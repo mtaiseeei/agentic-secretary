@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEditionConfig, inspectWorkspaceEdition } from "../plugins/secretary/scripts/lib/edition-guard.mjs";
@@ -455,6 +455,90 @@ check("fresh and opposite-edition workspace guards are deterministic", () => {
   }
 });
 
+check("canonical Agentic onboarding templates initialize the ledger without hiding genuine legacy state", () => {
+  const config = loadEditionConfig(pluginRoot);
+  const fresh = mkdtempSync("/private/tmp/agentic-sprint033-onboarding-");
+  const legacy = mkdtempSync("/private/tmp/agentic-sprint033-legacy-");
+  try {
+    execFileSync(process.execPath, [
+      join(pluginRoot, "scripts/edition-guard.mjs"),
+      "--workspace", fresh,
+      "--plugin-root", pluginRoot,
+      "--entry", "onboarding",
+      "--prepare-new",
+      "--json",
+    ], { cwd: root, stdio: "pipe" });
+
+    cpSync(join(pluginRoot, "templates"), join(fresh, "secretary"), { recursive: true });
+    cpSync(join(pluginRoot, "workspace-templates"), fresh, { recursive: true });
+    const createdDate = "2026-07-21";
+    const firstDecision = join(fresh, "secretary/memory/decisions/_first-decision.md");
+    renameSync(firstDecision, join(fresh, `secretary/memory/decisions/${createdDate}-decisions.md`));
+    const replacements = {
+      OWNER_NAME: "検証担当",
+      OWNER_ROLE: "エンジニア",
+      PRIMARY_SERVICE: "Google",
+      PRIMARY_SERVICE_DETAIL: "Gmail / Googleカレンダー / Googleドライブ",
+      TASKS: "今日やることの整理、調べもの・下書き",
+      REPORT_DETAIL: "みじかく",
+      CREATED_DATE: createdDate,
+      CREATED_AT: `${createdDate} 09:00`,
+    };
+    for (const path of walk(join(fresh, "secretary"))) {
+      const source = read(path);
+      const rendered = Object.entries(replacements).reduce(
+        (value, [name, replacement]) => value.replaceAll(`{{${name}}}`, replacement),
+        source,
+      );
+      writeFileSync(path, rendered);
+    }
+
+    assert.equal(inspectWorkspaceEdition(fresh, config).state, "same-edition");
+    const managed = [
+      "secretary/AGENTS.md",
+      "secretary/CLAUDE.md",
+      "secretary/memory/MEMORY.md",
+      "secretary/memory/preferences.md",
+      `secretary/memory/decisions/${createdDate}-decisions.md`,
+      ".github/workflows/chatwork-sync.yml",
+      "chatwork/config.json",
+      "chatwork/rooms.json",
+      "chatwork/scripts/chatwork-sync.mjs",
+    ];
+    execFileSync(process.execPath, [
+      join(pluginRoot, "scripts/update-ledger.mjs"),
+      "init",
+      "--workspace", fresh,
+      "--plugin-root", pluginRoot,
+      ...managed.flatMap((path) => ["--managed-path", path]),
+      "--template-variable", `CREATED_DATE=${createdDate}`,
+      "--template-variable", `CREATED_AT=${createdDate} 09:00`,
+      "--template-variable", "REPORT_DETAIL=みじかく",
+      "--new-install",
+      "--confirm",
+    ], { cwd: root, stdio: "pipe" });
+    const ledger = json(join(fresh, ".secretary/update-ledger.json"));
+    assert.equal(ledger.schemaVersion, 2);
+    assert.equal(ledger.edition, "agentic-secretary");
+    assert.deepEqual(ledger.records.map((record) => record.path), [...managed].sort());
+
+    mkdirSync(join(legacy, "secretary"), { recursive: true });
+    cpSync(join(pluginRoot, "templates/AGENTS.md"), join(legacy, "secretary/AGENTS.md"));
+    cpSync(join(pluginRoot, "templates/CLAUDE.md"), join(legacy, "secretary/CLAUDE.md"));
+    const legacyState = inspectWorkspaceEdition(legacy, config);
+    assert.equal(legacyState.state, "opposite-edition");
+    assert.equal(legacyState.legacy, true);
+    assert.deepEqual(legacyState.detectedEditions, ["yasashii-secretary"]);
+
+    mkdirSync(join(fresh, ".yasashii-secretary"), { recursive: true });
+    writeFileSync(join(fresh, ".yasashii-secretary/update-ledger.json"), "[]\n");
+    assert.equal(inspectWorkspaceEdition(fresh, config).state, "mixed");
+  } finally {
+    rmSync(fresh, { recursive: true, force: true });
+    rmSync(legacy, { recursive: true, force: true });
+  }
+});
+
 check("host adapters do not duplicate plugin core", () => {
   const adapterFiles = walk(join(root, "adapters")).map((path) => relative(root, path));
   assert(!adapterFiles.some((path) => /(^|\/)skills\//.test(path)));
@@ -479,11 +563,12 @@ check("active distribution surfaces have no opposite-edition identity", () => {
 });
 
 if (existsSync(join(root, ".git"))) {
-  check("complete neutral history is retained and target has no remote", () => {
+  check("complete neutral history is retained and target has only the approved origin", () => {
     execFileSync("git", ["merge-base", "--is-ancestor", neutralCommit, "HEAD"], { cwd: root });
     const minimum = json(join(root, "adapters/neutral-base.json")).minimumHistoryCommitCount;
     assert(Number(git("rev-list", "--count", "HEAD")) >= minimum);
-    assert.equal(git("remote"), "");
+    assert.deepEqual(git("remote").split("\n").filter(Boolean), ["origin"]);
+    assert.equal(git("remote", "get-url", "origin"), "https://github.com/mtaiseeei/agentic-secretary.git");
   });
 
   check("every post-neutral path is declared by the overlay", () => {

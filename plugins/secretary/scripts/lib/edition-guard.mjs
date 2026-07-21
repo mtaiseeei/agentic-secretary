@@ -156,8 +156,13 @@ export function inspectWorkspaceEdition(workspaceValue, config) {
   catch { return { state: "unknown", allowed: false, workspace: resolve(workspaceValue), evidence: ["workspace-unreadable"], detectedEditions: [] }; }
   const marker = markerSignal(workspace, config);
   const ledger = ledgerSignals(workspace, config);
-  const legacy = legacyMarkerSignal(workspace, config);
-  const unknown = Boolean(marker.unknown || ledger.some((item) => item.unknown) || legacy?.unknown);
+  const detectedLegacy = legacyMarkerSignal(workspace, config);
+  // The current shared templates intentionally retain the old yasashii marker blocks
+  // so an existing yasashii workspace can still be migrated. Once onboarding has
+  // written a valid canonical marker, those textual compatibility markers are not a
+  // second edition signal. A legacy ledger remains authoritative and is still mixed.
+  const legacy = marker.edition && detectedLegacy?.edition ? null : detectedLegacy;
+  const unknown = Boolean(marker.unknown || ledger.some((item) => item.unknown) || detectedLegacy?.unknown);
   const signals = [marker.edition ? { edition: marker.edition, evidence: marker.evidence, kind: "canonical-marker" } : null, ...ledger, legacy].filter(Boolean);
   const editions = [...new Set(signals.map((item) => item.edition).filter(Boolean))].sort();
   const hasCanonical = Boolean(marker.edition || ledger.some((item) => item.kind === "canonical-ledger" && item.edition));

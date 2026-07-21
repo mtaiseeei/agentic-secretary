@@ -27,6 +27,7 @@
     "plugins/secretary/rules/plain-language.md",
     "plugins/secretary/rules/rule-manifest.json",
     "plugins/secretary/rules/styles/agentic.md",
+    "plugins/secretary/scripts/lib/edition-guard.mjs",
     "plugins/secretary/scripts/lib/safe-git.mjs",
     "plugins/secretary/scripts/project-tools.mjs",
     "plugins/secretary/scripts/update-diagnose.mjs",
