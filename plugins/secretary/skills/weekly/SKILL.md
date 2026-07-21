@@ -7,7 +7,20 @@ description: >
 
 # 週次ふりかえりと索引退避
 
-`${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と `secretary/memory/preferences.md` を読む。
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
+`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と `secretary/memory/preferences.md` を読む。
 通常報告を独自に包装しない。最終出力形は同rule入口から解決される「最終応答serializer」だけを正本とし、
 下位skillとしてschemaを複製・再包装しない。
 
@@ -15,7 +28,7 @@ description: >
 
 1. 「今週」は`CC_SECRETARY_NOW`（未指定時は現在日）を含む**月曜〜日曜**を対象にする。
    「先週」は先週内の日付を`--week YYYY-MM-DD`へ渡す。相対語をコマンドへ直接渡さない。
-2. `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh weekly <secretary> [--week YYYY-MM-DD]`
+2. `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh weekly <secretary> [--week YYYY-MM-DD]`
    を実行する。このシームは、対象期間の各日journal原本を毎回直接読み、過去の週次成果物を入力にしない。
 3. 出力の`活動（did）`、`決定（decided）`、`翌週への申し送り（next）`を混ぜない。
    決定は新しい記録を先に表示する。`変更:`を含む決定も原文のまま残し、矛盾や変更履歴を自動統合・要約しない。
@@ -27,7 +40,7 @@ description: >
 ### 保存は明示されたときだけ
 
 ユーザーが「保存して」と明示した場合だけ、週次出力を標準入力から
-`${CLAUDE_PLUGIN_ROOT}/scripts/workspace-tools.sh save-deliverable <secretary> <YYYY-MM-DD> "週次ふりかえり <期間>" "週次,振り返り"`
+`${SECRETARY_PLUGIN_ROOT}/scripts/workspace-tools.sh save-deliverable <secretary> <YYYY-MM-DD> "週次ふりかえり <期間>" "週次,振り返り"`
 へ渡す。成功すると成果物とjournal `did`が各1件だけ増える。その後、
 `memory-tools.sh commit <secretary> "週次ふりかえりを保存（<期間>）"` を1回だけ実行する。
 pushはしない。
@@ -57,6 +70,6 @@ exit 0とし、stderrの警告から退避候補、残る参照、timeline/weekl
 
 ## 参照
 
-- 言葉づかい: `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md`
-- 週次・索引シーム: `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
-- 成果物保存: `${CLAUDE_PLUGIN_ROOT}/scripts/workspace-tools.sh`
+- 言葉づかい: `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md`
+- 週次・索引シーム: `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
+- 成果物保存: `${SECRETARY_PLUGIN_ROOT}/scripts/workspace-tools.sh`

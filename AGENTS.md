@@ -19,7 +19,7 @@ $harness-loop <short product idea>
 1. Planner turns the idea into a short `docs/spec.md` index, detailed `docs/spec/*.md` files (including `docs/spec/rubric.md`), and sprint contracts in `docs/sprints/`.
 2. Generator implements one sprint, grows the automated regression suite, and updates the matching `docs/progress/sprint-*.md`.
 3. Evaluator runs the app, verifies behavior against the rubric with recorded evidence, and writes the matching `docs/feedback/sprint-*.md`.
-4. The orchestrator records the outcome in `docs/sprints/state.md` before moving on. Failed sprints go back to Generator (or to Planner when feedback is classified as a spec issue). Passed sprints move forward. Three consecutive failures on one sprint escalate to the user.
+4. The orchestrator records the outcome in `docs/sprints/state.md` before moving on. Failed sprints go back to Generator (or to Planner when feedback is classified as a spec issue). A `verification-scope-issue`, meaning the failure is mainly in verification tooling or an uncontracted evidence format, goes directly to the user with options. Passed sprints move forward. Three consecutive failures and the configured lineage/spec-issue limits escalate to the user.
 
 If the host cannot dispatch subagents, run the three roles as strictly separated work units using the role definitions in the plugin's `agents/*.md`: one role per work unit, each writing only its own canonical files, and never reusing Generator's self-evaluation as the verdict.
 
@@ -41,9 +41,9 @@ If the host cannot dispatch subagents, run the three roles as strictly separated
 | `docs/feedback/sprint-*.md` | Evaluator result, scores, evidence, bugs, reproduction steps | Evaluator |
 
 Do not cross these ownership boundaries. If a role finds a problem outside its file, record it in its own handoff instead of editing another role's source of truth.
-Sprint statuses in `state.md` are: `planned`, `active`, `awaiting-eval`, `done`, `deferred`, `superseded`. Never skip or reorder sprints silently; record `deferred`/`superseded` with a reason.
+Sprint statuses in `state.md` are: `planned`, `active`, `awaiting-eval`, `done`, `done-by-user-decision`, `deferred`, `superseded`. Never skip or reorder sprints silently; record `deferred`/`superseded` with a reason. Use `done-by-user-decision` only when the user explicitly accepts recorded shortfalls; keep Evaluator feedback unchanged.
 An older `docs/sprints/current.md` is a legacy pointer: convert it into `docs/sprints/state.md` once, then treat it as read-only reference. If an older `docs/progress.md` exists, treat it as a legacy reference log and do not append new sprint progress there.
-If an existing `state.md` has no `Model Tier`, pass `unknown` to the resolver once, persist only the returned `standard` or `strong` tier with `Rotate: runtime-migration`, and fresh-dispatch Generator. Never persist `unknown`. If only `Rotate` is absent, add `Rotate: none`.
+If an existing `state.md` has no `Model Tier`, pass `unknown` to the resolver once, persist only the returned `standard` or `strong` tier with `Rotate: runtime-migration`, and fresh-dispatch Generator. Never persist `unknown`. If only `Rotate` is absent, add `Rotate: none`. If `Spec-Issue Count` or `Lineage Dispatches` is absent, the orchestrator adds it once using `0` or a value supported by recorded history.
 For a real Generator tier change, record `Rotate: model-escalation` for failure/risk/recommendation routing and `Rotate: model-availability` for an unavailable standard-model fallback. When Generator is not the next role, the resolver returns `modelTier: null`; this must not replace the last dispatched tier in state. A `spec-issue` route also keeps the last dispatched tier and returns to Planner.
 Use zero-padded sprint IDs. Do not create decimal sprint IDs such as `sprint-5.1` or `sprint-5.10`.
 For work between main sprints, use `sprint-NNN-patch-PPP`.
@@ -66,6 +66,7 @@ Do not default to fixing things outside the loop. Classify every follow-up reque
 - Planner generates `docs/spec/rubric.md` at initialization, adjusting design/originality thresholds to the project type. Evaluator proposes rubric changes in feedback; only Planner applies them.
 - Invariants confirmed by accepted sprints ("never regress this") are promoted into `docs/spec/constraints.md`, not accumulated in state files.
 - Avoid premature stack, schema, endpoint, or component decisions in the spec files.
+- Keep verification infrastructure out of product requirements unless the user explicitly requests it. The rubric and Sprint contract list sufficient evidence formats (safe harbor); tightening an active Sprint's acceptance criteria, thresholds, or evidence formats requires explicit user approval.
 - If a decision changes the product direction, ask the user before implementation.
 - Prefer ambitious but testable product behavior over a tiny CRUD-only MVP.
 
@@ -85,9 +86,12 @@ Do not default to fixing things outside the loop. Classify every follow-up reque
 - Evaluator must operate the real app before marking a sprint complete.
 - Score against `docs/spec/rubric.md`; one failed threshold means the sprint fails.
 - A pass requires recorded evidence: executed commands with results, and the concrete URL/DOM/browser interactions checked. Screenshots are mandatory whenever UI, responsiveness, or visual quality is scored. A pass without evidence is invalid.
+- Treat the evidence formats already listed in the rubric and Sprint contract as sufficient safe harbor. Do not invent a unified attestation, collector, or additional evidence format as a pass condition.
+- Classify every finding as `product` or `verification-infra`; when unsure, use `product`. A verification-infra problem alone does not become a product failure. Severe verification-only blockers are `verification-scope-issue` and go to the user with options.
+- Re-evaluate incrementally: use the actual git diff to retest changed surfaces plus the regression suite, carry forward recorded evidence for unchanged surfaces, and reuse same-candidate evidence only when the working tree is clean and the regression suite is green.
 - Run the handed-over regression suite as the baseline for the no-regression score, then manually verify the surfaces this sprint touched.
 - Evaluator performs evidence-backed evaluation and self-review; it never implements fixes.
-- Classify failures as `implementation-issue` (back to Generator) or `spec-issue` (back to Planner via the orchestrator).
+- Classify failures as `implementation-issue` (back to Generator), `spec-issue` (back to Planner via the orchestrator), or `verification-scope-issue` (directly to the user with options).
 - For patch sprints such as `sprint-005-patch-001`, verify the patch behavior, base sprint regression, and absence of next-main-sprint feature leakage. `Type: micro` patches get the lightweight scoring set.
 
 Browser verification priority:
@@ -100,6 +104,15 @@ Browser verification priority:
 ## Done Means Verified
 
 Do not declare completion only because code was written. A sprint is complete only after Evaluator verifies the running product with evidence and the orchestrator records the result in `docs/sprints/state.md`.
+
+The exception is `done-by-user-decision`: the user may explicitly accept recorded shortfalls. The orchestrator records the reasons and remaining risks in `state.md`; it is not an Evaluator PASS.
+
+## Proportional Verification
+
+- Before each Generator/Evaluator dispatch, the orchestrator checks `Lineage Dispatches`. At `limits.max_lineage_dispatches` (10), stop and present user options; otherwise increment it for the actual dispatch. A synchronous pre-child launch rejection does not consume the limit.
+- Each spec-issue return increments `Spec-Issue Count` without consuming Retry Count. At `limits.max_spec_issue_returns` (2), stop the Planner round trip and ask the user.
+- The counters are owned only by the orchestrator. Generator and Evaluator never edit `state.md`.
+- If two consecutive rounds change only verification code, or verification code outgrows product code, report that before another dispatch.
 
 ## Model Policy
 

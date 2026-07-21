@@ -4,9 +4,9 @@ The formal Codex distribution is `plugins/secretary/.codex-plugin/plugin.json` p
 marketplace at `.agents/plugins/marketplace.json`. Use this file only for repository-local authoring,
 isolated tests, or recovery when the formal plugin flow cannot be used.
 
-- Treat the repository path `plugins/secretary/` as `SECRETARY_PLUGIN_ROOT`.
-- When a shared skill mentions `${CLAUDE_PLUGIN_ROOT}`, resolve that placeholder to the same
-  `plugins/secretary/` root. Do not rewrite or duplicate the common skills.
+- Resolve `SECRETARY_PLUGIN_ROOT` from the real absolute path of the selected
+  `plugins/secretary/skills/<name>/SKILL.md` through `scripts/resolve-plugin-root.mjs`.
+  Never derive it from cwd, an unset environment variable, or a guessed install cache path.
 - Read `plugins/secretary/rules/plain-language.md` before producing user-facing secretary output.
 - Discover skills from `plugins/secretary/skills/*/SKILL.md`; load only the selected skill and its
   direct references.

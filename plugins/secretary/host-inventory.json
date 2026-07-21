@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "pluginRoot": {
+    "strategy": "skill-file-realpath-v1",
+    "resolver": "scripts/resolve-plugin-root.mjs",
+    "forbiddenInputs": [
+      "unset environment variable",
+      "empty path",
+      "unresolved placeholder",
+      "relative path",
+      "current working directory"
+    ]
+  },
+  "distributionSurfaces": {
+    "claudeCode": {
+      "marketplace": ".claude-plugin/marketplace.json",
+      "manifest": ".claude-plugin/plugin.json",
+      "explicitInvocation": "slash-command",
+      "updateSurface": "Claude plugin marketplace"
+    },
+    "codex": {
+      "marketplace": "../../.agents/plugins/marketplace.json",
+      "manifest": ".codex-plugin/plugin.json",
+      "explicitInvocation": "$skill-name",
+      "updateSurface": "Plugins Directory or Codex CLI plugin marketplace"
+    }
+  },
+  "skills": [
+    { "name": "build", "hostSpecific": ["Harness marketplace and install ID", "explicit Harness entry"] },
+    { "name": "chatwork", "hostSpecific": ["explicit skill invocation", "loopback browser surface"] },
+    { "name": "connections", "hostSpecific": ["connector availability and error surface"] },
+    { "name": "daily", "hostSpecific": ["connector availability"] },
+    { "name": "google-chat", "hostSpecific": ["explicit skill invocation", "loopback browser surface"] },
+    { "name": "memory-care", "hostSpecific": ["explicit skill invocation only"] },
+    { "name": "onboarding", "hostSpecific": ["explicit skill invocation", "plugin reload surface"] },
+    { "name": "projects", "hostSpecific": ["Harness handoff invocation"] },
+    { "name": "secretary", "hostSpecific": ["explicit skill invocation"] },
+    { "name": "settings", "hostSpecific": ["structured question surface"] },
+    { "name": "setup-google", "hostSpecific": ["official connector or App UI", "reload surface"] },
+    { "name": "setup-microsoft", "hostSpecific": ["official connector or App UI", "reload surface"] },
+    { "name": "setup-notion", "hostSpecific": ["official connector or App UI", "reload surface"] },
+    { "name": "update", "hostSpecific": ["plugin marketplace", "reload and new-session surface", "explicit skill invocation"] },
+    { "name": "weekly", "hostSpecific": ["explicit skill invocation only"] }
+  ],
+  "claudeOnlyInventory": [
+    "slash commands",
+    "Claude plugin marketplace commands",
+    "SessionStart hooks supplied by the separate Harness plugin",
+    "Claude connector settings UI",
+    "Claude plugin update and reload UI"
+  ],
+  "codexOnlyInventory": [
+    "$skill-name explicit invocation",
+    "Codex repository marketplace",
+    "Plugins Directory and Codex CLI plugin commands",
+    "new chat or CLI session after install"
+  ]
+}

@@ -23,6 +23,17 @@ For substantial app, site, tool, or multi-step feature work, use Agentic Harness
 - The orchestrator (main agent) is the only writer of `docs/sprints/state.md`, the execution-state source
   of truth (Current ID, per-sprint status, retry count). Record every pass/fail there before moving on.
   Three consecutive failures on one sprint escalate to the user; spec-issue failures go back to Planner.
+- Failure classes are `implementation-issue` (Generator), `spec-issue` (Planner), and
+  `verification-scope-issue` (straight to the user with options). Classify findings as `product` or
+  `verification-infra`; when unsure, use `product`.
+- Evidence formats listed in the rubric and Sprint contract are sufficient safe harbor. Do not make a new
+  collector, attestation, or unified evidence schema a pass condition. Tightening an active Sprint's criteria,
+  thresholds, or evidence formats requires user approval.
+- Re-evaluate changed surfaces plus the green regression suite, carry forward unchanged evidence, and reuse
+  same-candidate evidence only while its invalidation conditions have not changed and the worktree is clean.
+- The orchestrator owns `Spec-Issue Count` and `Lineage Dispatches`. Stop at the configured limits in
+  `.harness/config.toml` (10 lineage dispatches, 2 spec-issue returns) and present options to the user.
+- `done-by-user-decision` is only for explicit user acceptance with remaining shortfalls recorded; it is not an Evaluator PASS.
 - Use zero-padded sprint IDs like `sprint-005.md`; do not create decimal IDs like `sprint-5.10.md`.
 - In a harness-managed repository, classify small follow-ups instead of fixing them outside the loop:
   direct fix (non-behavioral), micro patch (`Type: micro`, lightweight evaluation), or a regular patch

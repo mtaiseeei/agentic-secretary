@@ -7,10 +7,23 @@ description: >
 
 # 記憶ケア（memory-care）
 
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
 秘書の「記憶」を安全に育てるスキル。記憶はユーザーの `secretary/memory/` 配下に置く。
 決定・活動・確認済みの相談要点を役割別に覚え、うっかり消えないように守り、中断しても続きから再開できるようにする。
 
-`${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
+`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
 `secretary/memory/preferences.md` を読む。記憶操作の結果と安全条件だけをrouterへ返し、
 通常報告を独自に包装しない。最終出力形は同rule入口から解決される「最終応答serializer」だけを正本とする。
 
@@ -33,7 +46,7 @@ secretary/memory/
 索引の追従・空上書きの拒否・削除前の確認・しおりの読み書き・節目コミットは、**必ず**次のヘルパーを使う。
 自前で `rm` したり空ファイルを書いたりしない（事故防止）。ヘルパーは同じ入力なら同じ結果になる。
 
-ヘルパー: `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
+ヘルパー: `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
 
 | やりたいこと | コマンド |
 |---|---|
@@ -140,7 +153,7 @@ secretary/memory/
 ## 6. オンデマンド振り返り
 
 - 「今週を振り返って」「先週を振り返って」はweeklyを段階ロードする。
-  読み込む: `${CLAUDE_PLUGIN_ROOT}/skills/weekly/SKILL.md`。
+  読み込む: `${SECRETARY_PLUGIN_ROOT}/skills/weekly/SKILL.md`。
 - 週次は毎回、対象週の日次journal原本を直接読み、過去の週次成果物から要約し直さない。
 - `MEMORY.md`の上限警告では、退避候補と影響を提示して止まり、別ターンの明示了承後だけ月単位で退避する。
 - 自動で `case-NNN` を作ったり `patterns/` に統合したり、decision変更履歴を統合したりしない。
@@ -153,5 +166,5 @@ secretary/memory/
 
 ## 参照
 
-- 言葉づかいルール（必読）: `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md`
-- 決定的シームのヘルパー: `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
+- 言葉づかいルール（必読）: `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md`
+- 決定的シームのヘルパー: `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`

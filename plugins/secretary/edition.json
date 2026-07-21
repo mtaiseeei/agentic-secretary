@@ -42,9 +42,24 @@
     ]
   },
   "harness": {
+    "version": "0.5.0",
+    "repository": "https://github.com/mtaiseeei/agentic-harness",
+    "observedCommit": "aafdf97d1f673a856c5a2a2fe72f87f1a4b57e89",
     "marketplace": "agentic-harness",
     "plugin": "harness",
-    "installId": "harness@agentic-harness"
+    "installId": "harness@agentic-harness",
+    "hosts": {
+      "claudeCode": {
+        "marketplace": "agentic-harness",
+        "installId": "harness@agentic-harness",
+        "explicitEntry": "/harness"
+      },
+      "codex": {
+        "marketplace": "agentic-harness-local",
+        "installId": "harness@agentic-harness-local",
+        "explicitEntries": ["$using-harness", "$harness-loop"]
+      }
+    }
   },
   "copy": {
     "path": "rules/copy/agentic.json",

@@ -1,15 +1,28 @@
 ---
 name: google-chat
-description: Google Workspace版Google ChatのCloud準備、OAuth接続、通常スペース選択、初回・定期取得、設定変更、確認付き履歴検索、再認証を行う。ユーザーが「Google Chatを設定したい」「Google Chatにつなぎたい」「GChatで探して」「/google-chat」と依頼したときに使う。
+description: Google Workspace版Google ChatのCloud準備、OAuth接続、通常スペース選択、初回・定期取得、設定変更、確認付き履歴検索、再認証を行う。ユーザーが「Google Chatを設定したい」「GChatで探して」、Claude Codeで「/google-chat」、Codexで「$google-chat」と依頼したときに使う。
 ---
 
 # Google Chat（少し高度な設定）
+
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
 
 Google Workspace版Google Chatの選択した通常スペースだけを、秘書・一般プロジェクト・Chatworkと同じ非公開のGitHubリポジトリへ保存する。
 Gmail等の公式Googleコネクタとは別の機能であり、各利用組織が所有するGoogle Cloudプロジェクト、Audience `Internal`、
 利用者本人のOAuthを使う。OAuthは、Googleのパスワードを渡さず、許可した範囲だけ読み取る認証である。
 
-最初に `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
+最初に `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
 `secretary/memory/preferences.md` を読む。通常報告の形式は同rule入口から解決される最終応答serializerだけに任せる。
 
 ## 状態を先に示す
@@ -33,7 +46,7 @@ Gmail等の公式Googleコネクタとは別の機能であり、各利用組織
 
 1. 次の読み取り専用コマンドで、Git repo root、Project案、`gcloud`の有無、ログイン状態を確認する。
 
-   `node "${CLAUDE_PLUGIN_ROOT}/skills/google-chat/scripts/cloud-setup.mjs" inspect --root .`
+   `node "${SECRETARY_PLUGIN_ROOT}/skills/google-chat/scripts/cloud-setup.mjs" inspect --root .`
 
 2. Git repo rootを確認できなければCloudを変更しない。Google Chatを接続するrepoを開くよう案内する。
 3. サブディレクトリから開始しても、repo rootのディレクトリ名を使う。repo名が `hogehoge` なら、Project表示名とProject IDの初期案は `hogehoge-google-chat`。
@@ -88,7 +101,7 @@ client secret、接続用JSON本文、認可URL、認可コード、access token
 
 利用者が接続用JSONをダウンロードできたと確認してから、次のローカル設定画面を起動する。
 
-`node "${CLAUDE_PLUGIN_ROOT}/skills/google-chat/scripts/wizard-server.mjs" --root . --port 0`
+`node "${SECRETARY_PLUGIN_ROOT}/skills/google-chat/scripts/wizard-server.mjs" --root . --port 0`
 
 1. wizardは接続用JSON選択から始まる。JSONがまだなければ秘密値を貼らせず、終了してAIへ「Google Chatを設定したい」と伝えるよう案内する。
 2. wizardでOAuth client JSONをローカルファイルとして選ぶ。内容は外部へuploadせず、client secret、認可コード、
@@ -135,7 +148,7 @@ client secret、接続用JSON本文、認可URL、認可コード、access token
 
 通常は確認付きの次の経路を使う。
 
-`node "${CLAUDE_PLUGIN_ROOT}/skills/google-chat/scripts/search-flow.mjs" --root . --query "<キーワード>" [--space "<スペース>"] [--sender "<発言者>"] [--from YYYY-MM-DD] [--to YYYY-MM-DD] --choice ask`
+`node "${SECRETARY_PLUGIN_ROOT}/skills/google-chat/scripts/search-flow.mjs" --root . --query "<キーワード>" [--space "<スペース>"] [--sender "<発言者>"] [--from YYYY-MM-DD] [--to YYYY-MM-DD] --choice ask`
 
 最初にpullしてから保存済み履歴を検索する。`found` はspace、日付、該当箇所を根拠として返す。
 `not-found-locally` では構造化質問で「取得して再検索（推奨）／取得しない／対象スペースを見直す」を示す。
