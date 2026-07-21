@@ -132,12 +132,20 @@ node scripts/agentic-live-host-gate.mjs \
   --output /absolute/path/to/new-sanitized-result.json
 ```
 
-The approval must name the matching host, adapter runner, app/CLI surface, all twelve checks, an
-expiry, cleanup plan, and an explicit absolute driver command. The runner passes only a small
-environment allowlist to that driver, persists neither raw stdout/stderr nor argument values, and
-accepts a PASS only when the returned sanitized record covers all checks and live conversation
-scenarios. Without `--approval`, it performs no host operation and exits 2 with
-`external-live-gate-unavailable`.
+The version 2 approval must name the matching host, adapter runner, app/CLI surface, all twelve
+checks, an expiry, a digest-bound executable and driver artifacts, and the exact isolation
+contract. That contract requires a synthetic HOME inside a runner-owned temporary workspace, a
+digest-matched read-only plugin copy, OS sandbox or host-guaranteed path-scoped permission, a
+recorded Write/Edit denial against a controlled outside-workspace canary, a Bash-free minimal tool
+list, bounded inspected targets, and cleanup after both success and failure.
+
+The runner forces the driver cwd, HOME, TMPDIR, plugin reference, workspace, and canary to its
+isolated paths. It independently compares the plugin source/copy and canary before and after, then
+removes the workspace, synthetic HOME, plugin copy, and canary before writing the result. A
+sanitized driver claim without the structured isolation report and runner-observed invariants is a
+FAIL. Retained results omit the actual executable, arguments, raw stdout/stderr, credential values,
+and real filesystem paths. Without `--approval`, the runner performs no host operation and exits 2
+with `external-live-gate-unavailable`.
 
 ## Repository relationship
 

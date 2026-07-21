@@ -26,6 +26,15 @@ const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const SENSITIVE_KEY = /(?:access.?token|refresh.?token|api.?token|client.?secret|password|credential|authorization|cookie|oauth.?code|private.?key)/i;
 const SENSITIVE_VALUE = /(?:Bearer\s+[A-Za-z0-9._~+\/-]{12,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
 
+export const ISOLATION_INSPECTED_TARGETS = Object.freeze([
+  "real-home-env",
+  "plugin-source",
+  "plugin-read-only-copy",
+  "approved-workspace",
+  "outside-workspace-canary",
+  "result-output",
+]);
+
 const CHECK_EVIDENCE_KINDS = Object.freeze({
   "distribution-format": new Set(["command", "official-validator", "host-observation"]),
   "fresh-install": new Set(["command", "host-observation"]),
@@ -147,6 +156,155 @@ function validateEvidence(entry, index, loaded, record) {
   assertNoSensitiveFields(entry, label);
 }
 
+function validateIsolation(isolation, label, { requireComplete = false } = {}) {
+  assertExactKeys(isolation, [
+    "schemaVersion", "syntheticHome", "pluginReadOnly", "pathScopedPermission", "canaryDenial",
+    "minimalTools", "inspectedTargets", "cleanupVerified", "retainedEvidence",
+  ], [], label);
+  if (isolation.schemaVersion !== 1) throw new Error(`${label}.schemaVersion must be 1`);
+
+  assertExactKeys(isolation.syntheticHome, [
+    "created", "insideApprovedWorkspace", "realHomeNotTransmitted", "declaredContents",
+  ], [], `${label}.syntheticHome`);
+  for (const key of ["created", "insideApprovedWorkspace", "realHomeNotTransmitted"]) {
+    if (typeof isolation.syntheticHome[key] !== "boolean") throw new Error(`${label}.syntheticHome.${key} must be boolean`);
+  }
+  if (!Array.isArray(isolation.syntheticHome.declaredContents)
+    || isolation.syntheticHome.declaredContents.some((item) => typeof item !== "string" || item.startsWith("/") || item.includes(".."))) {
+    throw new Error(`${label}.syntheticHome.declaredContents must contain sanitized relative paths`);
+  }
+
+  assertExactKeys(isolation.pluginReadOnly, [
+    "reference", "sourceDigestMatchesCopy", "beforeAfterUnchanged", "driverWriteDenied",
+  ], [], `${label}.pluginReadOnly`);
+  if (!new Set(["read-only-copy", "unavailable"]).has(isolation.pluginReadOnly.reference)) {
+    throw new Error(`${label}.pluginReadOnly.reference is invalid`);
+  }
+  for (const key of ["sourceDigestMatchesCopy", "beforeAfterUnchanged", "driverWriteDenied"]) {
+    if (typeof isolation.pluginReadOnly[key] !== "boolean") throw new Error(`${label}.pluginReadOnly.${key} must be boolean`);
+  }
+
+  assertExactKeys(isolation.pathScopedPermission, [
+    "mode", "writableScope", "driverConfirmed",
+  ], [], `${label}.pathScopedPermission`);
+  if (!new Set(["host-path-scoped-permission", "os-sandbox", "unavailable"]).has(isolation.pathScopedPermission.mode)) {
+    throw new Error(`${label}.pathScopedPermission.mode is invalid`);
+  }
+  if (!new Set(["approved-workspace-only", "unavailable"]).has(isolation.pathScopedPermission.writableScope)) {
+    throw new Error(`${label}.pathScopedPermission.writableScope is invalid`);
+  }
+  if (typeof isolation.pathScopedPermission.driverConfirmed !== "boolean") {
+    throw new Error(`${label}.pathScopedPermission.driverConfirmed must be boolean`);
+  }
+
+  assertExactKeys(isolation.canaryDenial, [
+    "attempted", "denied", "denialSource", "beforeAfterUnchanged",
+  ], [], `${label}.canaryDenial`);
+  for (const key of ["attempted", "denied", "beforeAfterUnchanged"]) {
+    if (typeof isolation.canaryDenial[key] !== "boolean") throw new Error(`${label}.canaryDenial.${key} must be boolean`);
+  }
+  if (!new Set(["host-permission", "os-sandbox", "unavailable"]).has(isolation.canaryDenial.denialSource)) {
+    throw new Error(`${label}.canaryDenial.denialSource is invalid`);
+  }
+
+  if (!Array.isArray(isolation.minimalTools)
+    || isolation.minimalTools.some((item) => typeof item !== "string" || item.trim() === "")) {
+    throw new Error(`${label}.minimalTools must be an array of tool names`);
+  }
+  if (!Array.isArray(isolation.inspectedTargets)
+    || JSON.stringify(isolation.inspectedTargets) !== JSON.stringify(ISOLATION_INSPECTED_TARGETS)) {
+    throw new Error(`${label}.inspectedTargets must enumerate the exact bounded inspection scope`);
+  }
+
+  assertExactKeys(isolation.cleanupVerified, [
+    "outcome", "runRootRemoved", "workspaceRemoved", "syntheticHomeRemoved", "pluginCopyRemoved",
+    "canaryRemoved", "completed",
+  ], [], `${label}.cleanupVerified`);
+  if (!new Set(["success", "failure", "not-run"]).has(isolation.cleanupVerified.outcome)) {
+    throw new Error(`${label}.cleanupVerified.outcome is invalid`);
+  }
+  for (const key of ["runRootRemoved", "workspaceRemoved", "syntheticHomeRemoved", "pluginCopyRemoved", "canaryRemoved", "completed"]) {
+    if (typeof isolation.cleanupVerified[key] !== "boolean") throw new Error(`${label}.cleanupVerified.${key} must be boolean`);
+  }
+
+  assertExactKeys(isolation.retainedEvidence, [
+    "commandOmitted", "sensitiveValuesOmitted", "realPathsOmitted",
+  ], [], `${label}.retainedEvidence`);
+  for (const key of ["commandOmitted", "sensitiveValuesOmitted", "realPathsOmitted"]) {
+    if (typeof isolation.retainedEvidence[key] !== "boolean") throw new Error(`${label}.retainedEvidence.${key} must be boolean`);
+  }
+
+  assertNoSensitiveFields(isolation, label);
+  if (requireComplete) {
+    const complete = isolation.syntheticHome.created
+      && isolation.syntheticHome.insideApprovedWorkspace
+      && isolation.syntheticHome.realHomeNotTransmitted
+      && isolation.pluginReadOnly.reference === "read-only-copy"
+      && isolation.pluginReadOnly.sourceDigestMatchesCopy
+      && isolation.pluginReadOnly.beforeAfterUnchanged
+      && isolation.pluginReadOnly.driverWriteDenied
+      && isolation.pathScopedPermission.mode !== "unavailable"
+      && isolation.pathScopedPermission.writableScope === "approved-workspace-only"
+      && isolation.pathScopedPermission.driverConfirmed
+      && isolation.canaryDenial.attempted
+      && isolation.canaryDenial.denied
+      && isolation.canaryDenial.denialSource !== "unavailable"
+      && isolation.canaryDenial.beforeAfterUnchanged
+      && isolation.minimalTools.length > 0
+      && isolation.cleanupVerified.outcome === "success"
+      && isolation.cleanupVerified.completed
+      && isolation.retainedEvidence.commandOmitted
+      && isolation.retainedEvidence.sensitiveValuesOmitted
+      && isolation.retainedEvidence.realPathsOmitted;
+    if (!complete) throw new Error(`${label} is incomplete; sanitized self-report alone cannot verify containment`);
+  }
+}
+
+export function incompleteIsolation() {
+  return {
+    schemaVersion: 1,
+    syntheticHome: {
+      created: false,
+      insideApprovedWorkspace: false,
+      realHomeNotTransmitted: false,
+      declaredContents: [],
+    },
+    pluginReadOnly: {
+      reference: "unavailable",
+      sourceDigestMatchesCopy: false,
+      beforeAfterUnchanged: false,
+      driverWriteDenied: false,
+    },
+    pathScopedPermission: {
+      mode: "unavailable",
+      writableScope: "unavailable",
+      driverConfirmed: false,
+    },
+    canaryDenial: {
+      attempted: false,
+      denied: false,
+      denialSource: "unavailable",
+      beforeAfterUnchanged: false,
+    },
+    minimalTools: [],
+    inspectedTargets: [...ISOLATION_INSPECTED_TARGETS],
+    cleanupVerified: {
+      outcome: "not-run",
+      runRootRemoved: false,
+      workspaceRemoved: false,
+      syntheticHomeRemoved: false,
+      pluginCopyRemoved: false,
+      canaryRemoved: false,
+      completed: false,
+    },
+    retainedEvidence: {
+      commandOmitted: true,
+      sensitiveValuesOmitted: true,
+      realPathsOmitted: true,
+    },
+  };
+}
+
 export function loadHostMatrix(rootValue) {
   const root = resolve(rootValue);
   const matrix = readJson(join(root, "adapters/host-matrix.json"));
@@ -214,6 +372,7 @@ export function unavailableRecords(loaded) {
       conversation: { result: "incomplete", scenarios: [] },
       liveConversationGate: "incomplete",
       installed: false,
+      isolation: incompleteIsolation(),
       evidence: [],
       reason: "Host installation and real-host execution were not individually approved. No offline result is promoted.",
     };
@@ -223,7 +382,7 @@ export function unavailableRecords(loaded) {
 export function validateHostRecord(loaded, record, { allowLivePass = false } = {}) {
   assertExactKeys(record, [
     "schemaVersion", "hostId", "runner", "surface", "status", "checks", "execution", "conversation",
-    "liveConversationGate", "installed", "evidence", "reason",
+    "liveConversationGate", "installed", "isolation", "evidence", "reason",
   ], [], "host record");
   if (record.schemaVersion !== 1) throw new Error("host record schemaVersion must be 1");
   if (!loaded.matrix.requiredHosts.includes(record.hostId)) throw new Error(`unknown host record: ${record.hostId}`);
@@ -243,6 +402,7 @@ export function validateHostRecord(loaded, record, { allowLivePass = false } = {
   }
   validateExecution(record.execution, `host ${record.hostId} execution`);
   validateConversation(record.conversation, `host ${record.hostId} conversation`);
+  validateIsolation(record.isolation, `host ${record.hostId} isolation`, { requireComplete: record.status === "pass" });
   if (record.liveConversationGate !== record.conversation.result) {
     throw new Error(`host ${record.hostId} liveConversationGate must match conversation.result`);
   }

@@ -8,6 +8,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEditionConfig, inspectWorkspaceEdition } from "../plugins/secretary/scripts/lib/edition-guard.mjs";
 import {
+  ISOLATION_INSPECTED_TARGETS,
   LIVE_CONVERSATION_SCENARIOS,
   loadHostMatrix,
   summarizeHostRecords,
@@ -75,6 +76,51 @@ function passedExecution(kind, command) {
   };
 }
 
+function completeIsolation() {
+  return {
+    schemaVersion: 1,
+    syntheticHome: {
+      created: true,
+      insideApprovedWorkspace: true,
+      realHomeNotTransmitted: true,
+      declaredContents: ["home/.agentic-live/home.json"],
+    },
+    pluginReadOnly: {
+      reference: "read-only-copy",
+      sourceDigestMatchesCopy: true,
+      beforeAfterUnchanged: true,
+      driverWriteDenied: true,
+    },
+    pathScopedPermission: {
+      mode: "host-path-scoped-permission",
+      writableScope: "approved-workspace-only",
+      driverConfirmed: true,
+    },
+    canaryDenial: {
+      attempted: true,
+      denied: true,
+      denialSource: "host-permission",
+      beforeAfterUnchanged: true,
+    },
+    minimalTools: ["Read", "Glob", "Grep", "Write", "Edit"],
+    inspectedTargets: [...ISOLATION_INSPECTED_TARGETS],
+    cleanupVerified: {
+      outcome: "success",
+      runRootRemoved: true,
+      workspaceRemoved: true,
+      syntheticHomeRemoved: true,
+      pluginCopyRemoved: true,
+      canaryRemoved: true,
+      completed: true,
+    },
+    retainedEvidence: {
+      commandOmitted: true,
+      sensitiveValuesOmitted: true,
+      realPathsOmitted: true,
+    },
+  };
+}
+
 function completePassRecord(loaded, hostId) {
   const entry = loaded.entries.get(hostId);
   const checks = Object.fromEntries(loaded.matrix.requiredChecks.map((id) => [id, "pass"]));
@@ -106,6 +152,7 @@ function completePassRecord(loaded, hostId) {
     },
     liveConversationGate: "pass",
     installed: true,
+    isolation: completeIsolation(),
     evidence,
     reason: "Approved live host execution completed every required check.",
   };
@@ -204,6 +251,9 @@ check("negative evidence cases cannot promote the release", () => {
     [(record) => { record.evidence[0].execution.result = "fail"; record.evidence[0].execution.exitCode = 1; }, /does not match checks/],
     [(record) => { record.conversation.scenarios.pop(); }, /must cover every required live conversation scenario/],
     [(record) => { record.evidence[0].sanitized = false; }, /sanitized must be true/],
+    [(record) => { delete record.isolation; }, /missing required field: isolation/],
+    [(record) => { record.isolation.canaryDenial.denied = false; }, /sanitized self-report alone cannot verify containment/],
+    [(record) => { record.isolation.cleanupVerified.completed = false; }, /sanitized self-report alone cannot verify containment/],
   ];
   for (const [mutate, pattern] of rejects) {
     const invalid = structuredClone(pass);
@@ -231,13 +281,163 @@ check("offline CLI rejects a syntactically complete fake PASS record", () => {
   }
 });
 
-check("live runner is approval-gated and executes only an explicit driver", () => {
+check("live runner requires the full isolation contract and never inherits the real HOME", () => {
   const source = read(join(root, "scripts/agentic-live-host-gate.mjs"));
-  for (const required of ["--approval", "--output", "spawnSync", "shell: false", "allowedEnvironment", "flag: \"wx\""]) {
+  for (const required of [
+    "--approval", "--output", "spawnSync", "shell: false", "allowedEnvironment", "flag: \"wx\"",
+    "syntheticHome", "pluginReadOnly", "pathScopedPermission", "canaryDenial", "minimalTools",
+    "inspectedTargets", "cleanupVerified", "executableSha256", "artifacts", "cleanupIsolation",
+  ]) {
     assert(source.includes(required), `missing live-runner control: ${required}`);
   }
+  assert(!/\["PATH",\s*"HOME"/.test(source), "real HOME must not appear in the inherited environment allowlist");
+  assert(source.includes("env.HOME = runtime.syntheticHome"), "the driver HOME must be forced to the synthetic HOME");
   assert(source.includes("if (!approvalPath)"));
   assert(source.includes("external-live-gate-unavailable") || source.includes("unavailableRecords"));
+});
+
+check("approved synthetic driver proves isolation, rejects self-report, and cleans success and failure", () => {
+  const loaded = loadHostMatrix(root);
+  const hostId = "codex-cli";
+  const entry = loaded.entries.get(hostId);
+  const fixture = mkdtempSync("/private/tmp/agentic-approved-driver-");
+  const driverPath = join(fixture, "driver.mjs");
+  const driverSource = `
+import { writeFileSync } from "node:fs";
+const mode = process.argv[2];
+const hostId = process.env.AGENTIC_LIVE_HOST_ID;
+const surface = process.env.AGENTIC_LIVE_HOST_SURFACE;
+const workspace = process.env.AGENTIC_LIVE_APPROVED_WORKSPACE;
+const plugin = process.env.AGENTIC_LIVE_PLUGIN_ROOT;
+const canary = process.env.AGENTIC_LIVE_CANARY_PATH;
+let pluginDenied = false;
+let canaryDenied = false;
+try { writeFileSync(plugin + "/driver-write-probe", "x"); } catch { pluginDenied = true; }
+try { writeFileSync(canary, "x"); } catch { canaryDenied = true; }
+writeFileSync(workspace + "/driver-workspace-probe", "ok\\n");
+if (mode === "failure") process.exit(17);
+const checksList = ${JSON.stringify(loaded.matrix.requiredChecks)};
+const scenarios = ${JSON.stringify(LIVE_CONVERSATION_SCENARIOS)};
+const execution = (kind, id) => ({ kind, command: "synthetic-fixture:" + id, exitCode: 0, startedAt: "2026-07-21T00:00:00.000Z", finishedAt: "2026-07-21T00:00:01.000Z", result: "pass" });
+const evidenceKind = (id) => ({
+  "distribution-format":"command", "fresh-install":"host-observation", "rules-and-skills":"host-observation",
+  "basic-and-complex-conversation":"conversation", "completion-and-status-report":"conversation",
+  "diagnosis-and-developer-handoff":"conversation", "wizard-launch":"screenshot", "workspace-boundary":"command",
+  "secret-non-exposure":"command", "update-path-or-safe-unsupported":"host-observation",
+  "host-regression":"command", "live-or-official-validator-evidence":"host-observation"
+})[id];
+const hostRecord = {
+  schemaVersion: 1, hostId, runner: "scripts/agentic-live-host-gate.mjs", surface, status: "pass",
+  checks: Object.fromEntries(checksList.map((id) => [id, "pass"])),
+  conversation: { result: "pass", scenarios: scenarios.map((id) => ({ id, result: "pass", markdownValidated: true })) },
+  liveConversationGate: "pass", installed: true,
+  evidence: checksList.map((checkId) => { const kind = evidenceKind(checkId); return {
+    kind, checkId, hostId, runner: "scripts/agentic-live-host-gate.mjs", surface,
+    execution: execution(kind === "command" ? "command" : "host-ui", checkId), sanitized: true,
+    summary: "Sanitized synthetic fixture evidence."
+  }; }),
+  reason: "Synthetic approved path fixture completed."
+};
+if (mode === "path-leak") hostRecord.reason = workspace;
+if (mode === "sensitive-leak") hostRecord.reason = "Bearer synthetic-sensitive-value-123456";
+const isolationReport = mode === "self-report-only" ? { sanitized: true } : {
+  schemaVersion: 1,
+  syntheticHome: { used: process.env.HOME.startsWith(workspace + "/"), declaredContents: ["home/.agentic-live/home.json"] },
+  pluginReadOnly: { reference: "read-only-copy", writeDenied: pluginDenied },
+  pathScopedPermission: { mode: process.env.AGENTIC_LIVE_PERMISSION_MODE, writableScope: "approved-workspace-only" },
+  canaryDenial: { attempted: true, denied: canaryDenied, denialSource: "host-permission" },
+  minimalTools: JSON.parse(process.env.AGENTIC_LIVE_MINIMAL_TOOLS),
+  inspectedTargets: ${JSON.stringify(ISOLATION_INSPECTED_TARGETS)},
+  cleanupReady: true
+};
+process.stdout.write(JSON.stringify({ schemaVersion: 1, hostRecord, isolationReport }));
+`;
+  writeFileSync(driverPath, driverSource, { mode: 0o700 });
+  const digest = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const approval = (mode) => ({
+    schemaVersion: 2,
+    scope: "agentic-secretary-host-live-gate",
+    approvalId: `synthetic-${mode}`,
+    approved: true,
+    approvedAt: new Date(Date.now() - 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    hostId,
+    runner: entry.adapter.runner,
+    surface: entry.surface,
+    approvedChecks: [...loaded.matrix.requiredChecks],
+    driver: {
+      command: process.execPath,
+      args: [driverPath, mode],
+      executableSha256: digest(process.execPath),
+      artifacts: [{ path: driverPath, sha256: digest(driverPath) }],
+    },
+    isolation: {
+      workspaceParent: fixture,
+      syntheticHome: { required: true, location: "approved-workspace" },
+      pluginReadOnly: { required: true, reference: "read-only-copy", digestAlgorithm: "sha256" },
+      pathScopedPermission: { required: true, mode: "host-path-scoped-permission", writableScope: "approved-workspace-only" },
+      canaryDenial: { required: true, writeTools: ["Write", "Edit"], requireBeforeAfterInvariant: true, requireDenialRecord: true },
+      minimalTools: ["Read", "Glob", "Grep", "Write", "Edit"],
+      inspectedTargets: [...ISOLATION_INSPECTED_TARGETS],
+      cleanupVerified: { required: true, outcomes: ["success", "failure"] },
+    },
+    cleanupPlan: "Remove the runner-owned workspace, synthetic HOME, read-only plugin copy, and canary after every outcome.",
+  });
+  const run = (mode) => {
+    const approvalPath = join(fixture, `approval-${mode}.json`);
+    const resultPath = join(fixture, `result-${mode}.json`);
+    writeFileSync(approvalPath, JSON.stringify(approval(mode)));
+    let exitCode = 0;
+    try {
+      execFileSync(process.execPath, [
+        join(root, "scripts/agentic-live-host-gate.mjs"), "--host", hostId,
+        "--approval", approvalPath, "--output", resultPath,
+      ], { cwd: root, encoding: "utf8", stdio: "pipe" });
+    } catch (error) {
+      exitCode = error.status ?? 1;
+    }
+    assert(existsSync(resultPath), `missing retained result for ${mode}`);
+    const record = json(resultPath);
+    assert(!readdirSync(fixture).some((name) => name.startsWith(".agentic-live-")), `run root leaked after ${mode}`);
+    return { exitCode, record, serialized: JSON.stringify(record) };
+  };
+  try {
+    const success = run("success");
+    assert.equal(success.exitCode, 0);
+    assert.equal(success.record.status, "pass");
+    assert.equal(success.record.isolation.cleanupVerified.completed, true);
+    assert.equal(success.record.isolation.canaryDenial.denied, true);
+    assert.equal(success.record.isolation.pluginReadOnly.beforeAfterUnchanged, true);
+    assert.equal(success.record.isolation.syntheticHome.realHomeNotTransmitted, true);
+    for (const value of [fixture, driverPath, process.execPath, process.env.HOME]) {
+      if (value) assert(!success.serialized.includes(value), "retained result leaked a real path");
+    }
+    assert(!success.serialized.includes('"args"'), "retained result leaked driver arguments");
+
+    const failure = run("failure");
+    assert.equal(failure.exitCode, 1);
+    assert.equal(failure.record.status, "fail");
+    assert.equal(failure.record.isolation.cleanupVerified.completed, true);
+    assert.equal(failure.record.isolation.cleanupVerified.outcome, "failure");
+
+    const selfReport = run("self-report-only");
+    assert.equal(selfReport.exitCode, 1);
+    assert.equal(selfReport.record.status, "fail");
+    assert.equal(selfReport.record.isolation.cleanupVerified.completed, true);
+    assert.equal(selfReport.record.isolation.canaryDenial.denied, false);
+
+    const pathLeak = run("path-leak");
+    assert.equal(pathLeak.exitCode, 1);
+    assert.equal(pathLeak.record.status, "fail");
+    assert(!pathLeak.serialized.includes(fixture), "rejected real path leaked into retained failure evidence");
+
+    const sensitiveLeak = run("sensitive-leak");
+    assert.equal(sensitiveLeak.exitCode, 1);
+    assert.equal(sensitiveLeak.record.status, "fail");
+    assert(!sensitiveLeak.serialized.includes("synthetic-sensitive-value"), "rejected sensitive value leaked into retained failure evidence");
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });
 
 check("fresh and opposite-edition workspace guards are deterministic", () => {

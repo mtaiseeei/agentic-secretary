@@ -8,7 +8,9 @@ After publication:
 /secretary
 ```
 
-Restart the CLI session after install. The live runner must use a synthetic HOME, a read-only plugin
-copy, path-scoped permissions, a controlled outside-workspace canary, and sanitized evidence. It may
-record `pass` only when the canary denial and all conversation scenarios are executed. This Sprint
-did not install the plugin, so the current status is `external-live-gate-unavailable`.
+Restart the CLI session after install. The live runner must use a synthetic HOME, a digest-matched
+read-only plugin copy, path-scoped permissions, a controlled outside-workspace canary, a Bash-free
+minimal tool list, bounded inspection, and verified cleanup after success and failure. It may record
+`pass` only when the runner-observed invariants, structured denial record, and all conversation
+scenarios pass. This Sprint did not install the plugin, so the current status is
+`external-live-gate-unavailable`.

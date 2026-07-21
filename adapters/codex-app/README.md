@@ -9,4 +9,6 @@ node scripts/agentic-codex-install-plan.mjs --host codex-app --repo "$PWD"
 
 The plan links each shared skill into Codex's skill discovery path and merges the adapter guidance
 without overwriting existing guidance or `config.toml`. Applying it and reloading Codex App are
-external host changes and were not approved in this Sprint. Status: `external-live-gate-unavailable`.
+external host changes and were not approved in this Sprint. Any approved live driver must use the
+shared synthetic-HOME, read-only-plugin, path-scoped permission, canary-denial, bounded-inspection,
+and success/failure cleanup contract. Status: `external-live-gate-unavailable`.

@@ -13,4 +13,6 @@ After publication, install with:
 
 Reload the Claude Code workspace after install. Real installation, skill loading, conversation,
 wizard launch, boundary, secret, and update checks require separate approval. Until then the live
-status is `external-live-gate-unavailable`.
+status is `external-live-gate-unavailable`. An approved driver must run with the shared synthetic
+HOME, digest-matched read-only plugin copy, OS sandbox or host path-scoped permission, controlled
+canary denial, bounded inspection, and verified cleanup contract.
