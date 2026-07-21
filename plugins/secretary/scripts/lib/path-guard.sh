@@ -51,15 +51,22 @@ _platform_root_alias() {
 # 最終要素だけでなく、例えば /safe/link/nested の link も先に拒否する。
 # 相対pathの場合は論理cwd（pwd -L）からのcomponentも同じように確認する。
 _safe_working_root() {
-  local requested="$1" candidate cursor part
-  local -a components
+  local requested="$1" candidate cursor part remaining
   case "$requested" in
     /*) candidate="$requested" ;;
     *) candidate="$(pwd -L 2>/dev/null)/$requested" || return 2 ;;
   esac
   cursor="/"
-  IFS='/' read -r -a components <<< "$candidate"
-  for part in "${components[@]}"; do
+  # here-string / here-doc / 一時fileを使わず、read-only filesystemでも
+  # componentを順に検査できるようparameter expansionだけで分解する。
+  remaining="${candidate#/}"
+  while [ -n "$remaining" ]; do
+    part="${remaining%%/*}"
+    if [ "$remaining" = "$part" ]; then
+      remaining=""
+    else
+      remaining="${remaining#*/}"
+    fi
     case "$part" in
       ""|.) continue ;;
       ..)

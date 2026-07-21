@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -551,6 +551,56 @@ check("canonical Agentic onboarding templates initialize the ledger without hidi
   } finally {
     rmSync(fresh, { recursive: true, force: true });
     rmSync(legacy, { recursive: true, force: true });
+  }
+});
+
+check("resume-check distinguishes present, absent, and guard failure when file writes are prohibited", () => {
+  const fixture = mkdtempSync("/tmp/agentic-resume-readonly-");
+  const secretary = join(fixture, "secretary");
+  const memory = join(secretary, "memory");
+  const bookmark = join(memory, "_resume.md");
+  const external = join(fixture, "external-secretary");
+  const linkedSecretary = join(fixture, "linked-secretary");
+  const tool = join(pluginRoot, "skills/memory-care/scripts/memory-tools.sh");
+  const run = (rootPath) => spawnSync("/bin/bash", [
+    "-c", 'ulimit -f 0; exec "$@"', "resume-check-readonly",
+    "/bin/bash", tool, "resume-check", rootPath,
+  ], {
+    cwd: fixture,
+    encoding: "utf8",
+    env: {
+      PATH: process.env.PATH,
+      HOME: fixture,
+      TMPDIR: fixture,
+      LANG: "C.UTF-8",
+    },
+  });
+  const fixtureDigest = () => createHash("sha256")
+    .update(walk(fixture).sort().map((path) => `${relative(fixture, path)}:${hash(path)}`).join("\n"))
+    .digest("hex");
+  try {
+    mkdirSync(memory, { recursive: true });
+    writeFileSync(bookmark, "# 再起動しおり\n");
+    let before = fixtureDigest();
+    const present = run(secretary);
+    assert.equal(present.status, 0, present.stderr);
+    assert.equal(fixtureDigest(), before, "present check changed the read-only fixture");
+
+    rmSync(bookmark);
+    before = fixtureDigest();
+    const absent = run(secretary);
+    assert.equal(absent.status, 1, absent.stderr);
+    assert.equal(fixtureDigest(), before, "absent check changed the read-only fixture");
+
+    mkdirSync(join(external, "memory"), { recursive: true });
+    execFileSync("ln", ["-s", external, linkedSecretary]);
+    before = fixtureDigest();
+    const guardFailure = run(linkedSecretary);
+    assert.equal(guardFailure.status, 3, guardFailure.stderr);
+    assert.match(guardFailure.stderr, /symlink|安全|操作できません/);
+    assert.equal(fixtureDigest(), before, "guard failure changed the read-only fixture");
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
   }
 });
 

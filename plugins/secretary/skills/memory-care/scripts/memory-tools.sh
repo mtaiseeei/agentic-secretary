@@ -20,7 +20,7 @@
 #   memory-tools.sh guarded-write    <secretary> <memory相対パス> # 内容は標準入力から。空・空白のみ／範囲外は拒否
 #   memory-tools.sh delete           <secretary> <memory相対パス> [--confirm]
 #   memory-tools.sh resume-write     <secretary> <進行中の作業> <次にやること> <未確定のこと>
-#   memory-tools.sh resume-check     <secretary>               # あれば exit 0 / なければ exit 1
+#   memory-tools.sh resume-check     <secretary>               # あれば exit 0 / なければ exit 1 / guard拒否は exit 3
 #   memory-tools.sh resume-read      <secretary>
 #   memory-tools.sh resume-clear     <secretary>
 #   memory-tools.sh commit           <secretary> <日本語メッセージ>
@@ -365,8 +365,8 @@ case "$cmd" in
 
   resume-check)
     sec="${1:-}"; [ -n "$sec" ] || die_usage "secretary を指定"
-    # 基点 symlink・範囲外は「しおり無し」扱い（外部を読みに行かない）
-    res="$(_safe_path "$sec" "memory/_resume.md")" || exit 1
+    # 「しおり無し」とguard内部失敗を混同しない。後者は日本語error付きexit 3で返す。
+    res="$(_safe_path "$sec" "memory/_resume.md")" || _guard_reject "$?" "memory/_resume.md"
     [ -f "$res" ] && exit 0 || exit 1
     ;;
 
