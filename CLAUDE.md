@@ -1,11 +1,11 @@
-# yasashii-secretary
+# agentic-secretary
 
-Claude Codeを使う一般の非エンジニア向けAI秘書プラグイン
-（Claude Code plugin / public / MIT）。一般的な技術用語は保ち、何が起きているかと次の行動を先に伝える。
+Claude Code / Codexで使う開発者・IT担当者向けAI秘書プラグイン
+（technical edition / MIT）。コマンド、path、エラー名、証跡、残余リスクを省略せず、結果と次の行動を先に伝える。
 
 ## 正本
 
-- 方針転換の引き継ぎ正本: `docs/proposal-2026-07-15-realignment.md`
+- 分岐元と共通coreの対応表: `docs/agentic-upstream-mapping.md`
 - 恒久設計: `docs/DESIGN.md`
 - 実装仕様: `docs/spec.md` と `docs/spec/`
 - 進行状態: `docs/sprints/state.md`
@@ -13,7 +13,7 @@ Claude Codeを使う一般の非エンジニア向けAI秘書プラグイン
 ## リポジトリ境界
 
 - 秘書本体の配布物は `plugins/secretary/`。
-- 開発ハーネスは別リポジトリ `mtaiseeei/yasashii-harness` が正本。本体には `harness/` や Planner / Generator / Evaluator のagentsを同梱しない。
+- 開発ハーネスは別リポジトリ `mtaiseeei/agentic-harness` が正本。本体には `harness/` や Planner / Generator / Evaluator のagentsを同梱しない。
 - `/Users/taisei/workspace/agentic-harness` と `~/workspace/agentic-harness` は、**読み取りを含む全面接触禁止**。
   編集、存在確認、一覧、status / HEAD / branch / remote 確認、checkout / switch、commit、生成物作成、
   複製元利用、symlink 経由、当該 checkout を対象にしたコマンド実行を行わない。
@@ -36,5 +36,5 @@ Claude Codeを使う一般の非エンジニア向けAI秘書プラグイン
 
 ## 報告
 
-既定は「やったこと／結果／次に何が起きるか」の3行。一般的な技術用語はそのまま使い、
-馴染みの薄い語だけ初出で短く補足する。過度な平易化や幼稚なメタファーは使わない。
+既定は「実行内容／結果／証跡／残余リスク／次の操作」。正式なコマンド、path、API名、エラー名を保持し、
+検証していない事実は `unverified` または `external-live-gate-unavailable` と明記する。

@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "hostId": "claude-code-desktop-app",
+  "surface": "app",
+  "family": "claude-code",
+  "distribution": {
+    "kind": "claude-plugin-marketplace",
+    "marketplaceManifest": ".claude-plugin/marketplace.json",
+    "pluginManifest": "plugins/secretary/.claude-plugin/plugin.json",
+    "pluginRoot": "plugins/secretary"
+  },
+  "skillDiscovery": "claude-plugin-manifest",
+  "structuredQuestions": "host-native-if-available",
+  "browserVerification": "desktop-app-embedded-browser",
+  "installGuide": "adapters/claude-code-desktop-app/README.md",
+  "runner": "scripts/agentic-live-host-gate.mjs",
+  "officialValidator": "claude plugin validate plugins/secretary",
+  "liveStatus": "external-live-gate-unavailable"
+}

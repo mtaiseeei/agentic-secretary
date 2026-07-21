@@ -1,7 +1,7 @@
 ---
 name: update
 description: >
-  yasashii-secretaryの更新状況を読み取り専用で診断し、明示確認後だけ安全に更新する。
+  agentic-secretaryの更新状況を読み取り専用で診断し、明示確認後だけ安全に更新する。
   「最新版にして」「更新ある？」「更新を再開」「バージョンを確認して」「自動更新はどうする？」で呼び出せる。
 trigger: /update
 ---
@@ -56,8 +56,8 @@ commit不能のいずれかなら止めます。拒否、キャンセル、曖�
 node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" start --workspace . --current-plugin-root "${CLAUDE_PLUGIN_ROOT}" --consent update-approved --scope user
 ```
 
-Claude Codeの公式更新経路は `claude plugin marketplace update yasashii-secretary` と
-`claude plugin update yasashii-secretary@yasashii-secretary --scope user` です。実装はshell文字列を組み立てず、
+Claude Codeの公式更新経路は `claude plugin marketplace update agentic-secretary` と
+`claude plugin update agentic-secretary@agentic-secretary --scope user` です。実装はshell文字列を組み立てず、
 固定された引数だけを渡します。実行後はClaude Codeの /reload-plugins が必要です。reloadは新しいpluginのskill・scriptへ
 切り替えるためで、workspace migrationはまだ始まりません。
 
@@ -67,7 +67,7 @@ plugin更新だけが失敗した場合は、原因を確認後、既存の保�
 node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" retry-plugin --workspace .
 ```
 
-「やさしい秘書の更新を再開」と言われたら、新しい`${CLAUDE_PLUGIN_ROOT}`でversionと再開情報を確認し、dry-runだけを実行します。
+「agentic-secretaryの更新を再開」と言われたら、新しい`${CLAUDE_PLUGIN_ROOT}`でversionと再開情報を確認し、dry-runだけを実行します。
 
 ```text
 node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" resume --workspace . --plugin-root "${CLAUDE_PLUGIN_ROOT}"

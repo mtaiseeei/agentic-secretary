@@ -5,7 +5,7 @@
     "safety",
     "evidence",
     "common-language",
-    "yasashii-style"
+    "agentic-style"
   ],
   "rules": {
     "evidence": {
@@ -30,16 +30,16 @@
         "evidence"
       ]
     },
-    "yasashii-style": {
-      "path": "styles/yasashii.md",
-      "owner": "yasashii-overlay",
+    "agentic-style": {
+      "path": "styles/agentic.md",
+      "owner": "agentic-edition",
       "protected": false,
       "dependencies": [
         "evidence",
         "safety",
         "common-language"
       ],
-      "copy": "copy/yasashii.json",
+      "copy": "copy/agentic.json",
       "copySurfaces": [
         "conversation",
         "diagnosis",

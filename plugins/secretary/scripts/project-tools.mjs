@@ -558,7 +558,7 @@ function cmdDevPointer(argv) {
   const root = secretaryRoot(sec), name = validateName(rawName), day = dateNow();
   mutateProject(root, name, { create: true, journalMessage: `別repo開発プロジェクト「${name}」の参照ポインタを作成（参照: projects/${name}/PROJECT.md）` }, (stage) => {
     writeMarkdown(join(stage, "PROJECT.md"), `---\nstatus: active\nprojectType: development-pointer\ncreatedAt: ${day}\nupdatedAt: ${day}\n---\n\n# ${name}\n\n## 概要\n\n${overview}\n\n## 正本repo\n\n- 場所: ${repo}\n- 公開範囲: ${visibility}\n- 最初に読むファイル: ${entry}\n\n## 現在の状態（${day}確認）\n\n${current}\n\n> 実装仕様、判断ログ、Sprint状態、コード、成果物の正本は上記repoです。このworkspaceには複製しません。\n`);
-    writeMarkdown(join(stage, "AGENTS.md"), `# ${name} 開発プロジェクト参照\n\n- 正本repo: ${repo}\n- 公開範囲: ${visibility}\n- 最初に読むファイル: ${entry}\n- workspace側では実装仕様、判断、進行状態、コード、成果物を編集・複製しない。\n- 開発作業は正本repoで \`harness@yasashii-harness\` の Planner → Generator → Evaluator に従う。\n`);
+    writeMarkdown(join(stage, "AGENTS.md"), `# ${name} 開発プロジェクト参照\n\n- 正本repo: ${repo}\n- 公開範囲: ${visibility}\n- 最初に読むファイル: ${entry}\n- workspace側では実装仕様、判断、進行状態、コード、成果物を編集・複製しない。\n- 開発作業は正本repoで \`harness@agentic-harness\` の Planner → Generator → Evaluator に従う。\n`);
   });
   console.log(`別repo開発PJの参照ポインタを作成しました: projects/${name}/PROJECT.md`);
 }

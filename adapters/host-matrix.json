@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "edition": "agentic-secretary",
+  "requiredHosts": [
+    "claude-code-desktop-app",
+    "claude-code-cli",
+    "codex-app",
+    "codex-cli"
+  ],
+  "requiredChecks": [
+    "distribution-format",
+    "fresh-install",
+    "rules-and-skills",
+    "basic-and-complex-conversation",
+    "completion-and-status-report",
+    "diagnosis-and-developer-handoff",
+    "wizard-launch",
+    "workspace-boundary",
+    "secret-non-exposure",
+    "update-path-or-safe-unsupported",
+    "host-regression",
+    "live-or-official-validator-evidence"
+  ],
+  "hosts": [
+    {
+      "id": "claude-code-desktop-app",
+      "label": "Claude Code Desktop App",
+      "surface": "app",
+      "adapter": "adapters/claude-code-desktop-app/adapter.json"
+    },
+    {
+      "id": "claude-code-cli",
+      "label": "Claude Code CLI",
+      "surface": "cli",
+      "adapter": "adapters/claude-code-cli/adapter.json"
+    },
+    {
+      "id": "codex-app",
+      "label": "Codex App",
+      "surface": "app",
+      "adapter": "adapters/codex-app/adapter.json"
+    },
+    {
+      "id": "codex-cli",
+      "label": "Codex CLI",
+      "surface": "cli",
+      "adapter": "adapters/codex-cli/adapter.json"
+    }
+  ]
+}

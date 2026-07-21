@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "hostId": "codex-cli",
+  "surface": "cli",
+  "family": "codex",
+  "distribution": {
+    "kind": "codex-agents-skills-config",
+    "guidance": "adapters/codex-common/AGENTS.md",
+    "configTemplate": "adapters/codex-common/config.toml.example",
+    "skillsRoot": "plugins/secretary/skills",
+    "pluginRoot": "plugins/secretary"
+  },
+  "skillDiscovery": "codex-skills",
+  "structuredQuestions": "host-native-if-available",
+  "browserVerification": "playwright-or-loopback-browser",
+  "installGuide": "adapters/codex-cli/README.md",
+  "runner": "scripts/agentic-live-host-gate.mjs",
+  "officialValidator": null,
+  "liveStatus": "external-live-gate-unavailable"
+}

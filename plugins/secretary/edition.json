@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "edition": "yasashii-secretary",
+  "edition": "agentic-secretary",
   "distribution": {
-    "pluginId": "yasashii-secretary@yasashii-secretary",
-    "marketplaceId": "yasashii-secretary",
-    "repository": "https://github.com/mtaiseeei/yasashii-secretary",
-    "marketplaceUrl": "https://raw.githubusercontent.com/mtaiseeei/yasashii-secretary/main/.claude-plugin/marketplace.json",
-    "changelogUrl": "https://raw.githubusercontent.com/mtaiseeei/yasashii-secretary/main/plugins/yasashii-secretary/CHANGELOG.md"
+    "pluginId": "agentic-secretary@agentic-secretary",
+    "marketplaceId": "agentic-secretary",
+    "repository": "https://github.com/mtaiseeei/agentic-secretary",
+    "marketplaceUrl": "https://raw.githubusercontent.com/mtaiseeei/agentic-secretary/main/.claude-plugin/marketplace.json",
+    "changelogUrl": "https://raw.githubusercontent.com/mtaiseeei/agentic-secretary/main/plugins/secretary/CHANGELOG.md"
   },
   "update": {
     "ledgerPath": ".secretary/update-ledger.json",
     "legacyLedgerPaths": [
       ".yasashii-secretary/update-ledger.json"
     ],
-    "sessionDirectory": "secretary-update",
+    "sessionDirectory": "agentic-secretary-update",
     "legacySessionDirectories": [
       "yasashii-secretary-update"
     ],
@@ -42,12 +42,12 @@
     ]
   },
   "harness": {
-    "marketplace": "yasashii-harness",
+    "marketplace": "agentic-harness",
     "plugin": "harness",
-    "installId": "harness@yasashii-harness"
+    "installId": "harness@agentic-harness"
   },
   "copy": {
-    "path": "rules/copy/yasashii.json",
+    "path": "rules/copy/agentic.json",
     "surfaces": [
       "conversation",
       "diagnosis",

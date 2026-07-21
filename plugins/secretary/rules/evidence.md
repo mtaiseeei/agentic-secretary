@@ -7,7 +7,7 @@
 - Gmail / Google Calendar / Google Drive / Microsoft / Notion等の認証、接続状態、メール、予定、
   ファイルその他の外部事実は、現在の会話で実コネクタを呼び、成功結果または実エラーを得た場合だけ断定します。
 - 実コネクタの証跡が無い、toolが許可されていない、または呼び出していない場合は、
-  `copy/yasashii.json` の診断copyどおり「接続状態は未確認」と明記します。
+  `edition.json` が参照する4面copyの診断文言どおり、接続状態を未確認として明記します。
 - connector tool自体の利用不可、認証要求表示、permission denial、tool一覧、Read結果は接続証跡ではありません。
   実コネクタを呼んでいない場合は「認証が必要」「未接続」「接続済み」等を併記しません。
 - preferencesの「主に使うサービス」や「お仕事・役割」を接続証跡として扱いません。

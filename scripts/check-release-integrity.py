@@ -12,9 +12,9 @@ from pathlib import Path
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\](?: - \d{4}-\d{2}-\d{2})?$", re.M)
 REQUIRED = ["対象者", "変わること", "設定・ファイルへの影響", "必要な操作", "互換性上の注意"]
-PLUGIN_NAME = "yasashii-secretary"
+PLUGIN_NAME = "agentic-secretary"
 PLUGIN_SOURCE = "./plugins/secretary"
-REPOSITORY = "https://github.com/mtaiseeei/yasashii-secretary"
+REPOSITORY = "https://github.com/mtaiseeei/agentic-secretary"
 FORKED_FROM = "https://github.com/Shin-sibainu/cc-company"
 AUTHOR = "mtaiseeei"
 
@@ -52,7 +52,7 @@ def validate(root: Path) -> list[str]:
     if market.get("owner") != {"name": AUTHOR}:
         errors.append("marketplace owner is missing or invalid")
     if len(entries) != 1:
-        errors.append("marketplace must contain exactly one yasashii-secretary entry")
+        errors.append(f"marketplace must contain exactly one {PLUGIN_NAME} entry")
     else:
         entry = entries[0]
         if entry.get("source") != PLUGIN_SOURCE:

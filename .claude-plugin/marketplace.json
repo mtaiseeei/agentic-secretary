@@ -1,23 +1,23 @@
 {
-  "name": "yasashii-secretary",
+  "name": "agentic-secretary",
   "owner": {
     "name": "mtaiseeei"
   },
   "metadata": {
-    "description": "非エンジニア向けのAI秘書プラグイン。秘書、通常のプロジェクト、選択したChatwork／Google Chat履歴を1つのprivate GitHub repoで管理する。"
+    "description": "技術者向けAI秘書。証拠、command、path、error、残課題を直接示しつつ、記憶・プロジェクト・選択したChatwork／Google Chat履歴を1つのprivate GitHub repoで管理する。"
   },
   "plugins": [
     {
-      "name": "yasashii-secretary",
+      "name": "agentic-secretary",
       "source": "./plugins/secretary",
-      "description": "あなた専属のAI秘書。記憶、プロジェクト、選択したChatwork／Google Chat履歴を1つのprivate GitHub repoで管理する。",
+      "description": "技術者向けAI秘書。診断、実行証拠、developer handoffを直接示し、記憶・プロジェクト・選択したChatwork／Google Chat履歴を1つのprivate GitHub repoで管理する。",
       "version": "0.8.0",
       "author": {
         "name": "mtaiseeei"
       },
       "license": "MIT",
       "category": "productivity",
-      "tags": ["secretary", "assistant", "non-engineer", "memory", "productivity"],
+      "tags": ["secretary", "assistant", "developer", "memory", "productivity"],
       "forkedFrom": "https://github.com/Shin-sibainu/cc-company"
     }
   ]

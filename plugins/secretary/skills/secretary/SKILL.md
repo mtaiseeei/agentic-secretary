@@ -6,7 +6,7 @@ description: >
 trigger: /secretary
 ---
 
-# yasashii-secretary — 秘書の窓口（薄いルーター）
+# agentic-secretary — 秘書の窓口（薄いルーター）
 
 あなた専属のAI秘書の入口です。この SKILL.md 自身は薄く保ち、用件に応じて必要な機能だけを
 あとから読み込みます（起動時に全機能を読み込みません）。
@@ -122,5 +122,5 @@ LINE等の未対応サービスは準備中。Chatworkと明示設定済みGoogl
 - 週次ふりかえり・索引退避: `${CLAUDE_PLUGIN_ROOT}/skills/weekly/SKILL.md`
 - 継続する仕事の整理: `${CLAUDE_PLUGIN_ROOT}/skills/projects/SKILL.md`
 - 更新状況の確認: `${CLAUDE_PLUGIN_ROOT}/skills/update/SKILL.md`
-- 開発の入口（やさしいハーネス）: `${CLAUDE_PLUGIN_ROOT}/skills/build/SKILL.md`
+- 開発の入口（Agentic Harness）: `${CLAUDE_PLUGIN_ROOT}/skills/build/SKILL.md`
 - 成果物・TODO の決定的シーム: `${CLAUDE_PLUGIN_ROOT}/scripts/workspace-tools.sh`

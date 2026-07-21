@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "surfaces": {
+    "conversation": {
+      "decisionConfirmation": "Record this decision verbatim: <そのターンのユーザー入力全文>",
+      "topicConfirmation": "Record this confirmed context: <確認済みの要点>",
+      "projectSuggestion": "This work spans multiple actions or sessions. Track it as a project?"
+    },
+    "diagnosis": {
+      "unverifiedConnection": "UNVERIFIED: connection state",
+      "failureOrder": [
+        "error / observed behavior",
+        "reproduction command and path",
+        "impact",
+        "next action"
+      ],
+      "latestUnverified": "UNVERIFIED: latest version could not be resolved"
+    },
+    "report": {
+      "shortLines": [
+        "technical summary: <what changed>",
+        "evidence: <commands, paths, results>",
+        "remaining work: <open risks or next implementation decision>"
+      ],
+      "detailedSuffix": "implementation notes: <additional technical detail>"
+    },
+    "developerHandoff": {
+      "order": [
+        "observed behavior and impact",
+        "reproduction command",
+        "relevant paths and error",
+        "evidence",
+        "remaining hypothesis or fix boundary"
+      ],
+      "guidance": "Provide copy-pasteable commands, exact paths, observed output, and unresolved assumptions. Separate facts from inference."
+    }
+  }
+}

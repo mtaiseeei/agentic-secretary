@@ -153,7 +153,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs create-dev-pointer <secreta
 ```
 
 このコマンドはrepoやremoteを作成・変更しない。workspace側に実装仕様、判断ログ、Sprint状態、コード、
-成果物を複製しない。実作業は正本repoと `harness@yasashii-harness` の導線で行う。
+成果物を複製しない。実作業は正本repoと `harness@agentic-harness` の導線で行う。
 
 ## 成功時だけ残す記録
 

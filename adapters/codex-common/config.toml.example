@@ -1,0 +1,7 @@
+# Optional project-local pointer used by the install plan. Merge deliberately; do not overwrite an
+# existing user config.toml. Codex skills remain in the official skills discovery surface.
+
+[agentic_secretary]
+edition = "agentic-secretary"
+plugin_root = "<ABSOLUTE_REPOSITORY_PATH>/plugins/secretary"
+rules_entrypoint = "<ABSOLUTE_REPOSITORY_PATH>/plugins/secretary/rules/plain-language.md"

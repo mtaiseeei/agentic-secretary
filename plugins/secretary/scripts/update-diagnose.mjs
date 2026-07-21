@@ -157,7 +157,7 @@ export async function latestRelease(args, { fetchImpl = fetch, config = null } =
       return { version: null, reason: "public配布repoへ接続できず、最新版を確認できませんでした。" };
     }
   }
-  const version = marketplaceVersion(manifest, config?.distribution?.marketplaceId || "yasashii-secretary");
+  const version = marketplaceVersion(manifest, config?.distribution?.marketplaceId);
   const parsed = parseChangelog(changelog);
   if (!version || !parsed.releases.has(version) || parsed.duplicates.has(version) || !completeRelease(parsed.releases.get(version))) {
     return { version: null, reason: "配布versionとCHANGELOGの対応を確認できないため、最新版とは判断しません。" };
@@ -298,7 +298,7 @@ function renderText(result) {
     `選択結果: ${result.selectedOutcome}`,
     "選べること: 今回は確認だけ / 今回は見送る / 中止 / 実更新へ進む",
     "実更新へ進む場合: この読み取り専用診断とは別の最終確認へ進みます。対象、保護commit、pushしないこと、戻し方を確認するまでは変更しません。",
-    "自動更新: Claude Codeの /plugin → Marketplaces → yasashii-secretary から利用者自身で有効化できます。第三者marketplaceは既定で無効です。診断では設定を変更しません。",
+    `自動更新: Claude Codeの /plugin → Marketplaces → ${result.marketplaceId} から利用者自身で有効化できます。第三者marketplaceは既定で無効です。診断では設定を変更しません。`,
     "注意: pluginが自動更新されても、workspaceへコピー済みのファイルは別管理のため自動では置き換わりません。",
   ].join("\n");
 }
@@ -345,6 +345,7 @@ async function main() {
     : notNewerReason(status, current, latest.version);
   const result = {
     mode: "diagnosis-read-only",
+    marketplaceId: editionConfig.distribution.marketplaceId,
     selectedOutcome: selectedChoice === "proceed-update"
       ? !updateAllowed
         ? `${blockedReason ?? "安全に更新可能な新版を確認できないため実更新へ進めません。"} 変更せず停止しました`

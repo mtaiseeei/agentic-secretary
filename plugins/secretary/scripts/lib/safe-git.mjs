@@ -398,7 +398,7 @@ export function commitOwnedChanges({ root, ownedPaths, message, afterScan = null
   if (!String(message || "").trim()) throw new GitSafetyError("message-required", "commitメッセージが必要です。");
 
   const oldHead = head(normalizedRoot);
-  const temporary = mkdtempSync(join(tmpdir(), "yasashii-safe-git-"));
+  const temporary = mkdtempSync(join(tmpdir(), "secretary-safe-git-"));
   const indexFile = join(temporary, "index");
   const hooksDirectory = join(temporary, "hooks");
   mkdirSync(hooksDirectory);

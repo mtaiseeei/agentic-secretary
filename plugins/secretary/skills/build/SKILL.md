@@ -2,14 +2,14 @@
 name: build
 description: >
   「〇〇を作って」「開発したい」「アプリ／ツールにして」等のまとまった開発依頼の入口。
-  別プラグイン yasashii-harness の導入状態を確認し、未導入なら3コマンドを案内、導入済みなら
+  別プラグイン Agentic Harness の導入状態を確認し、未導入なら3コマンドを案内、導入済みなら
   Planner → Generator → Evaluator のループへ接続する。
 ---
 
 # 開発の入口（build）
 
 「〇〇を作って」「これを実装して」「アプリ／ツールにしたい」といった、まとまった開発依頼を受け取る入口です。
-開発そのものは別リポジトリ [mtaiseeei/yasashii-harness](https://github.com/mtaiseeei/yasashii-harness) の
+開発そのものは別リポジトリ [mtaiseeei/agentic-harness](https://github.com/mtaiseeei/agentic-harness) の
 `harness` プラグインが担当します。この秘書プラグインにハーネスやagentsのコピーは同梱しません。
 
 `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
@@ -30,11 +30,11 @@ description: >
 何を入れるかを先に一言で説明してから、Claude Codeで上から順に実行してもらいます。
 
 ```text
-# 1. やさしいハーネスの配布元を登録する
-/plugin marketplace add mtaiseeei/yasashii-harness
+# 1. Agentic Harnessの配布元を登録する
+/plugin marketplace add mtaiseeei/agentic-harness
 
 # 2. harness プラグインを入れる
-/plugin install harness@yasashii-harness
+/plugin install harness@agentic-harness
 
 # 3. 作りたいものを伝えて開始する
 /harness <作りたいもの>
@@ -51,8 +51,8 @@ description: >
 - **Generator（実装）**: Current IDの1 Sprintだけを実装し、回帰チェックを増やす。
 - **Evaluator（検証）**: Generatorと分離した立場で実物を動かし、証跡つきで合否を判定する。
 
-進行は「計画→実装→検証」のどこにいるかを示します。Generatorの自己評価だけで完了にせず、
-Evaluatorの合格と状態記録まで行います。やさしさを理由に、役割分離、評価閾値、回帰ゼロ許容は緩めません。
+進行はPlanner → Generator → Evaluatorのどこにいるかを示します。Generatorの自己評価だけで完了にせず、
+Evaluatorの合格と状態記録まで行います。役割分離、評価閾値、回帰ゼロ許容は緩めません。
 
 ## 4. 別repoを正本にする開発プロジェクト
 
@@ -69,5 +69,5 @@ Harness管理下かどうかを確認し、管理下なら `state.md` と契約�
 ## 参照
 
 - 言葉づかいルール: `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md`
-- やさしいハーネス: `https://github.com/mtaiseeei/yasashii-harness`
+- Agentic Harness: `https://github.com/mtaiseeei/agentic-harness`
 - 導入後の入口: `using-harness` / `harness-loop` / **/harness**
