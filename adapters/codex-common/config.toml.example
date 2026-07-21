@@ -1,5 +1,6 @@
-# Optional project-local pointer used by the install plan. Merge deliberately; do not overwrite an
-# existing user config.toml. Codex skills remain in the official skills discovery surface.
+# Optional fallback pointer for repository-local authoring and isolated tests. The formal shared
+# distribution uses the Codex plugin manifest and repository marketplace; this file is not required
+# for a normal installation. Merge deliberately and never overwrite an existing user config.toml.
 
 [agentic_secretary]
 edition = "agentic-secretary"

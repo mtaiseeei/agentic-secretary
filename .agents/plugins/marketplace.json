@@ -1,0 +1,20 @@
+{
+  "name": "agentic-secretary",
+  "interface": {
+    "displayName": "Agentic Secretary"
+  },
+  "plugins": [
+    {
+      "name": "agentic-secretary",
+      "source": {
+        "source": "local",
+        "path": "./plugins/secretary"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

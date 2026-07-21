@@ -9,8 +9,8 @@
 - Common plugin path: `plugins/secretary/`
 - Release candidate: `0.8.0`
 
-The local repository was reconstructed from a verified complete Git bundle at the neutralization
-commit. No history was squashed. No remote is configured in the local repository.
+The local repository retains the complete history from the neutralization commit. No history was
+squashed. Its approved `origin` is `https://github.com/mtaiseeei/agentic-secretary.git`.
 
 ## Upstream / downstream relationship
 
@@ -38,13 +38,13 @@ and validator metadata live under `adapters/`.
 | Operation | Status | Side effect if later approved |
 |---|---|---|
 | local directory and Git history | completed locally | local files and commits under the approved directory |
-| GitHub repository creation | not executed | creates `mtaiseeei/agentic-secretary` |
-| remote add/change | not executed | changes local Git transport destination |
-| push | not executed | publishes local commits to GitHub |
+| GitHub repository creation | completed as private | repository exists; public setting remains forbidden |
+| remote add/change | completed for approved `origin` | later changes still require approval |
+| push | completed through the recorded baseline | later commits remain local until separately approved |
 | Claude Code Desktop App install | `external-live-gate-unavailable` | changes installed plugin state |
 | Claude Code CLI install | `external-live-gate-unavailable` | changes installed plugin state |
-| Codex App install | `external-live-gate-unavailable` | changes Codex skills / guidance state |
-| Codex CLI install | `external-live-gate-unavailable` | changes Codex skills / guidance state |
+| Codex App install | `external-live-gate-unavailable` | changes installed Codex plugin state |
+| Codex CLI install | `external-live-gate-unavailable` | changes installed Codex plugin state |
 | public setting | not executed | makes the future repository publicly visible |
 | release publication | not executed; Sprint 035 only | publishes a release artifact |
 

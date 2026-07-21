@@ -1,7 +1,7 @@
-# yasashii-secretary の使い方（公開向けガイド）
+# agentic-secretary の使い方（公開向けガイド）
 
-非エンジニア向けの使い方ドキュメントです。まず [README](../../README.md) の「まず使ってみる」を読んでから、
-くわしく知りたいところをこのガイドで見てください。
+技術者・AI活用に慣れた利用者向けの使い方ドキュメントです。まず [README](../../README.md) の
+host別install手順を読み、必要な詳細をこのガイドで確認してください。
 
 > このフォルダ（`docs/guide/`）は**使う人向け**です。
 > リポジトリの設計・開発の内部ドキュメント（`docs/spec` / `docs/sprints` / `docs/progress` / `docs/feedback`）

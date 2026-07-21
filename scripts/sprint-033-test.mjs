@@ -174,6 +174,21 @@ check("distribution identity and candidate version are agentic-secretary 0.8.0",
   assert.equal(edition.copy.path, "rules/copy/agentic.json");
 });
 
+check("Codex formal manifest and repository marketplace share the canonical skills tree", () => {
+  const codexMarketplace = json(join(root, ".agents/plugins/marketplace.json"));
+  const codexManifest = json(join(pluginRoot, ".codex-plugin/plugin.json"));
+  assert.equal(codexMarketplace.name, "agentic-secretary");
+  assert.equal(codexMarketplace.plugins.length, 1);
+  assert.deepEqual(codexMarketplace.plugins[0].source, { source: "local", path: "./plugins/secretary" });
+  assert.deepEqual(codexMarketplace.plugins[0].policy, { installation: "AVAILABLE", authentication: "ON_INSTALL" });
+  assert.equal(codexMarketplace.plugins[0].category, "Productivity");
+  assert.equal(codexManifest.name, "agentic-secretary");
+  assert.equal(codexManifest.version, "0.8.0");
+  assert.equal(codexManifest.skills, "./skills/");
+  assert.equal(walk(join(pluginRoot, "skills")).filter((path) => path.endsWith("/SKILL.md")).length, 15);
+  assert(!existsSync(join(root, ".agents/skills")));
+});
+
 check("technical copy is limited to the four edition surfaces", () => {
   const copy = json(join(pluginRoot, "rules/copy/agentic.json"));
   assert.deepEqual(Object.keys(copy.surfaces).sort(), ["conversation", "developerHandoff", "diagnosis", "report"]);
@@ -550,7 +565,9 @@ check("host adapters do not duplicate plugin core", () => {
 check("active distribution surfaces have no opposite-edition identity", () => {
   const active = [
     ".claude-plugin/marketplace.json",
+    ".agents/plugins/marketplace.json",
     "plugins/secretary/.claude-plugin/plugin.json",
+    "plugins/secretary/.codex-plugin/plugin.json",
     "plugins/secretary/rules/plain-language.md",
     "plugins/secretary/rules/rule-manifest.json",
     "plugins/secretary/rules/styles/agentic.md",

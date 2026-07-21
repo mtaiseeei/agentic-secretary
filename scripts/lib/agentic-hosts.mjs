@@ -338,7 +338,16 @@ export function loadHostMatrix(rootValue) {
         if (!existsSync(join(root, path))) throw new Error(`Claude adapter ${item.id} missing ${path}`);
       }
     } else if (adapter.family === "codex") {
-      for (const path of [adapter.distribution.guidance, adapter.distribution.configTemplate, adapter.distribution.skillsRoot]) {
+      if (adapter.distribution.kind !== "codex-plugin-marketplace") {
+        throw new Error(`Codex adapter ${item.id} must use the formal plugin marketplace`);
+      }
+      for (const path of [
+        adapter.distribution.marketplaceManifest,
+        adapter.distribution.pluginManifest,
+        adapter.distribution.skillsRoot,
+        adapter.distribution.fallbackGuidance,
+        adapter.distribution.fallbackConfigTemplate,
+      ]) {
         if (!existsSync(join(root, path))) throw new Error(`Codex adapter ${item.id} missing ${path}`);
       }
       if (adapter.officialValidator !== null) throw new Error(`Codex adapter ${item.id} invents an official validator`);

@@ -1,55 +1,78 @@
-# はじめ方（インストールと初回体験）
+# はじめ方（インストールと初回セットアップ）
 
-## インストール（3コマンド）
+`agentic-secretary` はClaude CodeとCodexの両方で使えます。どのhostでも、install後は新しいchat／sessionを
+開始してから秘書を呼び出します。
 
-Claude Code で、上から順に実行します。各コマンドの前に「今から何をするか」を書いています。
+## Claude Code Desktop App／CLI
+
+Claude Codeで次を上から順に実行します。
 
 ```text
-# 1. このプラグインの配布元を登録する
-/plugin marketplace add mtaiseeei/yasashii-secretary
+# 1. 配布元を登録する
+/plugin marketplace add mtaiseeei/agentic-secretary
 
-# 2. yasashii-secretary プラグインを入れる
-/plugin install yasashii-secretary@yasashii-secretary
+# 2. pluginをinstallする
+/plugin install agentic-secretary@agentic-secretary
 
-# 3. 秘書を呼ぶ（初回はセットアップが始まります）
+# 3. 新しいsessionで秘書を呼ぶ
 /secretary
 ```
 
-## 初回のセットアップ（やさしい数問）
+Desktop AppでもCLIでも `.claude-plugin` の正式manifest／marketplaceを使います。
 
-初めて `/secretary` を実行すると、次のような**やさしい数問**だけ聞かれます。
+## Codex App
 
-1. **呼び方**: あなたを何とお呼びすればよいか（決めていなければ「おまかせ」でも大丈夫）。
-2. **主に使うサービス**: Google／Microsoft／まだ決めていない、から選ぶ（あとで変えられます）。
-3. **任せたいこと**: 今日やることの整理／調べもの・下書き／記憶の管理 など（複数OK）。
+1. Plugins Directoryで `agentic-secretary` marketplaceを追加または選択します。
+2. plugin detailsから `agentic-secretary` をinstallします。
+3. 新しいchatを開始します。
+4. `$secretary` または「初回セットアップを始めて」のような自然な依頼で呼び出します。
 
-答えると、いまいるフォルダの中に**秘書ディレクトリ**（`secretary/`）ができます。中にはこんなものが入ります。
+## Codex CLI
 
+Codex CLI 0.144.6で確認した主導線です。
+
+```bash
+# 1. GitHub repositoryをmarketplace sourceとして登録する
+codex plugin marketplace add mtaiseeei/agentic-secretary --ref main
+
+# 2. marketplaceからpluginをinstallする
+codex plugin add agentic-secretary@agentic-secretary
+
+# 3. installed stateを確認する
+codex plugin list --marketplace agentic-secretary
 ```
+
+続いて新しいCLI sessionを開始し、`$secretary` または自然な依頼で呼び出します。`/plugins` browserから
+同じmarketplaceを選んでinstall／enableする方法もあります。
+
+`AGENTS.md`、skills手動コピー、`config.toml` はrepository-localの開発・隔離test・fallback用です。
+正式なCodex plugin導入の代わりにはなりません。
+
+## 初回セットアップ
+
+最初に秘書を呼ぶと、呼び方、主に使うサービス、任せたいこと、役割、報告の詳しさを確認します。
+回答後、現在のworkspaceに次の共通構造を作ります。
+
+```text
 secretary/
-├── AGENTS.md      ← 秘書への指示（守るルール）
-├── CLAUDE.md      ← AGENTS.md への案内
-├── inbox/         ← 走り書き・TODO
-├── docs/          ← できあがった文書の置き場
-├── projects/      ← 進行中の案件
-└── memory/        ← 記憶（目次・決めたこと・好み）
+├── AGENTS.md
+├── CLAUDE.md
+├── inbox/
+├── docs/
+├── projects/
+└── memory/
 ```
 
-最後に、1つの非公開のGitHubリポジトリを作り、最初のコミットと初回pushまで進めます。既存remoteがある場合は、別のリポジトリを作る前に現在のリポジトリを使うか確認します。Chatwork／Google Chatは、あとから選んだ対象だけをこのリポジトリへ保存します。
+最後に1つのprivate GitHub repositoryを作り、最初のcommitとpushまで進めます。既存remoteがある場合は、
+別repositoryを作る前に現在のrepositoryを使うか確認します。Chatwork／Google Chatは、あとから選んだ対象だけを
+このprivate repositoryへ保存します。
 
-## つぎの一歩
+セットアップ後は、次のように依頼できます。
 
-セットアップが終わったら、ふつうに話しかけるだけです。例:
-
-- 「今日やることを教えて」
-- 「〇〇を覚えておいて」／「前回の続き」
-- 「Google につなぎたい」
+- 「今日やることを整理して、判断材料も示して」
+- 「このerrorを診断して、commandとpathを含むhandoffにして」
 - 「Chatworkにつなぎたい」または `/chatwork`
-- 「〇〇を作って」（開発）
+- 「Google Chatにつなぎたい」または `/google-chat`
 
-うまくいかないときは、秘書が「何が起きて・どうすれば直るか」を日常語で案内します（英語のエラーはそのまま出しません）。
-
-## 作り直したいとき（保護あり）
-
-すでに秘書ディレクトリがある状態で「もう一度セットアップ」「作り直したい」と言うと、
-**いきなり作り直さず**、バックアップの提案と確認をしてから進めます。今の記憶を無確認で上書きすることはありません。
+既存の `secretary/` がある状態で作り直す場合は、いきなり上書きしません。現在のedition、ledger、
+workspace状態を診断し、保護と確認を行ってから進めます。

@@ -1,0 +1,38 @@
+{
+  "name": "agentic-secretary",
+  "version": "0.8.0",
+  "description": "技術者向けAI秘書。証拠、command、path、error、残課題を直接示しつつ、記憶・プロジェクト・選択したチャット履歴を安全に管理します。",
+  "author": {
+    "name": "mtaiseeei",
+    "url": "https://github.com/mtaiseeei"
+  },
+  "homepage": "https://github.com/mtaiseeei/agentic-secretary",
+  "repository": "https://github.com/mtaiseeei/agentic-secretary",
+  "license": "MIT",
+  "keywords": [
+    "secretary",
+    "assistant",
+    "developer",
+    "memory",
+    "productivity"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agentic Secretary",
+    "shortDescription": "証拠と次の判断を直接示す技術者向けAI秘書",
+    "longDescription": "記憶、一般プロジェクト、選択したChatworkルームとGoogle Chatスペースを、共通の安全境界を守りながら1つのprivate workspaceで管理します。",
+    "developerName": "mtaiseeei",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/mtaiseeei/agentic-secretary",
+    "defaultPrompt": [
+      "今日やることを整理して、判断材料と次の行動を示して。",
+      "このエラーを診断し、command・path・再現条件をまとめて。",
+      "この作業結果をdeveloper handoffとして整理して。"
+    ],
+    "brandColor": "#2563EB"
+  }
+}

@@ -20,7 +20,8 @@ const skills = readdirSync(skillsRoot, { withFileTypes: true })
   .sort();
 const plan = {
   schemaVersion: 1,
-  mode: "read-only-plan",
+  mode: "fallback-read-only-plan",
+  warning: "Fallback only. The formal distribution uses .codex-plugin/plugin.json and .agents/plugins/marketplace.json.",
   hostId,
   repository: repo,
   pluginRoot: join(repo, "plugins/secretary"),
@@ -31,7 +32,7 @@ const plan = {
     source: join(skillsRoot, name),
     destination: `$CODEX_HOME/skills/${name}`,
   })),
-  applyStatus: "not-executed",
+  applyStatus: "not-executed-fallback",
   externalSideEffectsIfApproved: [
     "create or update entries under the selected Codex skills directory",
     "merge adapter guidance without overwriting existing AGENTS.md",
@@ -40,4 +41,4 @@ const plan = {
   ],
 };
 process.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
-process.stdout.write("PLAN_ONLY no Codex files or settings were changed\n");
+process.stdout.write("FALLBACK_PLAN_ONLY formal Codex plugin installation is preferred; no Codex files or settings were changed\n");

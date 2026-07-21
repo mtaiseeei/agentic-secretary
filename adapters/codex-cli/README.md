@@ -1,14 +1,27 @@
 # Codex CLI adapter
 
-Generate the install plan without changing the host:
+正式な配布面は、repo rootの `.agents/plugins/marketplace.json` と
+`plugins/secretary/.codex-plugin/plugin.json` です。Codex CLI 0.144.6で確認した新規導入は次の順序です。
 
 ```bash
-node scripts/agentic-codex-install-plan.mjs --host codex-cli --repo "$PWD"
+codex plugin marketplace add mtaiseeei/agentic-secretary --ref main
+codex plugin add agentic-secretary@agentic-secretary
+codex plugin list --marketplace agentic-secretary
 ```
 
-The plan uses Codex skills and `AGENTS.md`; it does not invent a Codex plugin marketplace. Applying
-the plan changes the selected Codex configuration and requires explicit approval. A real CLI runner
-must also prove the synthetic-HOME, digest-matched read-only-plugin, path-scoped permission,
-canary-denial, Bash-free minimal-tool, bounded-inspection, success/failure cleanup, and
-sanitized-evidence contracts. A sanitized self-report without runner-observed invariants is not a
-PASS. Status: `external-live-gate-unavailable`.
+install後は新しいCLI sessionを開始し、`$secretary` または自然な依頼で呼び出します。`/plugins` browserから
+同じmarketplaceを選んでinstall／enableすることもできます。
+
+Git marketplaceのsnapshotを更新するときは次を実行します。
+
+```bash
+codex plugin marketplace upgrade agentic-secretary
+codex plugin add agentic-secretary@agentic-secretary
+```
+
+現行hostにplugin単体の自動upgradeがあるとは主張しません。marketplace refreshと再installを分け、
+installed versionを確認してから新しいsessionを開始します。cache directoryは直接編集しません。
+
+`AGENTS.md`、skills手動コピー、`config.toml` はrepository-localのauthoring・隔離test・fallbackだけに使い、
+正式pluginのPASS根拠にはしません。実CLI導入はexternal live gateです。未実行の場合のstatusは
+`external-live-gate-unavailable` のままです。

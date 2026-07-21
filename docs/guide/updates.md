@@ -24,7 +24,7 @@
 
 ## 自動更新を使う場合
 
-2026年7月時点では、第三者marketplaceの自動更新は既定で無効です。使う場合は、利用者自身が
+Claude Codeでは、2026年7月時点で第三者marketplaceの自動更新は既定で無効です。使う場合は、利用者自身が
 `/plugin` → `Marketplaces` → 対象marketplace → `Enable auto-update` を選びます。
 診断がこの設定を変更することはありません。
 
@@ -33,6 +33,23 @@
 - [Claude Code: Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
 - [Claude Code: Discover and install plugins](https://code.claude.com/docs/en/discover-plugins)
 - [Claude Code: Plugins reference](https://code.claude.com/docs/en/plugins-reference)
+
+## Codexで更新する場合
+
+Git marketplaceの更新、installed plugin、cache、新しいchat／sessionへの反映は別の段階です。
+
+Codex CLIではmarketplace snapshotをrefreshしてから、現行hostで確認済みの再installを行います。
+
+```bash
+codex plugin marketplace upgrade agentic-secretary
+codex plugin add agentic-secretary@agentic-secretary
+codex plugin list --marketplace agentic-secretary
+```
+
+その後、新しいCLI sessionを開始します。現行hostにplugin単体の自動upgradeが存在するとは主張しません。
+Codex AppではPlugins Directoryに表示される実際の更新操作に従い、更新後に新しいchatを開始します。
+
+`~/.codex/plugins/cache/` はinstall結果です。直接編集せず、marketplace refreshとplugin install／reinstallを使います。
 
 ## 実更新へ進む場合
 
@@ -44,7 +61,7 @@
 1. 未commitの変更や資格情報らしき内容がないか確認する
 2. 更新直前の状態を、pushしないローカルcommitとして1件残す
 3. Claude Code公式のplugin更新経路を固定引数で実行する
-4. `/reload-plugins` 後に「やさしい秘書の更新を再開」と伝える
+4. `/reload-plugins` 後に「agentic-secretaryの更新を再開」と伝える
 5. migrationのdry-run（変更予定）を確認する
 6. もう一度了承した後だけworkspaceへ適用し、version・台帳・主要導線を検証する
 

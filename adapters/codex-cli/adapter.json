@@ -4,13 +4,15 @@
   "surface": "cli",
   "family": "codex",
   "distribution": {
-    "kind": "codex-agents-skills-config",
-    "guidance": "adapters/codex-common/AGENTS.md",
-    "configTemplate": "adapters/codex-common/config.toml.example",
+    "kind": "codex-plugin-marketplace",
+    "marketplaceManifest": ".agents/plugins/marketplace.json",
+    "pluginManifest": "plugins/secretary/.codex-plugin/plugin.json",
     "skillsRoot": "plugins/secretary/skills",
-    "pluginRoot": "plugins/secretary"
+    "pluginRoot": "plugins/secretary",
+    "fallbackGuidance": "adapters/codex-common/AGENTS.md",
+    "fallbackConfigTemplate": "adapters/codex-common/config.toml.example"
   },
-  "skillDiscovery": "codex-skills",
+  "skillDiscovery": "codex-plugin-bundled-skills",
   "structuredQuestions": "host-native-if-available",
   "browserVerification": "playwright-or-loopback-browser",
   "installGuide": "adapters/codex-cli/README.md",
