@@ -2,11 +2,13 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-033
+- Current ID: sprint-035
 - Retry Count: 0
+- Spec-Issue Count: 0
+- Lineage Dispatches: 0
 - Model Tier: standard
 - Rotate: none
-- Next Planned: sprint-034
+- Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
      ユーザー確認で単段クレジットに正本改訂、回帰assert強化のうえ合格）。
@@ -57,14 +59,17 @@
 | sprint-032 | done | [contract](sprint-032.md) | [progress](../progress/sprint-032.md) | [feedback](../feedback/sprint-032.md) |
 | sprint-032-patch-001 | done | [contract](sprint-032-patch-001.md) | [progress](../progress/sprint-032-patch-001.md) | [feedback](../feedback/sprint-032-patch-001.md) |
 | sprint-032-patch-002 | done | [contract](sprint-032-patch-002.md) | [progress](../progress/sprint-032-patch-002.md) | [feedback](../feedback/sprint-032-patch-002.md) |
-| sprint-033 | planned | [contract](sprint-033.md) | - | - |
-| sprint-034 | planned | [contract](sprint-034.md) | - | - |
-| sprint-035 | planned | [contract](sprint-035.md) | - | - |
+| sprint-033 | done | [contract](sprint-033.md) | [progress](../progress/sprint-033.md) | [feedback](../feedback/sprint-033.md) |
+| sprint-034 | superseded | [contract](sprint-034.md) | - | - |
+| sprint-035 | done-by-user-decision | [contract](sprint-035.md) | [progress](../progress/sprint-035.md) | [feedback](../feedback/sprint-035.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
+- sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-22: Repo分割前のオーケストレーター正本からSprint 033／035のprogress・feedbackを移管。Sprint 033はcandidate `4670438`の4ホスト実証を含む独立評価PASS、Sprint 034はYasashii下流所有としてsupersededに整理した。
+- 2026-07-22: 最終main `95247b6`で0.8.0の両manifest、host-neutral root、Codex正式配布、Sprint 033／035、archive、release integrityを重点再確認し0 FAIL。ユーザーが実OAuth・Google／Microsoft／Notion connector認証をRelease必須から外し、軽量確認での出荷を明示選択したため、Sprint 035を `done-by-user-decision` とする。未実施項目はfeedbackのexternal live gate記録を保持する。
 - 2026-07-16: sprint-008〜012 と `sprint-012-patch-001` はすべて独立Evaluator評価に合格。Next Planned は `TBD`。
 - 2026-07-16: single-repo Git-first + Chatwork 方針を承認。sprint-013を開始し、sprint-014を次に計画。
 - 2026-07-16: sprint-013 初回評価はimplementation-issueで不合格。wizardがBufferをJSON化して配信する欠陥と回帰不足をGeneratorへ差し戻し（Retry 1）。
