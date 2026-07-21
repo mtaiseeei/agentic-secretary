@@ -43,6 +43,7 @@
     "plugins/secretary/scripts/project-tools.mjs",
     "plugins/secretary/scripts/resolve-plugin-root.mjs",
     "plugins/secretary/scripts/update-diagnose.mjs",
+    "plugins/secretary/scripts/update-apply.mjs",
     "plugins/secretary/skills/build/SKILL.md",
     "plugins/secretary/skills/chatwork/SKILL.md",
     "plugins/secretary/skills/chatwork/scripts/wizard-server.mjs",
