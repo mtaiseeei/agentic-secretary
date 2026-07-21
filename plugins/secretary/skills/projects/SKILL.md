@@ -7,7 +7,20 @@ description: >
 
 # 継続する仕事を整理する（projects）
 
-`${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
+`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
 `secretary/memory/preferences.md` を先に読む。通常報告は独自に包装せず、最終出力形は同rule入口から解決される
 「最終応答serializer」だけを正本とする。
 
@@ -26,13 +39,13 @@ description: >
 判定の確認には、副作用のない次のコマンドを使える。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs candidate-check --multiple-actions --multiple-sessions
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs candidate-check --multiple-actions --multiple-sessions
 ```
 
 同じ案件名が分かっている場合は、通常の候補提案より先に既存PJを照合する。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs candidate-check <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs candidate-check <secretary> <project> \
   --multiple-actions --repeated-topic
 ```
 
@@ -54,7 +67,7 @@ commit、remoteを変更しない。`candidate-check`もファイルを変更し
 成功の測り方、現在の状況、次の入口、要確認事項を短く確認する。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs create-light <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs create-light <secretary> <project> \
   --overview "<誰のために何をするか>" --goal "<終了条件>" --success "<成功の測り方>" \
   --current "<現在の状況>" --next "<次の入口>" --questions "<要確認事項>" --confirm
 ```
@@ -76,20 +89,20 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs create-light <secretary> <p
 判断は原文を示して確認した後だけ、現在状況と次の入口も同じ操作で更新する。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs add-decision <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs add-decision <secretary> <project> \
   --decision "<確認済み判断>" --current "<判断後の現在状況>" --next "<次の入口>" --confirm
 ```
 
 未確定事項はDecisionsへ入れず、PROJECT.mdの要確認事項として扱う。恒久事実の追加も確認後だけ行う。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs add-note <secretary> <project> --note "<確認済み事実>" --confirm
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs add-note <secretary> <project> --note "<確認済み事実>" --confirm
 ```
 
 PJの実行項目は既存TODO正本へPJ参照つきで追加する。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs add-todo <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs add-todo <secretary> <project> \
   --todo "<実行項目>" --source "<サービス名＋リンク/ID＋日付>" [--due YYYY-MM-DD]
 ```
 
@@ -116,8 +129,8 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs add-todo <secretary> <proje
 「フル運用へ整理する／今はライトのまま」を確認する。拒否時は何も変更しない。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs promotion-status <secretary> <project>
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs promote-full <secretary> <project> --confirm
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs promotion-status <secretary> <project>
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs promote-full <secretary> <project> --confirm
 ```
 
 承認後だけ `AGENTS.md`（指示・Start here・索引）、`PROJECT.md`（状態）、`DECISIONS.md`（判断）、
@@ -128,7 +141,7 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs promote-full <secretary> <p
 完了前に対象、完了日、達成した結果、残件を示し、「完了扱いにする／まだ進行中」を確認する。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs complete <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs complete <secretary> <project> \
   --result "<達成した結果>" --remaining "<未完・保留・引継ぎ。なければ、なし>" --confirm
 ```
 
@@ -141,19 +154,21 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs complete <secretary> <proje
 ## 7. 開発プロジェクトはbuildを維持する
 
 「作って」「開発したい」「アプリ／ツールにして」は一般PJへ吸収せず、
-`${CLAUDE_PLUGIN_ROOT}/skills/build/SKILL.md` を段階ロードする。
+`${SECRETARY_PLUGIN_ROOT}/skills/build/SKILL.md` を段階ロードする。
 
 別repoを正本にする場合は、repoの作成、接続、公開範囲を先に確認する。了承後だけworkspace側へ
 `AGENTS.md`と概要スナップショットの`PROJECT.md`を作る。
 
 ```text
-node ${CLAUDE_PLUGIN_ROOT}/scripts/project-tools.mjs create-dev-pointer <secretary> <project> \
+node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs create-dev-pointer <secretary> <project> \
   --repo "<正本repo>" --entry "<最初に読むファイル>" --overview "<概要>" \
   --current "<現在状態の短いスナップショット>" --visibility private --confirm
 ```
 
 このコマンドはrepoやremoteを作成・変更しない。workspace側に実装仕様、判断ログ、Sprint状態、コード、
-成果物を複製しない。実作業は正本repoと `harness@agentic-harness` の導線で行う。
+成果物を複製しない。実作業は正本repoで行い、Harnessの入口は `edition.json` のhost別設定に従う。
+Agentic版ではClaude Codeが `harness@agentic-harness` の `/harness`、Codexが
+`harness@agentic-harness-local` の `$using-harness` または `$harness-loop` を使う。
 
 ## 成功時だけ残す記録
 

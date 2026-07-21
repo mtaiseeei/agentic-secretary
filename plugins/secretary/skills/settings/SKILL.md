@@ -7,8 +7,21 @@ description: >
 
 # settings — その人に合わせる設定
 
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
 初回と途中変更を同じ入口で扱う。ユーザーに話しかける前に
-`${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は `secretary/memory/preferences.md` を毎回読み直す。
+`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は `secretary/memory/preferences.md` を毎回読み直す。
 preferences が無い・空・一部欠損なら、丁寧（標準）／専門用語=ふつう／報告=みじかく／決定確認=都度を使う。
 output stylesには依存しない。
 
@@ -31,7 +44,7 @@ output stylesには依存しない。
 2. 変更後の短い例文を見せ、最後に `この設定で反映しますか: <変更項目>=<値>` と確認する。
 3. **この確認ターンではツールを呼ばない。** キャンセル、訂正、別の話題なら終了し、preferences、journal、git commitを一切変更しない。
 4. 次の別ターンで明示了承された後だけ、次の部分更新シームを1回呼ぶ。
-   `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh pref-set <secretary> "<セクション>" "<キー>" "<値>"`
+   `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh pref-set <secretary> "<セクション>" "<キー>" "<値>"`
 5. `こう覚えました: <変更項目>=<値>` と宣言する。他項目を変えていないことも短く伝える。
 6. 宣言後、`journal-add <secretary> did "設定を変更: <変更項目>=<値>"` を1回だけ呼ぶ。
 7. 最後に `commit <secretary> "設定を変更（<変更項目>: <値>）"` を呼び、ローカルcommitだけを作る。pushしない。
@@ -51,7 +64,7 @@ output stylesには依存しない。
 | 言葉遣い | 決定の確認 | 都度／まとめて |
 | 口調のお手本 | NG / OK | 短い例文（内部設定は1件1record） |
 
-口調プリセットは `${CLAUDE_PLUGIN_ROOT}/templates/tones/standard.md`、`friendly.md`、`formal.md` の3種。
+口調プリセットは `${SECRETARY_PLUGIN_ROOT}/templates/tones/standard.md`、`friendly.md`、`formal.md` の3種。
 濃いキャラクターは使わない。プリセットのNG/OKを複写する場合も、適用前に例文を見せて確認する。
 
 ## 秘書のメモ
@@ -72,6 +85,6 @@ output stylesには依存しない。
 
 ## 参照
 
-- 共通ルール: `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md`
-- preferences雛形: `${CLAUDE_PLUGIN_ROOT}/templates/memory/preferences.md`
-- 部分更新・追記・journal・commit: `${CLAUDE_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`
+- 共通ルール: `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md`
+- preferences雛形: `${SECRETARY_PLUGIN_ROOT}/templates/memory/preferences.md`
+- 部分更新・追記・journal・commit: `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.sh`

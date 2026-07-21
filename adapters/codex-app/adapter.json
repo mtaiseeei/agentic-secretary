@@ -3,6 +3,7 @@
   "hostId": "codex-app",
   "surface": "app",
   "family": "codex",
+  "pluginRootStrategy": "skill-file-realpath-v1",
   "distribution": {
     "kind": "codex-plugin-marketplace",
     "marketplaceManifest": ".agents/plugins/marketplace.json",

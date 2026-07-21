@@ -1,6 +1,11 @@
 {
   "schemaVersion": 1,
   "edition": "agentic-secretary",
+  "sharedPluginRoot": {
+    "strategy": "skill-file-realpath-v1",
+    "resolver": "plugins/secretary/scripts/resolve-plugin-root.mjs",
+    "inventory": "plugins/secretary/host-inventory.json"
+  },
   "requiredHosts": [
     "claude-code-desktop-app",
     "claude-code-cli",

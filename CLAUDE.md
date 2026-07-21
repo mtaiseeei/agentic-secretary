@@ -33,6 +33,10 @@ Claude Code / Codexで使う開発者・IT担当者向けAI秘書プラグイン
 - 子Agent作成前の `Unknown model` または不正effortだけをlaunch rejectionとしてresolverへ戻す。
   `unknown field` はその適用経路が使えないことを意味する。resolver出力だけでは実起動の証拠にならず、
   child host metadataが指定値と一致した場合だけ `launch-verified` とする。Terraや `codex exec` へ自動fallbackしない。
+- Harness 0.5.0では、`Lineage Dispatches` は10、同一Sprintの `Spec-Issue Count` は2で停止する。
+  `verification-scope-issue` は検証基盤だけの問題としてユーザーへ選択肢を返し、product findingと分ける。
+  契約済み証拠をsafe harborとして、変更面だけ増分再評価し、同一candidateの有効な証拠を条件付きで再利用する。
+  active Sprintの基準変更はユーザー承認が必要で、`done-by-user-decision` は未達を残した明示受入にだけ使う。
 
 ## 報告
 

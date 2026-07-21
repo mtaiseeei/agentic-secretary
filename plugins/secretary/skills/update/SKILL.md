@@ -8,14 +8,30 @@ trigger: /update
 
 # 更新状況の確認
 
+Claude Codeの明示入口は `/update`、Codexは `$update` です。更新面はhostごとに異なるため、
+Claude marketplaceのcommandをCodexへ、Codex Plugins Directory／CLIの操作をClaude Codeへ流用しません。
+
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
 最初は**診断だけ**を行います。現在版、公開されている最新版、主な変更、設定・ファイルへの影響、
 必要な操作、workspaceのカスタマイズ衝突可能性を順に伝えます。この段階では何も変更しません。
 
-最初に `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
+最初に `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` と、存在する場合は
 `secretary/memory/preferences.md` を読みます。その後、作業中フォルダをworkspaceとして次を実行します。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-diagnose.mjs" --workspace .
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-diagnose.mjs" --workspace .
 ```
 
 診断結果は言い換えず、現在版→最新版→主な変更→影響→必要な操作→衝突可能性の順で示します。
@@ -25,7 +41,7 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/update-diagnose.mjs" --workspace .
 `legacy-yasashii` は互換読取した状態と、neutral marker／edition付きledgerへの予定migrationを示します。
 `opposite-edition`、`mixed`、`unknown` は検出edition、現在のworkspace、実行しなかった操作を示し、
 ledger、marker、履歴、設定、Git、pluginを変更せず停止します。edition切替や削除は案内しません。
-最後に `${CLAUDE_PLUGIN_ROOT}/rules/plain-language.md` から解決される最終応答serializerを1回だけ適用します。
+最後に `${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md` から解決される最終応答serializerを1回だけ適用します。
 
 ## 読み取り専用診断で絶対に行わないこと
 
@@ -53,7 +69,7 @@ commit不能のいずれかなら止めます。拒否、キャンセル、曖�
 利用者が次の別ターンで実更新を明示了承した後だけ、固定された引数で次を実行します。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" start --workspace . --current-plugin-root "${CLAUDE_PLUGIN_ROOT}" --consent update-approved --scope user
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" start --workspace . --current-plugin-root "${SECRETARY_PLUGIN_ROOT}" --consent update-approved --scope user
 ```
 
 Claude Codeの公式更新経路は `claude plugin marketplace update agentic-secretary` と
@@ -64,31 +80,31 @@ Claude Codeの公式更新経路は `claude plugin marketplace update agentic-se
 plugin更新だけが失敗した場合は、原因を確認後、既存の保護commitを増やさず次で再試行できます。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" retry-plugin --workspace .
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" retry-plugin --workspace .
 ```
 
-「agentic-secretaryの更新を再開」と言われたら、新しい`${CLAUDE_PLUGIN_ROOT}`でversionと再開情報を確認し、dry-runだけを実行します。
+「agentic-secretaryの更新を再開」と言われたら、新しい`${SECRETARY_PLUGIN_ROOT}`でversionと再開情報を確認し、dry-runだけを実行します。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" resume --workspace . --plugin-root "${CLAUDE_PLUGIN_ROOT}"
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" resume --workspace . --plugin-root "${SECRETARY_PLUGIN_ROOT}"
 ```
 
 dry-runの追加・変更・維持対象を示し、利用者がplan hashを含めて明示了承した後だけ、同じplanを本実行します。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" resume --workspace . --plugin-root "${CLAUDE_PLUGIN_ROOT}" --apply --plan-hash <表示されたhash>
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" resume --workspace . --plugin-root "${SECRETARY_PLUGIN_ROOT}" --apply --plan-hash <表示されたhash>
 ```
 
 失敗時または利用者が戻したい場合は、pluginとworkspaceを分けて説明してからrollbackします。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" rollback --workspace .
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" rollback --workspace .
 ```
 
 pluginも同時に復元する場合は、現在読み込まれているplugin rootを明示します。
 
 ```text
-node "${CLAUDE_PLUGIN_ROOT}/scripts/update-apply.mjs" rollback --workspace . --plugin-root "${CLAUDE_PLUGIN_ROOT}"
+node "${SECRETARY_PLUGIN_ROOT}/scripts/update-apply.mjs" rollback --workspace . --plugin-root "${SECRETARY_PLUGIN_ROOT}"
 ```
 
 workspaceは`git reset --hard`を使わず、更新が書いた後から利用者が変更していない管理対象だけを復元します。pluginは更新前の退避物を同じscopeの対象に戻し、versionと主要skillを検証します。自動復元できない場合は、成功と見せず旧版、scope、実行可能な退避先、起動・確認手順を示します。全経路でpushとremote変更は禁止です。

@@ -26,8 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGIN="$REPO/plugins/secretary"
 # 雛形は配布プラグイン配下（plugins/secretary/templates/）。
-# SKILL と同じく ${CLAUDE_PLUGIN_ROOT} 相対で解決し、未設定時はプラグイン配下にフォールバックする。
-PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$PLUGIN}"
+# SKILL と同じく ${SECRETARY_PLUGIN_ROOT} 相対で解決し、未設定時はプラグイン配下にフォールバックする。
+PLUGIN_ROOT="${SECRETARY_PLUGIN_ROOT:-$PLUGIN}"
 TEMPLATES="$PLUGIN_ROOT/templates"
 
 PASS=0
@@ -212,15 +212,15 @@ check "projects の name が 'projects'" "[ '$JNAME' = 'projects' ]"
 check "name が一意（重複なし）" \
   "[ \"\$(printf '%s\n' '$SNAME' '$ONAME' '$MNAME' '$GNAME' '$DNAME' '$WNAME' '$MSNAME' '$NNAME' '$CNAME' '$BNAME' '$PNAME' '$CWNAME' '$GCNAME' '$UNAME' '$JNAME' | sort -u | wc -l | tr -d ' ')\" = '15' ]"
 
-# 同梱ファイル参照は ${CLAUDE_PLUGIN_ROOT} 相対に統一されている（constraints.md L40 / domain.md）。
-# (a) ${CLAUDE_PLUGIN_ROOT}/... の参照先が全て実在（プラグイン配下で解決）
+# 同梱ファイル参照は ${SECRETARY_PLUGIN_ROOT} 相対に統一されている（constraints.md L40 / domain.md）。
+# (a) ${SECRETARY_PLUGIN_ROOT}/... の参照先が全て実在（プラグイン配下で解決）
 deadlinks=0
 while IFS= read -r ref; do
   ref="${ref%/}"   # 末尾スラッシュ（ディレクトリ参照）を正規化
-  [ -e "$PLUGIN_ROOT/$ref" ] || { echo "  デッドリンク: \${CLAUDE_PLUGIN_ROOT}/$ref"; deadlinks=$((deadlinks+1)); }
-done < <(grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+(\.md|\.sh|/)?' "${SKILLS[@]}" \
-          | sed -E 's#^\$\{CLAUDE_PLUGIN_ROOT\}/##' | sort -u)
-check "SKILL の \${CLAUDE_PLUGIN_ROOT} 参照先が全て実在" "[ $deadlinks -eq 0 ]"
+  [ -e "$PLUGIN_ROOT/$ref" ] || { echo "  デッドリンク: \${SECRETARY_PLUGIN_ROOT}/$ref"; deadlinks=$((deadlinks+1)); }
+done < <(grep -rhoE '\$\{SECRETARY_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+(\.md|\.sh|/)?' "${SKILLS[@]}" \
+          | sed -E 's#^\$\{SECRETARY_PLUGIN_ROOT\}/##' | sort -u)
+check "SKILL の \${SECRETARY_PLUGIN_ROOT} 参照先が全て実在" "[ $deadlinks -eq 0 ]"
 
 # (b) 雛形が新配置（plugins/secretary/templates/）に存在する
 check "雛形が plugins/secretary/templates/ に存在" "[ -f '$PLUGIN/templates/AGENTS.md' ] && [ -f '$PLUGIN/templates/CLAUDE.md' ]"
@@ -228,11 +228,11 @@ check "雛形が plugins/secretary/templates/ に存在" "[ -f '$PLUGIN/template
 # (c) 同梱ファイルへのリポジトリ直下相対参照（plugins/secretary/... や bare templates/）が残っていない
 check "SKILL に plugins/secretary/ 直下相対の同梱参照が無い" \
   "! grep -rqE 'plugins/secretary/' \"\${SKILLS[@]}\""
-check "SKILL に \${CLAUDE_PLUGIN_ROOT} を伴わない bare templates/ 参照が無い" \
-  "! grep -rnE '[^./{]templates/' \"\${SKILLS[@]}\" | grep -v '\${CLAUDE_PLUGIN_ROOT}' | grep -q ."
-# (d) 絶対パス直書き（先頭スラッシュのコード参照）が無い
+check "SKILL に \${SECRETARY_PLUGIN_ROOT} を伴わない bare templates/ 参照が無い" \
+  "! grep -rnE '[^./{]templates/' \"\${SKILLS[@]}\" | grep -v '\${SECRETARY_PLUGIN_ROOT}' | grep -q ."
+# (d) hostのslash command（/harness等）は許可し、実filesystemの絶対path直書きだけを拒否する
 check "SKILL に絶対パス直書きが無い" \
-  "! grep -rhoE '\`/[A-Za-z]' \"\${SKILLS[@]}\" | grep -q ."
+  "! grep -rhoE '\`/(Users|home|tmp|private|var|opt|etc|usr|Applications)(/|\`)' \"\${SKILLS[@]}\" | grep -q ."
 
 # ---------------------------------------------------------------------------
 section "3. オンボーディング生成物（テンプレ実体化ドライラン）"
@@ -814,17 +814,17 @@ check "B1: 配布プラグイン内に harness / agents へのsymlinkも無い" 
 check "B2: build がローカル agentic-harness を導入判定・複製元にしない" \
   "! grep -qE '~/workspace/agentic-harness|/Users/.*/workspace/agentic-harness' '$BUILD_SKILL'"
 check "B2: build に存在しない同梱 harness / agents 参照が無い" \
-  "! grep -qE '\$\{CLAUDE_PLUGIN_ROOT\}/(harness|agents)/|\$PLUGIN_ROOT/(harness|agents)/' '$BUILD_SKILL'"
+  "! grep -qE '\$\{SECRETARY_PLUGIN_ROOT\}/(harness|agents)/|\$PLUGIN_ROOT/(harness|agents)/' '$BUILD_SKILL'"
 check "B2: 配布物に SessionStart hooks を同梱しない" \
   "[ -z \"\$(find '$PLUGIN' \( -name 'hooks.json' -o -name 'session-start.sh' \) 2>/dev/null)\" ]"
 
-# --- C: ${CLAUDE_PLUGIN_ROOT} と $PLUGIN_ROOT のローカル参照健全性 ---
+# --- C: ${SECRETARY_PLUGIN_ROOT} と $PLUGIN_ROOT のローカル参照健全性 ---
 build_deadlinks=0
 while IFS= read -r ref; do
   ref="${ref%/}"
   [ -e "$PLUGIN_ROOT/$ref" ] || { echo "  デッドリンク: plugin root/$ref"; build_deadlinks=$((build_deadlinks+1)); }
-done < <(grep -oE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+|\$PLUGIN_ROOT/[A-Za-z0-9_./-]+' "$BUILD_SKILL" \
-          | sed -E 's#^\$\{CLAUDE_PLUGIN_ROOT\}/##; s#^\$PLUGIN_ROOT/##' | sort -u)
+done < <(grep -oE '\$\{SECRETARY_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+|\$PLUGIN_ROOT/[A-Za-z0-9_./-]+' "$BUILD_SKILL" \
+          | sed -E 's#^\$\{SECRETARY_PLUGIN_ROOT\}/##; s#^\$PLUGIN_ROOT/##' | sort -u)
 check "C1: build の plugin root 参照先が全て実在" "[ $build_deadlinks -eq 0 ]"
 check "C1: build が配布されない docs/spec・docs/sprints を参照しない" \
   "! grep -qE 'docs/spec|docs/sprints' '$BUILD_SKILL'"
@@ -1142,7 +1142,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-section "33. Harness v0.4.6 runtime運用"
+section "33. Harness v0.5.0 runtime運用"
 # ---------------------------------------------------------------------------
 HARNESS_CONFIG="$REPO/.harness/config.toml"
 HARNESS_IGNORE="$REPO/.harness/.gitignore"
@@ -1174,12 +1174,13 @@ assert config["hosts"]["codex"]["roles"]["generator"]["escalation"] == {
     "on_evaluator_recommendation": True,
 }
 assert config["hosts"]["codex"]["roles"]["evaluator"] == {"model": "gpt-5.6-sol", "effort": "high"}
+assert config["limits"] == {"max_lineage_dispatches": 10, "max_spec_issue_returns": 2}
 PY
 HARNESS_CONFIG_RC=$?
-check "config.tomlが解析でき、Claude継承・Codex role・強化条件が正しい" \
+check "config.tomlが解析でき、Claude継承・Codex role・強化条件・停止上限10/2が正しい" \
   "[ $HARNESS_CONFIG_RC -eq 0 ]"
 
-check "v0.4.6 configが設定値と説明を分離し、AI編集時の公式確認規則を保持" \
+check "v0.5.0 configが設定値と説明を分離し、AI編集時の公式確認規則を保持" \
   "grep -q '^# SETTINGS / 設定値$' '$HARNESS_CONFIG' && grep -q '^# REFERENCE / 設定方法・動作説明$' '$HARNESS_CONFIG' && grep -q 'AI editing contract' '$HARNESS_CONFIG' && grep -q 'AI編集規則' '$HARNESS_CONFIG' && grep -q 'Never guess, fuzzy-match, translate between hosts' '$HARNESS_CONFIG'"
 
 check "個人runtime overrideがTOML/JSONともgit管理外" \
@@ -1187,6 +1188,9 @@ check "個人runtime overrideがTOML/JSONともgit管理外" \
 
 check "AGENTSがrouting・state・resume・dispatch証拠の規則を保持" \
   "grep -q 'Model Tier' '$REPO/AGENTS.md' && grep -q 'Rotate: runtime-migration' '$REPO/AGENTS.md' && grep -q 'Rotate: model-escalation' '$REPO/AGENTS.md' && grep -q 'Rotate: model-availability' '$REPO/AGENTS.md' && grep -q 'modelTier: null' '$REPO/AGENTS.md' && grep -q 'Neither .*dispatch-ready.*nor .*dispatch-attempt.*proves which model actually launched' '$REPO/AGENTS.md' && grep -q 'resume preserves the routed model and effort' '$REPO/AGENTS.md' && grep -q 'Evaluator performs evidence-backed evaluation and self-review; it never implements fixes' '$REPO/AGENTS.md' && grep -q 'Do not install target application packages' '$REPO/AGENTS.md'"
+
+check "AGENTSとguidanceがHarness 0.5.0の検証分類・safe harbor・counter・user decisionを保持" \
+  "grep -q 'verification-scope-issue' '$REPO/AGENTS.md' && grep -q 'verification-infra' '$REPO/AGENTS.md' && grep -q 'safe harbor' '$REPO/AGENTS.md' && grep -q 'Spec-Issue Count' '$REPO/AGENTS.md' && grep -q 'Lineage Dispatches' '$REPO/AGENTS.md' && grep -q 'done-by-user-decision' '$REPO/AGENTS.md' && grep -q 'verification-scope-issue' '$HARNESS_GUIDANCE' && grep -q 'same-candidate evidence' '$HARNESS_GUIDANCE'"
 
 check "AGENTSがClaude継承・Codex既定・Terra自動除外・失敗停止を保持" \
   "grep -q \"Claude Code inherits the user's current model and effort\" '$REPO/AGENTS.md' && grep -q 'gpt-5.6-luna.*xhigh' '$REPO/AGENTS.md' && grep -q 'Terra is never selected automatically' '$REPO/AGENTS.md' && grep -q 'third consecutive failure stops for user input' '$REPO/AGENTS.md'"
@@ -1197,7 +1201,7 @@ check "既存CLAUDE.mdの製品固有境界・secret・3項目報告を維持" \
 check "stateが完了履歴と有効なruntime状態を保持" \
   "grep -q '^| sprint-020-patch-002 | done |' '$HARNESS_STATE' && grep -qE '^- Model Tier: (standard|strong)$' '$HARNESS_STATE' && grep -qE '^- Rotate: (none|runtime-migration|model-escalation|model-availability)$' '$HARNESS_STATE' && grep -qE '^- Current ID: sprint-[0-9]{3}(-patch-[0-9]{3})?$' '$HARNESS_STATE' && ! grep -q 'Model Tier: unknown' '$HARNESS_STATE'"
 
-check "guidanceがv0.4.6互換runtime運用とno-overwriteを案内" \
+check "guidanceがv0.5.0互換runtime運用とno-overwriteを案内" \
   "grep -q '.harness/config.local.toml' '$HARNESS_GUIDANCE' && grep -q 'dispatch-ready or dispatch-attempt, not launch-verified' '$HARNESS_GUIDANCE' && grep -q 'Rotate: model-escalation' '$HARNESS_GUIDANCE' && grep -q 'Rotate: model-availability' '$HARNESS_GUIDANCE' && grep -q 'never persist.*unknown' '$HARNESS_GUIDANCE' && grep -q 'Do not overwrite existing guidance' '$HARNESS_GUIDANCE'"
 
 check "candidate version 0.8.0とHarness/agents非同梱を維持" \

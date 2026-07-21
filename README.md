@@ -101,6 +101,24 @@ Codex用repo marketplaceは `.agents/plugins/marketplace.json`、Claude用market
 `.claude-plugin/marketplace.json` です。両方とも同じ `plugins/secretary/skills/` 15件を参照し、
 host別のskillコピーは持ちません。
 
+各skillは、読み込まれた `SKILL.md` 自身の実ファイル絶対pathから `plugins/secretary/` を解決します。
+`${SECRETARY_PLUGIN_ROOT}` はその検証済み結果だけを保持し、未設定のClaude専用環境変数、空path、相対path、
+現在directoryからの推測をcommandへ渡しません。host固有の前提一覧は
+[`plugins/secretary/host-inventory.json`](plugins/secretary/host-inventory.json)にあります。
+
+## Separate Harness 0.5.0
+
+開発依頼は別Pluginの [Agentic Harness 0.5.0](https://github.com/mtaiseeei/agentic-harness) へ接続します。
+SecretaryにはHarness本体を同梱せず、host別の正式IDを混ぜません。
+
+| Host | Marketplace | Install ID | Explicit entry |
+|---|---|---|---|
+| Claude Code | `agentic-harness` | `harness@agentic-harness` | `/harness` |
+| Codex | `agentic-harness-local` | `harness@agentic-harness-local` | `$using-harness` / `$harness-loop` |
+
+通常はどちらのhostでも「〇〇を作って」と話すだけで起動できます。導入詳細は `build` skillが
+現在のhostに合う手順だけを案内します。
+
 Edition-specific content is limited to four expression surfaces: conversation, diagnosis, report,
 and developer handoff. Distribution identifiers and host adapters are integration metadata.
 Wizard files, DOM/copy, OAuth scopes, sync behavior, and safety rules remain byte-identical to the

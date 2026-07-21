@@ -48,6 +48,12 @@ on_evaluator_recommendation = true
 model = "gpt-5.6-sol"
 effort = "high"
 
+# EN: Stop instead of dispatching again when either limit is reached.
+# JA: どちらかの上限に達したら、追加dispatchせずユーザーへ確認します。
+[limits]
+max_lineage_dispatches = 10
+max_spec_issue_returns = 2
+
 
 # ============================================================
 # REFERENCE / 設定方法・動作説明

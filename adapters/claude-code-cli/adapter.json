@@ -3,6 +3,7 @@
   "hostId": "claude-code-cli",
   "surface": "cli",
   "family": "claude-code",
+  "pluginRootStrategy": "skill-file-realpath-v1",
   "distribution": {
     "kind": "claude-plugin-marketplace",
     "marketplaceManifest": ".claude-plugin/marketplace.json",
