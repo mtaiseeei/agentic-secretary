@@ -14,8 +14,10 @@ try {
   if (existsSync(join(extracted, ".git"))) throw new Error("archive unexpectedly contains .git");
   execFileSync("python3", [join(extracted, "scripts/check-release-integrity.py"), "--root", extracted], { stdio: "inherit" });
   execFileSync("node", [join(extracted, "scripts/sprint-033-test.mjs"), "--root", extracted], { stdio: "inherit" });
+  execFileSync("node", [join(extracted, "scripts/sprint-032-patch-001-readability-test.mjs"), "--root", extracted], { stdio: "inherit" });
+  execFileSync("node", [join(extracted, "scripts/agentic-readability-test.mjs"), "--root", extracted], { stdio: "inherit" });
   execFileSync("node", [join(extracted, "scripts/agentic-host-gate.mjs"), "--mode", "offline"], { cwd: extracted, stdio: "inherit" });
-  process.stdout.write("AGENTIC_ARCHIVE_GATE_PASS=3 FAIL=0\n");
+  process.stdout.write("AGENTIC_ARCHIVE_GATE_PASS=5 FAIL=0\n");
 } finally {
   rmSync(target, { recursive: true, force: true });
 }

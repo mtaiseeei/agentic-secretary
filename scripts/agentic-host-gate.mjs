@@ -13,14 +13,14 @@ const evidencePath = value("--evidence");
 if (mode !== "offline") throw new Error("only --mode offline is available without per-host external approval");
 
 const loaded = loadHostMatrix(root);
-const records = evidencePath ? readJson(resolve(evidencePath)) : unavailableRecords(loaded.matrix);
+const records = evidencePath ? readJson(resolve(evidencePath)) : unavailableRecords(loaded);
 if (!Array.isArray(records)) throw new Error("evidence must be an array of host records");
-const summary = summarizeHostRecords(loaded.matrix, records);
+const summary = summarizeHostRecords(loaded, records, { allowLivePass: false });
 const report = {
   ...summary,
   mode,
   structuralValidation: "pass",
-  note: "offline adapter validation is not live-host evidence and never promotes an unavailable host",
+  note: "offline adapter validation is not live-host evidence; a PASS record is rejected unless an approved live runner produced it",
 };
 if (output) {
   const target = resolve(output);

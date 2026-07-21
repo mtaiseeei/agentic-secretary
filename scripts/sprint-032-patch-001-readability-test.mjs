@@ -82,6 +82,15 @@ function check(label, test) {
 const inventory = JSON.parse(read(join(fixtureRoot, "conversation-surface-inventory.json")));
 const surfaces = conversationSurfaces();
 const contract = loadConversationContract(repo);
+const legacyReportLabels = ["やったこと", "結果", "次に何が起きるか"];
+
+function conversationFixture(name) {
+  let text = read(join(fixtureRoot, "conversations", name));
+  legacyReportLabels.forEach((label, index) => {
+    text = text.replaceAll(label, contract.labels[index]);
+  });
+  return text.replaceAll("補足:", `${contract.detailLabel}:`);
+}
 
 // ----- 層A: 配布物の静的な契約検査 -----
 
@@ -92,7 +101,7 @@ check("A: inventory covers the four required user-facing categories", () => {
   ]);
   assert(inventory.machineReadableExclusions.every((entry) => entry.reason.length > 20));
   assert.equal(surfaces.filter((path) => path.endsWith("/SKILL.md")).length, 15);
-  assert(surfaces.some((path) => path.endsWith("rules/copy/yasashii.json")));
+  assert(surfaces.some((path) => path.endsWith(`rules/${contract.styleRule.copy}`)));
   assert(surfaces.some((path) => path.endsWith("templates/AGENTS.md")));
   assert(surfaces.some((path) => path.endsWith("chatwork/assets/wizard/app.js")));
   assert(surfaces.some((path) => path.endsWith("google-chat/assets/wizard/app.js")));
@@ -118,7 +127,7 @@ check("A: serializer scope is limited to completion/status/handoff reports", () 
   ]) {
     assert(contract.generalScenes.some((entry) => entry.includes(scene)), `general scene missing: ${scene}`);
   }
-  const style = contract.ruleText["yasashii-style"];
+  const style = contract.ruleText[contract.styleKey];
   assert(style.includes("serializerを適用しない場面"), "non-application section missing");
   assert(style.includes("common-language.md"), "general answers must defer to common-language");
 });
@@ -139,8 +148,8 @@ check("A: shared rule keeps readable Markdown without a preference toggle", () =
     assert(common.includes(phrase), `missing common readability phrase: ${phrase}`);
   }
   assert(!readRelative("plugins/secretary/templates/memory/preferences.md").includes("改行"));
-  const style = contract.ruleText["yasashii-style"];
-  assert(style.includes("くわしく"), "preference may only switch 3<->4 items");
+  const style = contract.ruleText[contract.styleKey];
+  assert(style.includes("report.detailedSuffix"), "the active style must define the optional fourth detail item");
   assert(!/preferences.{0,40}(?:1行|一行|平文)/s.test(style));
 });
 
@@ -161,8 +170,8 @@ const SCENARIOS = [
 
 check("B: copy schema provides three physically separate report items", () => {
   assert.equal(contract.labels.length, 3);
-  assert.deepEqual(contract.labels, ["やったこと", "結果", "次に何が起きるか"]);
-  assert.equal(contract.detailLabel, "補足");
+  assert(contract.labels.every((label) => typeof label === "string" && label.length > 0));
+  assert(typeof contract.detailLabel === "string" && contract.detailLabel.length > 0);
   for (const line of contract.copy.surfaces.report.shortLines) assert(!line.includes("\n"));
 });
 
@@ -182,32 +191,32 @@ check("B: every scenario is classified by the actual rule text", () => {
 
 for (const kind of SCENARIOS) {
   check(`B: scenario ${kind} — conforming conversation passes the derived contract`, () => {
-    const good = read(join(fixtureRoot, "conversations", `${kind}.good.md`));
+    const good = conversationFixture(`${kind}.good.md`);
     const verdict = validateScenario(kind, good, contract);
     assert.deepEqual(verdict.problems, [], `${kind} good fixture rejected`);
   });
   check(`B: scenario ${kind} — compressed conversation is rejected`, () => {
-    const bad = read(join(fixtureRoot, "conversations", `${kind}.bad.md`));
+    const bad = conversationFixture(`${kind}.bad.md`);
     const verdict = validateScenario(kind, bad, contract);
     assert(verdict.problems.length >= 1, `${kind} bad fixture was not rejected`);
   });
 }
 
 check("B: completion report without fixed labels is rejected (fixed === false)", () => {
-  const bad = read(join(fixtureRoot, "conversations", "completion-report.unlabeled.bad.md"));
+  const bad = conversationFixture("completion-report.unlabeled.bad.md");
   assert.equal(usesFixedThreeSchema(bad, contract.labels), false, "unlabeled fixture must not count as fixed schema");
   const verdict = validateScenario("completion-report", bad, contract);
   assert(verdict.problems.some((problem) => problem.includes("固定3項目schema")), "missing fixed-schema rejection");
 });
 
 check("B: completion report with out-of-order labels is rejected", () => {
-  const bad = read(join(fixtureRoot, "conversations", "completion-report.out-of-order.bad.md"));
+  const bad = conversationFixture("completion-report.out-of-order.bad.md");
   const verdict = validateScenario("completion-report", bad, contract);
   assert(verdict.problems.some((problem) => problem.includes("順序")), "missing label-order rejection");
 });
 
 check("B: general answers are not required to use the fixed three-item schema", () => {
-  const good = read(join(fixtureRoot, "conversations", "complex-question.good.md"));
+  const good = conversationFixture("complex-question.good.md");
   assert.equal(usesFixedThreeSchema(good, contract.labels), false);
   assert.deepEqual(validateScenario("complex-question", good, contract).problems, []);
 });
@@ -215,9 +224,14 @@ check("B: general answers are not required to use the fixed three-item schema", 
 check("B: agentic and yasashii keep distinct audiences while sharing structure", () => {
   const editions = readRelative("docs/spec/editions.md");
   for (const phrase of ["技術的に直接的", "何が起きたか、影響、次にすること", "developer handoff"]) assert(editions.includes(phrase));
-  const style = contract.ruleText["yasashii-style"];
-  assert(style.includes("Markdown箇条書きとして物理的に分けます"));
-  assert(style.includes("何が起きているか、利用者への影響、次に何をすればよいか"));
+  const style = contract.ruleText[contract.styleKey];
+  assert(style.includes("Markdown"));
+  if (contract.styleKey === "agentic-style") {
+    assert(style.includes("結論と具体的な判断材料を先に示します"));
+    assert(style.includes("再現command"));
+  } else {
+    assert(style.includes("何が起きているか"));
+  }
 });
 
 // ----- Chatwork Secret案内の無回帰 -----

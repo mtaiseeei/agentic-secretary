@@ -1,7 +1,7 @@
 // Sprint 032 Patch 001: 実際に配布されるrules／copyから会話契約を読み出し、
 // 会話Markdownの構造を検査する共有ライブラリ。
 // テスト側が模範Markdownを生成するのではなく、plugin実体（rule-manifest.json →
-// rules → copy/yasashii.json）から適用場面・項目名を導出して検査する。
+// rules → active edition copy）から適用場面・項目名を導出して検査する。
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,19 +13,28 @@ export function loadConversationContract(repo) {
   for (const [key, rule] of Object.entries(manifest.rules)) {
     ruleText[key] = readFileSync(join(plugin, "rules", rule.path), "utf8");
   }
-  const styleRule = manifest.rules["yasashii-style"];
+  const styleKeys = (manifest.priority || []).filter((key) => {
+    const rule = manifest.rules[key];
+    return rule && typeof rule.copy === "string" && Array.isArray(rule.copySurfaces)
+      && ["conversation", "diagnosis", "report", "developerHandoff"].every((surface) => rule.copySurfaces.includes(surface));
+  });
+  if (styleKeys.length !== 1) throw new Error(`rule manifest must select exactly one active edition style, found: ${styleKeys.join(", ") || "none"}`);
+  const styleKey = styleKeys[0];
+  const styleRule = manifest.rules[styleKey];
   const copy = JSON.parse(readFileSync(join(plugin, "rules", styleRule.copy), "utf8"));
 
   const shortLines = copy.surfaces.report.shortLines;
   const labels = shortLines.map((line) => line.split(/[:：]/)[0].trim());
   const detailLabel = copy.surfaces.report.detailedSuffix.split(/[:：]/)[0].trim();
 
-  const style = ruleText["yasashii-style"];
+  const style = ruleText[styleKey];
   return {
     plugin,
     manifest,
     ruleText,
     copy,
+    styleKey,
+    styleRule,
     labels,
     detailLabel,
     applyScenes: sectionBullets(style, "serializerを適用する場面"),
@@ -107,6 +116,8 @@ const NEEDS = {
   "search-results": { scene: "検索結果", scope: "general" },
   "partial-failure": { scene: "部分失敗の詳細報告", scope: "general" },
   "completion-report": { scene: "作業完了報告", scope: "apply" },
+  "status-report": { scene: "状態報告", scope: "apply" },
+  "developer-handoff": { scene: "developer handoff", scope: "general" },
 };
 
 export function scenarioScene(kind) {
@@ -159,7 +170,8 @@ export function validateScenario(kind, markdown, contract) {
       if (units < 4) problems.push("成功・失敗・影響・次の行動を読み分ける単位が足りない");
       break;
     }
-    case "completion-report": {
+    case "completion-report":
+    case "status-report": {
       const bulletPrefixes = topBulletLabels(markdown);
       const expected = [...labels];
       const allowed = [...labels, detailLabel];
@@ -172,6 +184,15 @@ export function validateScenario(kind, markdown, contract) {
         problems.push("完了報告にschema外の固定項目がある");
       }
       if (collapsed) problems.push("完了報告の3つの意味が1行へ連結されている");
+      break;
+    }
+    case "developer-handoff": {
+      requireGeneral();
+      const units = bullets + nested + blocks.filter((block) => !/^[-\d\s]/.test(block[0])).length;
+      if (units < 4) problems.push("developer handoffの再現条件・証跡・影響・残課題を読み分ける単位が足りない");
+      if (!/(?:command|コマンド)/.test(markdown) || !/(?:path|パス)/.test(markdown) || !/(?:error|エラー)/.test(markdown)) {
+        problems.push("developer handoffにcommand、path、errorの正式名称が不足している");
+      }
       break;
     }
     default:

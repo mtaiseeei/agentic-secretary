@@ -19,6 +19,8 @@ run node scripts/sprint-023-security-test.mjs
 run node scripts/sprint-024-data-causality-test.mjs
 run node scripts/sprint-027-copy-test.mjs
 run node scripts/sprint-033-test.mjs
+run node scripts/sprint-032-patch-001-readability-test.mjs
+run node scripts/agentic-readability-test.mjs
 run node scripts/agentic-host-gate.mjs --mode offline
 
 printf 'AGENTIC_REGRESSION_PASS=%s FAIL=0\n' "$passed"

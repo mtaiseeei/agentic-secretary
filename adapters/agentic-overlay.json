@@ -38,9 +38,12 @@
     "scripts/agentic-archive-gate.mjs",
     "scripts/agentic-host-gate.mjs",
     "scripts/agentic-live-host-gate.mjs",
+    "scripts/agentic-readability-test.mjs",
     "scripts/agentic-regression.sh",
     "scripts/check-release-integrity.py",
     "scripts/lib/agentic-hosts.mjs",
+    "scripts/lib/sprint-032-patch-001-conversation.mjs",
+    "scripts/sprint-032-patch-001-readability-test.mjs",
     "scripts/sprint-033-test.mjs"
   ],
   "legacyIdentifierAllowlist": [

@@ -122,6 +122,23 @@ bash scripts/agentic-regression.sh
 The live gate requires separate approval for each host installation and does not run as part of the
 offline suite.
 
+After one host and its external side effects have been approved, the shared runner accepts only an
+exact approval manifest and writes one new result file without overwriting an existing record:
+
+```bash
+node scripts/agentic-live-host-gate.mjs \
+  --host <required-host-id> \
+  --approval /absolute/path/to/approval.json \
+  --output /absolute/path/to/new-sanitized-result.json
+```
+
+The approval must name the matching host, adapter runner, app/CLI surface, all twelve checks, an
+expiry, cleanup plan, and an explicit absolute driver command. The runner passes only a small
+environment allowlist to that driver, persists neither raw stdout/stderr nor argument values, and
+accepts a PASS only when the returned sanitized record covers all checks and live conversation
+scenarios. Without `--approval`, it performs no host operation and exits 2 with
+`external-live-gate-unavailable`.
+
 ## Repository relationship
 
 This repository is the technical upstream edition. `yasashii-secretary` is the downstream edition

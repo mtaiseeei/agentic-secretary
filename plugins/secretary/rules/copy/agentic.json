@@ -2,37 +2,37 @@
   "schemaVersion": 1,
   "surfaces": {
     "conversation": {
-      "decisionConfirmation": "Record this decision verbatim: <そのターンのユーザー入力全文>",
-      "topicConfirmation": "Record this confirmed context: <確認済みの要点>",
-      "projectSuggestion": "This work spans multiple actions or sessions. Track it as a project?"
+      "decisionConfirmation": "この内容を決定として残しますね: <そのターンのユーザー入力全文>",
+      "topicConfirmation": "確認済みの要点を案件メモに残しますね: <確認済みの要点>",
+      "projectSuggestion": "この作業は複数の行動またはセッションにまたがります。プロジェクトとして管理しますか？"
     },
     "diagnosis": {
-      "unverifiedConnection": "UNVERIFIED: connection state",
+      "unverifiedConnection": "UNVERIFIED: 接続状態は未検証です",
       "failureOrder": [
-        "error / observed behavior",
-        "reproduction command and path",
-        "impact",
-        "next action"
+        "error / 観測された挙動",
+        "再現commandとpath",
+        "影響",
+        "次の操作"
       ],
-      "latestUnverified": "UNVERIFIED: latest version could not be resolved"
+      "latestUnverified": "UNVERIFIED: 最新versionを確認できませんでした"
     },
     "report": {
       "shortLines": [
-        "technical summary: <what changed>",
-        "evidence: <commands, paths, results>",
-        "remaining work: <open risks or next implementation decision>"
+        "技術要約: <変更内容>",
+        "証跡（evidence）: <command、path、結果>",
+        "残課題: <未解決のリスクまたは次の実装判断>"
       ],
-      "detailedSuffix": "implementation notes: <additional technical detail>"
+      "detailedSuffix": "実装メモ: <追加の技術情報>"
     },
     "developerHandoff": {
       "order": [
-        "observed behavior and impact",
-        "reproduction command",
-        "relevant paths and error",
-        "evidence",
-        "remaining hypothesis or fix boundary"
+        "観測された挙動と影響",
+        "再現command",
+        "関連pathとerror",
+        "証跡（evidence）",
+        "未確定の仮説または修正境界"
       ],
-      "guidance": "Provide copy-pasteable commands, exact paths, observed output, and unresolved assumptions. Separate facts from inference."
+      "guidance": "そのまま実行できるcommand、正確なpath、観測結果、未解決の前提を示します。確認済みの事実と推論は分けます。"
     }
   }
 }
