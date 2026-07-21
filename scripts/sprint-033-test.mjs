@@ -7,6 +7,7 @@ import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, 
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadEditionConfig, inspectWorkspaceEdition } from "../plugins/secretary/scripts/lib/edition-guard.mjs";
+import { loadWizardProductIdentity, renderWizardProductIdentity } from "../plugins/secretary/scripts/lib/wizard-product-identity.mjs";
 import {
   ISOLATION_INSPECTED_TARGETS,
   LIVE_CONVERSATION_SCENARIOS,
@@ -172,6 +173,49 @@ check("distribution identity and candidate version are agentic-secretary 0.8.0",
   assert.equal(edition.distribution.pluginId, "agentic-secretary@agentic-secretary");
   assert.equal(edition.harness.installId, "harness@agentic-harness");
   assert.equal(edition.copy.path, "rules/copy/agentic.json");
+});
+
+check("wizard title and banner resolve the formal edition identity without breaking yasashii compatibility", () => {
+  const identity = loadWizardProductIdentity(pluginRoot);
+  const indexSource = read(join(pluginRoot, "skills/chatwork/assets/wizard/index.html"));
+  const commonSource = read(join(pluginRoot, "skills/chatwork/assets/wizard/common.js"));
+  const renderedIndex = renderWizardProductIdentity(indexSource, identity);
+  const renderedCommon = renderWizardProductIdentity(commonSource, identity);
+  assert.equal(identity, "agentic-secretary");
+  assert(renderedIndex.includes("<title>接続設定 — agentic-secretary</title>"));
+  assert(renderedIndex.includes('<p class="product">agentic-secretary</p>'));
+  assert(renderedCommon.includes('document.title = `${detail.context} — agentic-secretary`'));
+  assert(!`${renderedIndex}\n${renderedCommon}`.includes("yasashii-secretary"));
+
+  const chatworkServer = read(join(pluginRoot, "skills/chatwork/scripts/wizard-server.mjs"));
+  const googleServer = read(join(pluginRoot, "skills/google-chat/scripts/wizard-server.mjs"));
+  for (const source of [chatworkServer, googleServer]) {
+    assert(source.includes("loadWizardProductIdentity(pluginRoot)"));
+    assert(source.includes("renderWizardProductIdentity"));
+  }
+
+  const fixture = mkdtempSync("/private/tmp/secretary-wizard-identity-");
+  try {
+    mkdirSync(join(fixture, ".claude-plugin"), { recursive: true });
+    writeFileSync(join(fixture, "edition.json"), JSON.stringify({
+      schemaVersion: 1,
+      edition: "yasashii-secretary",
+      distribution: {
+        marketplaceId: "yasashii-secretary",
+        pluginId: "yasashii-secretary@yasashii-secretary",
+      },
+    }));
+    writeFileSync(join(fixture, ".claude-plugin/plugin.json"), JSON.stringify({ name: "yasashii-secretary" }));
+    const yasashiiIdentity = loadWizardProductIdentity(fixture);
+    assert.equal(yasashiiIdentity, "yasashii-secretary");
+    assert(renderWizardProductIdentity(indexSource, yasashiiIdentity).includes('<p class="product">yasashii-secretary</p>'));
+
+    mkdirSync(join(fixture, ".codex-plugin"), { recursive: true });
+    writeFileSync(join(fixture, ".codex-plugin/plugin.json"), JSON.stringify({ name: "agentic-secretary" }));
+    assert.throws(() => loadWizardProductIdentity(fixture), /一致しません/);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
 });
 
 check("Codex formal manifest and repository marketplace share the canonical skills tree", () => {

@@ -8,6 +8,7 @@ import { commitOwnedChanges, pushOwnedCommit } from "../../../scripts/lib/safe-g
 import { workingRoot, writeFileAtomicSafe } from "../../../scripts/lib/safe-fs.mjs";
 import { fetchWithTimeout, runExternal, runExternalSync } from "../../../scripts/lib/external-ops.mjs";
 import { createWizardSessionGuard } from "../../../scripts/lib/wizard-session.mjs";
+import { loadWizardProductIdentity, renderWizardProductIdentity } from "../../../scripts/lib/wizard-product-identity.mjs";
 import { createGoogleChatClient } from "./client.mjs";
 import { applyGoogleChatConfig } from "./config-transaction.mjs";
 import { initialGoogleChatSync } from "./sync.mjs";
@@ -24,6 +25,8 @@ const host = "127.0.0.1";
 const assets = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "chatwork", "assets", "wizard");
 const googleApp = resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "wizard", "app.js");
 const googleCleanup = resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "wizard", "cleanup.mjs");
+const pluginRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const productIdentity = loadWizardProductIdentity(pluginRoot);
 const synthetic = process.env.YASASHII_GOOGLE_CHAT_SYNTHETIC === "1";
 const normalUiTest = synthetic && process.env.YASASHII_GOOGLE_CHAT_TEST_NORMAL_UI === "1";
 let session = { status: "unconfigured", message: "OAuth client JSONを選んでください。", credentials: null, pkce: null, authorizationTarget: null, accessToken: null, refreshToken: null, oauthGrantActive: false, secretNames: [], cleanup: null };
@@ -410,7 +413,11 @@ const server = createServer(async (request, response) => {
     const names = new Map([["/", [join(assets, "index.html"), "text/html; charset=utf-8"]], ["/app.js", [googleApp, "text/javascript; charset=utf-8"]], ["/cleanup.js", [googleCleanup, "text/javascript; charset=utf-8"]], ["/common.js", [join(assets, "common.js"), "text/javascript; charset=utf-8"]], ["/style.css", [join(assets, "style.css"), "text/css; charset=utf-8"]]]);
     const resource = names.get(url.pathname);
     if (!resource || !existsSync(resource[0])) return send(response, 404, "Not found", "text/plain; charset=utf-8");
-    return send(response, 200, readFileSync(resource[0]), resource[1]);
+    const asset = readFileSync(resource[0]);
+    const body = url.pathname === "/" || url.pathname === "/common.js"
+      ? renderWizardProductIdentity(asset.toString("utf8"), productIdentity)
+      : asset;
+    return send(response, 200, body, resource[1]);
   } catch (error) {
     return send(response, 400, { error: error.message || "処理を完了できませんでした。", code: error.code || "failed" });
   }

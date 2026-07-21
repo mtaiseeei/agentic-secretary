@@ -9,6 +9,7 @@ import { dispatchCorrelatedWorkflow, watchCorrelatedWorkflow } from "../../../sc
 import { workingRoot, writeFileAtomicSafe } from "../../../scripts/lib/safe-fs.mjs";
 import { runExternal, runExternalSync } from "../../../scripts/lib/external-ops.mjs";
 import { createWizardSessionGuard } from "../../../scripts/lib/wizard-session.mjs";
+import { loadWizardProductIdentity, renderWizardProductIdentity } from "../../../scripts/lib/wizard-product-identity.mjs";
 
 const INTERVALS = new Set(["30m", "1h", "3h", "6h", "12h", "manual"]);
 const args = new Map();
@@ -17,6 +18,8 @@ const root = workingRoot(args.get("--root") || process.cwd());
 const port = Number(args.get("--port") || 8765);
 const host = "127.0.0.1";
 const assets = resolve(dirname(fileURLToPath(import.meta.url)), "..", "assets", "wizard");
+const pluginRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const productIdentity = loadWizardProductIdentity(pluginRoot);
 let dispatch = { status: "idle", operation: null, config: null, message: "" };
 let discovery = { status: "idle", message: "" };
 let discoveryConfirmed = false;
@@ -255,7 +258,11 @@ const server = createServer(async (request, response) => {
   const name = names.get(url.pathname);
   if (!name) return send(response, 404, "Not found", "text/plain; charset=utf-8");
   const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8" };
-  return send(response, 200, readFileSync(join(assets, name)), types[extname(name)]);
+  const asset = readFileSync(join(assets, name));
+  const body = name === "index.html" || name === "common.js"
+    ? renderWizardProductIdentity(asset.toString("utf8"), productIdentity)
+    : asset;
+  return send(response, 200, body, types[extname(name)]);
 });
 
 verifyPrivateRepo();
