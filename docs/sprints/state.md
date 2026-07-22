@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-035-patch-001
+- Current ID: sprint-035-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 4
 - Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
@@ -63,12 +63,16 @@
 | sprint-034 | superseded | [contract](sprint-034.md) | - | - |
 | sprint-035 | done-by-user-decision | [contract](sprint-035.md) | [progress](../progress/sprint-035.md) | [feedback](../feedback/sprint-035.md) |
 | sprint-035-patch-001 | done | [contract](sprint-035-patch-001.md) | [progress](../progress/sprint-035-patch-001.md) | [feedback](../feedback/sprint-035-patch-001.md) |
+| sprint-035-patch-002 | done | [contract](sprint-035-patch-002.md) | [progress](../progress/sprint-035-patch-002.md) | [feedback](../feedback/sprint-035-patch-002.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-22: sprint-035-patch-002はfresh独立EvaluatorでPASS。5 callsite、隔離Git fixture 148/148、機能完全性・動作安定性・回帰なし各5/5、product finding 0件を確認してdone。既存固定期待値／allowlistのverification-infra 2件はfeedbackへ分離した。
+- 2026-07-22: sprint-035-patch-002 Generatorが5 callsiteを `pull --ff-only --no-rebase` へ更新し、隔離Git fixture 148/148と主要近傍回帰を引き渡した。既存README期待値等の非因果FAILはprogressへ分離し、Lineage Dispatches 4としてfresh Evaluatorへ進める。
+- 2026-07-22: ユーザー承認済みの残存Git障害を sprint-035-patch-002（Type: micro）として開始。`pull.rebase=true` と取得対象外dirty差分が共存しても、製品経路がGit設定を変更せず `git pull --ff-only --no-rebase` 相当で安全なfast-forwardだけを行う契約とした。Model Tier standard、Rotate none、Lineage Dispatches 3としてfresh Generatorへ引き渡す。
 - 2026-07-22: sprint-035-patch-001はfresh独立EvaluatorでPASS。両wizard×desktop／mobile／200%の6条件、composition中result mutation 0・全画面再描画0、確定後1回更新、focus／caret／途中編集／選択保持、統合9/9、session／OAuth／cancel 21/21、Secret／所有path 71/71を確認し、製品finding 0件でdone。実API／OAuth実値／Secrets／Actions／remote writeはnot-run。旧README期待値等のverification-infra Minor 3件はfeedbackに分離記録した。
 - 2026-07-22: sprint-035-patch-001 Generatorがcommon search helper、両wizardの部分描画、IME／caret／選択保持回帰をcandidate `b94501f` まで実装。専用・既存両wizard・edition回帰とlocal browserを0 product FAILで引き渡したため、statusをawaiting-eval、Lineage Dispatchesを2としてfresh Evaluatorへ進める。実API／OAuth／Secret／Actions／remote writeはnot-run。
 - 2026-07-22: ユーザーがChatwork／Google Chat共通wizardの検索入力不具合修正を承認。sprint-035-patch-001をstandard riskで開始。標準Generator `gpt-5.6-luna` は子Agent作成前にホストから拒否されたためdispatch回数には数えず、resolver指定の可用性fallback `gpt-5.6-sol`／highへ切り替え、Model Tierをstrong、Rotateをmodel-availability、Lineage Dispatchesを1としてfresh Generatorへ引き渡す。my-vault固有の状態判定・一覧発見はprivate downstreamの別Patchで扱う。

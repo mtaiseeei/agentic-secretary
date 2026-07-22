@@ -141,7 +141,7 @@ async function runSync(mode, config) {
     const runSummary = { id: run.runId, workflow: run.workflowFile, branch: run.branch, createdAt: run.createdAt };
     dispatch = { status: "waiting", operation, config, run: runSummary, message: "今回開始した自動取得処理（GitHub Actions）の完了を待っています。" };
     await watchCorrelatedWorkflow({ root, run, gh, timeoutMs: 5 * 60_000 });
-    await runExternal(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only"], { cwd: root, timeoutMs: 60_000, label: "git pull" });
+    await runExternal(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only", "--no-rebase"], { cwd: root, timeoutMs: 60_000, label: "git pull" });
     dispatch = {
       status: "success",
       operation,
@@ -187,7 +187,7 @@ async function discoverRooms() {
     });
     discovery = { status: "running", run: { id: run.runId, workflow: run.workflowFile, branch: run.branch, createdAt: run.createdAt }, message: "今回開始した自動取得処理（GitHub Actions）で参加中のルーム一覧を取得しています。" };
     await watchCorrelatedWorkflow({ root, run, gh, timeoutMs: 5 * 60_000 });
-    await runExternal(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only"], { cwd: root, timeoutMs: 60_000, label: "git pull" });
+    await runExternal(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only", "--no-rebase"], { cwd: root, timeoutMs: 60_000, label: "git pull" });
     const rooms = readJson(join(root, "chatwork", "rooms.json"), { status: "not-discovered", rooms: [] });
     if (rooms.status !== "ready") throw new Error("rooms-not-ready");
     discovery = { status: "success", run: { id: run.runId, workflow: run.workflowFile, branch: run.branch, createdAt: run.createdAt }, message: "ルーム一覧を取得しました。" };

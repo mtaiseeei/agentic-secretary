@@ -14,7 +14,7 @@ export function searchGoogleChat({ root, query, space = "", sender = "", from = 
   root = resolve(root);
   if (!skipPull) {
     try {
-      runExternalSync(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only"], {
+      runExternalSync(process.env.YASASHII_GIT_BIN || "git", ["pull", "--ff-only", "--no-rebase"], {
         cwd: root,
         timeoutMs: Number(process.env.YASASHII_CLI_TIMEOUT_MS || 30_000),
         label: "git pull",

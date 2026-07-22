@@ -48,7 +48,7 @@ async function run(binary, argv, runTimeout = 60_000) {
 
 async function pull(stage) {
   events.push(stage);
-  await run(git, ["pull", "--ff-only"]);
+  await run(git, ["pull", "--ff-only", "--no-rebase"]);
 }
 
 async function search(stage) {
