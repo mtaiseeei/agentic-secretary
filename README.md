@@ -7,9 +7,9 @@
 1つのprivate GitHub repoで管理します。Chatwork／Google Chatのwizard、OAuth scope、同期境界、
 secret保護、workspace境界は共通基盤であり、hostやeditionごとに分岐しません。
 
-## Release candidate
+## Release
 
-- Candidate / latest / manifests: `0.8.0`
+- Latest / manifests: `0.8.0`
 - Internal plugin path: `plugins/secretary/`
 - External plugin ID: `agentic-secretary@agentic-secretary`
 - License: MIT
@@ -20,7 +20,7 @@ secret保護、workspace境界は共通基盤であり、hostやeditionごとに
 既知scanner blockerは未解消で、`0.7.0 → 0.8.0` live updateを保証しません。同一版とdowngradeは
 副作用0件で停止します。更新前にはpush-free protection commitを作り、失敗時の復元地点を残します。
 追加のlive gateでは、認証情報を含まないprivate test workspaceだけを使い、実hostごとの導入・会話・wizard・
-更新経路を個別に検証します。Codex Appは、下記の実利用確認により検証済みです。
+更新経路を個別に検証します。4hostは、下記の実利用確認により検証済みです。
 
 ## Supported target hosts
 
