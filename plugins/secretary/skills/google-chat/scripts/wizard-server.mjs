@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createServer } from "node:http";
+import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +11,8 @@ import { fetchWithTimeout, runExternal, runExternalSync } from "../../../scripts
 import { createWizardSessionGuard } from "../../../scripts/lib/wizard-session.mjs";
 import { loadWizardProductIdentity, renderWizardProductIdentity } from "../../../scripts/lib/wizard-product-identity.mjs";
 import { createGoogleChatClient } from "./client.mjs";
+import { discoverSpacesWithActions } from "./actions-discovery.mjs";
+import { mergeDiscoveredSpaces, normalizeDiscoveryResult } from "./discovery.mjs";
 import { applyGoogleChatConfig } from "./config-transaction.mjs";
 import { initialGoogleChatSync } from "./sync.mjs";
 import {
@@ -32,6 +35,7 @@ const normalUiTest = synthetic && process.env.YASASHII_GOOGLE_CHAT_TEST_NORMAL_U
 let session = { status: "unconfigured", message: "OAuth client JSONを選んでください。", credentials: null, pkce: null, authorizationTarget: null, accessToken: null, refreshToken: null, oauthGrantActive: false, secretNames: [], cleanup: null };
 let spaces = [];
 let sync = null;
+let entryDiscovery = { status: "idle", correlationId: null };
 const testMetrics = { tokenExchanges: 0, secretRegistrations: Object.fromEntries(GOOGLE_CHAT_SECRET_NAMES.map((name) => [name, 0])), initialSyncs: 0 };
 
 function nextPkceState() {
@@ -46,7 +50,7 @@ function origin() {
 }
 
 const sessionGuard = createWizardSessionGuard({ origin, cookieName: "yasashii_google_chat_session" });
-const mutationPaths = new Set(["/api/oauth/client", "/api/oauth/synthetic", "/api/oauth/authorize", "/api/spaces", "/api/initial-sync", "/api/settings", "/api/cancel"]);
+const mutationPaths = new Set(["/api/oauth/client", "/api/oauth/synthetic", "/api/oauth/authorize", "/api/spaces", "/api/discovery", "/api/initial-sync", "/api/settings", "/api/cancel"]);
 
 function readJson(path, fallback = null) {
   try { return JSON.parse(readFileSync(path, "utf8")); } catch { return fallback; }
@@ -215,6 +219,23 @@ function currentClient() {
   return createGoogleChatClient({ accessToken: session.accessToken });
 }
 
+async function discoverConfiguredSpaces() {
+  if (entryDiscovery.status === "running") return entryDiscovery;
+  const current = configuredState();
+  const correlationId = randomUUID();
+  entryDiscovery = { status: "running", correlationId };
+  if (synthetic) {
+    const data = fixture() || {};
+    const status = ["complete", "partial", "failed"].includes(data.discoveryStatus) ? data.discoveryStatus : "complete";
+    const result = normalizeDiscoveryResult({ correlationId, status, generatedAt: new Date().toISOString(), spaces: status === "failed" ? [] : (data.discoverySpaces || data.spaces || []) }, correlationId);
+    entryDiscovery = { correlationId, ...mergeDiscoveredSpaces(current.spaces, result), generatedAt: result.generatedAt, code: data.discoveryCode || null, run: { synthetic: true } };
+  } else {
+    entryDiscovery = await discoverSpacesWithActions({ root, knownSpaces: current.spaces, correlationId });
+  }
+  spaces = entryDiscovery.spaces;
+  return entryDiscovery;
+}
+
 async function commitAndPush(paths) {
   if (process.env.YASASHII_GOOGLE_CHAT_SKIP_GIT === "1") return { status: "fixture" };
   const git = process.env.YASASHII_GIT_BIN || "git";
@@ -243,7 +264,13 @@ const server = createServer(async (request, response) => {
       if (rejected) return send(response, rejected.status, { error: rejected.message, code: rejected.code });
     }
     if (url.pathname === "/oauth/callback" && request.method !== "GET") return send(response, 405, { error: "Method not allowed", code: "method-not-allowed" });
-    if (request.method === "GET" && url.pathname === "/api/bootstrap") return send(response, 200, { service: "google-chat", oauth: publicOAuthState(session), cleanup: session.cleanup, intervals: ["1h", "3h", "6h", "12h", "manual"], defaultInterval: "3h", testing: synthetic && !normalUiTest, ...configuredState() });
+    if (request.method === "GET" && url.pathname === "/api/bootstrap") return send(response, 200, { service: "google-chat", oauth: publicOAuthState(session), cleanup: session.cleanup, intervals: ["1h", "3h", "6h", "12h", "manual"], defaultInterval: "3h", testing: synthetic && !normalUiTest, discovery: entryDiscovery, ...configuredState() });
+    if (request.method === "POST" && url.pathname === "/api/discovery") {
+      await bodyJson(request);
+      if (!configuredState().configured) return send(response, 409, { error: "初回接続を先に完了してください。", code: "initial-setup-required" });
+      const discovery = await discoverConfiguredSpaces();
+      return send(response, 200, { discovery, spaces: discovery.spaces, current: configuredState() });
+    }
     if (request.method === "POST" && url.pathname === "/api/oauth/client") {
       const input = await bodyJson(request);
       const credentials = parseDesktopClientJson(input.clientJson);

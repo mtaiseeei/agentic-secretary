@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-035-patch-002
+- Current ID: sprint-035-patch-003
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
+- Lineage Dispatches: 8
 - Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
@@ -64,12 +64,19 @@
 | sprint-035 | done-by-user-decision | [contract](sprint-035.md) | [progress](../progress/sprint-035.md) | [feedback](../feedback/sprint-035.md) |
 | sprint-035-patch-001 | done | [contract](sprint-035-patch-001.md) | [progress](../progress/sprint-035-patch-001.md) | [feedback](../feedback/sprint-035-patch-001.md) |
 | sprint-035-patch-002 | done | [contract](sprint-035-patch-002.md) | [progress](../progress/sprint-035-patch-002.md) | [feedback](../feedback/sprint-035-patch-002.md) |
+| sprint-035-patch-003 | done | [contract](sprint-035-patch-003.md) | [progress](../progress/sprint-035-patch-003.md) | [feedback](../feedback/sprint-035-patch-003.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-23: sprint-035-patch-003 Retry 1はfresh独立EvaluatorでPASS。初回High findingを実DOMのcomplete／partial／failedで再評価し、query=`今回`、caret 2/2、検索欄focus、未保存選択を含む2件をRetry後も保持。専用45/45、主要50/50・43/43、desktop／390px overflow 0、console error 0、新規finding 0を確認した。旧digestは非因果、長時間回帰の中断分はnot-runとして分離。sprint-035-patch-003をdone、Retry Count 0、Model Tier standard、Rotate noneへ戻す。
+- 2026-07-23: sprint-035-patch-003 Retry 1 Generatorが再試行時の検索query／caret／focus／未保存checkbox選択を一時snapshotで保持し、保存済みconfigへの巻き戻りを解消。専用45/45、Sprint 020 50/50、Patch 002 148/148、Sprint 024 43/43、実DOM failed fixture、diff checkを0 FAILで引き渡したためawaiting-eval、Lineage Dispatches 8としてfresh Evaluatorへ進める。
+- 2026-07-23: ユーザーがYasashii lineage上限の明示リセットと、High finding 1件だけの限定Retryを承認。AgenticはLineage Dispatches 7、Model Tier strong、Rotate noneでfresh Generatorへ差し戻す。取得backend／workflow設計は変更せず、再試行時の検索・caret・focus・checkbox保持と回帰追加に限定する。
+- 2026-07-23: sprint-035-patch-003初回評価はimplementation-issueでFAIL。失敗後の再試行で検索caret／focus／未保存checkbox選択が保存済みconfigへ巻き戻るHigh findingを実DOMで確認。Retry Count 1、Model Tier strong維持でGenerator差し戻し待ちとする。Yasashii lineage上限確認のため次dispatchは未実施。
+- 2026-07-23: sprint-035-patch-003 Generatorが設定済みentryのActions discovery、全page SPACE取得、complete／partial／failed、非破壊merge、再試行を実装。専用32/32、Sprint 020 50/50、Patch 002 148/148、Sprint 024 43/43を引き渡したためawaiting-eval、Lineage Dispatches 6としてfresh Evaluatorへ進める。既存README期待と旧digestの非因果FAILはprogressへ分離した。
+- 2026-07-23: ユーザーがGoogle Chat設定wizardで保存済み12件しか表示されない問題の修正を承認。sprint-035-patch-003（regular patch / high risk）として、設定済みentry時の相関済みGitHub Actions discovery、全ページSPACE限定取得、既存選択保持、新規未選択、OAuth再認可不要、complete／partial／failedの非破壊表示を契約化した。高リスクのためModel Tier strong、Rotate model-escalation、Lineage Dispatches 5としてfresh Generatorへ引き渡す。実OAuth／実API／実Secret更新／実Actions／remote writeは評価後の別承認まで行わない。
 - 2026-07-22: sprint-035-patch-002はfresh独立EvaluatorでPASS。5 callsite、隔離Git fixture 148/148、機能完全性・動作安定性・回帰なし各5/5、product finding 0件を確認してdone。既存固定期待値／allowlistのverification-infra 2件はfeedbackへ分離した。
 - 2026-07-22: sprint-035-patch-002 Generatorが5 callsiteを `pull --ff-only --no-rebase` へ更新し、隔離Git fixture 148/148と主要近傍回帰を引き渡した。既存README期待値等の非因果FAILはprogressへ分離し、Lineage Dispatches 4としてfresh Evaluatorへ進める。
 - 2026-07-22: ユーザー承認済みの残存Git障害を sprint-035-patch-002（Type: micro）として開始。`pull.rebase=true` と取得対象外dirty差分が共存しても、製品経路がGit設定を変更せず `git pull --ff-only --no-rebase` 相当で安全なfast-forwardだけを行う契約とした。Model Tier standard、Rotate none、Lineage Dispatches 3としてfresh Generatorへ引き渡す。

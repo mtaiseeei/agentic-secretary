@@ -2,7 +2,7 @@ import { bindWizardSearch, escapeHtml as escape, externalLink, installWizardShel
 import { cleanupDescription } from "/cleanup.js";
 
 const { app } = installWizardShell("google-chat");
-const state = { oauth: null, cleanup: null, config: null, sync: null, spaces: [], selected: new Set(), interval: "3h", query: "", saveConsent: false, commitPushConsent: false, automaticPushConsent: false, testing: false };
+const state = { oauth: null, cleanup: null, config: null, sync: null, spaces: [], selected: new Set(), interval: "3h", query: "", saveConsent: false, commitPushConsent: false, automaticPushConsent: false, testing: false, discovery: null };
 let oauthPollGeneration = 0;
 const frequencies = [["1h", "1時間ごと"], ["3h", "3時間ごと（おすすめ・初期値）"], ["6h", "6時間ごと"], ["12h", "12時間ごと"], ["manual", "手動のみ"]];
 const links = {
@@ -15,6 +15,30 @@ function errorMessage(error) {
 
 function show(id, html, stateName = "ready") {
   renderWizardScreen(app, { id: `google-chat-${id}`, state: stateName, html });
+}
+
+function captureSettingsDiscoveryUiState() {
+  const search = app.querySelector("#settings-space-search");
+  const active = typeof document === "undefined" ? null : document.activeElement;
+  const focusKey = active && app.contains(active) ? active.dataset?.focusKey || (search ? "settings-space-search" : null) : null;
+  return {
+    focusKey,
+    selectionStart: search && typeof search.selectionStart === "number" ? search.selectionStart : null,
+    selectionEnd: search && typeof search.selectionEnd === "number" ? search.selectionEnd : null,
+    selectionDirection: search?.selectionDirection || "none",
+  };
+}
+
+function restoreSettingsDiscoveryUiState(snapshot) {
+  if (!snapshot) return;
+  const search = app.querySelector("#settings-space-search");
+  const escaped = (value) => typeof CSS !== "undefined" && CSS.escape ? CSS.escape(value) : String(value).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+  const target = snapshot.focusKey ? app.querySelector(`[data-focus-key="${escaped(snapshot.focusKey)}"]`) : null;
+  target?.focus?.({ preventScroll: true });
+  if (search && snapshot.selectionStart != null && typeof search.setSelectionRange === "function") {
+    const max = String(search.value || "").length;
+    search.setSelectionRange(Math.min(snapshot.selectionStart, max), Math.min(snapshot.selectionEnd ?? snapshot.selectionStart, max), snapshot.selectionDirection);
+  }
 }
 
 async function json(url, options = {}) {
@@ -145,6 +169,22 @@ async function discoverSpaces() {
     if (state.config) return renderSettingsSpaces({ refreshed: true });
     renderSpaces();
   } catch (error) { renderDiscoverFailure(error); }
+}
+
+async function discoverConfiguredSpaces(retryUiState = null) {
+  progress(0);
+  show("settings-discovery-loading", '<p class="eyebrow">設定変更</p><h1>最新の通常スペースを確認しています。</h1><p class="lead" data-copy-role="status">登録済みの接続情報を使って、最新候補を確認するGitHubの仕組みを実行しています。</p><p class="notice">以前の選択と取得済み履歴は変更しません。この画面を開いたままお待ちください。</p>', "loading");
+  try {
+    const result = await json("/api/discovery", { method: "POST" });
+    state.discovery = result.discovery;
+    state.spaces = result.spaces || [];
+    renderSettingsSpaces({ discovery: state.discovery });
+    restoreSettingsDiscoveryUiState(retryUiState);
+  } catch (error) {
+    state.discovery = { status: "failed", code: error.code || "discovery-failed", added: 0, missingKnown: false };
+    renderSettingsSpaces({ discovery: state.discovery });
+    restoreSettingsDiscoveryUiState(retryUiState);
+  }
 }
 
 function renderDiscoverFailure(error) {
@@ -295,19 +335,36 @@ function renderResult(result) {
   app.querySelector('[data-action="close"]').onclick = renderComplete;
 }
 
-function renderSettingsSpaces({ refreshed = false } = {}) {
+function renderSettingsSpaces({ refreshed = false, discovery = state.discovery } = {}) {
   progress(1);
   const shown = filteredSpaces();
   const noSelection = state.selected.size === 0;
-  show("settings-select-spaces", `<p class="eyebrow">設定変更 1 / 3</p><h1>取得するGoogle Chatスペースを見直します。</h1>${nowCopy("今後も取得する通常スペースだけにチェックを入れます。")}${refreshed ? '<p class="notice" role="status">Googleへ接続し直し、最新の通常スペースを確認しました。以前の選択と履歴は残しています。</p>' : ""}
+  const discoveryNotice = discovery?.status === "complete"
+    ? `<p class="notice" role="status">最新の通常スペースを最後まで確認しました。新しい候補は${Number(discovery.added || 0)}件です。以前の選択と履歴は残しています。</p>`
+    : discovery?.status === "partial"
+      ? `<p class="notice" role="status">通常スペースを途中まで確認しました。確認できた新しい候補は${Number(discovery.added || 0)}件です。全参加一覧ではありません。</p>`
+      : discovery?.status === "failed"
+        ? '<p class="notice error" role="alert">最新の通常スペースを確認できませんでした。表示中は保存済みの候補で、全参加一覧ではありません。以前の選択と履歴は残しています。</p>'
+        : refreshed ? '<p class="notice" role="status">Googleへ接続し直し、最新の通常スペースを確認しました。以前の選択と履歴は残しています。</p>' : "";
+  show("settings-select-spaces", `<p class="eyebrow">設定変更 1 / 3</p><h1>取得するGoogle Chatスペースを見直します。</h1>${nowCopy("今後も取得する通常スペースだけにチェックを入れます。")}${discoveryNotice}
     <div class="panel"><label class="search-label" for="settings-space-search">通常スペースを検索</label><input class="search" id="settings-space-search" data-focus-key="settings-space-search" type="search" value="${escape(state.query)}" placeholder="スペース名"><button class="text-button" data-action="clear" type="button" aria-label="Google Chatスペースの選択をすべて外す">選択をすべて外す</button><ul class="room-list" data-search-results>${spaceResultsHtml(shown, "settings-space-")}</ul><p class="hint" data-selected-count role="status">選択中: ${state.selected.size}スペース</p>${technicalDetails("管理者向け: スペースの識別子と一覧更新", `<ul data-search-identifiers>${spaceIdentifiersHtml(shown)}</ul><p>新しいスペースが見えない場合は再認証して一覧を更新します。</p>`, "admin")}</div>
     <p class="notice" data-selection-notice role="status">${noSelection ? "0件のまま手動のみを選ぶと、今後の取得を止めます。取得済み履歴は削除しません。" : "選択を外したスペースは今後読みません。取得済み履歴は削除しません。"}</p>
-    <div class="actions" data-copy-role="actions"><button class="button button-secondary" data-action="reauthorize" aria-label="Googleへ接続し直して通常スペース一覧を更新する">Googleへ接続し直す</button><button class="button button-primary" data-action="next" aria-label="${noSelection ? "Google Chatの取得停止方法を確認する" : "Google Chatの取得間隔を確認する"}">${noSelection ? "取得の停止方法を確認する" : "取得間隔を確認する"}</button></div>`);
+    <div class="actions" data-copy-role="actions"><button class="button button-secondary" data-action="reauthorize" aria-label="Googleへ接続し直して通常スペース一覧を更新する">Googleへ接続し直す</button>${discovery?.status && discovery.status !== "complete" ? '<button class="button button-secondary" data-action="retry-discovery" aria-label="最新の通常スペースをもう一度確認する">最新候補をもう一度確認する</button>' : ""}<button class="button button-primary" data-action="next" aria-label="${noSelection ? "Google Chatの取得停止方法を確認する" : "Google Chatの取得間隔を確認する"}">${noSelection ? "取得の停止方法を確認する" : "取得間隔を確認する"}</button></div>`);
   bindSpaceSearch("#settings-space-search", "settings-space-");
   app.querySelector('[data-action="clear"]').onclick = () => { state.selected.clear(); renderSpaceResults("settings-space-"); };
   const next = app.querySelector('[data-action="next"]');
   next.onclick = renderSettingsFrequency;
   app.querySelector('[data-action="reauthorize"]').onclick = renderPrepareFile;
+  const retry = app.querySelector('[data-action="retry-discovery"]');
+  if (retry) {
+    let retryUiState = null;
+    retry.onpointerdown = () => { retryUiState = captureSettingsDiscoveryUiState(); };
+    retry.onclick = () => {
+      const snapshot = retryUiState || captureSettingsDiscoveryUiState();
+      retryUiState = null;
+      discoverConfiguredSpaces(snapshot);
+    };
+  }
 }
 
 function renderSettingsFrequency() {
@@ -411,7 +468,8 @@ json("/api/bootstrap").then((result) => {
   state.interval = result.config?.interval || result.defaultInterval;
   state.selected = new Set(result.config?.selectedSpaceNames || []);
   state.testing = result.testing === true;
-  if (result.configured && state.oauth.status !== "connected") renderSettingsSpaces();
+  state.discovery = result.discovery || null;
+  if (result.configured && state.oauth.status !== "connected") discoverConfiguredSpaces();
   else if (state.oauth.status === "connected") discoverSpaces();
   else if (state.oauth.status === "client-ready") renderAuthorize();
   else if (["authorization-pending", "callback-processing"].includes(state.oauth.status)) renderOAuthWaiting();

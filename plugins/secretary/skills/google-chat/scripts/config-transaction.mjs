@@ -10,7 +10,7 @@ import { GOOGLE_CHAT_SECRET_NAMES } from "./oauth-session.mjs";
 import { GOOGLE_CHAT_INTERVALS, renderGoogleChatWorkflow } from "./schedule.mjs";
 
 const moduleRoot = dirname(fileURLToPath(import.meta.url));
-const runtimeFiles = ["client.mjs", "history.mjs", "refresh-token.mjs", "continuous-sync.mjs", "runtime-safety.mjs"];
+const runtimeFiles = ["client.mjs", "history.mjs", "refresh-token.mjs", "continuous-sync.mjs", "discovery.mjs", "runtime-safety.mjs"];
 
 function readOptional(path) {
   try { return readFileSync(path, "utf8"); } catch { return null; }

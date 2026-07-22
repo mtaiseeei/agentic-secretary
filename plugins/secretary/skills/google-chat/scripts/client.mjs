@@ -44,18 +44,45 @@ export function createGoogleChatClient({ accessToken, fetchImpl = fetch, chatBas
     return response.json();
   };
   return {
-    async listSpaces() {
+    async discoverSpaces() {
       const spaces = [];
+      const seenIds = new Set();
+      const seenTokens = new Set();
       let pageToken = "";
-      do {
-        const url = new URL(`${chatBase}/spaces`);
-        url.searchParams.set("pageSize", "1000");
-        if (pageToken) url.searchParams.set("pageToken", pageToken);
-        const page = await request(url);
-        spaces.push(...(page.spaces || []));
-        pageToken = page.nextPageToken || "";
-      } while (pageToken);
-      return spaces;
+      let pages = 0;
+      let excluded = 0;
+      try {
+        do {
+          if (pageToken && seenTokens.has(pageToken)) {
+            return { status: spaces.length ? "partial" : "failed", spaces, pages, excluded, error: "page-token-cycle" };
+          }
+          if (pageToken) seenTokens.add(pageToken);
+          const url = new URL(`${chatBase}/spaces`);
+          url.searchParams.set("pageSize", "1000");
+          if (pageToken) url.searchParams.set("pageToken", pageToken);
+          const page = await request(url);
+          if (!page || typeof page !== "object" || !Array.isArray(page.spaces || [])) {
+            return { status: spaces.length ? "partial" : "failed", spaces, pages, excluded, error: "response-invalid" };
+          }
+          pages += 1;
+          for (const resource of page.spaces || []) {
+            const name = String(resource?.name || "").trim();
+            if (resource?.spaceType !== "SPACE" || !/^spaces\/[^/]+$/.test(name)) { excluded += 1; continue; }
+            if (seenIds.has(name)) { excluded += 1; continue; }
+            seenIds.add(name);
+            spaces.push({ name, displayName: String(resource.displayName || `名称未取得 ${name.split("/").pop()}`), spaceType: "SPACE" });
+          }
+          pageToken = typeof page.nextPageToken === "string" ? page.nextPageToken.trim() : "";
+        } while (pageToken);
+        return { status: "complete", spaces, pages, excluded, error: null };
+      } catch (error) {
+        return { status: spaces.length ? "partial" : "failed", spaces, pages, excluded, error: error?.code || "api-failed" };
+      }
+    },
+    async listSpaces() {
+      const result = await this.discoverSpaces();
+      if (result.status !== "complete") throw Object.assign(new Error("Google Chatの通常スペースを最後まで確認できませんでした。"), { code: result.error || "space-discovery-incomplete", discovery: result });
+      return result.spaces;
     },
     getSpace(name) { return request(`${chatBase}/${name}`); },
     async listAllMessages(parent, { after = "" } = {}) {
