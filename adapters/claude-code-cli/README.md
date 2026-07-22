@@ -8,9 +8,7 @@ After publication:
 /secretary
 ```
 
-Restart the CLI session after install. The live runner must use a synthetic HOME, a digest-matched
-read-only plugin copy, path-scoped permissions, a controlled outside-workspace canary, a Bash-free
-minimal tool list, bounded inspection, and verified cleanup after success and failure. It may record
-`pass` only when the runner-observed invariants, structured denial record, and all conversation
-scenarios pass. This Sprint did not install the plugin, so the current status is
-`external-live-gate-unavailable`.
+Restart the CLI session after install. The user confirmed real-host operation on 2026-07-22 with
+the v0.8.0 common core `891eabc`; the current host status is `verified`. Connector authorization,
+OAuth, Repository Secrets, GitHub Actions, and external chat sync were also confirmed in the real
+environment.

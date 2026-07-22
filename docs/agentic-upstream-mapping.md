@@ -41,11 +41,13 @@ and validator metadata live under `adapters/`.
 | GitHub repository creation | completed as private | repository exists; public setting remains forbidden |
 | remote add/change | completed for approved `origin` | later changes still require approval |
 | push | completed through the recorded baseline | later commits remain local until separately approved |
-| Claude Code Desktop App install | `external-live-gate-unavailable` | changes installed plugin state |
-| Claude Code CLI install | `external-live-gate-unavailable` | changes installed plugin state |
-| Codex App install | `external-live-gate-unavailable` | changes installed Codex plugin state |
-| Codex CLI install | `external-live-gate-unavailable` | changes installed Codex plugin state |
+| Claude Code Desktop App install | `verified` | 2026-07-22、v0.8.0共通coreの実環境動作をユーザー確認 |
+| Claude Code CLI install | `verified` | 2026-07-22、v0.8.0共通coreの実環境動作をユーザー確認 |
+| Codex App install | `verified` | 2026-07-22、v0.8.0共通coreを含むprivate downstreamで実利用確認 |
+| Codex CLI install | `verified` | 2026-07-22、v0.8.0共通coreの実環境動作をユーザー確認 |
 | public setting | not executed | makes the future repository publicly visible |
-| release publication | not executed; Sprint 035 only | publishes a release artifact |
+| release publication | completed for v0.8.0 | release artifact published |
 
-Offline validator success must not change any row above to verified.
+4hostの `verified` はoffline validatorではなく、配布版v0.8.0共通core `891eabc` の実環境動作を
+ユーザーが確認したことに基づく。Codex Appでは `agentic-secretary-my-vault` main `056044e` も使用した。
+connector認証、OAuth、Repository Secret、GitHub Actions、外部chat同期も実環境で確認済みである。

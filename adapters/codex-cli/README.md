@@ -23,5 +23,6 @@ codex plugin add agentic-secretary@agentic-secretary
 installed versionを確認してから新しいsessionを開始します。cache directoryは直接編集しません。
 
 `AGENTS.md`、skills手動コピー、`config.toml` はrepository-localのauthoring・隔離test・fallbackだけに使い、
-正式pluginのPASS根拠にはしません。実CLI導入はexternal live gateです。未実行の場合のstatusは
-`external-live-gate-unavailable` のままです。
+正式pluginのPASS根拠にはしません。Codex CLIは2026-07-22にユーザーがv0.8.0共通core `891eabc`の
+実環境動作を確認済みで、現在のstatusは `verified` です。connector認証、OAuth、Repository Secret、
+GitHub Actions、外部chat同期も実環境で確認済みです。
