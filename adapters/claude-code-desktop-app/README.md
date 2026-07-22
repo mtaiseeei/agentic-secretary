@@ -11,8 +11,7 @@ After publication, install with:
 /secretary
 ```
 
-Reload the Claude Code workspace after install. Real installation, skill loading, conversation,
-wizard launch, boundary, secret, and update checks require separate approval. Until then the live
-status is `external-live-gate-unavailable`. An approved driver must run with the shared synthetic
-HOME, digest-matched read-only plugin copy, OS sandbox or host path-scoped permission, controlled
-canary denial, bounded inspection, and verified cleanup contract.
+Reload the Claude Code workspace after install. The user confirmed real-host operation on
+2026-07-22 with the v0.8.0 common core `891eabc`; the current host status is `verified`.
+Connector authorization, OAuth, Repository Secrets, GitHub Actions, and external chat sync were
+also confirmed in the real environment.
