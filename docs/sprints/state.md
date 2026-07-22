@@ -2,12 +2,12 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-035
+- Current ID: sprint-035-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 0
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 2
+- Model Tier: strong
+- Rotate: model-availability
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -62,12 +62,16 @@
 | sprint-033 | done | [contract](sprint-033.md) | [progress](../progress/sprint-033.md) | [feedback](../feedback/sprint-033.md) |
 | sprint-034 | superseded | [contract](sprint-034.md) | - | - |
 | sprint-035 | done-by-user-decision | [contract](sprint-035.md) | [progress](../progress/sprint-035.md) | [feedback](../feedback/sprint-035.md) |
+| sprint-035-patch-001 | done | [contract](sprint-035-patch-001.md) | [progress](../progress/sprint-035-patch-001.md) | [feedback](../feedback/sprint-035-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-22: sprint-035-patch-001はfresh独立EvaluatorでPASS。両wizard×desktop／mobile／200%の6条件、composition中result mutation 0・全画面再描画0、確定後1回更新、focus／caret／途中編集／選択保持、統合9/9、session／OAuth／cancel 21/21、Secret／所有path 71/71を確認し、製品finding 0件でdone。実API／OAuth実値／Secrets／Actions／remote writeはnot-run。旧README期待値等のverification-infra Minor 3件はfeedbackに分離記録した。
+- 2026-07-22: sprint-035-patch-001 Generatorがcommon search helper、両wizardの部分描画、IME／caret／選択保持回帰をcandidate `b94501f` まで実装。専用・既存両wizard・edition回帰とlocal browserを0 product FAILで引き渡したため、statusをawaiting-eval、Lineage Dispatchesを2としてfresh Evaluatorへ進める。実API／OAuth／Secret／Actions／remote writeはnot-run。
+- 2026-07-22: ユーザーがChatwork／Google Chat共通wizardの検索入力不具合修正を承認。sprint-035-patch-001をstandard riskで開始。標準Generator `gpt-5.6-luna` は子Agent作成前にホストから拒否されたためdispatch回数には数えず、resolver指定の可用性fallback `gpt-5.6-sol`／highへ切り替え、Model Tierをstrong、Rotateをmodel-availability、Lineage Dispatchesを1としてfresh Generatorへ引き渡す。my-vault固有の状態判定・一覧発見はprivate downstreamの別Patchで扱う。
 - 2026-07-22: Repo分割前のオーケストレーター正本からSprint 033／035のprogress・feedbackを移管。Sprint 033はcandidate `4670438`の4ホスト実証を含む独立評価PASS、Sprint 034はYasashii下流所有としてsupersededに整理した。
 - 2026-07-22: 最終main `95247b6`で0.8.0の両manifest、host-neutral root、Codex正式配布、Sprint 033／035、archive、release integrityを重点再確認し0 FAIL。ユーザーが実OAuth・Google／Microsoft／Notion connector認証をRelease必須から外し、軽量確認での出荷を明示選択したため、Sprint 035を `done-by-user-decision` とする。未実施項目はfeedbackのexternal live gate記録を保持する。
 - 2026-07-16: sprint-008〜012 と `sprint-012-patch-001` はすべて独立Evaluator評価に合格。Next Planned は `TBD`。

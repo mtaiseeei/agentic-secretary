@@ -115,6 +115,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-033](sprints/sprint-033.md) | 上流版: 共通祖先から `agentic-secretary` を4環境対応（Claude Code Desktop App／CLI、Codex App／CLI）の技術者向け完成品として成立させる | sprint-032-patch-002 |
 | [sprint-034](sprints/sprint-034.md) | 下流版: `yasashii-secretary` の狭いoverlayと同期回帰、yasashii限定の `key=value` 表現改善 | sprint-033 |
 | [sprint-035](sprints/sprint-035.md) | 最終判定: 2 editionのparity、安全性、系譜、互換、公開gate | sprint-034 |
+| [sprint-035-patch-001](sprints/sprint-035-patch-001.md) | 共通core: Chatwork／Google Chatの日本語IME安全な検索、caret／選択保持 | sprint-035 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
