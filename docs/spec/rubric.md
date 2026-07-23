@@ -230,6 +230,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 033 | 指定の別directory／別repo、共通祖先、agentic技術表現、共通本体＋host adapter分離、4環境（Claude Code Desktop App／CLI、Codex App／CLI）個別の導入・skill読込・会話・wizard起動・境界・secret・更新・validator証跡、未検証誤表示の負テスト、wizard／安全parity、candidate／latest `0.8.0` 整合、external gate操作別許可 |
 | 034 | fetch専用upstream、狭いyasashii overlay、同期冪等、未分類差分拒否、repo固有docs非同期、`0.8.0` candidate維持、yasashii限定の `key=value` 表現改善とedition分離テスト |
 | 035 | 2 editionの `0.8.0` 全回帰、公式validator、parity、衝突停止、新規導入、会話可読性、系譜、クレジット、公開許可と後始末 |
+| 035-patch-004 | public upstream 15 Skillsの正式frontmatter、generic quick_validate 15/15と合成downstream 19/19、PyYAML依存不足の明示、formal／generic validator責務分離、private／cache／my-vault無変更 |
 
 ## 差し戻し分類
 

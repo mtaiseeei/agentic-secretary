@@ -289,3 +289,11 @@
 4. 改行の有無をユーザーへ質問せず、preferencesへ設定項目を追加しない。口調、専門用語、報告詳しさを変更しても、この最低基準は無効にできない。
 5. 「改行しない」「1行にまとめる」「平文で返す」「箇条書きを使わない」等のユーザー向け指示を配布rules、skills、templates、commands、edition copy、handoffに残さない。内部record、commit message、index、machine-readable出力の1行契約は対象外として区別する。
 6. agenticは結論・正式名称・証拠を早めに、yasashiiは何が起きたか・影響・次にすることを先に示す。可読性の共通化を理由に、思想・対象・4つのedition差分を同一化しない。
+
+## 18. Skill metadataとvalidatorの責務分離
+
+1. `SKILL.md` の発火条件は正式なSkill schemaに従って `description` へ記載する。正式schemaにない独自frontmatter fieldを、特定hostで偶然動くことを理由に配布正本へ残さない。
+2. generic Skill validatorは各Skillのfrontmatter構文、許可field、必須field、name規則、description規則を検査する。対象Skillの除外、validatorの許可field追加、失敗の握りつぶしで合格を作らない。
+3. formal Codex plugin validatorはmarketplace／plugin manifest、plugin identity、version、Skill roster、sourceからcacheへの導入整合を検査する。generic Skill validatorの合格をformal配布検査の代わりにせず、formal配布検査の合格を個別Skill frontmatter検査の代わりにしない。
+4. generic validatorがPyYAML等のvalidator自身の依存不足で起動できない場合は、Skill不合格または合格へ読み替えず `dependency-unavailable`／`incomplete` として明示する。既存の正式runtimeまたは明示された依存pathを使える場合だけ実検査を行い、plugin runtimeへ検証専用依存を追加しない。
+5. public upstream所有のSkillはpublic repoで修正する。private downstream、installed cache、利用者workspaceを正本として直接修正せず、下流反映と再インストールは実装・独立評価後の別操作として扱う。

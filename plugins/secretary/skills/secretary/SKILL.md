@@ -2,8 +2,8 @@
 name: secretary
 description: >
   あなた専属のAI秘書の窓口。初めてなら数問だけのセットアップへ、2回目以降は用件のふりわけへ案内する。
-  「秘書」「今日やること」「思い出して」「接続」「作って」などの言葉で呼び出せる。
-trigger: /secretary
+  「秘書」「今日やること」「思い出して」「接続」「作って」などの言葉、Claude Codeで「/secretary」、
+  Codexで「$secretary」と依頼したときに使う。
 ---
 
 # agentic-secretary — 秘書の窓口（薄いルーター）

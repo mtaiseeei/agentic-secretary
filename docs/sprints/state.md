@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-035-patch-003
+- Current ID: sprint-035-patch-004
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 8
+- Lineage Dispatches: 9
 - Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
@@ -65,12 +65,15 @@
 | sprint-035-patch-001 | done | [contract](sprint-035-patch-001.md) | [progress](../progress/sprint-035-patch-001.md) | [feedback](../feedback/sprint-035-patch-001.md) |
 | sprint-035-patch-002 | done | [contract](sprint-035-patch-002.md) | [progress](../progress/sprint-035-patch-002.md) | [feedback](../feedback/sprint-035-patch-002.md) |
 | sprint-035-patch-003 | done | [contract](sprint-035-patch-003.md) | [progress](../progress/sprint-035-patch-003.md) | [feedback](../feedback/sprint-035-patch-003.md) |
+| sprint-035-patch-004 | awaiting-eval | [contract](sprint-035-patch-004.md) | [progress](../progress/sprint-035-patch-004.md) | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-23: sprint-035-patch-004 Generator作業単位がpublic upstreamの `secretary`／`update` から非正式`trigger`を除き、Claude Code／Codexの明示入口を`description`へ移した。generic validator wrapperはPyYAML有無を検査前に区別し、依存不足をchecked 0のincomplete／exit 2とする。専用5/5、public quick_validate 15/15、一時合成downstream 19/19、formal Codex 4/4、release integrity、diff checkがPASS。全体回帰は今回と無関係な既存README固定期待1件、Sprint 033は既存wizard digest期待差で停止したため非因果としてprogressへ分離。private／cache／my-vault／remote write 0件のままawaiting-evalへ進める。
+- 2026-07-23: private版Sprint 044で分離されたgeneric `quick_validate.py` 17/19をpublic upstreamの独立課題として開始。`secretary`／`update` はpublic upstream 15 Skillsが所有し、private repoとinstalled cacheはbyte同一の下流配布物、private固有は4 Skillsであることを確認した。現行`skill-creator`の正式規則は発火条件を`description`へ置き、独自`trigger` frontmatterを認めないため、validatorを緩和せずpublic正本を直す通常Patch `sprint-035-patch-004`を契約化。private repo、installed cache、`/Users/taisei/my-vault`、remoteは変更しない。resolverはisolated work unit／inherit fallback／standard tierを返し、Lineage Dispatches 9としてGenerator作業単位へ進める。
 - 2026-07-23: sprint-035-patch-003 Retry 1はfresh独立EvaluatorでPASS。初回High findingを実DOMのcomplete／partial／failedで再評価し、query=`今回`、caret 2/2、検索欄focus、未保存選択を含む2件をRetry後も保持。専用45/45、主要50/50・43/43、desktop／390px overflow 0、console error 0、新規finding 0を確認した。旧digestは非因果、長時間回帰の中断分はnot-runとして分離。sprint-035-patch-003をdone、Retry Count 0、Model Tier standard、Rotate noneへ戻す。
 - 2026-07-23: sprint-035-patch-003 Retry 1 Generatorが再試行時の検索query／caret／focus／未保存checkbox選択を一時snapshotで保持し、保存済みconfigへの巻き戻りを解消。専用45/45、Sprint 020 50/50、Patch 002 148/148、Sprint 024 43/43、実DOM failed fixture、diff checkを0 FAILで引き渡したためawaiting-eval、Lineage Dispatches 8としてfresh Evaluatorへ進める。
 - 2026-07-23: ユーザーがYasashii lineage上限の明示リセットと、High finding 1件だけの限定Retryを承認。AgenticはLineage Dispatches 7、Model Tier strong、Rotate noneでfresh Generatorへ差し戻す。取得backend／workflow設計は変更せず、再試行時の検索・caret・focus・checkbox保持と回帰追加に限定する。
