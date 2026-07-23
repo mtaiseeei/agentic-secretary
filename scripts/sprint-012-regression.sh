@@ -22,7 +22,7 @@ materialize(){ # $1=dest
   mkdir -p "$dest"; cp -R "$TEMPLATES/." "$dest/"
   mv "$dest/memory/decisions/_first-decision.md" "$dest/memory/decisions/2026-07-16-decisions.md"
   find "$dest" -type f -name '*.md' -print0 | while IFS= read -r -d '' f; do
-    perl -pi -e 's/\{\{OWNER_NAME\}\}/村山さん/g; s/\{\{OWNER_ROLE\}\}/講師/g; s/\{\{PRIMARY_SERVICE\}\}/Google/g; s/\{\{PRIMARY_SERVICE_DETAIL\}\}/Gmail・Googleカレンダー/g; s/\{\{TASKS\}\}/資料作成/g; s/\{\{REPORT_DETAIL\}\}/みじかく/g; s/\{\{CREATED_DATE\}\}/2026-07-16/g; s/\{\{CREATED_AT\}\}/2026-07-16 09:00/g' "$f"
+    perl -pi -e 's/\{\{OWNER_NAME\}\}/青空みらいさん/g; s/\{\{OWNER_ROLE\}\}/講師/g; s/\{\{PRIMARY_SERVICE\}\}/Google/g; s/\{\{PRIMARY_SERVICE_DETAIL\}\}/Gmail・Googleカレンダー/g; s/\{\{TASKS\}\}/資料作成/g; s/\{\{REPORT_DETAIL\}\}/みじかく/g; s/\{\{CREATED_DATE\}\}/2026-07-16/g; s/\{\{CREATED_AT\}\}/2026-07-16 09:00/g' "$f"
   done
   git -C "$dest" init -q
   git -C "$dest" config user.email regression@example.com

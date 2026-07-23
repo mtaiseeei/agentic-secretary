@@ -67,6 +67,10 @@
 5. 一般技術用語は常にそのまま使う。「ことば添え」のopt-inでも語彙を置換せず、馴染みの薄い語またはユーザーの役割から未知と思われる語に短い補足を足すだけにする。
 6. パーソナライズされた文面の完全一致は回帰対象にしない。rubricは既定値を採点し、設定分岐は構造・適用・安全なフォールバックと模擬会話で確認する。
 7. 自発的な `秘書のメモ` 追記、口調・呼び方・詳しさ等の変更は、適用前に1行確認する。
+8. 初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢から解決し、保存前に実際の値を確認する。選択への未回答、空回答は「あなた」へ解決し、保存確認が未完了なら書き込まない。
+9. アカウント名候補は、現在タスクへhostが既に渡した文脈、`git config user.name`、OSユーザー名の順で読み取る。任意の過去会話や生session logを直接探索する共通APIは前提にしない。Git／OS候補は表示名向けに正規化し、不適格値を除外する。
+10. 既存の呼び方変更では `preferences.md` を現在値の正本とし、`AGENTS.md` と `MEMORY.md` の現役表示を同じ値へ同期する。同期に失敗した場合は部分更新を残さない。初回決定ログは履歴として改変しない。
+11. 候補探索の途中結果、出典一覧、除外値、推奨順位は永続化しない。ユーザーが選択し保存前確認を通過した呼び方だけを既存正本へ保存する。
 
 ## 5. やさしさと規律
 
@@ -255,7 +259,7 @@
 
 ## 15. 2 edition境界
 
-1. `agentic-secretary` は `/Users/taisei/workspace/agentic-secretary` の別directoryかつ `mtaiseeei/agentic-secretary` の別GitHub repoとする。`yasashii-secretary` 内のmonorepo／subdirectoryにしない。
+1. `agentic-secretary` は下流と別のlocal checkoutかつ `mtaiseeei/agentic-secretary` の別GitHub repoとする。`yasashii-secretary` 内のmonorepo／subdirectoryにしない。
 2. `agentic-secretary` は上流、`yasashii-secretary` は下流とし、下流の `upstream` remoteはfetch専用・push無効とする。両者はneutralization commitまでのGit履歴と共通祖先を持つ。
 3. 別directory／repo作成、remote追加・変更、push、公開、release、実plugin install／updateは、該当Sprintのexternal gateで操作ごとのユーザー明示許可を再確認する。
 4. 内部plugin pathは両editionで `plugins/secretary/`。外部plugin ID、marketplace名、repository／homepageはedition別とする。
@@ -297,3 +301,11 @@
 3. formal Codex plugin validatorはmarketplace／plugin manifest、plugin identity、version、Skill roster、sourceからcacheへの導入整合を検査する。generic Skill validatorの合格をformal配布検査の代わりにせず、formal配布検査の合格を個別Skill frontmatter検査の代わりにしない。
 4. generic validatorがPyYAML等のvalidator自身の依存不足で起動できない場合は、Skill不合格または合格へ読み替えず `dependency-unavailable`／`incomplete` として明示する。既存の正式runtimeまたは明示された依存pathを使える場合だけ実検査を行い、plugin runtimeへ検証専用依存を追加しない。
 5. public upstream所有のSkillはpublic repoで修正する。private downstream、installed cache、利用者workspaceを正本として直接修正せず、下流反映と再インストールは実装・独立評価後の別操作として扱う。
+
+## 19. 利用者中立の配布境界
+
+1. 配布物と現行製品正本は、特定利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行条件・参照元・fallbackにしない。
+2. 人物を必要とするtest fixtureは、実在利用者を示さない合成人物名を使う。過去のprogress、feedback、evidence、Sprint契約、state、proposal等の監査・判断履歴は改変対象にせず、active surface scanの対象外pathとして明示する。
+3. allowlistは値と許可pathを列挙する。MITの著作権表示、GitHub owner `mtaiseeei`、公式repository URL、`forkedFrom`、公開版の正式な製品識別子は削除しない。
+4. 絶対path自体が必要なruntime検証は、placeholder、合成path、実行時に解決したpathを使う。特定端末の実pathを製品既定へhard-codeしない。
+5. downstream repo、installed cache、利用者workspace、remote、release、外部サービスは本変更の書込み対象にしない。

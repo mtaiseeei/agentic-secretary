@@ -409,9 +409,9 @@ busy roomの最新100件が覆う時間幅は推奨材料にできるが、間�
 
 ## Google Chatの取得境界
 
-### `my-vault`との同等性
+### 保存形式と取得境界
 
-`/Users/taisei/my-vault` の現行Google Chat同期を振る舞いの基準にする。同等とみなす要素は次である。
+Google Chat同期の正本要素は次である。特定の私用workspaceや端末pathを参照せず、この契約だけで実装・検証できるようにする。
 
 - 利用者本人のOAuthでGoogle Chat APIを読む。
 - 選択したスペースだけを対象にする。
@@ -420,13 +420,13 @@ busy roomの最新100件が覆う時間幅は推奨材料にできるが、間�
 - 初回はAPIが返せる履歴をページングし、以後は取得位置から差分を取り込む。
 - GitHub Actionsで定期取得し、同じprivate repoへcommit・pushできる。
 
-一方、現在の配布製品では次を意図的に引き継がない。
+一方、現在の配布製品では次を意図的に扱わない。
 
 - DM URLの受付とDM履歴。ユーザー回答2Aにより `SPACE` のみ対象とする。
 - 使っていない `chat.memberships.readonly` 等の追加scope。
 - 資格情報やrefresh tokenの端末表示、`.env` 保存を通常導線にする挙動。
 - 古いサービスアカウント設定案内、JSON鍵、スペースへのbot追加。
-- `my-vault` 固有の自動取得間隔。本製品はChatworkと揃え、3時間を推奨・初期値にする。
+- 製品外workspace固有の自動取得間隔。本製品はChatworkと揃え、3時間を推奨・初期値にする。
 - UTC文字列の日付でファイルを分ける挙動。本製品はAsia/Tokyoの日付境界を使い、日本時間の深夜帯を前日に誤分類しない。
 - 同日ファイルの上書きによる既存投稿消失や、誤ったthread取得経路等、現行実装の欠陥になり得る挙動。
 
@@ -540,6 +540,17 @@ OAuth client JSON本文、client secret、認可URL、認可コード、tokenは
 `memory-tools.sh pref-set <セクション> <キー> <値>` は指定行だけを更新し、`memory-tools.sh pref-note-add <本文>` は秘書のメモに追記する。
 設定変更前は例文プレビューで確認し、変更後はjournalへ `did` を追記して節目コミットする。
 
+### 呼び方の状態
+
+- 初回候補は `あなた`、探索で得た `account-name`、ユーザーが入力する `specified-name`、host標準の `other` の4経路。
+- 保存するのは候補種別ではなく、確認済みの解決値である。選択への未回答、空回答は `あなた` へ解決し、保存確認が未完了なら書き込まない。
+- account-name候補のsource priorityは `host-task-context` → `git-user-name` → `os-user-name`。`host-task-context` は現在タスクへ既に渡された過去会話の記憶、Personalization、Project文脈、現在会話の明示名に限り、任意の過去会話や生session logを直接探索しない。
+- 候補値はUnicode NFKC、前後空白除去、連続空白の1個化を行う。空、メール形式、40文字超、数字が可視文字の半数以上、path／UUID／16文字以上のhex／host名等のmachine-like値、case-insensitiveで `bot`、`ci`、`root`、`admin`、`administrator`、`user`、`username`、`unknown`、`nobody`、`runner`、`github-actions`、`build` と一致する汎用名を除外する。OS値はさらにUnicode letterを1文字以上含む場合だけ候補にする。
+- 正規化後のcase-fold一致は重複候補としてまとめ、source priorityが高い出典を残す。同一source tierでは、現在会話の明示名、Personalizationのpreferred name、Projectの利用者名、過去会話の記憶の順で推奨する。複数候補は出典を短く添え、最良1件を推奨する。
+- host間で利用可能sourceが違っても同じ順序・除外規則でbest effortとする。候補が0件なら `account-name` は利用不能。探索結果、除外値、出典、推奨順位は保存しない。
+- 現在値の正本は `memory/preferences.md`。`AGENTS.md` と `memory/MEMORY.md` は現役表示として同期し、3者の部分更新を残さない。
+- `memory/decisions/<初回日>-decisions.md` は初回に確認した値の履歴であり、後日の呼び方変更では書き換えない。
+
 ## 口調プリセットと役割の適用
 
 - `standard`、`friendly`、`formal` の3プリセットを提供し、NG/OK例ペアを設定へ複写できる。
@@ -606,9 +617,9 @@ legacy fileはredirectの説明だけに置き換えない。正本と同じ `0.
 
 ### RepositoryTopology
 
-- upstream checkout: `/Users/taisei/workspace/agentic-secretary`
+- upstream checkout: `agentic-secretary` の独立local checkout
 - upstream GitHub repo: `mtaiseeei/agentic-secretary`
-- downstream checkout: `/Users/taisei/workspace/yasashii-secretary`
+- downstream checkout: `yasashii-secretary` の独立local checkout
 - downstream GitHub repo: `mtaiseeei/yasashii-secretary`
 - relation: 共通祖先を持つ別repo。monorepo／subdirectoryではない
 - downstream remote: `upstream` fetch enabled、push disabled

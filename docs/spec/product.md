@@ -24,7 +24,7 @@ publicな `yasashii-secretary` repoは配布物の正本であり、利用者デ
 ## 対象ユーザー
 
 - **主対象**: Claude Codeを使う非エンジニア。Git / GitHubの習熟度や、特定の講座・教材を受けた経験を前提にしない。標準環境は Claude デスクトップアプリ／Claude Code。
-- **副対象**: 村山さんを含む配布・保守者。一般利用者向けの導入と保守を、秘書本体と開発ハーネスを独立に扱いながら行う。
+- **副対象**: 配布・保守者。一般利用者向けの導入と保守を、秘書本体と開発ハーネスを独立に扱いながら行う。
 
 この主対象は `yasashii-secretary` editionの対象である。共通基盤から分かれる上流の
 `agentic-secretary` は、エンジニアおよびAI活用に慣れた利用者を主対象にする。
@@ -48,6 +48,8 @@ dashboard は必須条件ではなく、sprint-012 で利用反応を踏まえ�
 初回と途中変更の両方を `settings` が受ける。職業・役割、言葉遣い、説明の詳しさ、呼び方、
 決定確認のタイミングを `preferences.md` v2 に保存し、提案・例示・用語補足に実際に反映する。
 既定動作を安全な正本とし、ユーザーが明示した項目だけを opt-in で上書きする。
+初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢から解決し、
+どの経路でも保存前に実際の値を確認する。未回答は「あなた」とする。
 
 ### G3 やさしいハーネスの分離と上流追随
 
@@ -119,12 +121,12 @@ Google画面で本人操作が必要な `Internal` Audience、`Desktop app`、�
 
 接続後は、利用者が名前を確認して選んだ `SPACE` 種別の通常スペースだけを同じprivate workspaceへ保存する。
 1対1のDMとグループDMは初版では対象外にし、投稿・編集・削除も行わない。保存形式と取得の考え方は
-`my-vault` の現行Google Chat同期を基準に、スペース別・日付別Markdown、スレッド、発言者、Asia/Tokyoの時刻、
+本specを基準に、スペース別・日付別Markdown、スレッド、発言者、Asia/Tokyoの時刻、
 初回の取得可能な全履歴、以後の差分取得を保つ。ただし、使っていない権限、古いサービスアカウント案内、
 資格情報を端末へ表示する挙動は引き継がない。
 
 自動取得の既定推奨は3時間ごとにする。利用者は手動のみ、1時間、3時間、6時間、12時間から選べ、
-確定前に対象、保存内容、共同編集者への可視性、commit・pushを確認する。保存形式と取得境界は `my-vault` を基準にするが、
+確定前に対象、保存内容、共同編集者への可視性、commit・pushを確認する。保存形式と取得境界は本specを正本とし、
 自動取得の推奨間隔とAsia/Tokyoの日付境界は本製品で意図的に改善する。
 初回設定はChatworkと同じ一体型フローとし、スペースと間隔を選んで安全情報へ同意した1回の確定操作で、
 初回取り込みと自動取得設定を完了する。手動のみでは初回取り込みだけを行い、scheduleは作らない。
@@ -167,6 +169,20 @@ Claude Code Desktop App、Claude Code CLI、Codex App、Codex CLIの4つとす�
 対応対象ホストと検証済みホストは別集計し、1ホストのPASSを全ホストPASSとして扱わず、
 未検証環境を「対応済み」と表示しない。詳細は `editions.md` を正本とする。
 
+### G12 呼び方と配布物を利用者中立にする
+
+Claude CodeとCodexの初回セットアップは、同じ4つの呼び方候補と確認手順を提供する。
+アカウント名候補は、現在のタスクへhostが既に渡している過去会話の記憶・Personalization・Project文脈・
+現在会話で明示された名前、`git config user.name`、OSユーザー名の順で探す。任意の過去会話や生session logを
+直接探索する共通APIは前提にしない。候補は表示名向けに正規化し、メール、bot／CI／root等の汎用名、
+数字中心、長すぎる識別子、machine-like文字列を除く。複数候補は出典を添えて最良1件を推奨し、
+探索結果自体は保存しない。既存設定を変える場合は `preferences.md` を現在値の正本とし、
+`AGENTS.md` と `MEMORY.md` の現役表示を同じ値へ同期する。初回決定ログは当時の履歴として書き換えない。
+
+配布物と現行製品正本には、特定利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceへの
+実行時依存を残さない。テストで人物が必要な場合は合成人物を使う。一方、MITの著作権表示、GitHub owner、
+公式repository URL、`forkedFrom` 等の製品所有・配布に必要な正式情報は削除しない。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -187,14 +203,17 @@ Claude Code Desktop App、Claude Code CLI、Codex App、Codex CLIの4つとす�
 16. 最初の明示配布候補 `0.8.0` を新規導入できる。反対edition、曖昧なworkspace、同一版、downgradeではデータを変えずに停止し、旧0.7.0 updaterの既知blockerを対応済みと誤表示しない。
 17. agentic／yasashiiの全会話が、内容に応じた改行・段落・Markdown箇条書きで読める。ChatworkのSecret登録ではGitHub画面の `Name` と `Secret` に入れる内容が具体的に分かる。
 18. `agentic-secretary` を4つの正式対象ホスト（Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLI）で、共通本体＋host adapterの構成により導入・検証でき、対応対象と検証済みが別集計で正直に表示される。
+19. 初回の呼び方を4選択肢から確認して保存でき、既存変更後は現役3正本が一致する。配布物と現行製品正本は個人名・端末固有path・私用workspaceへ依存しない。
 
 ## 成功状態
 
 - `journal` / `decisions` / `topics` が役割どおりに蓄積され、会話全文や承認対象外の外部データ本文を保存していない。Chatwork／Google Chat本文は選択対象の専用履歴領域だけにある。
 - `timeline` は同じ入力から同じ Markdown を返し、「Zoomの件いつ決めたっけ」のような問いをキーワード検索できる。
 - `MEMORY.md` は200行以内で、topics と月単位に畳んだ journal を索引できる。
-- 初回設定は5問以内。口調は聞かず標準値で開始し、いつでも変更できることを伝える。
+- 初回設定は5問以内。呼び方は4選択肢から解決値を保存前に確認し、未回答は「あなた」とする。口調は聞かず標準値で開始し、いつでも変更できることを伝える。
 - `preferences.md` が欠落または空でも既定値で安全に動き、明示した設定だけが挙動を上書きする。
+- 呼び方の既存変更では `preferences.md`、`AGENTS.md`、`MEMORY.md` の現役表示が同じ値になり、初回決定ログは当時の値を保持する。
+- 配布物と現行製品正本の個人・環境固有情報scanが明示allowlistだけで合格し、合成人物fixtureと正式な製品所有情報を区別できる。
 - 決定を含む模擬会話、決定ゼロの日の締め、3種類の設定差分を Evaluator が実際に確認できる。
 - `yasashii-secretary` にハーネスや agents のコピーがなく、`yasashii-harness` への案内が切れていない。
 - GitHub上の `mtaiseeei/yasashii-harness` がpublic・`fork=false`で実在し、origin/upstream remoteとfb9c303基点を証跡で確認できる。

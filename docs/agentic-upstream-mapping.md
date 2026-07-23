@@ -3,7 +3,7 @@
 ## Identity
 
 - Edition: `agentic-secretary`
-- Local checkout: `/Users/taisei/workspace/agentic-secretary`
+- Local checkout: `<workspace-root>/agentic-secretary`
 - Intended GitHub repository: `mtaiseeei/agentic-secretary`
 - Neutralization commit: `52016cf10c1c5587fbd83ff2faf3888e29282d5e`
 - Common plugin path: `plugins/secretary/`
@@ -49,5 +49,5 @@ and validator metadata live under `adapters/`.
 | release publication | completed for v0.8.0 | release artifact published |
 
 4hostの `verified` はoffline validatorではなく、配布版v0.8.0共通core `891eabc` の実環境動作を
-ユーザーが確認したことに基づく。Codex Appでは `agentic-secretary-my-vault` main `056044e` も使用した。
+ユーザーが確認したことに基づく。Codex Appではprivate downstreamの確認済みrevisionも使用した。
 connector認証、OAuth、Repository Secret、GitHub Actions、外部chat同期も実環境で確認済みである。

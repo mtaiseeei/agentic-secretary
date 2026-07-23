@@ -1,6 +1,6 @@
 # Features
 
-機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は次候補 `0.8.0` で2 editionへ安全に分離する機能、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapterである。
+機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は次候補 `0.8.0` で2 editionへ安全に分離する機能、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物である。
 
 ## 既存機能（F01〜F16）
 
@@ -202,7 +202,7 @@
 - 初回取り込みとschedule設定の結果が分かれる場合は、完了した処理、未完了の処理、次にすることを別々に示し、全体を成功と誤認させない。既存の安全なtransaction／rollback境界は維持する。
 - 初回取り込みはOAuth完了直後の同じwizardセッション内で、メモリ上のtokenだけを使ってローカル実行する。tokenはセッション終了時に破棄し、以後の取得はGitHub Actionsが担う。
 - 初回取得時にも選択済みspace IDの `spaceType=SPACE` を再確認し、設定ファイルの直編集等でDM／グループDMが混入しても取得を拒否する。
-- `my-vault` の現行Google Chat同期を製品上の基準にし、スペース別・日付別Markdown、Asia/Tokyoの時刻、スレッド親子関係、発言者、本文、添付ファイル名・種類・参照先等のメタデータを保存する。添付ファイル本文はダウンロードしない。
+- スペース別・日付別Markdown、Asia/Tokyoの時刻、スレッド親子関係、発言者、本文、添付ファイル名・種類・参照先等のメタデータを保存する。添付ファイル本文はダウンロードしない。
 - message resource nameを同一性の基準にして再取得時の重複を防ぐ。同日ファイルへ新しい投稿を追加しても既存投稿を失わず、部分失敗時は成功スペースと失敗スペースを区別する。
 - `/google-chat search` は最新のGit状態を取り込んでから、スペース、発言者、日付、キーワードで保存済み履歴を検索し、該当箇所とスペース・日付の根拠を返す。
 
@@ -318,7 +318,7 @@ same-version bootstrap bridgeは作らず、`0.8.0 → 0.8.0` と `0.8.0 → 0.7
 
 ### F48 agentic-secretary上流edition
 
-neutralization commitまでの全Git履歴を継承し、`/Users/taisei/workspace/agentic-secretary` の別directoryと
+neutralization commitまでの全Git履歴を継承し、下流とは別のlocal checkoutと
 GitHubの別repo `mtaiseeei/agentic-secretary` に上流editionを成立させる。monorepo／subdirectoryにはしない。
 技術者向け差分は会話、診断、報告、developer handoffだけで、wizardと安全動作は共通にする。
 
@@ -354,12 +354,24 @@ Markdown箇条書きにする。既定3行報告は物理的にも別行また�
 1ホストのPASSを全ホストPASSへ昇格させず、未検証環境を「対応済み」と表示しない。
 「対応済み」判定の条件は `editions.md` の12条件を正本とする。
 
+### F53 利用者中立の呼び方と配布物
+
+- 初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢をClaude CodeとCodexの両方で提示する。
+- 「アカウント名」の候補は、(1) 現在タスクへhostが提供済みの過去会話の記憶・Personalization・Project文脈・現在会話の明示名、(2) `git config user.name`、(3) OSユーザー名の順で探す。任意の過去会話や生session logを直接探索する共通APIは使わない。
+- Git／OS値は表示名向けに正規化する。空、メール形式、bot／CI／root／admin／user／unknown等の汎用名、数字中心、長すぎる識別子、machine-like文字列を除外し、OS値は名前らしい場合だけ候補にする。
+- 候補は正規化後に重複を除き、複数なら出典を短く添えて最良1件を推奨する。host間で取得可能情報が違っても同じ優先順位・除外規則でbest effortとし、候補0件なら「アカウント名」を利用不能にする。
+- 「指定の名前」と「その他」で得た自由入力を含め、解決した保存値を作成処理より前にユーザーへ示して確認する。選択への未回答、空回答は「あなた」へ解決し、保存確認が未完了なら書き込まない。
+- 探索・正規化・推奨の途中結果は保存しない。ユーザーが選び、保存前確認を通過した解決値だけを保存する。
+- 既存の呼び方変更は `preferences.md` を現在値の正本とし、`AGENTS.md` と `MEMORY.md` の現役表示を同一transactionで同期する。初回決定ログは当時の判断履歴として改変しない。
+- 配布物と現行製品正本から個人名、利用者端末固有の絶対path、私用workspaceへの依存を除く。回帰fixtureの人物は合成人物へ置換する。
+- MITの著作権名、GitHub owner `mtaiseeei`、公式repository URL、`forkedFrom`、公開版の正式な配布識別子は維持する。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
 |---|---|
 | G1 | F05 F06 F07 F08 F17 F18 F19 F21 |
-| G2 | F04 F10 F20 F51 |
+| G2 | F04 F10 F20 F51 F53 |
 | G3 | F14 F15 F22 |
 | G4 | F10 F14 F15 F20 F22 F51 |
 | G5 | F04 F07 F23 F24 F25 F26 F27 |
@@ -369,3 +381,4 @@ Markdown箇条書きにする。既定3行報告は物理的にも別行また�
 | G9 | F03 F07 F10 F16 F23 F32 F33 F34 F35 |
 | G10 | F01 F02 F04 F05 F07 F10 F16 F23 F24 F30 F31 F32 F33 F34 F35 F36 F37 F38 F39 F40 F41 F42 F43 |
 | G11 | F30 F31 F36 F40 F41 F42 F43 F44 F45 F46 F47 F48 F49 F50 F51 F52 |
+| G12 | F04 F16 F20 F41 F42 F53 |

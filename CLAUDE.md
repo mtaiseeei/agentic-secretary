@@ -14,7 +14,7 @@ Claude Code / Codexで使う開発者・IT担当者向けAI秘書プラグイン
 
 - 秘書本体の配布物は `plugins/secretary/`。
 - 開発ハーネスは別リポジトリ `mtaiseeei/agentic-harness` が正本。本体には `harness/` や Planner / Generator / Evaluator のagentsを同梱しない。
-- `/Users/taisei/workspace/agentic-harness` と `~/workspace/agentic-harness` は、**読み取りを含む全面接触禁止**。
+- `<user-home>/workspace/agentic-harness` と `~/workspace/agentic-harness` は、**読み取りを含む全面接触禁止**。
   編集、存在確認、一覧、status / HEAD / branch / remote 確認、checkout / switch、commit、生成物作成、
   複製元利用、symlink 経由、当該 checkout を対象にしたコマンド実行を行わない。
   上流情報は GitHub 上の `mtaiseeei/agentic-harness` の remote / API だけを参照する。

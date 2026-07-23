@@ -51,10 +51,50 @@ SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/
 
 ### Q1: 呼び方
 
-> あなたのことを何とお呼びすればよいですか？
-> 例: 「村山さん」「たいせいさん」「社長」など。決めていなければ「おまかせ」でも大丈夫です。
+Claude Codeの `AskUserQuestion`、Codexの構造化ユーザー入力とも、同じ意味の次の4経路を使う。
+host UIが「その他」を自動で付ける場合は、明示候補を最初の3件だけにして重複させない。
+自動付与がないhostだけ4件目を表示する。
 
-回答を `OWNER_NAME` に記録（未回答なら「あなた」）。
+> あなたのことを何とお呼びすればよいですか？
+>
+> - **あなた**（おすすめ。個人名を使わず始める）
+> - **アカウント名**（利用できる表示名候補から選ぶ）
+> - **指定の名前**（短い名前を入力する）
+> - **その他**（hostが自動付与しない場合だけ表示）
+
+選択への未回答は「あなた」へ解決する。「指定の名前」と「その他」は短い自由入力を1回受け、
+空なら「あなた」へ解決する。値を解決しただけでは、まだfileやdirectoryを作らない。
+
+「アカウント名」が選ばれた後だけ、次の共通moduleを使う。他の3経路ではmoduleを呼ばず、
+Git／OSを読まない。
+
+```text
+node "${SECRETARY_PLUGIN_ROOT}/scripts/name-candidates.mjs"
+```
+
+moduleへは現在タスクへhostが既に渡している値だけを標準入力のJSONとして渡す。
+`selection` は `account-name`、`hostTaskContext` は利用できる項目だけにする。
+
+- `currentConversationName`: 現在会話で明示された名前
+- `personalizationPreferredName`: Personalizationのpreferred name
+- `projectUserName`: Project文脈の利用者名
+- `memoryName`: 現在タスクへhostが提供済みの過去会話の記憶
+
+任意の過去会話、別task、raw transcript、生session log、memory storeを直接検索しない。
+moduleは続けて `git config user.name`、OSユーザー名をread-onlyで確認する。email、remote、
+credential、commit history、home path解析、directory列挙は行わない。
+
+候補は値と短い出典だけを示し、最上位の1件へ「おすすめ」を付ける。除外値やraw contextは示さない。
+候補0件なら「アカウント名は利用できません」と伝え、「あなた」「指定の名前」「その他」へ戻す。
+候補一覧、除外値、出典、推奨順位はfile、journal、設定、decision、logへ保存しない。
+
+どの経路でも `OWNER_NAME` を解決したら、**ステップ2より前の別turn**で次だけを確認する。
+
+> 保存する呼び方: `<OWNER_NAME>`
+> この呼び方で秘書の初期設定を作成しますか？
+
+「はい」等の明示了承があるまで、edition guardを含むcommandを呼ばず、directory／file／marker／journal／commitを
+作らない。訂正なら新しい値をもう一度表示して確認する。キャンセル、別の話題、保存確認未完了なら副作用0件で終了する。
 
 ### Q2: 主に使うサービス
 
@@ -96,6 +136,8 @@ SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/
 口調は初回に質問しない。丁寧で堅すぎない「丁寧（標準）」で開始する。
 
 ## ステップ2: 秘書ディレクトリを作る（道具）
+
+Q1の保存確認を別turnで明示了承された場合だけ、ここへ進む。
 
 「いまは『道具』の段階です。秘書ディレクトリを用意しています」と一言添えてから、次を行う。
 

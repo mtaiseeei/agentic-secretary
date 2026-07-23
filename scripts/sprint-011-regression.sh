@@ -31,7 +31,7 @@ materialize(){ # $1=dest $2=role $3=detail
   mv "$dest/memory/decisions/_first-decision.md" "$dest/memory/decisions/2026-07-16-decisions.md"
   OWNER_ROLE="$role" REPORT_DETAIL="$detail" find "$dest" -type f -name '*.md' -print0 | while IFS= read -r -d '' f; do
     OWNER_ROLE="$role" REPORT_DETAIL="$detail" perl -pi -e '
-      s/\{\{OWNER_NAME\}\}/村山さん/g;
+      s/\{\{OWNER_NAME\}\}/青空みらいさん/g;
       s/\{\{OWNER_ROLE\}\}/$ENV{OWNER_ROLE}/g;
       s/\{\{PRIMARY_SERVICE\}\}/Google/g;
       s/\{\{PRIMARY_SERVICE_DETAIL\}\}/Gmail・Googleカレンダー/g;
@@ -95,7 +95,7 @@ check "templates/AGENTSはserializer正本を参照し再包装しない" \
 check "templates/CLAUDEもserializer正本だけを参照" \
   "grep -q '最終応答serializer.*だけを正本' '$TEMPLATES/CLAUDE.md' && grep -q 'schemaをここへ複製しません' '$TEMPLATES/CLAUDE.md'"
 check "plain-language入口は4責務とmanifestを参照" \
-  "grep -q 'rule-manifest.json' '$RULES_ENTRY' && grep -q 'safety.md' '$RULES_ENTRY' && grep -q 'evidence.md' '$RULES_ENTRY' && grep -q 'common-language.md' '$RULES_ENTRY' && grep -q 'styles/yasashii.md' '$RULES_ENTRY'"
+  "grep -q 'rule-manifest.json' '$RULES_ENTRY' && grep -q 'safety.md' '$RULES_ENTRY' && grep -q 'evidence.md' '$RULES_ENTRY' && grep -q 'common-language.md' '$RULES_ENTRY' && grep -q 'styles/agentic.md' '$RULES_ENTRY'"
 
 # I1: schemaの重複ではなく、唯一正本・競合0・適用順を検査する。
 REFERENCE_SURFACES=(
@@ -109,7 +109,7 @@ for surface in "${REFERENCE_SURFACES[@]}"; do
 done
 check "yasashii styleのserializer唯一正本はI1-I3境界を満たす" "serializer_contract_ok '$RULES'"
 check "安全・証拠境界はstyleから分離" \
-  "grep -q 'push.*明示的に指示' '$SAFETY_RULES' && grep -q '実コネクタ' '$EVIDENCE_RULES' && grep -q '接続状態は未確認' '$EVIDENCE_RULES' && ! grep -q '実コネクタの証跡が無い' '$RULES'"
+  "grep -q 'push.*明示的に指示' '$SAFETY_RULES' && grep -q '実コネクタ' '$EVIDENCE_RULES' && grep -q '接続状態.*未確認' '$EVIDENCE_RULES' && ! grep -q '実コネクタの証跡が無い' '$RULES'"
 check "templates/tones/全15スキルは正本参照だけでschema重複0" \
   "[ '${#REFERENCE_SURFACES[@]}' -eq 20 ] && [ '$reference_bad' -eq 0 ]"
 SCHEMA_OWNER_COUNT="$(grep -Rsl '^- やったこと:' "$PLUGIN/rules" "$PLUGIN/skills" "$PLUGIN/templates" --include='*.md' | wc -l | tr -d ' ')"
@@ -135,7 +135,7 @@ check "意図的失敗fixtureは下位skillのschema重複を検出" "! serializ
 check "意図的失敗fixtureはrouterの途中出力境界欠落を検出" "! grep -q 'ルーティング、段階ロードは無言' '$WORK/bad-silent.md'"
 
 printf -- '- やったこと: 商談メモを保存しました。\n- 結果: local commit済みで、pushはしていません。\n- 次に何が起きるか: 内容を確認できます。\n' > "$WORK/report-short-ok.txt"
-printf -- '村山さん、完了しました。\n- やったこと: 商談メモを保存しました。\n- 結果: local commit済みです。\n- 次に何が起きるか: 内容を確認できます。\n' > "$WORK/report-greeting-ng.txt"
+printf -- '青空みらいさん、完了しました。\n- やったこと: 商談メモを保存しました。\n- 結果: local commit済みです。\n- 次に何が起きるか: 内容を確認できます。\n' > "$WORK/report-greeting-ng.txt"
 printf -- '- やったこと: 商談メモを保存しました。\n- 結果: local commit済みで、pushはしていません。\n- 次に何が起きるか: 内容を確認できます。\n- 補足: 外部サービスの接続状態は未確認です。\n' > "$WORK/report-detail-ok.txt"
 check "Markdown 3項目validatorは正しい短い報告を許可" "report_shape_ok '$WORK/report-short-ok.txt' short"
 check "Markdown 3項目validatorは挨拶の独立行を拒否" "! report_shape_ok '$WORK/report-greeting-ng.txt' short"
@@ -159,7 +159,7 @@ check "settingsは例文→確認→反映→宣言→journal→commitを定義"
   "grep -q '変更後の短い例文' '$SETTINGS' && grep -q '確認ターンではツールを呼ばない' '$SETTINGS' && grep -q 'pref-set' '$SETTINGS' && grep -q 'こう覚えました' '$SETTINGS' && grep -q 'journal-add' '$SETTINGS' && grep -q 'commit' '$SETTINGS'"
 PREVIEW_LINE="$(grep -n -m1 '変更後の短い例文' "$SETTINGS" | cut -d: -f1)"
 CONFIRM_LINE="$(grep -n -m1 'この確認ターンではツールを呼ばない' "$SETTINGS" | cut -d: -f1)"
-APPLY_LINE="$(grep -n -m1 '部分更新シームを1回呼ぶ' "$SETTINGS" | cut -d: -f1)"
+APPLY_LINE="$(grep -n -m1 'シームを1回呼ぶ' "$SETTINGS" | cut -d: -f1)"
 DECLARE_LINE="$(grep -n -m1 'こう覚えました' "$SETTINGS" | cut -d: -f1)"
 JOURNAL_LINE="$(grep -n -m1 '宣言後.*journal-add' "$SETTINGS" | cut -d: -f1)"
 COMMIT_LINE="$(grep -n -m1 '最後に.*commit' "$SETTINGS" | cut -d: -f1)"
@@ -245,7 +245,7 @@ check "preferences欠落時はv2既定を安全に再生成" "grep -q '^- 口調
 check "欠落時も指定した役割だけ反映" "grep -q '^- お仕事・役割: 営業$' '$MISSING/memory/preferences.md'"
 
 PARTIAL="$WORK/partial/secretary"; materialize "$PARTIAL" "未設定" "みじかく"
-printf '# 部分設定\n\n## 基本\n- 呼び方: 村山さん\n- 手書き: 保持\n' > "$PARTIAL/memory/preferences.md"
+printf '# 部分設定\n\n## 基本\n- 呼び方: 青空みらいさん\n- 手書き: 保持\n' > "$PARTIAL/memory/preferences.md"
 bash "$TOOLS" pref-set "$PARTIAL" "言葉遣い" "決定の確認" "まとめて" >/dev/null 2>&1
 check "部分欠損時は必要セクションと対象行だけ追加" "grep -q '^## 言葉遣い$' '$PARTIAL/memory/preferences.md' && grep -q '^- 決定の確認: まとめて$' '$PARTIAL/memory/preferences.md'"
 check "部分欠損更新でも手書き行を保持" "grep -q '^- 手書き: 保持$' '$PARTIAL/memory/preferences.md'"

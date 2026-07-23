@@ -64,7 +64,7 @@ Claude Codeを使う非エンジニア一般へ配布する、AI秘書プラグ�
 | 成果物 | `secretary/docs/` | 同じrepoの正本として保存し、自動コミット |
 | 開発ハーネス | 別repo `yasashii-harness` | buildから存在確認・案内・接続 |
 
-my-vault から持ち込むのはインフラではなく、スコープ・根拠・出力・記憶保護・スキル分割の規律。
+利用者の保管庫から持ち込むのはインフラではなく、スコープ・根拠・出力・記憶保護・スキル分割の規律。
 cc-company からは3コマンド導入、オンボーディング、再起動しおり、記憶保護を継承する。
 
 ## 製品テーマ
@@ -221,7 +221,7 @@ GitHubのfork badge、parent relation、同じforkから上流へPRする導線�
 
 ### repoとGitの形
 
-`agentic-secretary` は必ず `/Users/taisei/workspace/agentic-secretary` の別directory、
+`agentic-secretary` は必ず `<workspace-root>/agentic-secretary` の別directory、
 GitHubの別repo `mtaiseeei/agentic-secretary` とする。`yasashii-secretary` 内のmonorepo／subdirectoryにはしない。
 neutralization commitまでの全Git履歴を継承し、両repoが同じ共通祖先を持つようにする。
 `yasashii-secretary` の `upstream` remoteはagentic repoをfetch専用で参照し、pushを無効にする。

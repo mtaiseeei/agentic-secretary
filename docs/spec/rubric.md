@@ -58,6 +58,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 40. **candidate identityと履歴保護**: candidate／latest／marketplace／plugin manifest／正本・旧raw CHANGELOG／ledger／migration／公開ガイドが `0.8.0` で整合し、公開済み `0.7.0` のmanifest、migration、fixture、評価記録、Git履歴が不変であることを確認する。checkout専用のGit／監査evidence検査と `.git`／監査evidenceを含まないarchive配布検査を分け、同じ配布対象bytesについて両方を0 FAILで完走する。
 41. **全会話のMarkdown可読性**: rules、skills、templates、commands、edition copy、handoffのinventoryを作り、改行禁止・一行圧縮・平文強制のユーザー向け指示0件を確認する。短い1要点、複数手順、診断、部分失敗、完了、handoffを両editionで実行し、必要な段落／箇条書き、3行報告の物理分離、過剰Markdownなし、edition内容差維持をレンダリングで確認する。内部1行recordは理由つきで対象外にする。固定3項目は完了・状態報告だけに適用され、一般回答が固定schemaへ押し込まれていないことも確認する。
 42. **実会話回帰の安全性とホスト集計**: 実会話runnerについて、子プロセスenvのallowlist（合成credential注入で非伝播を確認）、合成HOME（実HOME非透過。内容一覧の証跡記録を含む）、plugin本体のread-only参照、原則Bashなしの最小ツール許可、workspace内fixtureだけの境界テスト、OS sandboxまたはpath-scoped permissionによる書込み先限定と制御されたworkspace外canaryへの書込みが実際に拒否される実証、成功／失敗両方のcleanup、サニタイズ済み証跡を検証する。canary拒否を実証できない構成でWrite/Editを使うscenarioが自動実行されないこと、外部変更の主張が無限定の「0件」ではなく検査対象を列挙した範囲限定表現であることを確認する。実会話出力の回帰はlive conversation gateとしてoffline回帰・master gateと分離して三値（pass／fail／incomplete）で集計し、未実行・未認証は「未完了（incomplete）」と表示され、offline PASSや構文チェックが実会話の回帰保証として数えられていないこと、「解消済み」「回帰保証」の主張が実行済みの検証に限定されていることを確認する。完了報告判定は固定3項目の存在・順序必須と負ケース（ラベルなし3行・順序違い）の不合格を確認する。証跡のhost・runner・実行面記録、unverifiedホストの別集計、1ホストPASSの非昇格、未検証環境の「対応済み」誤表示0件を確認する。
+43. **呼び方と利用者中立性**: Claude Code／Codexのオンボーディング文面で4選択肢、host-task-context→Git→OSの優先順位、任意の過去会話／生session logの直接探索なし、正規化・不適格値除外、出典表示、複数候補の推奨、候補なし、探索結果非保存、保存前確認、未回答の「あなた」を確認する。既存変更は `preferences.md`／`AGENTS.md`／`MEMORY.md` の一致と初回決定ログ不変を実fileで検証する。配布物・現行製品正本scanは対象pathとallowlistを記録し、個人名・端末固有path・私用workspace依存0件、正式な製品所有情報の維持、fixtureの合成人物化を正負fixtureで確認する。
 
 ## 必須の模擬会話
 
@@ -230,7 +231,9 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 033 | 指定の別directory／別repo、共通祖先、agentic技術表現、共通本体＋host adapter分離、4環境（Claude Code Desktop App／CLI、Codex App／CLI）個別の導入・skill読込・会話・wizard起動・境界・secret・更新・validator証跡、未検証誤表示の負テスト、wizard／安全parity、candidate／latest `0.8.0` 整合、external gate操作別許可 |
 | 034 | fetch専用upstream、狭いyasashii overlay、同期冪等、未分類差分拒否、repo固有docs非同期、`0.8.0` candidate維持、yasashii限定の `key=value` 表現改善とedition分離テスト |
 | 035 | 2 editionの `0.8.0` 全回帰、公式validator、parity、衝突停止、新規導入、会話可読性、系譜、クレジット、公開許可と後始末 |
-| 035-patch-004 | public upstream 15 Skillsの正式frontmatter、generic quick_validate 15/15と合成downstream 19/19、PyYAML依存不足の明示、formal／generic validator責務分離、private／cache／my-vault無変更 |
+| 035-patch-004 | public upstream 15 Skillsの正式frontmatter、generic quick_validate 15/15と合成downstream 19/19、PyYAML依存不足の明示、formal／generic validator責務分離、private／cache／利用者workspace無変更 |
+| 036 | superseded — Generator着手前にaccount-name候補探索方針が変わり、sprint-037へ置換。旧契約は履歴として保持 |
+| 037 | Claude Code／Codexの呼び方4選択肢、host-task-context→Git→OS、候補正規化・除外、出典と推奨、候補なし、探索結果非保存、保存前確認、未回答既定、既存設定の現役3正本同期、初回決定ログ不変、個人・環境固有情報scanと正式所有情報allowlist、全回帰 |
 
 ## 差し戻し分類
 

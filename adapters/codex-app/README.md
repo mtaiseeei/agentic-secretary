@@ -13,7 +13,7 @@ cache directoryは直接編集しません。`AGENTS.md`、skills手動コピー
 authoring・隔離test・fallbackだけに使い、正式pluginのPASS根拠にはしません。
 
 Codex Appは2026-07-22に実利用で確認済みです。配布版v0.8.0の共通core `891eabc` を取り込んだ
-private downstream `agentic-secretary-my-vault` の `main`（`056044e`）も正式なCodex Plugin経路で使用し、
+private downstreamも正式なCodex Plugin経路で使用し、
 ユーザーが実環境での動作を確認しました。現在のstatusは `verified` です。
 
 connector認証、OAuth、Repository Secret、GitHub Actions、外部chat同期も実環境で確認済みです。

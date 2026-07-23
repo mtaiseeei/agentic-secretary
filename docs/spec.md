@@ -63,13 +63,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G9 | Google Chatを安全に蓄積する | AI支援で各社所有のGoogle Cloudプロジェクトを準備し、ユーザーOAuth、選択した通常スペース、同意済みGitHub Actionsまでを一続きにする |
 | G10 | 公開済み0.7.0の安全基準を維持する | secret・Git・symlink・OAuth・履歴・更新・回帰・UXを監査指摘0件まで閉じた基準と、専用private test workspaceのlive gate・後始末を次候補でも回帰させない |
 | G11 | 2つの完成品を安全に育てる | `agentic-secretary` を上流、`yasashii-secretary` を狭いoverlayの下流とし、共通安全性・Git系譜・0.8.0配布準備・会話可読性・edition衝突停止を守る |
+| G12 | 呼び方と配布物を利用者中立にする | host提供済み文脈→Git→OSの順で安全な表示名候補をbest effortで示し、4選択肢と保存前確認を守る。既存設定変更では現役表示を同期し、配布物は個人名・端末固有path・私用環境へ依存しない |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G11、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F51 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G12、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F53 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、更新の説明と確認、プロジェクト候補確認、Chatwork／Google Chat wizardの簡潔な日本語、3行報告、先回り提案 |
@@ -116,6 +117,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-034](sprints/sprint-034.md) | 下流版: `yasashii-secretary` の狭いoverlayと同期回帰、yasashii限定の `key=value` 表現改善 | sprint-033 |
 | [sprint-035](sprints/sprint-035.md) | 最終判定: 2 editionのparity、安全性、系譜、互換、公開gate | sprint-034 |
 | [sprint-035-patch-001](sprints/sprint-035-patch-001.md) | 共通core: Chatwork／Google Chatの日本語IME安全な検索、caret／選択保持 | sprint-035 |
+| [sprint-036](sprints/sprint-036.md) | 旧候補探索方針。Generator着手前にsprint-037へ置換 | superseded by sprint-037 |
+| [sprint-037](sprints/sprint-037.md) | 呼び方候補の優先探索・正規化、4選択肢、現役正本同期、配布物の個人・環境固有情報除去 | sprint-036を置換する次メインSprint |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -154,3 +157,5 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 30. Chatwork wizardはGitHub Actions Secret追加画面で、`Name` 欄へ `CHATWORK_API_TOKEN`、`Secret` 欄へ本人がChatwork公式画面で取得したAPI Tokenを入力すると示す。Token実値をwizard／会話へ貼らせない。
 31. 正式対象ホストはClaude Code Desktop App／Claude Code CLI／Codex App／Codex CLIの4つ。共通本体はホスト非依存の1実装とし、host固有はadapterに限る。対応対象ホストと検証済みホストを別集計し、1ホストPASSを全ホストPASSへ昇格させず、未検証環境を「対応済み」と表示しない。
 32. 実会話runnerの子プロセスenvはallowlist方式で資格情報を渡さず、原則Bashなしの最小ツール許可、一時workspace内fixtureだけの境界テスト、成功・失敗両方のcleanup、サニタイズ済み証跡を守る。完了・状態報告は固定3項目の存在と順序を必須にし、一般回答へ固定3項目を強制せず、圧縮された一般回答を不合格にする。
+33. 初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢から解決し、保存前に実際の値を確認する。「アカウント名」は、現在タスクへhostが提供済みの文脈、`git config user.name`、OSユーザー名の順で候補を探す。任意の過去会話や生session logを直接探索せず、不適格値を除外し、候補が無ければ利用不能とする。選択への未回答は「あなた」へ解決するが、保存確認が未完了なら書き込まない。
+34. 配布物と現行製品正本は、利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行前提にしない。MITの著作権表示、GitHub owner、公式repository URL等の製品所有・配布識別情報は維持する。

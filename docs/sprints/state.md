@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-035-patch-004
+- Current ID: sprint-037
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 10
+- Lineage Dispatches: 5
 - Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
@@ -66,12 +66,24 @@
 | sprint-035-patch-002 | done | [contract](sprint-035-patch-002.md) | [progress](../progress/sprint-035-patch-002.md) | [feedback](../feedback/sprint-035-patch-002.md) |
 | sprint-035-patch-003 | done | [contract](sprint-035-patch-003.md) | [progress](../progress/sprint-035-patch-003.md) | [feedback](../feedback/sprint-035-patch-003.md) |
 | sprint-035-patch-004 | done | [contract](sprint-035-patch-004.md) | [progress](../progress/sprint-035-patch-004.md) | [feedback](../feedback/sprint-035-patch-004.md) |
+| sprint-036 | superseded | [contract](sprint-036.md) | - | - |
+| sprint-037 | done | [contract](sprint-037.md) | [progress](../progress/sprint-037.md) | [feedback](../feedback/sprint-037.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
+- sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-07-24: sprint-037は改訂AC12に対するfresh最終EvaluatorでPASS。必須4 suiteは専用14/14、Sprint 011 68/68、Sprint 012 38/38、Sprint 022 69/69＋wrapper 8/8ですべてexit 0。Unicode case-foldとhost名判定の前回2 finding、rollback 5注入点、scan 278 files／unexpected 0・負fixture 3/3、Sprint 045保護6 files diff 0、diff checkを独立確認し、product finding 0件。既存の赤い全体baselineは改訂契約どおり将来の別課題として記録を保持する。sprint-037をdone、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate none、Next Planned TBDとして完了する。
+- 2026-07-24: Plannerがユーザー承認どおりsprint-037 AC12だけを棚卸し。必須0 FAILを専用、Sprint 011、012、022の開始HEAD-greenかつ因果範囲4 suiteへ限定し、Sprint 033／archive／agentic／offlineの既存赤baselineは原因記録を残した任意internal QA・将来別Sprint候補へ移した。AC1〜11・AC13、rubric、製品code、証拠形式は不変。同じcandidateをStatus awaiting-eval、Lineage Dispatches 5としてfresh独立Evaluatorへ再判定する。
+- 2026-07-24: ユーザーがverification-scope-issueの推奨案を承認。AC12を開始HEADからgreenでSprint 037に因果のある増分回帰へ限定し、既存のSprint 033／archive wizard digest、agentic README期待、offline master等の赤いbaselineは本Sprintの出荷必須から外して別課題として記録する。製品candidateは変更せず、Plannerが契約をこの承認どおり棚卸しした後にfresh独立Evaluatorで再判定し、PASS後にcommitする。
+- 2026-07-24: sprint-037 Retry 1のfresh独立Evaluatorは製品候補PASS、product finding 0件。前回のUnicode case-fold重複とhost名除外を直接再現して解消を確認し、専用14/14、Sprint 011 68/68、Sprint 012 38/38、Sprint 022 69/69＋wrapper 8/8、rollback 5/5、scan 278 files／unexpected 0、Sprint 045保護対象diff 0、diff checkを確認した。一方、AC12が開始HEADから赤い全体回帰まで0 FAIL必須としているため、Sprint契約全体はverification-scope-issueで停止。Statusをactiveへ戻し、受入基準を開始HEAD-greenの増分回帰へ限定する推奨案、既存baselineの別修復、または残余リスクの明示受入についてユーザー判断を待つ。実装commitは未作成。
+- 2026-07-24: sprint-037 Retry 1 Generatorが初回Evaluatorのproduct finding 2件を限定修正。Unicode case-fold比較で`Straße`／`STRASSE`等を決定的に重複排除し、TLD列挙に依存しないhost名判定で`device.jp`／`server.jp`／`pc.localhost`をOS候補から除外した。専用14/14、Sprint 011 68/68、Sprint 012 38/38、Sprint 022 69/69＋wrapper 8/8、diff checkを0 FAILで引き渡したためStatusをawaiting-eval、Lineage Dispatchesを4としてfresh独立Evaluatorへ進める。開始HEADから赤いfull-suite baselineは今回のGeneratorで再実行せず、既存のverification-scope-issueとして分離を維持する。
+- 2026-07-24: sprint-037初回EvaluatorはFAIL、主分類implementation-issue。Unicode case-fold同値 `Straße`／`STRASSE` が重複し、`device.jp`／`server.jp`／`pc.localhost` がhost名なのにOS候補へ残るproduct finding 2件を独立再現した。Retry Count 1、Model Tier standard、Rotate noneを維持し、Lineage Dispatches 3としてfresh Generatorへ限定差し戻す。開始HEADから赤いSprint 033／agentic／archive／offline／Sprint 045回帰はsecondary verification-scope-issueとして保持し、今回のGeneratorへ広げない。
+- 2026-07-24: sprint-037 Generatorがhost-task-context→Git→OSの候補収集、4選択肢と保存前確認、既存呼び方の3正本transaction、active surface中立化と固定allowlist scanを実装。専用13/13、Sprint 011 68/68、Sprint 012 38/38、Sprint 022 69/69＋wrapper 8/8、scan 278 files／unexpected 0、負fixture 3/3、Sprint 045保護対象diff 0を引き渡した。既存Sprint 033／archiveのwizard digest、agentic-regressionのREADME期待、offline masterの旧identity等は非因果としてprogressに分離。Statusをawaiting-eval、Lineage Dispatchesを2としてfresh独立Evaluatorへ進める。
+- 2026-07-24: ユーザーが呼び方の候補sourceとして、現在タスクへhostが渡した過去会話の記憶・Personalization・Project文脈に加え、`git config user.name` と名前らしいOSユーザー名のread-only探索を許可した。activeなsprint-036へ範囲追加せず、Generator作業単位を実装変更前に停止してsprint-036をsupersededとし、新方針を次メインSprint `sprint-037`へ固定。任意の過去会話や生session logの直接探索、Git email／credential／commit history、home directory列挙は対象外。新メインSprintのためLineage Dispatchesを0へ戻した。
+- 2026-07-24: ユーザーが初回の呼び方を「あなた」「アカウント名」「指定の名前」「その他」の4選択肢にし、Claude Code／Codexの両方へ適用する方針を確定。配布物と現行製品正本に残る個人名・端末固有path・私用workspace依存も同時に棚卸しし、正式な著作権・repository識別情報をallowlistで維持する次メインSprint `sprint-036` を開始した。Sprint 035系譜とは別のためLineage Dispatchesを0へ戻し、現在HEADのユーザー既存 `[sprint-045]` 2 commitは保全対象として契約に明記した。外部write、downstream、installed cache、利用者workspace、remote、releaseは対象外。
 - 2026-07-23: sprint-035-patch-004はfresh独立Evaluator作業単位でPASS。現行system quick_validateを実行し、public 15/15、fresh一時downstream 19/19、PyYAMLなしexit 2／checked 0、非正式`trigger`負fixture拒否、formal Codex 4/4、Git archive 13/13、archive内専用5/5／formal 4/4を確認した。product finding 0件。既存README固定期待とSprint 033 wizard digest drift、専用回帰を依存pathなしで単体実行した場合のsummaryはverification-infraへ分離し、0 FAILへ言い換えていない。private／cache／my-vault／remote write 0件、評価一時物cleanup済み。sprint-035-patch-004をdone、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate noneを維持する。Lineage Dispatchesは同一Base Sprint系譜の上限10に達したため、明示リセットなしには戻さない。
 - 2026-07-23: sprint-035-patch-004のGenerator candidateをlocal commit `c9b4894`へ固定。resolverはEvaluatorをfresh isolated work unit／inherit fallbackとし、Lineage Dispatches 10として上限内最後の独立評価へ進める。外部push、private反映、再インストールは行わない。
 - 2026-07-23: sprint-035-patch-004 Generator作業単位がpublic upstreamの `secretary`／`update` から非正式`trigger`を除き、Claude Code／Codexの明示入口を`description`へ移した。generic validator wrapperはPyYAML有無を検査前に区別し、依存不足をchecked 0のincomplete／exit 2とする。専用5/5、public quick_validate 15/15、一時合成downstream 19/19、formal Codex 4/4、Git archive 13/13、release integrity、diff checkがPASS。全体回帰は今回と無関係な既存README固定期待1件、Sprint 033と広いarchive gateは既存wizard digest期待差で停止したため非因果としてprogressへ分離。private／cache／my-vault／remote write 0件のままawaiting-evalへ進める。

@@ -12,7 +12,7 @@
 
 ## Git系譜とrepo関係
 
-`agentic-secretary` は必ず `/Users/taisei/workspace/agentic-secretary` の別directory、
+`agentic-secretary` は必ず下流とは別のlocal checkout、
 GitHubの別repo `mtaiseeei/agentic-secretary` とする。`yasashii-secretary` 内のmonorepoや
 subdirectoryとして作らない。`yasashii-secretary` からはfetch専用の `upstream` remoteで参照する。
 

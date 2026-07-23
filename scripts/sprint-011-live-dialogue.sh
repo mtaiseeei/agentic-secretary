@@ -25,7 +25,7 @@ materialize() { # $1=name $2=role $3=tone $4=term $5=detail
   cp -R "$TEMPLATES/." "$dest/"
   OWNER_ROLE="$role" REPORT_DETAIL="$detail" find "$dest" -type f -name '*.md' -print0 | while IFS= read -r -d '' file; do
     OWNER_ROLE="$role" REPORT_DETAIL="$detail" perl -pi -e '
-      s/\{\{OWNER_NAME\}\}/村山さん/g;
+      s/\{\{OWNER_NAME\}\}/青空みらいさん/g;
       s/\{\{OWNER_ROLE\}\}/$ENV{OWNER_ROLE}/g;
       s/\{\{PRIMARY_SERVICE\}\}/Google/g;
       s/\{\{PRIMARY_SERVICE_DETAIL\}\}/Gmail・Googleカレンダー・Googleドライブ/g;

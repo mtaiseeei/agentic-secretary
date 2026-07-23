@@ -238,7 +238,7 @@ check "SKILL に絶対パス直書きが無い" \
 section "3. オンボーディング生成物（テンプレ実体化ドライラン）"
 # ---------------------------------------------------------------------------
 # 固定の回答で決定的に実体化する（同じ回答 → 同じ構造）
-OWNER_NAME="村山さん"
+OWNER_NAME="青空みらいさん"
 PRIMARY_SERVICE="Google"
 PRIMARY_SERVICE_DETAIL="Gmail / Googleカレンダー / Googleドライブ"
 TASKS="今日やることの整理、調べもの・下書き"
