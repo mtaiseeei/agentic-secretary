@@ -71,6 +71,8 @@ GENERIC_SKILL_VALIDATE_INCOMPLETE status=dependency-unavailable dependency=PyYAM
 | 同じgeneric commandをPyYAMLなしの `/usr/bin/python3` で実行 | exit 2、checked 0／passed 0／failed 0、dependency-unavailable |
 | 非正式 `trigger` を持つ負fixture | generic validatorが1/1拒否 |
 | `node scripts/agentic-codex-plugin-test.mjs` | formal 4 PASS / 0 FAIL |
+| committed candidateのGit archiveで `scripts/archive-release-gate.mjs` | 13 PASS / 0 FAIL |
+| 同じGit archiveで専用回帰／formal Codex検査 | 5/5、4/4 PASS |
 
 ### 非因果の既存回帰
 
@@ -79,6 +81,8 @@ GENERIC_SKILL_VALIDATE_INCOMPLETE status=dependency-unavailable dependency=PyYAM
 今回の変更pathは2 Skillのfrontmatter、generic validatorの実行補助、専用回帰、Harness正本だけであり、README、Google Chat skill、wizard、Sprint 019 testを変更していない。この1件は今回の実装による回帰へ読み替えず、既存suiteの時点依存期待としてEvaluatorへそのまま引き渡す。
 
 `node scripts/sprint-033-test.mjs` も5件PASS後、既存Google Chat wizard `app.js` の固定digest期待差で停止した。今回のdiffに同fileは含まれず、現行 `app.js` digestの時点依存期待である。`python3 scripts/check-release-integrity.py --root .` と `git diff --check` はPASSした。
+
+広い `scripts/agentic-archive-gate.mjs` も同じ既存Sprint 033 digest期待で停止したため、Git archiveそのものに対して、契約対象の `scripts/archive-release-gate.mjs` 13/13、専用5/5、formal 4/4を別々に実行して合格を確認した。広いgateの既存FAILを0 FAILへ言い換えていない。
 
 ## private／cache／my-vault境界
 
