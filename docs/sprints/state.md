@@ -65,13 +65,14 @@
 | sprint-035-patch-001 | done | [contract](sprint-035-patch-001.md) | [progress](../progress/sprint-035-patch-001.md) | [feedback](../feedback/sprint-035-patch-001.md) |
 | sprint-035-patch-002 | done | [contract](sprint-035-patch-002.md) | [progress](../progress/sprint-035-patch-002.md) | [feedback](../feedback/sprint-035-patch-002.md) |
 | sprint-035-patch-003 | done | [contract](sprint-035-patch-003.md) | [progress](../progress/sprint-035-patch-003.md) | [feedback](../feedback/sprint-035-patch-003.md) |
-| sprint-035-patch-004 | awaiting-eval | [contract](sprint-035-patch-004.md) | [progress](../progress/sprint-035-patch-004.md) | - |
+| sprint-035-patch-004 | done | [contract](sprint-035-patch-004.md) | [progress](../progress/sprint-035-patch-004.md) | [feedback](../feedback/sprint-035-patch-004.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
 - sprint-034: superseded — Repo分割後は `yasashii-secretary` 下流overlayのSprintとして同Repoで実装・独立評価を完了。Agentic側では重複実行しない。
 
 ## Completion
+- 2026-07-23: sprint-035-patch-004はfresh独立Evaluator作業単位でPASS。現行system quick_validateを実行し、public 15/15、fresh一時downstream 19/19、PyYAMLなしexit 2／checked 0、非正式`trigger`負fixture拒否、formal Codex 4/4、Git archive 13/13、archive内専用5/5／formal 4/4を確認した。product finding 0件。既存README固定期待とSprint 033 wizard digest drift、専用回帰を依存pathなしで単体実行した場合のsummaryはverification-infraへ分離し、0 FAILへ言い換えていない。private／cache／my-vault／remote write 0件、評価一時物cleanup済み。sprint-035-patch-004をdone、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate noneを維持する。Lineage Dispatchesは同一Base Sprint系譜の上限10に達したため、明示リセットなしには戻さない。
 - 2026-07-23: sprint-035-patch-004のGenerator candidateをlocal commit `c9b4894`へ固定。resolverはEvaluatorをfresh isolated work unit／inherit fallbackとし、Lineage Dispatches 10として上限内最後の独立評価へ進める。外部push、private反映、再インストールは行わない。
 - 2026-07-23: sprint-035-patch-004 Generator作業単位がpublic upstreamの `secretary`／`update` から非正式`trigger`を除き、Claude Code／Codexの明示入口を`description`へ移した。generic validator wrapperはPyYAML有無を検査前に区別し、依存不足をchecked 0のincomplete／exit 2とする。専用5/5、public quick_validate 15/15、一時合成downstream 19/19、formal Codex 4/4、Git archive 13/13、release integrity、diff checkがPASS。全体回帰は今回と無関係な既存README固定期待1件、Sprint 033と広いarchive gateは既存wizard digest期待差で停止したため非因果としてprogressへ分離。private／cache／my-vault／remote write 0件のままawaiting-evalへ進める。
 - 2026-07-23: private版Sprint 044で分離されたgeneric `quick_validate.py` 17/19をpublic upstreamの独立課題として開始。`secretary`／`update` はpublic upstream 15 Skillsが所有し、private repoとinstalled cacheはbyte同一の下流配布物、private固有は4 Skillsであることを確認した。現行`skill-creator`の正式規則は発火条件を`description`へ置き、独自`trigger` frontmatterを認めないため、validatorを緩和せずpublic正本を直す通常Patch `sprint-035-patch-004`を契約化。private repo、installed cache、`/Users/taisei/my-vault`、remoteは変更しない。resolverはisolated work unit／inherit fallback／standard tierを返し、Lineage Dispatches 9としてGenerator作業単位へ進める。
