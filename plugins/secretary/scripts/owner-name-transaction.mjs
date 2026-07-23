@@ -117,8 +117,8 @@ export function updateOwnerName({
     if (failAt === "before-journal") throw new Error("テスト用のjournal失敗");
 
     const memoryTools = join(dirname(fileURLToPath(import.meta.url)), "..", "skills", "memory-care", "scripts", "memory-tools.sh");
-    const journalResult = runExternalSync(memoryTools, [
-      "journal-add", root, "did", `設定を変更: 呼び方=${normalizedName}`,
+    runExternalSync(memoryTools, [
+      "journal-add", root, "did", "設定を変更: 呼び方",
     ], {
       encoding: "utf8",
       env: { ...process.env, CC_SECRETARY_NOW: now },
@@ -132,7 +132,7 @@ export function updateOwnerName({
     const commit = commitOwnedChanges({
       root: repo,
       ownedPaths,
-      message: `設定を変更（呼び方: ${normalizedName}）`,
+      message: "設定を変更（呼び方）",
     });
     if (commit.status !== "committed") throw new Error("呼び方変更のlocal commitを作成できませんでした。");
     return { status: "committed", name: normalizedName, commit: commit.newHead, journal: journalRelative };

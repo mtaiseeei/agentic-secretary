@@ -550,6 +550,7 @@ OAuth client JSON本文、client secret、認可URL、認可コード、tokenは
 - host間で利用可能sourceが違っても同じ順序・除外規則でbest effortとする。候補が0件なら `account-name` は利用不能。探索結果、除外値、出典、推奨順位は保存しない。
 - 現在値の正本は `memory/preferences.md`。`AGENTS.md` と `memory/MEMORY.md` は現役表示として同期し、3者の部分更新を残さない。
 - `memory/decisions/<初回日>-decisions.md` は初回に確認した値の履歴であり、後日の呼び方変更では書き換えない。
+- 後日の呼び方変更では、新しい確認済み値を3つの現役正本へだけ反映する。journalは `設定を変更: 呼び方`、Git commit subjectは `設定を変更（呼び方）` とし、値、その一部、値から導いた文字列を含めない。
 
 ## 口調プリセットと役割の適用
 

@@ -6,6 +6,7 @@ import {
   rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -197,47 +198,94 @@ function activeName(path, section) {
   return block.match(/^- 呼び方: (.+)$/mu)?.[1];
 }
 
-check("3正本同期、初回decision不変、journal・local commit各1件、push 0件", () => {
-  const { repo, secretary } = makeWorkspace();
-  try {
-    const decision = readFileSync(join(secretary, "memory", "decisions", "2026-01-01-decisions.md"));
-    const beforeCommits = Number(git(repo, "rev-list", "--count", "HEAD"));
-    updateOwnerName({ secretaryRoot: secretary, name: " 青空　みらい ", now: "2026-07-24T09:30:00+09:00" });
-    assert.equal(activeName(join(secretary, "memory", "preferences.md"), "基本"), "青空 みらい");
-    assert.equal(activeName(join(secretary, "AGENTS.md"), "オーナー情報"), "青空 みらい");
-    assert.equal(activeName(join(secretary, "memory", "MEMORY.md"), "オーナーの基本"), "青空 みらい");
-    assert.match(readFileSync(join(secretary, "AGENTS.md"), "utf8"), /projects\/open[\s\S]*projects\/closed/u);
-    assert.deepEqual(readFileSync(join(secretary, "memory", "decisions", "2026-01-01-decisions.md")), decision);
-    assert.equal((readFileSync(join(secretary, "memory", "journal", "2026-07-24.md"), "utf8").match(/\[did\]/gu) || []).length, 1);
-    assert.equal(Number(git(repo, "rev-list", "--count", "HEAD")), beforeCommits + 1);
-    assert.equal(git(repo, "remote"), "");
-    assert.equal(git(repo, "status", "--porcelain"), "");
-  } finally {
-    rmSync(repo, { recursive: true, force: true });
+check("3正本だけに値を保存し、journal・commitは項目名だけを各1件記録", () => {
+  const cases = [
+    {
+      input: " 青空　みらい ",
+      normalized: "青空 みらい",
+      fragments: ["青空", "みらい", "青空　みらい"],
+    },
+    {
+      input: " 例名 =: \"Q\" `B` $() ${X} *_[M]_ ",
+      normalized: "例名 =: \"Q\" `B` $() ${X} *_[M]_",
+      fragments: ["例名", "\"Q\"", "`B`", "$()", "${X}", "*_[M]_"],
+    },
+  ];
+  for (const fixture of cases) {
+    const { repo, secretary } = makeWorkspace();
+    try {
+      const decision = readFileSync(join(secretary, "memory", "decisions", "2026-01-01-decisions.md"));
+      const beforeCommits = Number(git(repo, "rev-list", "--count", "HEAD"));
+      updateOwnerName({
+        secretaryRoot: secretary,
+        name: fixture.input,
+        now: "2026-07-24T09:30:00+09:00",
+      });
+      assert.equal(activeName(join(secretary, "memory", "preferences.md"), "基本"), fixture.normalized);
+      assert.equal(activeName(join(secretary, "AGENTS.md"), "オーナー情報"), fixture.normalized);
+      assert.equal(activeName(join(secretary, "memory", "MEMORY.md"), "オーナーの基本"), fixture.normalized);
+      assert.match(readFileSync(join(secretary, "AGENTS.md"), "utf8"), /projects\/open[\s\S]*projects\/closed/u);
+      assert.deepEqual(readFileSync(join(secretary, "memory", "decisions", "2026-01-01-decisions.md")), decision);
+
+      const journal = readFileSync(join(secretary, "memory", "journal", "2026-07-24.md"), "utf8");
+      const journalEvents = journal.split("\n").filter((line) => line.includes("[did]"));
+      const subject = git(repo, "log", "-1", "--format=%s");
+      const body = git(repo, "log", "-1", "--format=%b");
+      assert.deepEqual(journalEvents, ["- 09:30 [did] 設定を変更: 呼び方"]);
+      assert.equal(subject, "設定を変更（呼び方）");
+      assert.equal(body, "");
+      const valueDerived = [
+        JSON.stringify(fixture.normalized),
+        encodeURIComponent(fixture.normalized),
+        Buffer.from(fixture.normalized).toString("base64"),
+        createHash("sha256").update(fixture.normalized).digest("hex"),
+      ];
+      for (const forbidden of [
+        fixture.input.trim(), fixture.normalized, ...fixture.fragments, ...valueDerived,
+      ]) {
+        assert.equal(journalEvents[0].includes(forbidden), false, `journalに入力断片が残っています: ${forbidden}`);
+        assert.equal(subject.includes(forbidden), false, `commit subjectに入力断片が残っています: ${forbidden}`);
+        assert.equal(body.includes(forbidden), false, `commit bodyに入力断片が残っています: ${forbidden}`);
+      }
+
+      assert.equal(Number(git(repo, "rev-list", "--count", "HEAD")), beforeCommits + 1);
+      assert.equal(git(repo, "remote"), "");
+      assert.equal(git(repo, "status", "--porcelain"), "");
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   }
 });
 
-check("途中失敗は3正本・journal・commitをrollback", () => {
-  const { repo, secretary } = makeWorkspace();
-  try {
-    const paths = [
-      join(secretary, "memory", "preferences.md"),
-      join(secretary, "AGENTS.md"),
-      join(secretary, "memory", "MEMORY.md"),
-      join(secretary, "memory", "decisions", "2026-01-01-decisions.md"),
-    ];
-    const before = paths.map((path) => readFileSync(path));
-    const head = git(repo, "rev-parse", "HEAD");
-    assert.throws(() => updateOwnerName({
-      secretaryRoot: secretary, name: "Alex Example", now: "2026-07-24T09:30:00+09:00", failAt: "before-commit",
-    }));
-    paths.forEach((path, index) => assert.deepEqual(readFileSync(path), before[index]));
-    assert.equal(existsSync(join(secretary, "memory", "journal", "2026-07-24.md")), false);
-    assert.equal(existsSync(join(secretary, "memory", "journal")), true);
-    assert.equal(git(repo, "rev-parse", "HEAD"), head);
-    assert.equal(git(repo, "status", "--porcelain"), "");
-  } finally {
-    rmSync(repo, { recursive: true, force: true });
+check("5失敗点は3正本・journal・HEAD・index・working treeをrollback", () => {
+  for (const failAt of ["before-write-1", "before-write-2", "before-write-3", "before-journal", "before-commit"]) {
+    const { repo, secretary } = makeWorkspace();
+    try {
+      const paths = [
+        join(secretary, "memory", "preferences.md"),
+        join(secretary, "AGENTS.md"),
+        join(secretary, "memory", "MEMORY.md"),
+        join(secretary, "memory", "decisions", "2026-01-01-decisions.md"),
+      ];
+      const before = paths.map((path) => readFileSync(path));
+      const head = git(repo, "rev-parse", "HEAD");
+      const index = git(repo, "diff", "--cached", "--binary");
+      const workingTree = git(repo, "status", "--porcelain=v1");
+      assert.throws(() => updateOwnerName({
+        secretaryRoot: secretary,
+        name: "例名 =: \"Q\" `B` $() ${X} *_[M]_",
+        now: "2026-07-24T09:30:00+09:00",
+        failAt,
+      }));
+      paths.forEach((path, index_) => assert.deepEqual(readFileSync(path), before[index_]));
+      assert.equal(existsSync(join(secretary, "memory", "journal", "2026-07-24.md")), false);
+      assert.equal(existsSync(join(secretary, "memory", "journal")), true);
+      assert.equal(git(repo, "rev-parse", "HEAD"), head);
+      assert.equal(git(repo, "diff", "--cached", "--binary"), index);
+      assert.equal(git(repo, "status", "--porcelain=v1"), workingTree);
+    } finally {
+      rmSync(repo, { recursive: true, force: true });
+    }
   }
 });
 

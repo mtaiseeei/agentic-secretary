@@ -119,6 +119,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-035-patch-001](sprints/sprint-035-patch-001.md) | 共通core: Chatwork／Google Chatの日本語IME安全な検索、caret／選択保持 | sprint-035 |
 | [sprint-036](sprints/sprint-036.md) | 旧候補探索方針。Generator着手前にsprint-037へ置換 | superseded by sprint-037 |
 | [sprint-037](sprints/sprint-037.md) | 呼び方候補の優先探索・正規化、4選択肢、現役正本同期、配布物の個人・環境固有情報除去 | sprint-036を置換する次メインSprint |
+| [sprint-037-patch-001](sprints/sprint-037-patch-001.md) | 呼び方の値をjournal／commit subjectへ再掲しない共通transaction | sprint-037 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

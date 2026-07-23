@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-037
+- Current ID: sprint-037-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 5
+- Lineage Dispatches: 7
 - Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
@@ -68,6 +68,7 @@
 | sprint-035-patch-004 | done | [contract](sprint-035-patch-004.md) | [progress](../progress/sprint-035-patch-004.md) | [feedback](../feedback/sprint-035-patch-004.md) |
 | sprint-036 | superseded | [contract](sprint-036.md) | - | - |
 | sprint-037 | done | [contract](sprint-037.md) | [progress](../progress/sprint-037.md) | [feedback](../feedback/sprint-037.md) |
+| sprint-037-patch-001 | done | [contract](sprint-037-patch-001.md) | [progress](../progress/sprint-037-patch-001.md) | [feedback](../feedback/sprint-037-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -75,6 +76,9 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-07-24: sprint-037-patch-001はfresh独立EvaluatorでPASS。micro採点は機能完全性5/5・動作安定性5/5・回帰なし5/5、product finding 0件。journal／commit固定文言、body空、入力の完全値・断片・JSON／URL escape・Base64・SHA-256混入0、3正本同期、decision維持、1 event／1 commit／no push、5失敗点rollback、Agentic／一時downstream 6,626 bytes・SHA-256一致、専用14/14・Patch 5/5・Sprint 011 68/68・012 38/38・022 69/69＋wrapper 8/8、Sprint 045保護diff 0、diff checkを確認した。初回並列Sprint 022の1件は単独再実行で非再現の検証flakeとして分離。Status done、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate noneを維持する。
+- 2026-07-24: sprint-037-patch-001 Generatorが共通transactionのjournalを`設定を変更: 呼び方`、commit subjectを`設定を変更（呼び方）`へ固定し、入力値・断片・hash・escape表現を履歴metadataへ渡さないよう修正。専用14/14、Patch 5/5、Agentic／一時downstream common script byte・SHA一致、Sprint 011 68/68、012 38/38、022単独69/69＋wrapper 8/8、Sprint 045保護6 files diff 0、diff checkを引き渡した。並列初回のSprint 022 timeout fixture 1件のflakeは単独再実行で解消しprogressへ開示。Status awaiting-eval、Lineage Dispatches 7としてfresh独立Evaluatorへ進める。
+- 2026-07-24: Yasashii downstreamのsprint-037独立評価で、共通transactionが確認済みの呼び方をjournal本文とcommit subjectへ再掲し、下流の設定値非再掲契約と衝突するspec-issueを確認した。下流forkを作らず共通coreを修正するType: micro `sprint-037-patch-001`を開始し、確認済み値は3正本だけ、journal `設定を変更: 呼び方`、commit subject `設定を変更（呼び方）`の固定値、atomic rollback・1 event・1 commit・no pushを契約化。Lineage Dispatches 6、Model Tier standard、Rotate noneでfresh Generatorへ進める。
 - 2026-07-24: sprint-037は改訂AC12に対するfresh最終EvaluatorでPASS。必須4 suiteは専用14/14、Sprint 011 68/68、Sprint 012 38/38、Sprint 022 69/69＋wrapper 8/8ですべてexit 0。Unicode case-foldとhost名判定の前回2 finding、rollback 5注入点、scan 278 files／unexpected 0・負fixture 3/3、Sprint 045保護6 files diff 0、diff checkを独立確認し、product finding 0件。既存の赤い全体baselineは改訂契約どおり将来の別課題として記録を保持する。sprint-037をdone、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate none、Next Planned TBDとして完了する。
 - 2026-07-24: Plannerがユーザー承認どおりsprint-037 AC12だけを棚卸し。必須0 FAILを専用、Sprint 011、012、022の開始HEAD-greenかつ因果範囲4 suiteへ限定し、Sprint 033／archive／agentic／offlineの既存赤baselineは原因記録を残した任意internal QA・将来別Sprint候補へ移した。AC1〜11・AC13、rubric、製品code、証拠形式は不変。同じcandidateをStatus awaiting-eval、Lineage Dispatches 5としてfresh独立Evaluatorへ再判定する。
 - 2026-07-24: ユーザーがverification-scope-issueの推奨案を承認。AC12を開始HEADからgreenでSprint 037に因果のある増分回帰へ限定し、既存のSprint 033／archive wizard digest、agentic README期待、offline master等の赤いbaselineは本Sprintの出荷必須から外して別課題として記録する。製品candidateは変更せず、Plannerが契約をこの承認どおり棚卸しした後にfresh独立Evaluatorで再判定し、PASS後にcommitする。

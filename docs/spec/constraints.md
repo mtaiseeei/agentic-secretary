@@ -270,6 +270,7 @@
 9. 新規生成bot名の第一候補は `secretary[bot]`。既存workspaceのbot名やworkflowは強制改名しない。
 10. LICENSEとShin-sibainu/cc-company単段クレジットを両editionで保持する。`forkedFrom` は公式validatorまたはlive gateの証拠なしに推測変更しない。
 11. yasashii overlayは共通plugin、共通安全回帰、必要な互換／release checkだけを対象とする。spec、Sprint、progress、feedback、evidenceは各repoが所有し、同期しない。
+12. 呼び方変更transactionのjournal本文とGit commit subjectは変更項目だけの固定表現とし、確認済みの呼び方、他の設定値、値の一部、値から導いた表現を再掲しない。この安全境界はedition差分にせず、両editionでbyte同一の共通処理として維持する。
 
 ## 16. ホスト対応・検証表示と実会話回帰の安全境界
 
