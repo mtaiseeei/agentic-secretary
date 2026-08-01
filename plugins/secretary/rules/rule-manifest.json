@@ -5,6 +5,7 @@
     "safety",
     "evidence",
     "common-language",
+    "conversation-contract",
     "agentic-style"
   ],
   "rules": {
@@ -30,6 +31,12 @@
         "evidence"
       ]
     },
+    "conversation-contract": {
+      "path": "conversation-contract.md",
+      "owner": "common-core",
+      "protected": true,
+      "dependencies": ["evidence", "safety"]
+    },
     "agentic-style": {
       "path": "styles/agentic.md",
       "owner": "agentic-edition",
@@ -37,7 +44,8 @@
       "dependencies": [
         "evidence",
         "safety",
-        "common-language"
+        "common-language",
+        "conversation-contract"
       ],
       "copy": "copy/agentic.json",
       "copySurfaces": [

@@ -37,8 +37,8 @@ publicな `yasashii-secretary` repoは配布物の正本であり、利用者デ
 相談や作業を普段どおり進めるだけで、次の三層が役割を混ぜずに蓄積される。
 
 1. 活動は、成果物保存・TODO・設定変更など定義済みシームの副作用として確実に溜まる。
-2. 決定は、会話中の都度確認と会話の締めでの拾い漏れ確認という二段構えで回収する。LLMによる検出であり完全自動保証ではないことを隠さない。
-3. 結論に至らない相談の文脈は、一区切りで1行確認して案件メモに残す。
+2. 決定は、明示された低リスク保存依頼なら同じターンで、自発的に検出した候補なら質問後に回収する。会話の締めでは明確な拾い漏れ候補がある場合だけ確認し、決定0件の内部監査を強制表示しない。LLMによる検出であり完全自動保証ではないことを隠さない。
+3. 結論に至らない相談の文脈は、明示保存依頼なら同じターンで、自発提案なら要点を示した質問後に案件メモへ残す。
 
 G1 の最小達成状態は、`timeline` により「何がいつ決まり、その日に何をしたか」を決定的に一覧・検索できること。
 dashboard は必須条件ではなく、sprint-012 で利用反応を踏まえて判断する。
@@ -160,7 +160,8 @@ OAuth、同期、更新回帰を共有する。edition差分は会話、診断�
 
 両editionの思想と対象ユーザーの違いは保ったまま、全ユーザー会話には改行、段落、必要なMarkdown箇条書きという
 共通の可読性最低基準を適用する。これは好みとして質問せず、preferencesでも無効化しない。
-固定3項目報告は完了・状態報告だけに適用し、一般回答は内容に応じた段落・箇条書きで返す。
+完了・状態報告を含む全応答は内容依存とし、単純成功は自然な短文、複数結果・部分失敗は必要な段落・箇条書きで返す。
+固定3項目の存在・順序・prefixは要求しない。
 
 `agentic-secretary` は技術者向けにそのまま配布できる完成品とし、正式な必須対象環境を
 Claude Code Desktop App、Claude Code CLI、Codex App、Codex CLIの4つとする。その他のコーディングエージェントは
@@ -178,6 +179,29 @@ Claude CodeとCodexの初回セットアップは、同じ4つの呼び方候補
 数字中心、長すぎる識別子、machine-like文字列を除く。複数候補は出典を添えて最良1件を推奨し、
 探索結果自体は保存しない。既存設定を変える場合は `preferences.md` を現在値の正本とし、
 `AGENTS.md` と `MEMORY.md` の現役表示を同じ値へ同期する。初回決定ログは当時の履歴として書き換えない。
+
+### G13 現在の依頼を自然に完了する
+
+ユーザーが「覚えて」「設定して」「完了にして」のように、対象と操作を明示した低リスクの依頼は、
+その発話自体を実行許可として扱う。同じ内容を復唱して別ターンの了承を待たず、同じターンで実行し、
+成功後に何をどこへ残したかを過去形で伝える。
+
+秘書が保存やプロジェクト化を自発提案する場合、対象や行き先が曖昧な場合は、利用者が答えられる質問を出す。
+削除、上書き、公開、push、認証、権限変更、課金、他者への通知、大量操作、Secretを含む保存は、
+明示依頼でも対象と影響を示して事前確認する。安全性は確認回数ではなく、intent（意図）、
+side effect（副作用）、残る危険の組み合わせで守る。
+
+現在の用件は、古い再開しおり、決定の拾い漏れ監査、プロジェクト候補、内部index整合より優先する。
+返答は内容と実行結果に応じて、自然な短文、質問、複数結果、部分失敗を使い分ける。
+固定3項目、原文のbyte単位復唱、質問禁止、架空の「次の一手」を合格条件にしない。
+
+共通coreは `agentic-secretary`、private downstreamの `agentic-secretary-my-vault`、
+`yasashii-secretary` の3配布系統で意味を揃える。my-vaultではNotion TaskDBを実行タスクの正本として維持し、
+通常のproperty、relation、作成・再読確認は再設計せず、承認済みの5問題だけを直す。
+
+既存workspaceの旧 `secretary/AGENTS.md` は全面上書きしない。配布template由来と証明できる旧会話契約行だけを、
+dry-run、衝突検出、backup／rollback、冪等性を備えたmigrationで置き換える。所有判定不能または利用者編集と競合する場合は停止し、
+CHANGELOGで旧挙動が残る可能性と確認箇所を案内する。
 
 配布物と現行製品正本には、特定利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceへの
 実行時依存を残さない。テストで人物が必要な場合は合成人物を使う。一方、MITの著作権表示、GitHub owner、
@@ -200,10 +224,12 @@ Claude CodeとCodexの初回セットアップは、同じ4つの呼び方候補
 13. `/google-chat` からAI支援で各社所有Cloud projectを準備し、接続用JSON取得後のOAuth接続、通常スペース選択、初回取得、検索、3時間推奨の定期取得へ進める。
 14. `0.7.0`の配布前gateで、監査指摘0件、全自動回帰0 FAIL、Git archive相当の動作、専用private test workspaceの両チャットlive gateと後始末をすべて証跡つきで確認できる。
 15. `agentic-secretary` と `yasashii-secretary` が同じGit系譜と共通安全基盤を持ち、対象ユーザーに合わせた4つの表現面だけをedition差分として独立配布できる。
-16. 最初の明示配布候補 `0.8.0` を新規導入できる。反対edition、曖昧なworkspace、同一版、downgradeではデータを変えずに停止し、旧0.7.0 updaterの既知blockerを対応済みと誤表示しない。
+16. 公開済み `0.8.0` の新規導入・停止条件を履歴回帰として維持し、Sprint 038の現在candidate `0.9.0` をmanifest、CHANGELOG、配布先、artifactで一意に整合できる。反対edition、曖昧なworkspace、同一版、downgradeではデータを変えずに停止し、旧0.7.0 updaterの既知blockerを対応済みと誤表示しない。
 17. agentic／yasashiiの全会話が、内容に応じた改行・段落・Markdown箇条書きで読める。ChatworkのSecret登録ではGitHub画面の `Name` と `Secret` に入れる内容が具体的に分かる。
 18. `agentic-secretary` を4つの正式対象ホスト（Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLI）で、共通本体＋host adapterの構成により導入・検証でき、対応対象と検証済みが別集計で正直に表示される。
 19. 初回の呼び方を4選択肢から確認して保存でき、既存変更後は現役3正本が一致する。配布物と現行製品正本は個人名・端末固有path・私用workspaceへ依存しない。
+20. 明示された低リスク操作は重複確認なしで同じターンに完了し、自発提案・曖昧さ・高リスク操作では必要な事前確認が働く。応答は実際の副作用状態と一致する。
+21. 共通会話契約と意味保存golden setが3配布系統で成立し、my-vaultのNotion変更は承認済み5問題に限定される。
 
 ## 成功状態
 
@@ -242,12 +268,15 @@ Claude CodeとCodexの初回セットアップは、同じ4つの呼び方候補
 - Node／shellの書込み・削除はsymlinkを含む実体境界を守り、workspace外の本体を変更しない。外部CLI・HTTPはtimeout後に安全に停止し、部分成功または未完了を正直に示す。
 - loopback wizardは同一origin・同一session・正しいContent-Typeの状態変更だけを受け付け、OAuth callbackは再送・再入でtoken交換やSecret登録を重複しない。後始末失敗を成功と表示しない。
 - Google Chat本文に内部markerと同じ文字列が含まれても、既存履歴と新規履歴を欠落させない。GitHub Actionsは今回のdispatchに因果的に対応するrunだけを追跡し、古いrunや時刻不明runを成功扱いしない。
-- `0.7.0` のmanifest、migration、fixture、評価記録、Git履歴は不変である。最初の明示配布候補のmarketplace、plugin manifest、正本／旧raw CHANGELOG、更新台帳、公開ガイドが `0.8.0` で整合し、新規導入、equal／downgrade副作用0停止、portable gateが成立する。旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。
+- `0.7.0`／`0.8.0` のmanifest、migration、fixture、評価記録、tag、Git履歴は不変である。最初の明示配布候補 `0.8.0` の新規導入、equal／downgrade副作用0停止、portable gateは履歴回帰として成立し、旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。現在candidate `0.9.0` はmarketplace、Claude／Codex manifest、正本／旧raw CHANGELOG新entry、更新台帳、公開ガイドで一致する。
 - 両editionの会話、診断、確認、進行、結果、エラー、handoffで、複数要素が改行なしの平文に連結されず、段落またはMarkdown箇条書きとして読める。edition固有の対象・内容差は保たれる。
 - Chatwork wizardのGitHub Secret案内は `Name` 欄=`CHATWORK_API_TOKEN`、`Secret` 欄=本人が公式画面で取得したAPI Tokenと示し、実値をwizardや会話へ入力させない。
 - master回帰は受入済みSprint 015とSprint 020 Patch 002を含む必要な全suiteを実行し、Git checkoutとGit archive相当の両方で合格する。配布可否を個別suiteの成功だけで代替しない。
 - wizardの画面遷移後は新しい見出しまたは主領域へfocusが移り、keyboard利用者が現在地を把握できる。主要操作は44px相当以上で、README、onboarding、`.mcp.json`、公開ガイドが現行機能と一致する。
 - 最終live gateでは両チャットの非機密test対象を同じ専用private test workspaceへ保存し、OAuth、Secret、Actions、commit、push、pull後検索を確認する。終了後はschedule、Secret、対象選択、Google OAuth grant／tokenが残っていない。
+- 「覚えて」「設定して」「TODO 3を完了にして」等の明示依頼は、操作・対象・行き先が一意で低リスクなら同じターンに副作用1件と成功報告まで進む。自発提案と曖昧入力は副作用0件で質問し、高リスク操作は対象・影響の確認前に進まない。
+- 成功、質問、失敗、部分成功の返答が実状態と一致し、単純成功に不要な固定帳票や次行動を付けない。保存内容は入力の主体・日付・行動を保ち、入力にない事実、依頼語、不要な全文を加えない。
+- `agentic-secretary`、`agentic-secretary-my-vault`、`yasashii-secretary` は、行き先・正本ルールが同じ共通caseで同じ意味と安全境界を持つ。Notion routing等は版固有caseとして、その版の正本に従う保存先とresponse stateを評価し、共通比較は安全境界に限定する。
 
 ## 非ゴール
 
@@ -256,6 +285,8 @@ Claude CodeとCodexの初回セットアップは、同じ4つの呼び方候補
 - 同意前のschedule push、確認なしの予期しない手動同期、public repoへのChatwork保存は行わない。復元機能「昨日の状態に戻して」は今回作らない。
 - 濃いキャラクター（関西弁・執事風等）のプリセットは同梱しない。例ペアを育てる方法は本プラグインの必須導線にしない。
 - hooks は同梱しない。採用する場合は先に不変条件を再定義する。
+- Notion TaskDBのproperty設計、relation、通常の作成・再読確認、DB正本を全面再設計しない。Sprint 038では承認済みの5問題を越えるNotion変更を行わない。
+- 会話を自然にするために、削除・上書き・公開・push・認証・権限・課金・他者通知・大量操作・Secret保存の事前確認、path guard、atomic write、rollback、未確認外部状態の正直な表示を外さない。
 - dashboard は G1 の完了条件にしない。sprint-012 で明示判断する。
 - 常設Webアプリ、外部公開サーバー、汎用dashboardは作らない。例外としてChatwork／Google Chat設定用の共通ローカルwizardを提供する。
 - public配布repoへのChatwork Repository Secret、同期workflow、room設定、履歴の配置は行わない。

@@ -28,6 +28,7 @@ repo・Git履歴・ログ・製品側DOM・会話へ実値を残さない。comm
 この関係、editionごとの差分、互換条件、公開gateの正本は `docs/spec/editions.md` とする。
 同日、Sprint 032のlive診断後、2 edition完成品をまだ利用者へ明示配布していないことを前提に、
 既存0.7.0利用者向けの複雑なexternal recovery／bootstrapを作らず、最初の明示配布候補を `0.8.0` へ直接揃えると決定した。
+`0.8.0` はその後 `v0.8.0` として公開済みになったため、この判断はrelease履歴として保持し、現在candidateへ再利用しない。
 `0.7.0` のrelease記録・fixture・Git履歴は不変で、旧scannerの停止をfixture除外や安全scan弱体化で隠さない。
 旧0.7.0からのlive update成功は配布条件として主張せず、同一versionとdowngradeは副作用0件で停止する。
 さらにRepo分割前に、両editionの全ユーザー会話へ過不足ない改行・段落・Markdown箇条書きを必須適用し、
@@ -38,6 +39,15 @@ Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLIの4つとす�
 1実装とし、manifest・導入・更新・plugin root・実会話runner等のホスト固有部分だけをadapterへ分け、対応対象ホストと
 検証済みホストを別集計する。Repo分割前のSprint 032 Patch 002では、一般回答を固定3項目へ押し込まない分離、
 実会話回帰の安全化と誤合格解消、wizard進捗一貫性、serializer正本の明確化、ホスト非依存の会話・テスト層を確定した。
+2026-07-31 に、明示依頼まで一律に別ターン確認へ送る旧契約を改め、現在の用件と残る危険に応じて確認する
+**人間らしい会話フロー**を承認した。明示された低リスク操作はその発話をauthorization（実行許可）として同じターンで行い、
+自発提案、曖昧な対象、破壊的操作、公開・push・認証・権限・通知・大量操作は必要な事前確認を維持する。
+本変更は `agentic-secretary` 共通core、private downstreamの `agentic-secretary-my-vault`、
+`yasashii-secretary` の3配布系統を単一Sprint 038で整合させる。my-vaultのNotion TaskDBは正本のまま、
+承認済み提案で特定した5問題だけを限定修正する。実装前にFableの敵対的レビューをPlannerへ戻す特別gateを置く。
+現在正本ではmanifest、CHANGELOG先頭、公開tagが `0.8.0` で一致する。Sprint 038は後方互換な利用者向け機能追加なので、
+Semantic Versioningのminor更新として次candidateを `0.9.0` に一意に固定する。`0.7.0` と `0.8.0` の履歴回帰は
+期待値を変えず、現在candidateのmanifest／CHANGELOG／release gateだけを `0.9.0` へ進める。
 
 ## ひとことで
 
@@ -64,18 +74,19 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G10 | 公開済み0.7.0の安全基準を維持する | secret・Git・symlink・OAuth・履歴・更新・回帰・UXを監査指摘0件まで閉じた基準と、専用private test workspaceのlive gate・後始末を次候補でも回帰させない |
 | G11 | 2つの完成品を安全に育てる | `agentic-secretary` を上流、`yasashii-secretary` を狭いoverlayの下流とし、共通安全性・Git系譜・0.8.0配布準備・会話可読性・edition衝突停止を守る |
 | G12 | 呼び方と配布物を利用者中立にする | host提供済み文脈→Git→OSの順で安全な表示名候補をbest effortで示し、4選択肢と保存前確認を守る。既存設定変更では現役表示を同期し、配布物は個人名・端末固有path・私用環境へ依存しない |
+| G13 | 現在の依頼を自然に完了する | 明示依頼・自発提案・曖昧さ・高リスク操作を区別し、同じ内容の重複確認や内部都合による横取りをなくす。意味保存と副作用状態を3配布系統で検証する |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G12、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F53 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G13、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F57 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
-| [ui.md](spec/ui.md) | 対話UX、更新の説明と確認、プロジェクト候補確認、Chatwork／Google Chat wizardの簡潔な日本語、3行報告、先回り提案 |
+| [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
 | [rubric.md](spec/rubric.md) | ゼロ許容基準、browser・OAuth・secret・実API、やさしさを含む評価方法 |
-| [editions.md](spec/editions.md) | agentic／yasashiiの上下流関係、共通面、edition差分、識別子、互換・overlay・公開gate |
+| [editions.md](spec/editions.md) | agentic／private my-vault／yasashiiの3配布系統、共通面、限定差分、互換・同期・公開gate |
 
 ## スプリント
 
@@ -120,6 +131,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-036](sprints/sprint-036.md) | 旧候補探索方針。Generator着手前にsprint-037へ置換 | superseded by sprint-037 |
 | [sprint-037](sprints/sprint-037.md) | 呼び方候補の優先探索・正規化、4選択肢、現役正本同期、配布物の個人・環境固有情報除去 | sprint-036を置換する次メインSprint |
 | [sprint-037-patch-001](sprints/sprint-037-patch-001.md) | 呼び方の値をjournal／commit subjectへ再掲しない共通transaction | sprint-037 |
+| [sprint-038](sprints/sprint-038.md) | 人間らしい会話フロー: 危険に応じた確認、現在用件優先、内容依存応答、意味保存golden set、3配布系統同期、限定Notion修正、release candidate gate | sprint-037-patch-001 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -148,15 +160,17 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 20. 配布、設定、記憶、更新のcommitは各操作が所有する変更だけを対象にし、既存stageや隣接領域を混ぜない。commit／push前のsecret検査は、製品管理対象と初回publish inventoryにあるGoogle OAuth client JSON、private key、known token field、通常のliteral assignment等の合理的な誤混入を拒否する。`${{ secrets.NAME }}` 等の正規参照と通常文書は許可し、意図的難読化の完全検出を保証しない。
 21. 書込みの許可rootは、現在確認済みのworking rootごとに定める。秘書workspaceから外部repoへ向くsymlink越しの書込みは拒否する一方、確認済みの開発repoをそのrepo自身のworking rootとして開いた通常の開発ではrepo内へ書き込める。symlink削除は参照先ではなくlink自体だけを対象にし、外部CLI・HTTPは有限時間で終了してtimeoutを成功として扱わない。
 22. loopback wizardは同一session・同一originの正当な操作だけを受け付け、OAuth callbackは一度だけ処理する。Google Chat本文が内部Markdown markerに似ていても履歴の欠落・改変を起こさない。
-23. 公開済み版は `0.7.0` で不変とし、そのmanifest、migration、fixture、評価記録、Git履歴を書き換えない。次のrelease candidate／最新版は `0.8.0` とし、候補配布面のversionを一致させる。既存 `0.6.0 → 0.7.0` の履歴回帰も保持する。
+23. 公開済み `0.7.0` と `0.8.0` は履歴として不変とし、そのmanifest、migration、fixture、評価記録、tag、Git履歴を書き換えない。現在のrelease candidateは、公開済み最高版 `0.8.0` に後方互換な機能追加のminor更新を適用した `0.9.0` とし、候補配布面のversionを一致させる。既存 `0.6.0 → 0.7.0` と `0.7.0／0.8.0` の履歴回帰も保持する。
 24. 配布可否はmaster回帰、Git archive相当の `.git` なし環境、専用private test workspaceのChatwork／Google Chat live gate、Secret・schedule・OAuthの後始末がすべて合格した場合だけ `ready` とする。
 25. `agentic-secretary` と `yasashii-secretary` は切替機能や同居機能を持たない。別editionの台帳またはmarkerを検出した場合は、移動・統合・上書きをせず安全に停止する。
-26. 旧 `0.7.0` が参照する `plugins/yasashii-secretary/CHANGELOG.md` はraw CHANGELOGの長期互換pathとして残し、新しい正本CHANGELOGと常にbyte単位で同一にする。最初の明示配布候補は `0.8.0` とし、新規導入とportable gateを必須にする。未検証の旧0.7.0 live updateを成功扱いせず、same-version bridgeは作らず、同一版とdowngradeは副作用0件で停止する。
+26. 旧 `0.7.0` が参照する `plugins/yasashii-secretary/CHANGELOG.md` はraw CHANGELOGの長期互換pathとして残し、新しい正本CHANGELOGと常にbyte単位で同一にする。最初の明示配布候補 `0.8.0` の新規導入・portable gate・旧blocker記録は公開履歴として保持する。Sprint 038では現在candidate `0.9.0` の整合を別に検査し、same-version bridgeは作らず、同一版とdowngradeは副作用0件で停止する。
 27. 共通の安全性・証拠・Chatwork／Google Chat wizardは上流所有とし、edition差分は会話文体、診断説明、報告形式、developer handoffに限る。wizardのcopy、scope、OAuth、同期、安全条件をedition別に分岐させない。
 28. `agentic-secretary` の外部repo作成、remote変更、push、公開、release、実plugin install／updateは、その操作ごとのユーザー明示許可がある場合だけ行う。validator結果を得る前に `forkedFrom` を推測して変更しない。
 29. 両editionの全ユーザー会話は、複数要素を改行なしの平文へ詰め込まず、必要な空行・段落・Markdown箇条書きで読みやすくする。この最低基準はpreferencesで無効化せず、過剰な見出しや1文ごとのbulletも避ける。
 30. Chatwork wizardはGitHub Actions Secret追加画面で、`Name` 欄へ `CHATWORK_API_TOKEN`、`Secret` 欄へ本人がChatwork公式画面で取得したAPI Tokenを入力すると示す。Token実値をwizard／会話へ貼らせない。
 31. 正式対象ホストはClaude Code Desktop App／Claude Code CLI／Codex App／Codex CLIの4つ。共通本体はホスト非依存の1実装とし、host固有はadapterに限る。対応対象ホストと検証済みホストを別集計し、1ホストPASSを全ホストPASSへ昇格させず、未検証環境を「対応済み」と表示しない。
-32. 実会話runnerの子プロセスenvはallowlist方式で資格情報を渡さず、原則Bashなしの最小ツール許可、一時workspace内fixtureだけの境界テスト、成功・失敗両方のcleanup、サニタイズ済み証跡を守る。完了・状態報告は固定3項目の存在と順序を必須にし、一般回答へ固定3項目を強制せず、圧縮された一般回答を不合格にする。
+32. 実会話runnerの子プロセスenvはallowlist方式で資格情報を渡さず、原則Bashなしの最小ツール許可、一時workspace内fixtureだけの境界テスト、成功・失敗両方のcleanup、サニタイズ済み証跡を守る。完了・状態報告を含む全応答は内容依存とし、単純成功は自然な短文、複数結果・部分失敗は必要な段落または箇条書きにする。固定3項目の存在・順序、固定prefix、行数を合格条件にしない。
 33. 初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢から解決し、保存前に実際の値を確認する。「アカウント名」は、現在タスクへhostが提供済みの文脈、`git config user.name`、OSユーザー名の順で候補を探す。任意の過去会話や生session logを直接探索せず、不適格値を除外し、候補が無ければ利用不能とする。選択への未回答は「あなた」へ解決するが、保存確認が未完了なら書き込まない。
-34. 配布物と現行製品正本は、利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行前提にしない。MITの著作権表示、GitHub owner、公式repository URL等の製品所有・配布識別情報は維持する。
+34. 明示された低リスク操作はその発話を実行許可として扱い、同じ内容を別ターンで再承認させない。自発提案と曖昧さでは答えられる質問を出し、削除・上書き・公開・push・認証・権限・課金・他者通知・大量操作・Secret保存は影響を示した事前確認を維持する。
+35. 現在の明示依頼を、再開しおり、決定0件監査、プロジェクト候補、内部index整合より優先する。応答は実際の副作用状態に合わせ、未実行を完了風に述べず、単純成功へ固定3項目や架空の次の行動を強制しない。
+36. 配布物と現行製品正本は、利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行前提にしない。MITの著作権表示、GitHub owner、公式repository URL等の製品所有・配布識別情報は維持する。

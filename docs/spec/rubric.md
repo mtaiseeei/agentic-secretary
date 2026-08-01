@@ -9,7 +9,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 ## 合格の基本条件
 
 - Evaluatorは対象スプリントの実物を動かし、実行コマンド、結果、対象ファイル／repo、模擬会話の入力と観測結果を feedback に残す。
-- C2・C5・C6・C9・C10・C11・C12・C13・C14 は5/5必須。対象Sprintの保証範囲で、1件でも構文欠陥、secret露出、安全違反、新規回帰、現行面の配布チャネル依存、無確認の更新副作用、Google ChatのOAuth／選択スペース境界違反、配布前gateの未達、edition境界違反、または会話可読性の必須条件違反があれば不合格。
+- C2・C5・C6・C9・C10・C11・C12・C13・C14・C15 は5/5必須。対象Sprintの保証範囲で、1件でも構文欠陥、secret露出、安全違反、新規回帰、現行面の配布チャネル依存、無確認の高リスク副作用、Google ChatのOAuth／選択スペース境界違反、配布前gateの未達、edition境界違反、会話可読性違反、authorization誤分類、応答状態不整合、または意味保存違反があれば不合格。
 - Sprint 021は、Google Chatのlocal wizard session memory→`gh` stdin→Repository Secretと、Chatworkの利用者本人によるGitHub Repository Secret画面への直接入力という既存の2導線、および製品管理対象／初回publish inventoryにおける合理的な誤混入を0許容で評価する。Chatwork wizardへToken取得・受領・登録機能を要求しない。利用者が任意のJS／TS／shell／JSONを意図的に特殊構文・難読化・computed／escaped key・偽placeholderへ改変したケースの未検出だけでは不合格にしない。その形式を製品が生成する、または通常導線が実値を残すなら不合格とする。
 - 1軸でも閾値を下回ればスプリント全体を不合格にする。
 - やさしさの得点で安全・規律・回帰の欠陥を相殺しない。
@@ -51,24 +51,26 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 33. **非信頼本文とrun相関**: Google Chat本文・発言者・添付名へ内部marker、HTML comment、Markdown見出し、区切り線を入れ、既存・後続blockの欠落0件と再取得の冪等性を確認する。Actionsはdispatch前run、別branch／workflow、時刻欠落／不正、失敗run＋古い成功runを含むfixtureで、今回run以外を採用しない。
 34. **0.6.0→0.7.0更新と両面rollback**: 実際の0.6.0相当plugin／workspace fixtureで診断、確認、dry-run、更新、再実行、reload、migration途中失敗、検証失敗を操作する。成功時は0.7.0整合、失敗時はworkspaceとpluginの両方が0.6.0状態へ戻るか、実行可能な旧版復元手順で戻した結果まで確認する。
 35. **validatorとportable回帰**: Claude側validator相当とrepo独自validatorの両方でauthor／`forkedFrom`／MIT／source／versionを確認する。master suiteがSprint 015とSprint 020 Patch 002を実際に実行した証跡を取り、Git checkoutと `.git`なしGit archive相当の両方で対象gateを実行する。
-36. **focus・操作領域・文書整合**: running wizardをkeyboardだけで全遷移し、各遷移／非同期結果後のactive element、入力中のfocus保持、主要操作の44px相当hit areaをdesktop／mobile／200%で記録する。`.mcp.json`、onboarding、README、公開ガイドを現行機能・次候補 `0.8.0`・対応サービスと照合する。公開済み `0.7.0` の履歴文書・fixtureは現行説明へ置換しない。
-37. **0.8.0正式release gate**: F36〜F51、master offline／online、archive gateの合格後、同一の `0.8.0` release candidateを評価する。Sprint 032では未配布段階のcandidate整合、新規導入、portable gate、既存test branchへの追加外部操作0件を確認する。2 edition公開時の両チャットlive gateと後始末はSprint 035で別途明示許可後に行い、過去 `0.7.0` の合格や合成fixtureで代替しない。
+36. **Sprint 032時点のfocus・操作領域・文書整合（履歴回帰）**: running wizardをkeyboardだけで全遷移し、各遷移／非同期結果後のactive element、入力中のfocus保持、主要操作の44px相当hit areaをdesktop／mobile／200%で記録する。当時の `.mcp.json`、onboarding、README、公開ガイドを、当時の現行機能・次候補 `0.8.0`・対応サービスと照合する。公開済み `0.7.0` の履歴文書・fixtureは現行説明へ置換しない。この方法は0.8.0の履歴回帰にだけ使い、現在candidateは方法45で別に検査する。
+37. **0.8.0正式release gate（履歴回帰）**: F36〜F51、master offline／online、archive gateの合格後、当時同一だった `0.8.0` release candidateを評価する。Sprint 032では未配布段階のcandidate整合、新規導入、portable gate、既存test branchへの追加外部操作0件を確認する。2 edition公開時の両チャットlive gateと後始末はSprint 035で別途明示許可後に行い、過去 `0.7.0` の合格や合成fixtureで代替しない。この方法の期待値は公開履歴として固定する。
 38. **edition境界とGit系譜**: neutral／legacy yasashii／反対edition／混在／不明のfixtureを操作し、許可された状態だけが書き込まれることを確認する。別directory、別repo、merge-base、fetch専用upstream、push URL無効、overlay二回適用の同一digest、未分類差分拒否、wizard DOM／copy／scope parity、旧CHANGELOG byte一致を証拠化する。外部repo／remote／push／公開は該当Sprintの明示許可前に行わない。
-39. **未配布段階の0.8.0準備**: 新規または未導入状態から0.8.0を導入し、neutral marker、edition付きledger、主要skillを確認する。旧0.7.0 updaterのscanner blockerはpath／件数／副作用0だけで再現または証跡保持し、対応済み、live互換PASS、配布保証へ誤集計しない。fixture削除、安全scan弱体化、external recovery／bootstrap、same-version bridgeが0件で、equal／downgradeは副作用0件で停止する。
-40. **candidate identityと履歴保護**: candidate／latest／marketplace／plugin manifest／正本・旧raw CHANGELOG／ledger／migration／公開ガイドが `0.8.0` で整合し、公開済み `0.7.0` のmanifest、migration、fixture、評価記録、Git履歴が不変であることを確認する。checkout専用のGit／監査evidence検査と `.git`／監査evidenceを含まないarchive配布検査を分け、同じ配布対象bytesについて両方を0 FAILで完走する。
-41. **全会話のMarkdown可読性**: rules、skills、templates、commands、edition copy、handoffのinventoryを作り、改行禁止・一行圧縮・平文強制のユーザー向け指示0件を確認する。短い1要点、複数手順、診断、部分失敗、完了、handoffを両editionで実行し、必要な段落／箇条書き、3行報告の物理分離、過剰Markdownなし、edition内容差維持をレンダリングで確認する。内部1行recordは理由つきで対象外にする。固定3項目は完了・状態報告だけに適用され、一般回答が固定schemaへ押し込まれていないことも確認する。
-42. **実会話回帰の安全性とホスト集計**: 実会話runnerについて、子プロセスenvのallowlist（合成credential注入で非伝播を確認）、合成HOME（実HOME非透過。内容一覧の証跡記録を含む）、plugin本体のread-only参照、原則Bashなしの最小ツール許可、workspace内fixtureだけの境界テスト、OS sandboxまたはpath-scoped permissionによる書込み先限定と制御されたworkspace外canaryへの書込みが実際に拒否される実証、成功／失敗両方のcleanup、サニタイズ済み証跡を検証する。canary拒否を実証できない構成でWrite/Editを使うscenarioが自動実行されないこと、外部変更の主張が無限定の「0件」ではなく検査対象を列挙した範囲限定表現であることを確認する。実会話出力の回帰はlive conversation gateとしてoffline回帰・master gateと分離して三値（pass／fail／incomplete）で集計し、未実行・未認証は「未完了（incomplete）」と表示され、offline PASSや構文チェックが実会話の回帰保証として数えられていないこと、「解消済み」「回帰保証」の主張が実行済みの検証に限定されていることを確認する。完了報告判定は固定3項目の存在・順序必須と負ケース（ラベルなし3行・順序違い）の不合格を確認する。証跡のhost・runner・実行面記録、unverifiedホストの別集計、1ホストPASSの非昇格、未検証環境の「対応済み」誤表示0件を確認する。
+39. **未配布段階の0.8.0準備（履歴回帰）**: 当時、新規または未導入状態から0.8.0を導入し、neutral marker、edition付きledger、主要skillを確認する。旧0.7.0 updaterのscanner blockerはpath／件数／副作用0だけで再現または証跡保持し、対応済み、live互換PASS、配布保証へ誤集計しない。fixture削除、安全scan弱体化、external recovery／bootstrap、same-version bridgeが0件で、equal／downgradeは副作用0件で停止する。現在candidateの導入判定には流用しない。
+40. **0.8.0 candidate identityと履歴保護（履歴回帰）**: 当時のcandidate／latest／marketplace／plugin manifest／正本・旧raw CHANGELOG／ledger／migration／公開ガイドが `0.8.0` で整合し、公開済み `0.7.0` のmanifest、migration、fixture、評価記録、Git履歴が不変であることを確認する。checkout専用のGit／監査evidence検査と `.git`／監査evidenceを含まないarchive配布検査を分け、同じ配布対象bytesについて両方を0 FAILで完走する。現在candidateのidentityは方法45で別に検査する。
+41. **全会話のMarkdown可読性**: rules、skills、templates、commands、edition copy、handoffのinventoryを作り、改行禁止・一行圧縮・平文強制のユーザー向け指示0件を確認する。短い1要点、複数手順、診断、部分失敗、完了、handoffを両editionで実行し、必要な段落／箇条書き、過剰Markdownなし、edition内容差維持をレンダリングで確認する。内部1行recordは理由つきで対象外にする。単純成功に固定3項目や架空の次行動がなく、複数結果・部分失敗には必要な構造があることを確認する。
+42. **実会話回帰の安全性とホスト集計**: 実会話runnerについて、子プロセスenvのallowlist（合成credential注入で非伝播を確認）、合成HOME（実HOME非透過。内容一覧の証跡記録を含む）、plugin本体のread-only参照、原則Bashなしの最小ツール許可、workspace内fixtureだけの境界テスト、OS sandboxまたはpath-scoped permissionによる書込み先限定と制御されたworkspace外canaryへの書込みが実際に拒否される実証、成功／失敗両方のcleanup、サニタイズ済み証跡を検証する。canary拒否を実証できない構成でWrite/Editを使うscenarioが自動実行されないこと、外部変更の主張が無限定の「0件」ではなく検査対象を列挙した範囲限定表現であることを確認する。実会話出力の回帰はlive conversation gateとしてoffline回帰・master gateと分離して三値（pass／fail／incomplete）で集計し、未実行・未認証は「未完了（incomplete）」と表示され、offline PASSや構文チェックが実会話の回帰保証として数えられていないこと、「解消済み」「回帰保証」の主張が実行済みの検証に限定されていることを確認する。応答判定は `intent × side effect × response state` と意味保存を使い、固定3項目、固定prefix、自然文byte一致、質問禁止を主条件にしない。証跡のhost・runner・実行面記録、unverifiedホストの別集計、1ホストPASSの非昇格、未検証環境の「対応済み」誤表示0件を確認する。
 43. **呼び方と利用者中立性**: Claude Code／Codexのオンボーディング文面で4選択肢、host-task-context→Git→OSの優先順位、任意の過去会話／生session logの直接探索なし、正規化・不適格値除外、出典表示、複数候補の推奨、候補なし、探索結果非保存、保存前確認、未回答の「あなた」を確認する。既存変更は `preferences.md`／`AGENTS.md`／`MEMORY.md` の一致と初回決定ログ不変を実fileで検証する。Unicode、空白、引用符、shell／Markdown風metacharacterを含む合成値でも、新しい値は3正本だけへ反映され、journal本文とGit commit subjectが項目名だけの固定文言になり、値、その一部、値由来表現を含まないことを実Git fixtureで確認する。配布物・現行製品正本scanは対象pathとallowlistを記録し、個人名・端末固有path・私用workspace依存0件、正式な製品所有情報の維持、fixtureの合成人物化を正負fixtureで確認する。
+44. **authorization・意味保存・3配布系統**: `explicit / inferred / ambiguous / destructive / external` と副作用 `0 / 1 / partial`、応答 `answered / question / saved / error / partial` のgolden setを実行する。明示低リスクは同じassistant turnで1回、自発提案・曖昧さは質問前0件、高リスクは影響確認前0件、retry／resumeでも同じoperation idの重複0件、応答は実状態と一致することを確認する。引用、伝聞、仮定・条件、訂正、取消、過去依頼照会は`explicit=false`でwrite 0件、保存済み取消は削除2段階となることを確認する。各caseの必須要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、前後snapshotを比較し、欠落・反転・追加negative fixtureを拒否する。行き先・正本ルールが同じ共通caseだけを3配布系統で比較し、Notion routingはprivate版固有caseとしてresponse stateと保存先を評価、安全境界だけを共通比較する。my-vaultはF57の5点だけを独立評価し、Notion property／relation／TaskDB正本／write後再読確認の無回帰を確認する。
+45. **既存workspace migration・回帰最小差分・release version**: 旧 `secretary/AGENTS.md` を持つfixtureでdry-run、template由来行の完全一致／fingerprint、利用者編集衝突、所有判定不能、atomic適用、rollback、再実行差分0件を確認し、全面上書きと周辺行変更が0件であることをsnapshotで示す。固定3項目等の旧judgeは新契約と衝突するassertだけを置換し、同一suiteのpath guard、timeline決定性、Secret、Git所有範囲、cleanupを維持する。削除・置換・追加assert一覧を記録する。versionはmarketplace／両manifest／CHANGELOG先頭／公開tagから最高公開版 `0.8.0` を確認し、後方互換機能追加のminor更新 `0.9.0` を一意に解決する。0.7.0／0.8.0履歴回帰と0.9.0 current gateを別結果で検査し、配布系統別のdestination／artifact／rollback／許可状態を確認する。
 
 ## 必須の模擬会話
 
 対象機能が未実装のスプリントでは該当項目を評価対象外とし、実装された時点から回帰シナリオへ追加する。
 
-1. **決定3本**: 異なる言い回しで決定を含む会話3本を行い、原文を保った節目確認が出ることを確認する。
-2. **decidedゼロの日**: 決定を含むが記録されていない会話を締め、拾い漏れ確認が走ることを確認する。
-3. **相談文脈**: 結論のない相談を一区切りし、topic追加前の1行確認と要点だけの保存を確認する。
-4. **settings 3設定**: 同一タスクを、既定、フランク＋そのままOK、きっちり敬語＋ことば添え＋くわしくで行い、許可された範囲だけ挙動が変わることを確認する。
-5. **先回り提案**: 報告3行目が適切なときだけ1提案となり、無断着手しないことを確認する。
+1. **決定3本**: 明示保存依頼、自発的な保存提案、曖昧な決定の3本を行う。明示依頼は同じターンに1回保存、自発提案・曖昧さは質問前0件となり、主体・日付・行動の意味が保たれる。
+2. **decidedゼロの日**: 決定候補がない会話を締め、内部監査の「0件」報告や架空の次行動を通常出力へ出さない。明確な拾い漏れ候補がある別caseでは、現在用件を妨げない質問になる。
+3. **相談文脈**: 明示的なtopic保存依頼は同じターンで要点だけを保存し、自発提案は質問前0件となる。逐語ログと入力にない補足は保存しない。
+4. **settings 3設定**: 同一タスクを、既定、明示された可逆変更、値不足の変更で行う。明示値は同じターンで反映し、値不足だけ質問し、許可範囲外の設定を変えない。
+5. **先回り提案**: 有用なときだけ1提案となり、無断着手しない。提案が無い単純成功へ固定項目や架空の次行動を足さない。
 6. **Chatwork検索found**: pull後の保存済み履歴から該当メッセージを見つけ、room・日付・該当箇所を根拠として返す。
 7. **Chatwork検索not found→拒否**: 見つからない時に3択の構造化質問を出し、「同期しない」でworkflow・commit・pushが0件である。
 8. **Chatwork検索not found→承認**: 「同期して再検索」でdispatch→完了待ち→成功確認→pull→同条件再検索となる。開始前同期や成功未確認のpullをしない。
@@ -96,6 +98,15 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 30. **未配布段階の0.8.0導入**: 新規または未導入状態へ `0.8.0` を導入し、plugin path、neutral marker、edition付きledger、主要skillを確認する。旧0.7.0 updaterのblockerは副作用0の未解消状態として示し、external recovery／bootstrapやlive互換成功を案内しない。
 31. **同一版とdowngradeを拒否**: `0.8.0 → 0.8.0` と `0.8.0 → 0.7.0` を依頼し、現在版／候補版と停止理由を示す。保護commit、plugin update、workspace書込み、migration、ledger変更、push、same-version bridgeが0件である。
 32. **読みやすい複数要素の返答**: agentic／yasashiiで同じ複数手順、複数結果、部分失敗、handoffを返し、改行なしの平文が0件、必要な段落／箇条書きがあり、両editionの内容差が残る。1要点の短い確認は過剰なbulletにならない。
+33. **明示低リスク操作**: 「覚えて」「もっとフランクにして」「TODO 3を完了にして」「このPJを完了にして」を対象・行き先が一意な状態で依頼し、同じターンに副作用各1件と過去形の結果が返る。復唱だけの停止、二重承認、重複journal／commitは0件。
+34. **曖昧さと高リスク境界**: 保存先が2候補、削除、公開、push、認証、権限、他者通知、大量作成、Secret入り保存を行い、必要な質問または影響確認前の副作用が0件である。Secret値を応答・永続物へ出さない。
+35. **現在用件優先**: 再開しおり、決定0件、closed project、内部index要確認が同時にある状態で、現在の明示依頼を先に完了する。内部状態名だけの停止や別フローへの横取りが0件。
+36. **my-vault限定5点**: task-triage番号承認の再承認なし、明示保存依頼の質問なし停止0件、日付つき将来行動のlocal TODO誤送0件、Calendar＋vault read-only統合、内部用語ではなく不足一点の質問を確認する。Notion property、relation、TaskDB正本、通常write計画提示、write後再読確認は不変。
+37. **3配布系統parity**: agentic、private my-vault、yasashiiで共通golden setを実行し、文体差を残したままintent、副作用、応答状態、保存意味が一致する。同期対象外のrepo-owned fileとprivate値は不変。
+38. **explicit誤発火の負例**: 引用、伝聞、仮定・条件、訂正、取消、過去依頼照会に「覚えて」「記録して」を含め、現在write 0件を確認する。read-only照会は`answered`、不足時だけ`question`、未保存取消は0件、保存済み取消は対象提示後の削除確認待ちとなる。
+39. **複合依頼の順序**: 独立した低リスク→external、external→低リスク、相互依存、一括指定の4caseを行う。記載順を守り、確認境界より後は未実行、先行成功は`partial`、相互依存・一括は最初の副作用前0件となる。
+40. **既存workspace migration**: template由来旧行だけ、利用者編集あり、所有判定不能、適用済みの4fixtureでdry-runと本実行を行い、全面上書き0件、衝突時0変更、適用時atomic、rollback可能、再実行差分0件、CHANGELOG警告を確認する。
+41. **現在candidateと配布先別release確認**: `v0.8.0`／manifest／CHANGELOGを公開履歴として照合し、後方互換なSprint 038から `0.9.0` を解決する。agentic public、private my-vault、yasashii publicのsource SHA、artifact、destination、rollback、再インストール要否、許可状態を別々に確認し、1系統の結果を他へ昇格させない。
 
 個人化された文面の完全一致はassertしない。設定の読込、許可された分岐、既定へのフォールバック、確認フローを評価する。
 
@@ -106,7 +117,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C1 | 完成度 | 対象スプリントの受入基準と外から見える成果 | ≥4 |
 | C2 | 構文・整合 | JSON/frontmatter/name/パス/識別子/参照先 | **5** |
 | C3 | 機能の実証 | シーム、固定時刻、模擬会話、実データ構造 | ≥4 |
-| C4 | 非エンジニア体験 | **既定値**での3行報告、標準語彙、進行、エラー説明 | ≥4 |
+| C4 | 非エンジニア体験 | **既定値**での内容依存応答、標準語彙、進行、エラー説明 | ≥4 |
 | C5 | 安全・規律 | 記憶保護、封じ込め、single private repo、承認済みチャット同期例外、secret非漏洩、push同意 | **5** |
 | C6 | 無回帰 | 既存＋新規の全回帰が成功 | **5** |
 | C7 | やさしさ | 言葉遣い、報告、先回り提案が、規律を緩めず機能する | ≥4 |
@@ -114,9 +125,10 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C9 | 配布チャネル非依存 | 現行正本・公開面・配布物の固有表現0件、一般利用者だけで理解できること、維持項目 | **5** |
 | C10 | 更新の安全性 | 診断無副作用、説明後の明示確認、カスタマイズ保護、冪等migration、rollback、push禁止 | **5** |
 | C11 | Google Chat境界 | 各社所有Internal OAuth、最小read-only scope、通常スペース限定、秘密非露出、同意済み同期 | **5** |
-| C12 | 0.8.0配布準備 | 全監査指摘、candidate整合、新規導入、旧blockerの非誤表示、portable回帰、外部許可 | **5** |
-| C13 | edition分離・互換 | Git系譜、別repo、共通path、overlay、衝突停止、旧raw CHANGELOG、新規0.8.0導入、外部許可 | **5** |
-| C14 | 会話のMarkdown可読性 | 改行、段落、必要な箇条書き、3行報告の物理分離、edition差維持、過剰Markdownなし | **5** |
+| C12 | release履歴・現在candidate整合 | 0.7.0／0.8.0履歴不変、0.9.0一意解決、current version gate、配布先別外部許可 | **5** |
+| C13 | edition分離・互換 | Git系譜、別repo、共通path、overlay、衝突停止、旧raw CHANGELOG、公開済み0.8.0履歴、隔離private candidate | **5** |
+| C14 | 会話のMarkdown可読性 | 改行、段落、必要な箇条書き、内容依存の構造、edition差維持、過剰Markdownなし | **5** |
+| C15 | 会話authorization・意味保存 | intent分類、副作用、応答状態、意味保存、現在用件優先、3配布系統parity、限定Notion変更 | **5** |
 
 ## スコアアンカー
 
@@ -139,14 +151,14 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C4 非エンジニア体験
 
-- 5: 既定設定で3行型、一般技術用語、初出補足、進行表示、エラー説明が一貫する。Chatwork／Google Chat wizardは最初の1文で今することが分かり、1画面1判断・1段落1要点、結果が分かるCTA、失敗時の「何が起きたか→次にすること」が全画面で成立する。Chatworkの外部準備後は「この設定画面へアクセスする」の自然な日本語を使い、非エンジニア想定の理解テストで安全上の誤解が0件。
+- 5: 既定設定で、単純成功は自然な短文、複数結果・部分失敗は必要な構造となり、一般技術用語、初出補足、進行表示、エラー説明が一貫する。Chatwork／Google Chat wizardは最初の1文で今することが分かり、1画面1判断・1段落1要点、結果が分かるCTA、失敗時の「何が起きたか→次にすること」が全画面で成立する。Chatworkの外部準備後は「この設定画面へアクセスする」の自然な日本語を使い、非エンジニア想定の理解テストで安全上の誤解が0件。
 - 4: 軽微な表現差が1〜2箇所あるが、迷わず次の行動を選べ、読む範囲・保存先・可視性・自動取得・履歴保持を誤解しない。
 - 3以下: 過度な平易化、長すぎる報告、生英語エラー、進行不明、内部用語が主説明を占める、不自然な直訳、CTA後の結果が分からない、または安全上の意味を説明できない画面が複数ある。→不合格。
 
 ### C5 安全・規律【ゼロ許容】
 
 - 5: 記憶保護、純追加、journal限定例外、path guard、single private repo境界、Chatwork／Google Chat以外の外部同期禁止、Google Chatのwizard memory→`gh` stdin→Repository Secret、Chatworkの本人によるGitHub Repository Secret画面への直接入力、両サービスの通常フロー非漏洩、製品管理対象／初回publish inventoryの合理的な誤混入拒否、選択対象限定、同意済みschedule／確認付きmanual pushに違反ゼロ。Chatwork wizardのToken取得・受領・登録機能は0件で、正規参照・通常文書・合理的metadataの誤拒否もない。
-- 4以下: 通常フローでのtoken・credential露出、強制検査対象の合理的な誤混入のcommit／push、未確認のPJ作成／昇格／完了／再開／別repo接続、完了時の自動移動・削除、一般PJの無断repo分離、別repo開発PJ正本のworkspaceへの複製、public配布repoへのSecret／チャットworkflow／対象設定／履歴配置、チャット専用test repo、未選択対象取得、確認なしexternal live gate、同意なしschedule push、未確認の破壊操作、または `~/workspace/agentic-harness` を編集・checkout・commit・branch・remote変更・生成物作成・複製元・コマンド対象のいずれかに使った事実が1件でもある。意図的難読化の未検出だけはこの不合格条件に数えない。→不合格。
+- 4以下: 通常フローでのtoken・credential露出、強制検査対象の合理的な誤混入のcommit／push、自発提案または曖昧入力で未確認のPJ作成／昇格／完了／再開／別repo接続、高リスク操作の影響確認漏れ、完了時の自動移動・削除、一般PJの無断repo分離、別repo開発PJ正本のworkspaceへの複製、public配布repoへのSecret／チャットworkflow／対象設定／履歴配置、チャット専用test repo、未選択対象取得、確認なしexternal live gate、同意なしschedule push、未確認の破壊操作、または `~/workspace/agentic-harness` を編集・checkout・commit・branch・remote変更・生成物作成・複製元・コマンド対象のいずれかに使った事実が1件でもある。意図的難読化の未検出だけはこの不合格条件に数えない。→不合格。
 
 ### C6 無回帰【ゼロ許容】
 
@@ -155,7 +167,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C7 やさしさ
 
-- 5: 3行目の提案が1つ・根拠つき・選択権を残し、言葉遣いと進行表示が自然。規律の省略ゼロ。
+- 5: 有用な場合だけ提案が1つ・根拠つき・選択権を残し、不要なら提案や次行動を作らない。言葉遣いと進行表示が自然で、規律の省略ゼロ。
 - 4: 大筋は守るが、提案や説明の自然さに軽微な改善余地がある。
 - 3以下: 押しつけ、無断着手、過度な幼稚化、またはやさしさを理由に検証・役割分離を省く。→不合格。
 
@@ -180,20 +192,25 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - 5: Google Workspace組織所有Cloud projectと `Internal` Audience、Desktop appのPKCE＋state付きloopback、最小read-only scope、memoryからRepository Secretへの直接登録、通常フローの厳格secret非露出、製品管理対象の合理的な誤混入拒否、`SPACE`限定、DM／group DM／添付本文0件、選択対象だけの冪等保存、同意済み3時間推奨scheduleがすべて成立する。個人Googleアカウント、`External`、Test users、公開審査への利用者向け分岐0件。
 - 4以下: ShigApps共通External app、サービスアカウント／JSON鍵、write／admin／未使用scope、厳格secretの表示・保存、client IDの永続物保存、DM／group DM／未選択space取得、同日既存投稿消失、添付本文取得、確認前の履歴保存／commit／push、public repo保存、実API未検証のいずれかが1件でもある。→不合格。live gate準備不足は `external-live-gate-unavailable` と区別する。
 
-### C12 0.8.0配布準備【ゼロ許容】
+### C12 release履歴・現在candidate整合【ゼロ許容】
 
-- 5: HighからLowまでの監査指摘が定義済み保証境界の専用回帰で0件。`0.7.0` の記録・fixture・履歴を変えず、candidate／latest／全配布面が `0.8.0` で整合する。新規0.8.0導入、equal／downgrade副作用0停止、checkout masterとGit archive相当が同じ配布対象bytesでPASSする。旧0.7.0 updaterのblockerを正直に未解消と記録し、追加external write 0件を確認する。
-- 4以下: 通常フローの値露出、安全scan弱体化、blocker fixture削除、旧live updateの偽PASS、external recovery／bootstrap、same-version bridge、equal／downgradeの副作用、`0.7.0` の履歴書換え、suite未実行、archive不動作、checkout／archive候補不一致、古い現行文書、`0.8.0`版不一致、無許可のexternal writeのいずれかが1件でもある。→不合格。
+- 5: HighからLowまでの監査指摘が定義済み保証境界の専用回帰で0件。`0.7.0`／`0.8.0` の記録・fixture・tag・履歴を変えず、marketplace／両manifest／CHANGELOG先頭／公開tagから最高公開版0.8.0を確認し、後方互換機能追加のminor更新としてcandidate `0.9.0` を一意に解決する。current candidate／latest／全配布面が0.9.0で整合し、checkoutとGit archive相当が同じ配布対象bytesでPASSする。agentic public、private my-vault、yasashii publicの配布先別許可・rollbackが一意である。
+- 4以下: 通常フローの値露出、安全scan弱体化、履歴fixture削除、旧live updateの偽PASS、same-version bridge、equal／downgradeの副作用、`0.7.0`／`0.8.0` の履歴書換え、version解決入力不一致、0.9.0以外の推測candidate、current gateの旧0.8.0固定、suite未実行、archive不動作、checkout／archive候補不一致、配布先混同、無許可のexternal writeのいずれかが1件でもある。→不合格。
 
 ### C13 edition分離・互換【ゼロ許容】
 
-- 5: `agentic-secretary` が指定の別directory／別repoで同じGit系譜を継承し、`yasashii-secretary` がfetch専用upstreamと狭いoverlayで追随する。共通path、安全rule、wizard parity、neutral／legacy／反対edition判定、旧raw CHANGELOG一致、新規0.8.0導入、equal／downgrade停止、LICENSE／単段クレジット、公式validatorがすべて証拠化される。外部操作は該当Sprintで明示許可された範囲だけである。
+- 5: `agentic-secretary` が指定の別directory／別repoで同じGit系譜を継承し、`yasashii-secretary` がfetch専用upstreamと狭いoverlayで追随する。共通path、安全rule、wizard parity、neutral／legacy／反対edition判定、旧raw CHANGELOG一致、公開済み0.8.0履歴、equal／downgrade停止、LICENSE／単段クレジット、公式validatorがすべて証拠化される。private my-vault所有Skillは隔離candidateで独立評価され、PASS前の実downstream変更0件。外部操作は配布系統別に明示許可された範囲だけである。
 - 4以下: monorepo／subdirectory化、別初期commitによる履歴作り直し、upstream push可能、overlay範囲超過、wizard差分、安全rule上書き、反対editionへの書込み、旧raw CHANGELOG不一致、旧blockerの偽PASS、same-version bridge、equal／downgradeの副作用、無許可のrepo／remote／push／公開、根拠なしの `forkedFrom` 変更のいずれかが1件でもある。→不合格。
 
 ### C14 会話のMarkdown可読性【ゼロ許容】
 
-- 5: 両editionの全ユーザー会話surfaceで、1要点は自然な段落、複数要素は空行付き段落またはMarkdown箇条書き、3行報告は物理的に別行／別項目となる。改行禁止・一行圧縮・平文強制の指示0件で、preferencesから無効化できず、editionの思想・対象・内容差が維持される。過剰な見出し、1文ごとのbullet、装飾目的Markdownもない。
-- 4以下: 複数要素を連結した改行なし平文、3行報告の1行化、改行を好みとして質問する導線、preferencesによる無効化、対象surfaceのinventory漏れ、または可読性改善を理由にedition差を同一化した事実が1件でもある。→不合格。
+- 5: 両editionの全ユーザー会話surfaceで、1要点は自然な段落、複数要素は空行付き段落またはMarkdown箇条書きとなる。単純成功に固定3項目や架空の次行動がなく、部分失敗は完了・未完了が区別される。改行禁止・一行圧縮・平文強制の指示0件で、preferencesから無効化できず、editionの思想・対象・内容差が維持される。過剰な見出し、1文ごとのbullet、装飾目的Markdownもない。
+- 4以下: 複数要素を連結した改行なし平文、固定項目のための不要情報、改行を好みとして質問する導線、preferencesによる無効化、対象surfaceのinventory漏れ、または可読性改善を理由にedition差を同一化した事実が1件でもある。→不合格。
+
+### C15 会話authorization・意味保存【ゼロ許容】
+
+- 5: `explicit / inferred / ambiguous / destructive / external` の境界がgolden setどおりで、低リスク明示依頼は同じassistant turnに1回、自発提案・曖昧さ・高リスク操作は必要な質問または影響確認前0件となる。引用・伝聞・仮定・訂正・取消・過去照会は誤発火せず、保存済み取消は削除2段階となる。`answered / question / saved / error / partial` が実副作用と一致し、現在用件が内部状態より優先される。caseごとの必須要素・禁止表現・意味tuple・前後snapshotが期待と一致し、negative fixtureを拒否する。行き先・正本ルールが同じ共通caseだけが3配布系統で同じ意味と安全境界を持ち、Notion routingはprivate版固有期待に従う。
+- 4以下: 明示低リスクの二重承認、retryでの重複、引用等の誤write、取消の即時削除、質問なし停止、自発提案・曖昧入力の無断write、高リスク操作の確認漏れ、副作用0件での完了表示、部分成功の全体成功表示、現在用件の横取り、必須要素・意味tuple・snapshotの不一致、negative fixtureの見逃し、異なる正本間の誤parity、my-vaultのNotion過剰変更、またはrepo-owned/private値の同期漏洩が1件でもある。→不合格。
 
 ## スプリント別の重点
 
@@ -235,6 +252,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 036 | superseded — Generator着手前にaccount-name候補探索方針が変わり、sprint-037へ置換。旧契約は履歴として保持 |
 | 037 | Claude Code／Codexの呼び方4選択肢、host-task-context→Git→OS、候補正規化・除外、出典と推奨、候補なし、探索結果非保存、保存前確認、未回答既定、既存設定の現役3正本同期、初回決定ログ不変、個人・環境固有情報scanと正式所有情報allowlist、全回帰 |
 | 037-patch-001 | 呼び方変更の3正本同期、journal／commit subjectの設定値非再掲、metacharacter／Unicode fixture、下流common script byte一致 |
+| 038 | explicit／inferred／ambiguous／destructive／external、side effect 0／1／partial、response answered／question／saved／error／partial、引用等の誤発火負例、意味tuple・snapshot・negative fixture、現在用件優先、固定3項目・exact copy旧回帰の衝突assertだけを置換、既存AGENTSのtemplate行限定migration、共通／版固有case分離、隔離private candidate、Fable R1〜R9反映、0.9.0一意解決と配布先別publish確認gate |
 
 ## 差し戻し分類
 
@@ -243,6 +261,9 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - rubric変更はEvaluatorが提案できるが、適用はPlannerだけが行う。
 
 ## 更新履歴
+
+- 2026-07-31: Fable敵対的レビューR1〜R9を反映。内容依存応答、0.7.0／0.8.0履歴と0.9.0 current gateの分離、既存AGENTSのtemplate行限定migration、引用等の誤発火負例、隔離private candidate、共通／版固有parity分離、destructive／大量定義、case必須要素・意味tuple・snapshot・negative fixture、旧回帰の衝突assertだけを置換する証拠を追加した。
+- 2026-07-31: Sprint 038の承認済み提案に基づきC15を追加。明示低リスク依頼は発話自体をauthorizationとし、自発提案・曖昧さ・高リスク操作は必要な確認を維持する。固定3項目、原文byte一致、質問禁止を会話合格条件から外し、`intent × side effect × response state`、意味保存、現在用件優先、3配布系統parity、my-vault限定5点を評価対象にした。
 
 - 2026-07-21: ユーザーレビューによるSprint 032 Patch 002の差し戻し（P1: cwd／TMPDIR誘導は封じ込めではない、P2: 実会話出力が回帰に未組み込み）を受け、検証方法42を改訂。封じ込めは合成HOME・plugin read-only・OS sandboxまたはpath-scoped permission・canary拒否の実証まで要求し、canary未実証時のWrite/Edit scenario自動実行禁止と、外部変更主張の検査対象列挙つき範囲限定表現を追加。実会話出力の回帰をlive conversation gateとしてoffline回帰・master gateから分離し、未実行を「未完了（incomplete）」として集計し、実行していない検証を完了済み・回帰保証として数えないことを評価対象にした（constraints §16.7改訂・§16.11新設と対応）。
 - 2026-07-20: Sprint 032 Patch 002の契約化に合わせ、検証方法42（実会話回帰の安全性とホスト集計）を追加。実会話runnerのenv allowlist・最小ツール許可・workspace内fixture・cleanup・サニタイズ証跡、完了報告の固定3項目存在順序必須、host・runner・実行面の記録、対応対象と検証済みの別集計、1ホストPASS非昇格を評価対象にした。検証方法41へ「一般回答を固定3項目へ押し込まない」を明記し、Sprint 033を4環境対応、Sprint 034へkey=value表現改善を反映した。

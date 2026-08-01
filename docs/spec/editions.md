@@ -10,6 +10,10 @@
 両者は「設定で切り替える1製品」ではない。それぞれ独立して導入・更新・公開できる完成品であり、
 `agentic-secretary` の共通基盤を `yasashii-secretary` が狭いoverlayで追随する。
 
+この2 editionとは別に、`agentic-secretary-my-vault` がprivate downstreamとして存在する。
+これは第3の公開製品ではなく、`agentic-secretary` 共通coreへmy-vault固有のNotion TaskDB・vault正本を加えた配布系統である。
+Sprint 038の「3配布系統」は、このpublic 2 editionとprivate downstreamを指す。
+
 ## Git系譜とrepo関係
 
 `agentic-secretary` は必ず下流とは別のlocal checkout、
@@ -26,6 +30,9 @@ subdirectoryとして作らない。`yasashii-secretary` からはfetch専用の
 別directory／別repoの作成、remote追加・変更、push、公開、releaseは、その該当Sprintのexternal gateで
 操作ごとのユーザー明示許可を再確認する。以前の包括的な同意だけで実行しない。
 
+`agentic-secretary-my-vault` は `agentic-secretary` を読取元とするprivate downstreamとし、upstreamへのpushを無効にする。
+private値、Notion schema、my-vault固有Skill、利用者データをpublic upstreamまたはyasashiiへ同期しない。
+
 ## 共通基盤
 
 両editionのrepo内では、plugin本体の内部pathを `plugins/secretary/` に統一する。次は共通であり、edition別に複製・分岐しない。
@@ -35,6 +42,7 @@ subdirectoryとして作らない。`yasashii-secretary` からはfetch専用の
 - Chatwork／Google Chatのwizard、表示copy、OAuth scope、同期境界、履歴形式
 - 記憶保護、secret検査、symlink境界、commit対象分離、rollback等の安全契約
 - 全ユーザー会話の改行、段落、必要なMarkdown箇条書きという可読性最低基準
+- 明示依頼・自発提案・曖昧さ・高リスク操作のauthorization境界、現在用件優先、意味保存
 - 共通pluginの回帰、master release gate、Git archive相当gate
 - botの新規生成時の第一候補 `secretary[bot]`
 
@@ -48,7 +56,7 @@ edition差分は次の4面に限定する。
 |---|---|---|
 | 会話 | 技術的に直接的。正式名称と判断材料を早めに示す | 現行の平易な日本語、段階表示、過度に幼くしない |
 | 診断 | command、path、error、再現条件を先に示す | 何が起きたか、影響、次にすることを先に示す |
-| 報告 | 技術要約、証拠、残課題、developer向け情報 | 既定3行＋必要時の短い補足 |
+| 報告 | 技術要約、証拠、残課題、developer向け情報 | 何が起きたか、影響、必要なら次の行動 |
 | developer handoff | 実装者がそのまま調査・修正できる詳細 | 必要な正式名称を残しつつ利用者向けに整理 |
 
 Chatwork／Google Chat wizardはcommon by design、つまり意図的に共通である。wizardの文言をedition可変copyへ入れない。
@@ -56,6 +64,10 @@ Chatwork／Google Chat wizardはcommon by design、つまり意図的に共通�
 共通wizardの挙動修正は `agentic-secretary` を正本として先に成立させ、`yasashii-secretary` は宣言済みの
 overlay同期で取り込む。下流だけの手修正でwizardを分岐させず、同期後もyasashii固有の会話copy、identity、
 配布metadata、repo-owned docsを上流値で置換しない。
+
+`agentic-secretary-my-vault` の差分はNotion TaskDB、vault検索・保存、private接続値等のprivate profileに限定する。
+共通会話契約は上流に追随するが、Sprint 038のNotion変更はF57の5点だけとし、property、relation、通常作成フローを
+共通化や自然会話を理由に再設計しない。
 
 ## 正式対象ホストとhost adapter
 
@@ -144,10 +156,15 @@ update ledgerにはschema versionとeditionを持たせる。既存のedition情
 4. 両editionの痕跡が混在する、または判定不能な場合も停止する。
 5. 将来の移行余地を残すため、edition値とschema versionを記録するが、今回のscopeでは切替commandを作らない。
 
-## 未配布段階の0.8.0 release preparation
+## 公開済み0.8.0のrelease履歴と次candidate
+
+この節は0.8.0準備時に確定した履歴契約である。`v0.8.0` は公開済みであり、過去の
+`candidate=0.8.0` を現在candidateとして再利用しない。現在のmarketplace、Claude／Codex manifest、
+CHANGELOG先頭、公開tagが `0.8.0` で一致し、Sprint 038は後方互換な利用者向け機能追加なので、
+Semantic Versioningのminor更新を1回適用した `0.9.0` を次candidateとして一意に解決する。
 
 `0.7.0` は不変なrelease記録であり、manifest、migration、fixture、評価記録、Git履歴を同一versionのまま差し替えない。
-2 edition完成品はまだ利用者へ明示配布していないため、最初の明示配布candidate／latestを `0.8.0` とする。既存 `0.7.0` は旧URL
+2 edition完成品をまだ利用者へ明示配布していなかった時点で、最初の明示配布candidate／latestを `0.8.0` とした。既存 `0.7.0` は旧URL
 `plugins/yasashii-secretary/CHANGELOG.md` を参照するため、このpathはredirect説明ではないraw CHANGELOG互換fileとして残し、
 `plugins/secretary/CHANGELOG.md` の新しい正本とbyte-for-byteで一致させる。過去entryは書き換えない。
 
@@ -164,6 +181,33 @@ Git、設定、ledger、migrationへ副作用0件で停止する。
 5. 公開済みartifact、過去fixture、過去評価記録を0.8.0前提へ書き換えない。
 
 実plugin install／update、remote参照の変更、pushはユーザー明示許可を得たlive gateでだけ行う。
+
+Sprint 038は、現在candidateを指すmanifest、marketplace、CHANGELOG新entry、edition metadata、公開ガイド、
+current release gateの期待値だけを `0.9.0` へ進める。0.7.0／0.8.0のsnapshot、migration、fixture、tag、
+progress、feedback、履歴assertはその版のまま保持する。version解決入力が一致しない場合はpublishしない。
+
+## private my-vault downstreamの所有範囲
+
+my-vault側が所有し、public 2 editionへ同期しないもの:
+
+- Notion TaskDB、property schema、project relation、private DB識別子。
+- `task-triage`、`notion-tasks`、`vault-search`、`vault-documents` 等のmy-vault固有Skill。
+- my-vaultのPROJECT構造、private profile、利用者データ、private release判断。
+
+上流から取り込むもの:
+
+- 共通会話authorization、response state、意味保存の契約。
+- memory-care、settings、daily、projects、secretary等、private固有差分がない共通core。
+- path guard、atomic write、rollback、Secret、Git、外部状態の安全契約。
+
+同期はupstream candidateの完全SHAと対象pathを固定し、private-owned fileの開始前後digestを保護する。
+my-vault固有5問題の変更はprivate repo側の同一Sprint契約作業単位と独立回帰を持ち、public upstreamの合格だけでprivate profileを合格にしない。
+Generator／Evaluator中は実downstreamではなく隔離candidateを変更し、独立Evaluator PASS後、配布系統別の明示確認を経たrelease操作でだけ
+実downstreamへ反映・再インストールする。`/Users/taisei/my-vault` の利用者データはcandidate作成・評価・反映の対象にしない。
+
+共通parity caseは、行き先・正本ルールまで同じcaseだけとする。Notion TaskDB routing、task-triage番号承認、vault横断等は
+my-vault固有caseで保存先とresponse stateを評価し、agentic／yasashiiとの比較はintentと確認・Secret・未確認外部状態等の
+安全境界に限定する。
 
 ## yasashii overlayの所有範囲
 
@@ -193,11 +237,13 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 2. wizardのDOM、copy、OAuth scope、同期・安全挙動が両editionで同一。
 3. edition差分が会話、診断、報告、developer handoffだけに限定されている。
 4. neutral marker、legacy yasashii marker、反対edition、混在・不明の全ケースが契約どおりになる。
-5. 旧raw CHANGELOGが正本とbyte一致し、0.7.0の歴史記録が不変で、新規0.8.0導入、equal／downgrade副作用0停止、旧blockerの非誤表示が合格する。
+5. 旧raw CHANGELOGが正本とbyte一致し、0.7.0／0.8.0の歴史記録が不変で、新規0.8.0導入、equal／downgrade副作用0停止、旧blockerの非誤表示が履歴回帰として合格する。
 6. Git共通祖先、upstream base、下流overlayの冪等性、upstream push無効化が証拠化される。
 7. LICENSE、単段クレジット、README、upstream mapping、CHANGELOG互換が一致する。
 8. 外部repo作成、remote変更、push、公開、release、実plugin install／updateについてユーザーが明示許可した操作だけが実行される。
-9. candidate／latest／manifest／CHANGELOG／ledger／migrationが `0.8.0` で整合し、公開済み `0.7.0` の記録・fixture・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
+9. 現在candidate／latest／manifest／CHANGELOG／ledger／migrationが `0.9.0` で整合し、公開済み `0.7.0`／`0.8.0` の記録・fixture・tag・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
 10. 全会話面が改行・段落・必要なMarkdown箇条書きを持ち、agentic／yasashiiの4面の内容差を維持する。Chatwork wizardの `Name`／`Secret` 入力案内は両editionで同一かつ具体的である。
+11. 行き先・正本ルールが同じ共通会話golden setがagentic／yasashii／private my-vaultで同じ意味と安全境界を持つ。Notion routing等はprivate版固有caseとしてF57の5問題を独立評価し、共通比較は安全境界だけに限定する。各repo固有fileの同期前後digestが不変である。
+12. 次version、配布先、変更内容、rollbackが現在の正本から一意に示される。解決できない間はrelease candidate準備とgateまでに止め、tag、GitHub Release、marketplace更新、remote push、公開を行わない。
 
 許可不足や外部サービス未準備は `external-live-gate-unavailable` として不合格にし、実装不具合とは分けて記録する。

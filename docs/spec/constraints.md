@@ -50,7 +50,7 @@
 - journal は追記専用の事実ログ。定義済みシームが成功した事実だけは、ユーザー確認なしで副作用として追記してよい。
 - 無確認追記を許すシームは `save-deliverable`、`todo-add`、`todo-done`、`todo-carry`、`remember-decision`、`topic-add`、確認済みPJに対する定義済みproject操作、settings の設定変更に限定する。
 - `journal-add` は末尾appendのみ、空本文拒否、既存行の書換・削除機能なし。会話全文・逐語ログ・未確認の推測は書かない。
-- `decided` と `topics` は、シームを呼ぶ前に節目プロトコルの確認を受ける。journal自体の副作用で確認を省略してよいという意味ではない。
+- `decided` と `topics` はF54のauthorization境界に従う。明示された低リスクの保存依頼はその発話を確認済みとして扱い、自発提案・曖昧な保存先では質問への了承後だけシームを呼ぶ。journal自体の副作用を、未依頼の保存許可には使わない。
 
 ### 決定の純追加
 
@@ -62,11 +62,11 @@
 
 1. 共有規律と既定の体験を第1部、個人設定による上書きを第2部として分ける。
 2. `preferences.md` が無い・空・該当項目未設定なら既定値で動く。暗黙推測で設定を変えない。
-3. 既定値は、丁寧で堅すぎない口調、専門用語「ふつう」、報告「みじかく（3行）」、決定確認「都度」。
-4. 報告は**既定3行**。3つの意味を物理的にも別行または別項目で表示し、1行の平文へ連結しない。`preferences.md` で「くわしく」が明示された場合だけ、3行＋補足1つへ拡張できる。憲章テンプレの規約も同じ形にする。
+3. 既定値は、丁寧で堅すぎない口調、専門用語「ふつう」、報告「みじかく」、自発的な決定保存提案は都度確認。
+4. 報告は内容依存とする。1要点の成功は自然な短文、複数結果・部分失敗・比較は必要な段落または箇条書きで示す。`preferences.md` の「くわしく」は必要な説明量を増やせるが、固定項目、架空の次行動、未実行の完了表現を追加してはならない。
 5. 一般技術用語は常にそのまま使う。「ことば添え」のopt-inでも語彙を置換せず、馴染みの薄い語またはユーザーの役割から未知と思われる語に短い補足を足すだけにする。
 6. パーソナライズされた文面の完全一致は回帰対象にしない。rubricは既定値を採点し、設定分岐は構造・適用・安全なフォールバックと模擬会話で確認する。
-7. 自発的な `秘書のメモ` 追記、口調・呼び方・詳しさ等の変更は、適用前に1行確認する。
+7. 自発的な `秘書のメモ` 追記や、秘書側から提案する口調・呼び方・詳しさ等の変更は、適用前に質問する。ユーザーが値と対象を明示した可逆変更はその発話をauthorizationとして扱い、値不足や複数候補がある場合だけ質問する。
 8. 初回の呼び方は「あなた」「アカウント名」「指定の名前」「その他」の4選択肢から解決し、保存前に実際の値を確認する。選択への未回答、空回答は「あなた」へ解決し、保存確認が未完了なら書き込まない。
 9. アカウント名候補は、現在タスクへhostが既に渡した文脈、`git config user.name`、OSユーザー名の順で読み取る。任意の過去会話や生session logを直接探索する共通APIは前提にしない。Git／OS候補は表示名向けに正規化し、不適格値を除外する。
 10. 既存の呼び方変更では `preferences.md` を現在値の正本とし、`AGENTS.md` と `MEMORY.md` の現役表示を同じ値へ同期する。同期に失敗した場合は部分更新を残さない。初回決定ログは履歴として改変しない。
@@ -77,7 +77,7 @@
 1. やさしさは、言葉遣い、報告、進行の見せ方、次の一手の先回り提案に適用する。
 2. 6規律（スコープ・根拠・出力・記憶保護・自動コミット・報告）、封じ込め、Planner / Generator / Evaluator の分離、書込責務、評価閾値、回帰ゼロ許容は削らず、緩めない。
 3. 一般技術用語はそのまま使う。過度な平易化、幼稚なメタファー、生の英語エラーの放置は禁止。
-4. 先回り提案は報告3行目を標準とし、1つまで、根拠を一言、着手はユーザーが決める。提案が無ければ無理に作らない。
+4. 先回り提案は有用な場合だけ1つまで、根拠を一言添える。置き場所を固定せず、次の行動が無ければ作らない。着手はユーザーが決める。
 5. 口調や詳しさの違いを、C2・C5・C6のゼロ許容基準とトレードオフにしない。
 
 ## 6. データと実行の決定性
@@ -220,7 +220,7 @@
 13. Cloud準備の会話とlocal wizardを分ける。skill会話はJSON取得までを担当し、JSON取得を確認してからwizardを起動する。wizardはJSON選択→OAuth許可→通常スペース選択へ進み、Cloud project作成・API有効化・Audience・OAuth Client作成の画像や重複説明を表示しない。
 14. OAuth許可はJSON確認後の明示ボタンで別タブに開く。元wizardの状態確認、ポップアップ拒否、タブ閉鎖、同意拒否、再試行、許可後の自動SPACE選択というSprint 019の合格動作を維持する。OAuth画面をJSON選択だけで勝手に開かない。
 
-## 14. 公開済み0.7.0と次候補0.8.0の配布安全境界
+## 14. 公開済み0.7.0／0.8.0と現在candidateの配布安全境界
 
 1. 2026-07-18の公開判断では公開版を `0.7.0` とし、marketplace、plugin manifest、CHANGELOG、更新診断、最小台帳、migration、公開ガイドの版を一致させた。これは公開済みreleaseの歴史的な不変条件であり、`0.6.0`のまま監査対応を大幅追加して配布しない。
 2. 初回publish、チャット設定、記憶commit、更新等のGit操作は、その操作が所有するpathだけをstage・commitする。操作開始前からstage済みの変更、別サービス、一般PJ、repo rootの無関係ファイルをcommitへ混ぜず、既存indexを勝手にunstage・上書き・削除しない。
@@ -249,15 +249,20 @@
 19. `0.7.0`の配布合格には、F36〜F42の回帰、master offline／online、Git archive相当の検査、専用private test workspaceのChatwork／Google Chat live gateがすべて必要である。片方のサービス、合成fixture、過去run、過去版の成功で代替しない。
 20. live gate完了後は両チャットschedule、全Repository Secret、room／space選択、Google OAuth grant／tokenが残っていないことを確認する。後始末未完了は不合格。履歴またはtest workspaceの削除は別の明示確認を必要とする。
 21. 1〜20は公開済み `0.7.0` で確定した不変条件として維持する。公開済み `0.7.0` のmanifest、migration、fixture、評価記録、Git履歴を `0.8.0` 前提へ書き換えず、同一versionのまま配布物を差し替えない。
-22. まだ利用者へ明示配布していない2 editionの最初のrelease candidate／latestは `0.8.0` とし、marketplace、plugin manifest、正本CHANGELOG、edition設定、README／公開ガイドの候補versionを一致させる。
+22. 当時まだ利用者へ明示配布していなかった2 editionの最初のrelease candidate／latestは `0.8.0` とし、marketplace、plugin manifest、正本CHANGELOG、edition設定、README／公開ガイドの候補versionを一致させた。この条件は `v0.8.0` の公開履歴として保持し、現在candidateへ読み替えない。
 23. 旧 `plugins/yasashii-secretary/CHANGELOG.md` はredirectではないraw CHANGELOG互換fileとして残し、新しい正本とbyte-for-byteで一致させる。過去entryを書き換えず、未検証の旧0.7.0 live update成功を説明しない。
 24. 更新可能とするのは候補versionが導入済みversionよりsemver上で新しい場合だけとする。同一versionとdowngradeはplugin、workspace、Git、設定、ledger、migrationへ副作用0件で停止する。same-version bootstrap bridge、別配布物による橋渡し、公開済み `0.7.0` のin-place差替えを作らない。
 25. 0.8.0は新規または未導入状態から導入でき、正本plugin path、neutral marker、edition付きledger、主要skillを整合させる。旧0.7.0 updaterのscanner停止は既知blockerとして保持し、対応済み・live互換PASS・配布保証のいずれにも数えない。
 26. 旧0.7.0利用者向けexternal recovery／bootstrapは作らない。旧scannerで止まる標準生成fileのfixture削除、既知pathの広い除外、secret scan弱体化、公開済みartifactの改変で合格を作らない。
 27. `0.8.0` release candidateのidentityは配布対象bytesで固定する。checkout専用のGit履歴・監査evidence検査と、`.git`／監査evidenceを含まないarchive配布検査は役割を分ける。checkout専用入力をarchiveへ混ぜず、どちらか一方の合格で全体を代替しない。
 28. 旧 `0.6.0 → 0.7.0` と調査済み `0.7.0 → 0.8.0` のmigration、fixture、受入記録は歴史的回帰として期待値を変更せず保持する。未実施live gateを合格として追加しない。
+29. 現在の公開済み最高版は、manifest、CHANGELOG先頭、公開tagが一致する `0.8.0` とする。Sprint 038は後方互換な利用者向け機能追加であり、Semantic Versioningのminor更新を1回適用した `0.9.0` を現在candidateとして一意に使う。解決入力が一致しない場合はversionを推測せずreleaseを停止する。
+30. Sprint 038が所有するversion変更は、現在candidateを指すmarketplace、Claude／Codex manifest、正本／legacy CHANGELOGの新entry、edition metadata、公開ガイド、current release gateの期待値である。`0.7.0`／`0.8.0` のmanifest snapshot、migration、fixture、tag、progress、feedback、履歴assertは変更しない。
+31. version gateは「履歴回帰」と「現在candidate整合」を別結果で表示する。履歴回帰は0.7.0／0.8.0の既存期待値、現在candidate整合は0.9.0のmanifest／CHANGELOG／配布先／artifact identityを検査し、一方のPASSで他方を代替しない。
+32. 現在candidateの同一版 `0.9.0 → 0.9.0` とdowngradeは副作用0件で停止する。過去の `0.8.0 → 0.8.0`／downgrade fixtureは履歴回帰として別に保持する。
+33. release確認は配布系統別に行う。public upstream `agentic-secretary`、private downstream `agentic-secretary-my-vault`、public downstream `yasashii-secretary` ごとに、source SHA、version、destination、artifact、rollback、再インストール／cache更新の要否を列挙し、未許可の系統へ横展開しない。
 
-## 15. 2 edition境界
+## 15. 2 editionとprivate downstream境界
 
 1. `agentic-secretary` は下流と別のlocal checkoutかつ `mtaiseeei/agentic-secretary` の別GitHub repoとする。`yasashii-secretary` 内のmonorepo／subdirectoryにしない。
 2. `agentic-secretary` は上流、`yasashii-secretary` は下流とし、下流の `upstream` remoteはfetch専用・push無効とする。両者はneutralization commitまでのGit履歴と共通祖先を持つ。
@@ -271,6 +276,11 @@
 10. LICENSEとShin-sibainu/cc-company単段クレジットを両editionで保持する。`forkedFrom` は公式validatorまたはlive gateの証拠なしに推測変更しない。
 11. yasashii overlayは共通plugin、共通安全回帰、必要な互換／release checkだけを対象とする。spec、Sprint、progress、feedback、evidenceは各repoが所有し、同期しない。
 12. 呼び方変更transactionのjournal本文とGit commit subjectは変更項目だけの固定表現とし、確認済みの呼び方、他の設定値、値の一部、値から導いた表現を再掲しない。この安全境界はedition差分にせず、両editionでbyte同一の共通処理として維持する。
+13. `agentic-secretary-my-vault` は第3の公開editionではなく、`agentic-secretary` 共通coreを取り込むprivate downstreamである。my-vault固有のTaskDB・vault正本・private値をpublic upstreamやyasashiiへ逆流させない。
+14. 3配布系統を同期するときも、各repoのspec、Sprint、progress、feedback、evidence、README、release判断を上書きしない。共通caseの意味と安全境界を揃え、版固有copy・metadata・private機能を保護する。
+15. 共通coreのintent分類、response state、内容依存応答、安全境界はpublic upstreamが所有する。`task-triage`、`notion-tasks`、`vault-search`、`vault-documents` 等のmy-vault固有SkillとNotion routingはprivate repoが所有し、public upstreamへ複製しない。
+16. private所有変更は同じSprint 038契約を継承したprivate側の作業単位で行うが、Generator／Evaluator中は実downstreamではなく隔離candidateだけを変更する。共通candidate SHA、private base SHA、対象pathを固定し、独立Evaluator PASS後かつ配布系統別の明示確認後だけ実downstreamへfast-forward相当で反映し、再インストールする。
+17. 共通parity caseは保存先・正本ルールまで同じcaseに限る。Notion TaskDB routing等はedition固有caseとし、共通比較はintentと確認・Secret・外部状態等の安全境界に限定する。保存先とresponse stateは各editionの正本に従う。
 
 ## 16. ホスト対応・検証表示と実会話回帰の安全境界
 
@@ -282,7 +292,7 @@
 6. 実会話runnerの子プロセスenvはallowlist方式とし、`process.env` 全体を複製せず、認証情報・APIキー・token・secret類を渡さない。子セッションへは各scenarioに必要な最小ツールだけを許可し、原則Bashを許可しない。
 7. 実会話runnerの読み取り拒否・境界テストは一時workspace内の管理対象fixtureだけで行い、`/System` やuser home等のworkspace外パスを対象にしない。封じ込めはcwd・TMPDIRの誘導や許可ツールの絞り込みだけでは成立せず、合成HOME（実HOME非透過）、plugin本体のread-only参照、OS sandboxまたはホスト保証のpath-scoped permissionによる書込み先限定を必須とし、制御されたworkspace外canaryへの書き込みが実際に拒否されることを実証する。canary拒否を実証できない構成ではWrite/Editを使うscenarioを自動実行しない。無限定の「workspace外変更0件」という主張はせず、検査対象を列挙した範囲限定の表現だけを用いる。
 8. 実会話runnerは成功・失敗を問わず一時workspaceをcleanupし、証跡は秘密情報を含まないサニタイズ済み構造化結果だけとする。安全な環境を用意できない項目は `unverified` と記録し、安全条件を弱めてPASSにしない。
-9. 会話回帰の合否判定は共通契約を正本とする。完了・状態報告は固定3項目の存在と順序を必須にし、固定schemaなしの応答を行数だけで合格にしない。一般回答には固定3項目を要求せず、圧縮された改行なし平文を不合格にする。誤合格を作る緩和は禁止し、必要な緩和は理由つきで明示する。
+9. 会話回帰の合否判定は共通契約を正本とし、`intent × side effect × response state` と意味保存で判定する。固定3項目、固定prefix、自然文のbyte一致、質問禁止、行数だけを合格条件にしない。複数要素を圧縮した改行なし平文、実状態と異なる応答、意味の欠落・追加は不合格にする。
 10. 公式仕様の裏づけがないホスト機構を推測実装しない。公式ドキュメント・正式schemaで確認できない事項は `unverified` として記録する。
 11. 実会話出力の回帰確認は、offline回帰・構文チェック・master gateから分離した明示的なlive conversation gateとして扱い、未実行・未認証・隔離未実証は「未完了（incomplete）」として集計・表示する。offline検証の合格・runnerの構文チェックを実会話の回帰保証として数えない。「解消済み」「回帰保証」という主張は実際に実行された検証に限定する。過去のfeedback・progress・stateの記述は遡って書き換えず、訂正は新しい記録で行う。
 
@@ -310,3 +320,27 @@
 3. allowlistは値と許可pathを列挙する。MITの著作権表示、GitHub owner `mtaiseeei`、公式repository URL、`forkedFrom`、公開版の正式な製品識別子は削除しない。
 4. 絶対path自体が必要なruntime検証は、placeholder、合成path、実行時に解決したpathを使う。特定端末の実pathを製品既定へhard-codeしない。
 5. downstream repo、installed cache、利用者workspace、remote、release、外部サービスは本変更の書込み対象にしない。
+
+## 20. 人間らしい会話と副作用の確認境界
+
+1. 操作、対象、行き先が明示され、残る危険が小さい依頼は、その発話自体をauthorizationとして同じターンで実行する。同じ内容の復唱、別ターン停止、二重承認を安全性の代用にしない。
+2. 秘書が保存・プロジェクト化・設定変更等を自発提案する場合は、対象と操作が分かる質問を出す。対象、日付、行き先、参照先が曖昧な場合は、不足する一点だけを質問する。宣言文だけを返して確認待ちにしない。
+3. 削除、destructiveな上書き、戻しにくい変更、公開、push、認証、権限変更、課金、メール・チャット・assign・mention等の他者通知、大量作成・一括変更、Secret保存、曖昧な送信先・公開範囲は、明示依頼でも対象と影響を示した事前確認を維持する。
+   - destructiveな上書きは、利用者作成・編集内容を置換または喪失させる変更、もしくは容易にrollbackできない変更。単一設定値の可逆更新は含めない。
+   - 大量操作は、10件以上、対象件数が未確定の「全部／一括」、または複数repo・複数外部宛先にまたがる操作のいずれか。1〜9件でも削除・外部通知等の別境界に該当すれば確認する。
+4. path guard、atomic write、rollback、空上書き拒否、Secretの非表示・保存拒否、未依頼push禁止、書込み失敗時の非成功報告、未確認外部状態の非成功扱い、入力にない事実の非追加を緩めない。
+5. 現在の明示依頼を、古い再開しおり、決定0件監査、プロジェクト候補、内部index整合より優先する。軽量なclosed project照合等のread-only確認は必要に応じて行えるが、現在用件を別フローへ横取りしない。
+6. 応答は実状態と一致させる。副作用0件で待つ場合は `question`、成功は `saved`、失敗は `error`、一部だけ完了した場合は `partial` として、利用者が分かる言葉で示す。未実行を完了風に宣言しない。
+7. 単純成功へ固定3項目、内部stage名、不要な技術証跡、架空の次行動を強制しない。複数結果や部分失敗は必要な段落・箇条書きで示し、次の行動が無い場合は作らない。
+8. 会話テストは自然文のbyte一致、固定prefix、質問禁止を主条件にせず、intent、side effect、response state、保存された主体・日付・行動・否定・条件の意味保存を検査する。
+9. my-vaultのNotion変更はF57の5点だけに限定する。TaskDB正本、property、relation、通常の作成計画提示、connector write後の再読確認、未確認外部状態の非成功扱いを維持する。
+10. 既存Sprintの契約・progress・feedbackは当時の履歴として改変しない。現行仕様と衝突するexact copy・固定3項目等の旧テストは、Sprint 038で意味契約へ置換し、旧記録の遡及改変ではなく新しい回帰結果として残す。
+11. 引用、伝聞、仮定・条件、訂正、取消、過去依頼への照会に「覚えて」「記録して」等が含まれても、現在の`explicit` write依頼へ昇格させない。未保存の取消は副作用0件、保存済み内容の取消は対象提示と明示確認を分ける削除2段階へ接続する。
+12. 「同じターン」は、1つのユーザー発話を受け、必要なtool実行を含み、1つの最終応答で終わるassistant turnとする。timeout、応答再送、resumeでも同じoperation idの副作用は1回だけとし、既実行なら前後状態を確認して重複実行しない。
+13. 低リスク操作とexternal／destructive操作が混在する複合依頼は、利用者の記載順を守る。確認境界より前にある独立した低リスク操作だけは実行できるが、その結果は`partial`として示し、境界以降は確認後まで実行しない。操作が相互依存する、「まとめて／一括」と指定された、またはatomicな結果が期待される場合は、最初の副作用前に全体の影響を確認する。
+14. 別確認を維持する既存操作には、記憶削除、週次の古い月の退避、`MEMORY.md`上限超過時の退避、既存`secretary/`の再初期化・backup、一般PJのフル昇格、customized管理対象の上書き、plugin／workspace rollback、公開・push・認証・権限・他者通知を含む。現在の明示依頼を即時実行できる規則で、これらの境界を上書きしない。
+15. connector接続状態を確認できない場合は「未接続」と推定してsetupへ送らない。read-only診断を第一選択として示し、利用者がsetupを明示しても認証・権限変更・外部writeの直前確認を維持する。
+16. 既存workspaceの `secretary/AGENTS.md` に残る旧会話契約は、配布template由来と証明できる行または管理blockだけをmigration対象にする。dry-runで対象行、期待旧値、新値、衝突、backup／rollbackを示し、完全一致または記録済みtemplate fingerprintがない行、利用者編集がある行、所有判定不能な行では停止する。ファイル全面上書き、周辺の利用者指示の並べ替え・削除は禁止する。適用はatomic、同じmigrationの再実行差分0件を必須とし、対象外workspaceにはCHANGELOGで旧挙動が残る可能性と手動確認箇所を示す。
+17. 会話golden setの各caseは、case ID、対象edition、入力、前提、期待intent、期待side effect、期待response state、必須応答要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、前後snapshotを持つ。意味の欠落・反転・入力にない追加を各要素へ注入するnegative fixtureを用意し、決定的に機械判定できない項目はEvaluatorが判定根拠を記録する。
+18. 応答状態は、read-only照会等へ副作用0件で答えた`answered`、不足回答を求める`question`、実write成功の`saved`、失敗の`error`、一部成功の`partial`を区別する。必須要素・禁止表現・意味tuple・snapshotのいずれかが期待と異なれば、文面が自然でも当該caseは不合格とする。
+19. 旧回帰の置換は新契約と衝突するassertだけに限定する。`scripts/lib/sprint-032-patch-001-conversation.mjs`とそのreadability／smoke judge、`scripts/check-report-schema.py`、固定報告shapeを要求するSprint 010／011／012／029／032系assertは対象inventoryに含める。同じsuiteのpath guard、timeline決定性、Secret非露出、Git所有範囲、cleanup等は削除・緩和しない。削除・置換・追加したassertの一覧と、保持した安全assertの一覧をEvaluator証拠へ残す。

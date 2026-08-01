@@ -95,8 +95,8 @@ def validate(root: Path) -> list[str]:
 
     if codex_plugin.get("name") != PLUGIN_NAME:
         errors.append("Codex plugin manifest name is missing or invalid")
-    if codex_plugin.get("version") != "0.8.0":
-        errors.append("Codex plugin manifest version must be 0.8.0")
+    if codex_plugin.get("version") != "0.9.0":
+        errors.append("Codex plugin manifest version must be 0.9.0")
     if codex_plugin.get("skills") != "./skills/":
         errors.append("Codex plugin manifest skills must be ./skills/")
     if codex_plugin.get("author", {}).get("name") != AUTHOR:
@@ -137,6 +137,15 @@ def validate(root: Path) -> list[str]:
     else:
         if migration.get("schemaVersion") != 1 or migration.get("fromVersion") != "0.7.0" or migration.get("toVersion") != "0.8.0" or not isinstance(migration.get("operations"), list):
             errors.append("0.7.0 to 0.8.0 migration metadata is invalid")
+
+    current_migration_path = root / "plugins/secretary/migrations/0.8.0-to-0.9.0.json"
+    try:
+        current_migration = json.loads(current_migration_path.read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        errors.append(f"0.8.0 to 0.9.0 migration is unreadable: {error}")
+    else:
+        if current_migration.get("fromVersion") != "0.8.0" or current_migration.get("toVersion") != "0.9.0" or current_migration.get("operations", [{}])[0].get("type") != "replace-section":
+            errors.append("0.8.0 to 0.9.0 migration metadata is invalid")
 
     try:
         license_text = (root / "LICENSE").read_text()
