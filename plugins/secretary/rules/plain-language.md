@@ -7,8 +7,9 @@
 1. [`safety.md`](safety.md) — 記憶、確認、資格情報、外部送信等の安全契約
 2. [`evidence.md`](evidence.md) — 外部事実、根拠、断定、エラーの証拠契約
 3. [`common-language.md`](common-language.md) — edition共通の語彙と説明順
-4. [`styles/agentic.md`](styles/agentic.md) — agenticの技術的に直接的な会話、診断、報告
-5. [`copy/agentic.json`](copy/agentic.json) — 会話、診断、報告、developer handoffの可変copy
+4. [`conversation-contract.md`](conversation-contract.md) — intent、実行許可、副作用回数、応答状態
+5. [`styles/agentic.md`](styles/agentic.md) — agenticの技術的に直接的な会話、診断、報告
+6. [`copy/agentic.json`](copy/agentic.json) — 会話、診断、報告、developer handoffの可変copy
 
 `secretary/memory/preferences.md` は最後に読み、agentic styleが許可した口調だけへ適用します。
 設定が無い、空、一部欠損の場合はagenticの既定値へ戻ります。

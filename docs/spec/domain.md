@@ -200,12 +200,13 @@ token値、OAuth client値、不要な対象名、チャット本文、業務固
 - workflow、取得履歴、test workspaceを残す必要がある場合は、目的・保持期間・閲覧者をユーザーへ示す。
 - repoや履歴の削除・archiveは別の破壊的操作として、対象と影響を示した後の明示確認でだけ行う。
 
-## 0.7.0の歴史記録と最初の明示配布候補0.8.0
+## 0.7.0／0.8.0の歴史記録と現在candidate 0.9.0
 
-`0.7.0` は監査済みの不変なrelease記録であり、そのmanifest、migration、fixture、評価記録、Git履歴を変更しない。
-2 edition完成品はまだ利用者へ明示配布していないため、最初の明示配布candidate／latestを `0.8.0` とする。
-以下のrelease readinessは、過去の `0.7.0` 合格記録を流用せず、
-同一の `0.8.0` 配布対象bytesについて判定する。
+`0.7.0` と `0.8.0` は監査済みの不変なrelease記録であり、そのmanifest、migration、fixture、評価記録、tag、Git履歴を変更しない。
+当時まだ利用者へ明示配布していなかった2 editionの最初の明示配布candidate／latestは `0.8.0` とした。
+現在はmanifest、CHANGELOG先頭、公開tag `v0.8.0` が一致するため、`0.8.0` を最高公開版とする。
+Sprint 038は後方互換な利用者向け機能追加なので、Semantic Versioningのminor更新を1回適用した `0.9.0` を現在candidateとする。
+以下の0.8.0 readinessは履歴回帰として保持し、現在candidateのidentityとgateは別結果で判定する。
 
 ### Git変更集合
 
@@ -248,7 +249,7 @@ Gitを使う各操作は、次の集合を混ぜずに扱う。
 ### release readiness状態
 
 - `blocked`: F36〜F42、master suite、version整合、Git archive相当のいずれかが未合格。live gateを開始しない。
-- `offline-passed`: 自動回帰、online参照検査、archive検査、`0.8.0`整合が合格し、同一release candidateを固定できた。
+- `offline-passed`: 自動回帰、online参照検査、archive検査、現在candidate `0.9.0` 整合が合格し、同一release candidateを固定できた。
 - `live-running`: 専用private test workspaceで両チャットのlive gateを実施中。片方の完了を全体合格にしない。
 - `cleanup-required`: live動作は完了したが、schedule、Secret、選択、Google OAuthの後始末が未完了。
 - `ready`: 同一release candidateで両チャットのActions、commit、push、pull後検索、冪等再実行と後始末がすべて合格した。
@@ -269,7 +270,7 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 
 この状態遷移と対応fixtureは公開済み `0.7.0` の履歴回帰であり、`0.8.0` の期待値へ書き換えない。
 
-### 未配布段階の0.8.0準備状態
+### 公開済み0.8.0準備の履歴状態
 
 - `candidate-aligned`: marketplace、plugin manifest、正本／legacy CHANGELOG、edition設定、README、公開ガイドが `0.8.0` で一致する。
 - `fresh-install-verified`: 新規または未導入状態から0.8.0を導入し、正本plugin path、neutral marker、edition付きledger、主要skillを確認済み。
@@ -280,13 +281,22 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 旧0.7.0利用者向けexternal recovery／bootstrapは状態として持たない。same-version bridge、fixture削除、安全scan弱体化、
 公開済みartifactの改変で `legacy-live-blocked` を回避しない。将来この互換を提供する場合は、別のユーザー判断とSprint契約を必要とする。
 
+### 現在candidate 0.9.0の状態
+
+- `version-resolved`: marketplace／Claude manifest／Codex manifest／CHANGELOG先頭／公開tagが最高公開版 `0.8.0` で一致し、変更分類が後方互換な機能追加であるため `0.9.0` を一意に得た。
+- `candidate-aligned`: current version ownerであるmarketplace、両manifest、正本／legacy CHANGELOGの新entry、edition metadata、公開ガイド、current release gateが `0.9.0` で一致する。
+- `history-protected`: `0.7.0`／`0.8.0` のmanifest snapshot、migration、fixture、tag、progress、feedback、履歴assertが不変である。
+- `destination-ready`: agentic public、private my-vault、yasashii publicの各配布系統について、source SHA、version、artifact、destination、rollback、再インストール要否が一意である。
+
+version解決入力が一致しない、または変更分類からminor更新を一意に選べない場合は `version-unresolved` とし、publishせずPlannerへ戻す。
+
 ## ユーザー会話の構造
 
 ユーザー向けの意味単位を次のように扱う。
 
 - `single-point`: 1要点だけの短い確認や回答。1段落でよく、機械的にbulletへしない。
 - `multi-point`: 複数の手順、選択肢、結果、原因、影響、次の行動。空行で分けた段落またはMarkdown箇条書きにする。
-- `three-line-report`: やったこと、結果、次に起きること／提案の3意味。物理的にも別行または別項目にする。
+- `result-report`: 実行結果に必要な意味だけを示す。単純成功は自然な短文、複数結果・部分失敗は必要な項目へ分け、固定3項目や架空の次行動を持たない。
 - `technical-handoff`: agentic／yasashiiの内容差を保ちつつ、再現条件、証拠、残課題等の複数要素を構造化する。
 
 改行有無は個人設定ではなく両edition共通の表示不変条件である。内部record、commit message、index、machine-readable出力の
@@ -296,12 +306,13 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 
 | 層 | 型 | 記録経路 | 記録前確認 |
 |---|---|---|---|
-| 決定 | `decided` | 会話中の検出→ `remember-decision` → journal副作用 | あり。既定は都度1行 |
+| 決定 | `decided` | 明示依頼または確認済み提案→ `remember-decision` → journal副作用 | 明示依頼は発話自体。自発提案・曖昧時は質問 |
 | 活動 | `did` / `next` / `note` | 成功したシーム→ journal副作用 | なし。事実の追記だけ |
-| 相談文脈 | topic | 区切りで要点確認→ `topic-add` → journal副作用 | あり。1行 |
+| 相談文脈 | topic | 明示依頼または要点の確認済み提案→ `topic-add` → journal副作用 | 明示依頼は発話自体。自発提案は質問 |
 
-決定検出はLLM規律に依存するため、「活動はシームが保証するが、決定は都度＋締めで取りこぼしを回収する」と扱う。
-決定文は原文で残し、勝手に膨らませない。相談文脈は会話全文を保存せず、確認済みの要点だけを残す。
+決定検出はLLM規律に依存するが、決定0件という内部監査結果を通常の締めへ強制表示しない。
+決定文は主体・日付・行動・否定・条件の意味を保ち、勝手に膨らませない。原文全文のbyte複製は必須ではない。
+相談文脈は会話全文を保存せず、明示された内容または確認済みの要点だけを残す。
 確認済みPJに属する決定・文脈は当該PJの正本へ送り、一般memoryへ同じ本文を複写しない。
 
 ## journal
@@ -349,6 +360,99 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 - 追加、完了、持ち越しをシームで扱い、期限は任意フィールド。
 - `todo-done` と `todo-carry` は `backup/sprint-007-010-plan` の旧実装をそのまま戻さず、journal統合形として再構成する。
 - PJに属するTODOはプロジェクト名または `PROJECT.md` への参照を持てる。PJ内に別の生きたTODO正本を作らない。
+
+## 会話authorizationの状態モデル
+
+### explicit誤発火の除外
+
+「覚えて」「記録して」「設定して」等を含んでも、次は現在の操作依頼ではない。
+
+- 引用: 「『覚えておいて』と言われた」のように発話を引用している。
+- 伝聞: 第三者が依頼したと報告しているだけで、現在の利用者が実行を命じていない。
+- 仮定・条件: 「もし覚えてと言ったら」のように条件の説明をしている。
+- 訂正: 「覚えて、ではなく確認だけ」のように直前の依頼を取り消し、別の意味へ訂正している。
+- 取消: 未保存なら副作用0件。保存済みなら即時削除せず、対象提示と明示確認を分ける削除2段階へ進む。
+- 過去依頼への照会: 「昨日、覚えてと頼んだ内容は？」のようなread-only照会。
+
+これらは`explicit=false`として副作用0件を守り、照会へ答える、訂正後の内容を扱う、または必要な一点を質問する。
+
+### IntentClass
+
+| 値 | 意味 | 実行境界 |
+|---|---|---|
+| `explicit` | 操作、対象、行き先が明示され、残る危険が小さい | 発話自体をauthorizationとして同じターンで実行 |
+| `inferred` | 秘書が保存・設定・プロジェクト化等を自発提案 | 質問への了承前は副作用0件 |
+| `ambiguous` | 対象、日付、行き先、参照先に複数候補が残る | 不足する一点を質問し、副作用0件 |
+| `destructive` | 削除、利用者作成内容を失う上書き、戻しにくい変更、10件以上・件数未定の一括・複数repo／宛先にまたがる大量変更 | 対象と影響を示した別確認後だけ実行 |
+| `external` | 公開、push、認証、権限、課金、他者通知、曖昧な送信先 | 対象・公開範囲・影響を示した別確認後だけ実行 |
+
+Secretを含む保存依頼は `explicit` でも即時保存へ進めず、Secretを表示・永続化しない安全境界へ送る。
+複数分類に当たる場合は、より強い確認を必要とする `destructive` または `external` を優先する。
+単一設定値の可逆更新はdestructiveな上書きに含めない。
+
+「同じターン」は、1つのユーザー発話を受け、必要なtool実行を含み、最終応答で終わる1 assistant turnである。
+retryやresumeは同じoperation idを引き継ぎ、実行済み副作用を再実行しない。
+
+複合依頼は記載順のoperation列として扱う。独立した低リスク操作が確認境界より前にあればそこまで実行し、`partial`で結果を示す。
+確認境界以降は実行しない。相互依存、利用者指定の一括、atomicな結果が必要な場合は、最初の副作用前に全体確認する。
+
+### SideEffectState
+
+- `0`: 永続物、外部状態、journal、commitの変更なし。
+- `1`: 契約された操作が1回だけ成功し、必要なシーム副作用も1回だけ完了。
+- `partial`: 複合依頼の一部だけが成功。成功範囲と未完了範囲を分け、全体成功にしない。
+
+同じ明示依頼の重複確認を省くことと、同じ副作用を重複実行することは別である。
+idempotency（同じ処理を再実行しても重複しない性質）または既存の重複防止を維持する。
+
+### ResponseState
+
+- `answered`: read-only照会、引用・伝聞等の非操作的入力へ、副作用0件で必要な回答を返した。
+- `question`: 副作用0件で、不足する回答が分かる質問または選択肢を示した。
+- `saved`: 実際の副作用が成功し、種別と行き先を過去形で示した。
+- `error`: 副作用が成功していない。起きたことと、利用者が必要なら選べる復旧手段を示した。
+- `partial`: 成功済みと未完了を分け、残る影響を示した。
+
+`answered`なのにwriteがある、`question` なのに質問が無い、`saved` なのに副作用0件、`error` を成功風に包む、`partial` を全体成功とする状態は不整合である。
+
+## 意味保存モデル
+
+保存候補から次の意味要素を取り出し、入力との一致を検査する。
+
+- 主体: 誰が行う／決めたか。
+- 日付・期限: 明示された日付、相対日付を解決した基準日。
+- 行動・対象: 何をする／何を残すか。
+- 否定・条件: 「しない」「〜なら」「保留」等。
+- 行き先: decision、topic、settings、TODO、Notion TaskDB、project等の正本。
+
+入力にない担当、期限、顧客名、因果、確定状態を補わない。「覚えて」「メモして」等の依頼語や、
+保存に不要な会話全文を内容へ混ぜない。自然文の言い換えは許すが、上記の意味を欠落・反転・追加しない。
+
+### golden caseの判定単位
+
+各caseは、case ID、edition、入力、前提、期待IntentClass、SideEffectState、ResponseState、必須応答要素、禁止表現、
+意味tuple、変更前snapshot、変更後snapshotを持つ。意味tupleは主体、日付・期限、行動、対象、否定・条件、行き先の順で比較する。
+各要素について欠落、反転、入力にない追加を起こすnegative fixtureを持ち、validatorが拒否できることを確認する。
+決定的に機械判定できない自然さ等は、Evaluatorが観測文と判定根拠を記録し、未記録の主観判定をPASSにしない。
+
+## my-vaultのタスク正本
+
+`agentic-secretary-my-vault` では、将来の実行行動の正本はNotion TaskDBである。
+日付と将来行動を含む「覚えて」等の入力を、キーワードだけでmemory-careやlocal TODOへ送らない。
+意味と正本ルールに基づきNotion taskと作業上の注意事項を分ける。
+
+task-triageの番号承認は、候補の内容と対象がその後変わっていない場合、その候補を起票するauthorizationとして
+notion-tasksへ引き継ぐ。内容、対象project、TaskDB、relation、公開範囲に意味のある変更があれば再確認する。
+通常のNotion直接起票では、既存どおりTaskDB、properties、relation、本文の計画を示して確認し、
+connector write後にpageを再読してから成功とする。
+
+Calendarとvaultのread-only横断依頼は、内部でそれぞれの正本へ問い合わせ、出典つきの統合結果を1回返す。
+内部のroute名、index名、unlinked等だけで止めず、利用者が決める不足一点を日常語で質問する。
+
+共通coreはIntentClass、SideEffectState、ResponseState、内容依存応答、安全境界を所有する。
+`task-triage`、`notion-tasks`、`vault-search`、`vault-documents` とNotion routingはprivate repoが所有する。
+Notion TaskDBへ送るcaseは共通parityから外し、my-vault版固有caseとして保存先とresponse stateを評価する。
+agentic／yasashiiとの共通比較は、引用等の誤発火防止、確認境界、Secret非露出、未確認外部状態の非成功扱いに限る。
 
 ## Chatworkの取得境界
 
@@ -536,9 +640,10 @@ OAuth client JSON本文、client secret、認可URL、認可コード、tokenは
 ## 秘書のメモ
 ```
 
-既定値は、口調=丁寧（標準）、専門用語=ふつう、報告=みじかく（3行）、決定確認=都度。
+既定値は、口調=丁寧（標準）、専門用語=ふつう、報告=みじかく（内容依存）、決定確認=都度。
 `memory-tools.sh pref-set <セクション> <キー> <値>` は指定行だけを更新し、`memory-tools.sh pref-note-add <本文>` は秘書のメモに追記する。
-設定変更前は例文プレビューで確認し、変更後はjournalへ `did` を追記して節目コミットする。
+利用者が値を明示した単一の可逆変更は重複確認なしで適用し、変更後はjournalへ `did` を追記して節目コミットする。
+値不足または秘書側の自発提案では、必要なら例文プレビューを示して確認する。
 
 ### 呼び方の状態
 

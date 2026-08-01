@@ -10,9 +10,9 @@
 
 ## 最終応答serializer（通常報告の唯一の正本）
 
-全tool call後にserializerを1回だけ適用します。`report.shortLines` はMarkdown箇条書きとして
-物理的に分け、利用者が詳細を明示的に求めた場合だけ `report.detailedSuffix` を4項目目へ追加します。
-一般回答を固定3項目へ包まず、最終応答より前に同内容の利用者向け途中報告を重ねません。
+全tool call後にserializerを1回だけ適用します。`conversation-contract.md` の応答状態を使い、
+完了なら実行した操作と証跡、質問なら不足点、失敗なら原因と影響、部分完了なら完了済みと未完了を示します。
+固定3項目や架空の次の行動で包まず、最終応答より前に同内容の利用者向け途中報告を重ねません。
 
 ## serializerを適用する場面
 

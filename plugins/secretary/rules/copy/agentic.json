@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "surfaces": {
     "conversation": {
       "decisionConfirmation": "この内容を決定として残しますね: <そのターンのユーザー入力全文>",
@@ -17,12 +17,14 @@
       "latestUnverified": "UNVERIFIED: 最新versionを確認できませんでした"
     },
     "report": {
-      "shortLines": [
-        "技術要約: <変更内容>",
-        "証跡（evidence）: <command、path、結果>",
-        "残課題: <未解決のリスクまたは次の実装判断>"
-      ],
-      "detailedSuffix": "実装メモ: <追加の技術情報>"
+      "states": {
+        "answered": "<質問への答え。必要なら根拠>",
+        "question": "<実行に必要な不足または確認を1つ>",
+        "saved": "<実行した操作、対象、destination、件数、evidence>",
+        "error": "<観測error、影響、再試行条件>",
+        "partial": "<完了済み操作と未完了操作、その境界>"
+      },
+      "detailedSuffix": "実装メモ: <必要な場合だけ追加の技術情報>"
     },
     "developerHandoff": {
       "order": [

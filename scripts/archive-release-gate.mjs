@@ -29,7 +29,7 @@ try {
   const codexPlugin = JSON.parse(readFileSync(codexPluginPath, "utf8"));
   const entry = market.plugins?.[0] || {};
   const codexEntry = codexMarket.plugins?.[0] || {};
-  check("Claude and Codex plugin version is 0.8.0", entry.version === "0.8.0" && plugin.version === "0.8.0" && codexPlugin.version === "0.8.0");
+  check("current Claude and Codex candidate version is 0.9.0", entry.version === "0.9.0" && plugin.version === "0.9.0" && codexPlugin.version === "0.9.0");
   check("author and MIT are present", JSON.stringify(entry.author) === JSON.stringify({ name: "mtaiseeei" }) && JSON.stringify(plugin.author) === JSON.stringify({ name: "mtaiseeei" }) && entry.license === "MIT" && plugin.license === "MIT");
   check("forkedFrom uses the single credit", entry.forkedFrom === "https://github.com/Shin-sibainu/cc-company");
   check("plugin source is present", entry.source === "./plugins/secretary" && existsSync(join(root, entry.source.slice(2))));
@@ -60,5 +60,6 @@ check("canonical CHANGELOG is included", existsSync(canonicalChangelog));
 check("legacy path contains only CHANGELOG", existsSync(legacyChangelog) && readdirSync(legacyRoot).join("\0") === "CHANGELOG.md");
 check("canonical and legacy CHANGELOG bytes match", existsSync(canonicalChangelog) && existsSync(legacyChangelog) && readFileSync(canonicalChangelog).equals(readFileSync(legacyChangelog)));
 check("0.7.0 to 0.8.0 migration is included", existsSync(join(root, "plugins", "secretary", "migrations", "0.7.0-to-0.8.0.json")));
+check("0.8.0 to 0.9.0 migration is included", existsSync(join(root, "plugins", "secretary", "migrations", "0.8.0-to-0.9.0.json")));
 process.stdout.write(`ARCHIVE_RELEASE_PASS=${pass} ARCHIVE_RELEASE_FAIL=${fail}\n`);
 process.exitCode = fail === 0 ? 0 : 1;

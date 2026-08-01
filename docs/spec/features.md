@@ -1,6 +1,6 @@
 # Features
 
-機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は次候補 `0.8.0` で2 editionへ安全に分離する機能、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物である。
+機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合である。
 
 ## 既存機能（F01〜F16）
 
@@ -15,7 +15,7 @@
 | F07 | Git履歴 | 節目で何をしたか分かる日本語メッセージをcommitし、秘書・一般プロジェクト・Chatwork／Google Chatを同じworkspace repoの履歴として扱う。別repo開発PJの履歴はその正本repoに残す。初回pushと同意済みチャットschedule以外の予期しないpushは確認する |
 | F08 | 成果物規約 | 単発成果物は `docs/YYYY/MM/YYYY-MM-DD_<title>.md`、確認済み一般PJの成果物は当該PJ内にfrontmatterつきで保存し、確定版を `outputs/`、旧版を `archive/` へ分ける |
 | F09 | Google 接続 | Gmail / Calendar / Drive の公式コネクタ接続と診断を案内する |
-| F10 | 文言ルール | 一般技術用語を保ち、馴染みの薄い語だけ短く補足し、3行報告と進行表示を守る |
+| F10 | 文言ルール | 一般技術用語を保ち、馴染みの薄い語だけ短く補足し、内容依存の自然な報告と必要な進行表示を守る |
 | F11 | Microsoft 接続 | Microsoft 365 公式コネクタの接続と確認を案内する |
 | F12 | Notion 接続 | 任意で Notion の公式接続を案内する |
 | F13 | 接続診断 | 実エラーを根拠に原因と対処を伝える |
@@ -41,16 +41,16 @@
 
 ### F19 節目プロトコル — 決定と相談文脈の記録
 
-- 決定の合図を会話中に検出し、原文のまま1行確認して `remember-decision` へ渡す。既定は都度、設定により締めのまとめ確認へ切り替えられる。
-- 会話の締めで、その日の `decided` が0件なら会話を読み返し、拾い漏れを確認する。
-- 結論に至らない相談が一区切りしたら、要点を案件メモに残す旨を1行確認して `topic-add` へ渡す。
+- 「覚えて」「決定として残して」等の明示依頼はF54のauthorizationに従い、対象と行き先が一意で低リスクなら同じターンで `remember-decision` へ渡す。原文復唱だけで別ターンへ止めない。
+- 明示依頼がない決定候補や相談文脈を秘書側から保存提案するときは、保存する要点を示した実際の質問で確認する。確認待ちは副作用0件とする。
+- 会話の締めで、その日の `decided` が0件でも、通常は内部監査を利用者へ報告しない。会話中に明確な拾い漏れ候補がある場合だけ、現在の用件を妨げない質問として扱う。
 - topicは `memory/topics/` に保存し、会話全文や逐語ログは残さない。
 - 確認済みプロジェクトに属する決定・相談文脈は、一般memoryへ同じ本文を二重保存せず、F28のプロジェクト正本へ送る。timeline用の活動記録はプロジェクト名と参照先を含む短い記録に留める。
 
 ### F20 settings — パーソナライズ
 
 - 初回と途中変更を同じ `settings` で扱う。初回は既存項目に「仕事・役割」「説明の詳しさ」を加え5問以内、口調は聞かず標準で開始する。
-- 「もっとフランクに」「専門用語そのままで」「呼び方を変えて」を受け、変更前に例文を見せて確認し、反映後に覚えた内容を宣言する。
+- 「もっとフランクに」「専門用語そのままで」等、設定値と対象が一意な可逆変更は、その発話を実行許可として同じターンで反映する。値不足、複数候補、不可逆な波及があるときだけ不足する一点を質問する。
 - `memory-tools.sh pref-set` は指定した構造化項目だけを更新し、`memory-tools.sh pref-note-add` は秘書のメモへ追記する。全文の read-modify-write を要求しない。
 - 自発的に秘書のメモへ追加するときも1行確認する。
 - 役割は保存するだけでなく、提案・例示・用語補足の題材へ反映する。
@@ -308,13 +308,14 @@
 旧 `plugins/yasashii-secretary/CHANGELOG.md` をredirect説明ではないraw CHANGELOG長期互換fileとして残し、
 新しい正本と常にbyte-for-byteで同一にする。旧 `0.7.0` の診断処理がこのfileから `0.8.0` と変更点を読めることを守る。
 
-### F47 未配布段階の0.8.0 release preparation
+### F47 公開済み0.8.0のrelease履歴
 
-`0.7.0` のrelease記録は不変、まだ利用者へ明示配布していない2 editionの最初のrelease candidate／latestは `0.8.0` とする。
+`0.7.0` のrelease記録は不変、当時まだ利用者へ明示配布していなかった2 editionの最初のrelease candidate／latestは `0.8.0` とした。
 marketplace、plugin manifest、正本／legacy CHANGELOG、edition設定、README、公開ガイドを揃え、新規または未導入状態から
 0.8.0を導入できることを同一candidateで検証する。旧0.7.0 updaterがGoogle Chat標準生成fileをscannerで止める既知事実を保持し、
 external recovery／bootstrap、fixture削除、安全scan弱体化で回避しない。未検証の旧0.7.0 live updateを対応済みと主張しない。
 same-version bootstrap bridgeは作らず、`0.8.0 → 0.8.0` と `0.8.0 → 0.7.0` は副作用0件で停止する。
+この節は `v0.8.0` 公開後も履歴回帰として期待値を変更しない。現在candidateはF50で別に解決する。
 
 ### F48 agentic-secretary上流edition
 
@@ -327,21 +328,21 @@ GitHubの別repo `mtaiseeei/agentic-secretary` に上流editionを成立させ�
 `yasashii-secretary` はfetch専用 `upstream` remoteで `agentic-secretary` を参照する。overlayは共通pluginのedition style、
 共通安全回帰、必要な互換／release checkだけに限定し、spec、Sprint、progress、feedback、evidenceは各repoが所有する。
 
-### F50 2 edition公開gate
+### F50 2 editionと現在candidateの公開gate
 
 共通回帰、edition別回帰、公式validator、Git共通祖先、overlay冪等性、反対edition停止、wizard parity、
 旧raw CHANGELOG互換、新規0.8.0導入、equal／downgrade停止、旧blockerの非誤表示、
-candidate／latest／versionの `0.8.0` 整合、LICENSE／クレジット／mappingを証拠化する。別directory／repo作成、remote、push、公開、
+公開済み `0.8.0` 履歴の不変、現在candidate／latest／versionの `0.9.0` 整合、LICENSE／クレジット／mappingを証拠化する。
+現在candidate `0.9.0` は、manifest・CHANGELOG・公開tagで確定した最高公開版 `0.8.0` に、後方互換な利用者向け機能追加のminor更新を適用して一意に得る。別directory／repo作成、remote、push、公開、
 release、実plugin install／updateは該当Sprintで明示許可された操作だけ実行する。
 
 ### F51 全会話のMarkdown可読性
 
 両editionの会話、診断、確認、進行、成功、部分失敗、エラー、検索結果、更新、プロジェクト、接続案内、developer handoffは、
 複数要素を改行なしの平文へ連結しない。1要点は短い段落、複数の手順・選択肢・結果・原因・次の行動は空行で分けた段落または
-Markdown箇条書きにする。既定3行報告は物理的にも別行または別項目で出す。改行の有無をユーザーへ質問せず、preferencesで無効化しない。
+Markdown箇条書きにする。単純成功は自然な短文でよく、固定の項目数・順序・prefixを要求しない。改行の有無をユーザーへ質問せず、preferencesで無効化しない。
 一方、1文ごとのbullet、不要な見出し、装飾目的のMarkdownは増やさない。agentic／yasashiiの思想、対象、4面の内容差は維持する。
-固定3項目（やったこと／結果／次に何が起きるか）は完了・状態報告だけに適用し、一般的な質問への回答、複雑な説明、診断、検索結果、
-部分失敗の詳細は内容に応じた段落・箇条書きで返す。一般回答を固定3項目schemaへ押し込まない。
+完了・状態報告、一般的な質問への回答、複雑な説明、診断、検索結果、部分失敗は、すべて内容に応じた短文・段落・箇条書きを使い分ける。
 
 ### F52 ホスト非依存の共通本体と4環境host adapter
 
@@ -367,6 +368,50 @@ Markdown箇条書きにする。既定3行報告は物理的にも別行また�
 - 配布物と現行製品正本から個人名、利用者端末固有の絶対path、私用workspaceへの依存を除く。回帰fixtureの人物は合成人物へ置換する。
 - MITの著作権名、GitHub owner `mtaiseeei`、公式repository URL、`forkedFrom`、公開版の正式な配布識別子は維持する。
 
+### F54 危険に応じたauthorizationと確認
+
+- `explicit` は、ユーザーが操作、対象、行き先を明示し、残る危険が小さい状態である。その発話自体をauthorizationとして同じターンで実行し、同じ内容を再承認させない。
+- 「覚えて」「記録して」等を含んでも、引用、第三者からの伝聞、仮定・条件、直前内容の訂正、取消、過去依頼への照会は、現在の`explicit`依頼とみなさない。引用・伝聞・過去照会はread-onlyで答え、仮定・条件は条件が現在成立し実行依頼であると明確な場合だけ分類し直す。訂正は訂正後の内容だけを候補にし、取消は未保存なら副作用0件、保存済みなら削除2段階へ接続する。
+- `inferred` は、秘書が保存、設定変更、プロジェクト化等を自発提案する状態である。何を行うかが分かる質問を出し、回答前の副作用は0件にする。
+- `ambiguous` は、対象、日付、行き先、参照先に複数候補が残る状態である。不足する一点だけを質問し、質問でない宣言文を残して停止しない。
+- `destructive` な上書きは、利用者が作成・編集した内容を置換・喪失させる、または容易にrollbackできない変更である。単一設定値の可逆更新は除外する。`大量操作` は10件以上、件数未確定の「全部／一括」、複数repo・複数外部宛先にまたがる操作のいずれかとする。
+- `destructive` または `external` は、削除、上記の上書き、戻しにくい変更、公開、push、認証、権限、課金、他者通知、大量操作、Secret保存、曖昧な送信先・公開範囲を含む。明示依頼でも対象と影響を示して事前確認する。
+- 同じターンは、1つのユーザー発話を受けてtool実行を含み最終応答で終わる1 assistant turnである。retryや再開でも同じoperation idの副作用は1回だけにし、既実行なら再実行せず状態を確認して報告する。
+- path guard、atomic write、rollback、空上書き拒否、Secret非表示・保存拒否、未依頼push禁止、未確認外部状態の非成功扱い、入力にない事実の非追加を維持する。
+
+### F55 現在用件優先と内容依存の応答
+
+- 現在の明示依頼を、古い再開しおり、決定0件監査、プロジェクト候補、内部index整合より優先する。内部管理は必要なら現在用件の完了後に行い、利用者の依頼を別件へ横取りしない。
+- 応答は `answered`、`question`、`saved`、`error`、`partial` の実状態と一致させる。`answered` はread-only照会や非操作的な引用等へ副作用0件で答えた状態である。未実行を「残します」「記録します」と完了風に述べない。
+- 待つ場合は利用者が何を返すか分かる質問または選択肢を示す。成功後は、保存した内容の要点、種別、行き先を過去形で伝える。
+- 単純成功は自然な短文、複数結果や部分失敗は必要な段落・箇条書きにする。固定3項目、内部stage名、不要な技術証跡、架空の次行動を強制しない。
+- setupは「サービスを使いたい」と「接続設定をしたい」を区別し、接続状態を確認できる場合は実際に未接続のときだけsetupへ進む。
+- 接続状態を確認できない場合は未接続と推定せず、read-only診断を先に提案する。利用者が明示的にsetupを依頼しても、認証・権限変更・外部writeの直前確認は省かない。
+
+### F56 意味保存golden set
+
+- 会話回帰は自然文のbyte一致や固定prefixではなく、`intent × side effect × response state` の期待遷移を検査する。
+- 保存では、主体、日付、行動、対象、否定・条件が入力と一致する。入力にない担当、期限、顧客名、因果、依頼語、不要な会話全文を保存内容へ追加しない。
+- golden setは `explicit / inferred / ambiguous / destructive / external`、副作用 `0 / 1 / partial`、応答 `answered / question / saved / error / partial` を網羅する。
+- 各caseは、必須応答要素、禁止表現、期待する意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、副作用の前後snapshotを持つ。意味要素の欠落・反転・入力にない追加を注入したnegative fixtureを必須にし、機械判定不能な項目は判定根拠を記録する。
+- 境界例として、引用、伝聞、仮定・条件、訂正、取消、過去依頼照会、重複作成、Secretを含む入力、通知を伴う即時実行、複合依頼の一部失敗、closed projectの軽量read-only照合、明示TODO完了・持越し、決定0件の自然な締めを含める。
+- 旧exact copy、質問禁止、固定3項目の回帰は、現在の意味契約と衝突するassertだけを置換する。`scripts/lib/sprint-032-patch-001-conversation.mjs` と、それを使うreadability／smoke judge、`scripts/check-report-schema.py`、固定報告shapeを要求するSprint 010／011／012／029／032系assertを置換対象に含める。履歴記録自体は改変せず、同じsuiteのpath guard、timeline決定性、Secret、Git所有範囲等の非衝突assertは保持する。
+
+### F57 3配布系統の同期と限定Notion修正
+
+- 共通会話契約は `agentic-secretary` を上流正本とし、private downstreamの `agentic-secretary-my-vault` と、狭いoverlayを持つ `yasashii-secretary` へ反映する。各repo固有のspec、Sprint記録、README、配布判断は上書きしない。
+- 共通coreの分類・応答・安全契約は本repoが所有する。`task-triage`、`notion-tasks`、`vault-search`、`vault-documents` 等のmy-vault所有Skillはprivate repo側の同一Sprint契約作業単位でだけ変更し、public coreへ移植しない。GeneratorとEvaluatorは実downstreamではなく隔離candidateを用い、独立Evaluator PASS後の明示されたrelease操作でのみ実downstreamへ反映・再インストールする。
+- my-vaultは実行タスクの正本をNotion TaskDBに維持し、今回の変更を次の5点に限定する。
+  1. task-triageで番号承認済みかつ内容不変の候補を、Notion write前に同じ内容で再承認させない。
+  2. 明示保存依頼で、質問文なしのまま停止しない。
+  3. 日付を伴う将来の実行行動をlocal TODOへ誤送せず、意味と正本ルールによりNotion taskへ送る。
+  4. Calendarとvaultのread-only横断依頼は内部で分けて取得し、利用者には統合結果を返す。
+  5. 内部用語だけで停止せず、利用者が決める不足一点を質問する。
+- Notionのproperty設計、relation、TaskDB正本、通常の作成計画提示、connector write後のpage再読確認、未確認外部状態の非成功扱いは維持する。
+- yasashiiは通常設定とSecretを混同せず、明示された可逆設定を同じターンで反映し、edition固有の言葉遣いを保った自然な結果を返す。
+- 3配布系統の共通parity caseは、行き先と正本ルールが同じcaseだけに限定する。Notion routing等、保存先が版で異なるcaseはedition固有golden setとし、intentと安全境界だけを共通比較し、response stateと保存先は各版の正本に従う。
+- 3配布系統のcandidateは、共通caseの意味、安全境界、版固有差分、同期後のrepo-owned file不変を確認してからrelease gateへ進む。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -383,3 +428,4 @@ Markdown箇条書きにする。既定3行報告は物理的にも別行また�
 | G10 | F01 F02 F04 F05 F07 F10 F16 F23 F24 F30 F31 F32 F33 F34 F35 F36 F37 F38 F39 F40 F41 F42 F43 |
 | G11 | F30 F31 F36 F40 F41 F42 F43 F44 F45 F46 F47 F48 F49 F50 F51 F52 |
 | G12 | F04 F16 F20 F41 F42 F53 |
+| G13 | F03 F05 F06 F10 F17 F19 F20 F28 F30 F31 F51 F54 F55 F56 F57 |
