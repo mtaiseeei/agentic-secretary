@@ -244,7 +244,7 @@ adapterに閉じ込めています。各skillは読み込まれた `SKILL.md` �
 ### Agentic Harnessとの連携
 
 アプリや複数段階の機能開発は、別プラグイン
-[Agentic Harness 0.5.0](https://github.com/mtaiseeei/agentic-harness)へ接続します。Secretary本体にHarnessを同梱せず、
+[Agentic Harness 0.5.1](https://github.com/mtaiseeei/agentic-harness)へ接続します。Secretary本体にHarnessを同梱せず、
 `build` skillが現在のhostに合う導入方法を案内します。
 
 | Host | Marketplace | Install ID | 明示的な入口 |

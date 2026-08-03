@@ -300,6 +300,9 @@
 ### F45 edition設定と衝突停止
 
 配布ID、repository、更新URL、ledger、session directory、保護commit prefix、Harness、表現copyを宣言的設定から得る。
+対応するHarnessのversion、repository、検査済みcommit、host別導入IDはedition設定を正本とし、
+build導線、README、互換性回帰、online検査を同じ値へ揃える。SecretaryはHarness本体を同梱せず、
+Harness固有のmodel routingやcustom agent実装を複製しない。
 新規workspaceはneutral markerとedition値を持ち、legacy yasashii markerも認識する。反対edition、混在、判定不能を検出したら書込み前に停止し、既存データを移動・統合・上書きしない。
 
 ### F46 共通plugin pathと旧CHANGELOG互換
@@ -335,6 +338,9 @@ GitHubの別repo `mtaiseeei/agentic-secretary` に上流editionを成立させ�
 公開済み `0.8.0` 履歴の不変、現在candidate／latest／versionの `0.9.0` 整合、LICENSE／クレジット／mappingを証拠化する。
 現在candidate `0.9.0` は、manifest・CHANGELOG・公開tagで確定した最高公開版 `0.8.0` に、後方互換な利用者向け機能追加のminor更新を適用して一意に得る。別directory／repo作成、remote、push、公開、
 release、実plugin install／updateは該当Sprintで明示許可された操作だけ実行する。
+`0.9.0` 公開後のHarness互換参照更新は、Secretary本体の後方互換なpatch更新 `0.9.1` とする。
+`0.9.0` の公開tag・artifact・評価記録は変更せず、現在candidate、marketplace、両manifest、CHANGELOG新entry、
+edition metadata、公開案内、current release gateだけを `0.9.1` へ進める。
 
 ### F51 全会話のMarkdown可読性
 

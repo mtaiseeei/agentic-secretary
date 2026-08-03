@@ -224,7 +224,7 @@ CHANGELOGで旧挙動が残る可能性と確認箇所を案内する。
 13. `/google-chat` からAI支援で各社所有Cloud projectを準備し、接続用JSON取得後のOAuth接続、通常スペース選択、初回取得、検索、3時間推奨の定期取得へ進める。
 14. `0.7.0`の配布前gateで、監査指摘0件、全自動回帰0 FAIL、Git archive相当の動作、専用private test workspaceの両チャットlive gateと後始末をすべて証跡つきで確認できる。
 15. `agentic-secretary` と `yasashii-secretary` が同じGit系譜と共通安全基盤を持ち、対象ユーザーに合わせた4つの表現面だけをedition差分として独立配布できる。
-16. 公開済み `0.8.0` の新規導入・停止条件を履歴回帰として維持し、Sprint 038の現在candidate `0.9.0` をmanifest、CHANGELOG、配布先、artifactで一意に整合できる。反対edition、曖昧なworkspace、同一版、downgradeではデータを変えずに停止し、旧0.7.0 updaterの既知blockerを対応済みと誤表示しない。
+16. 公開済み `0.8.0`／`0.9.0` の記録と新規導入・停止条件を履歴回帰として維持し、Harness互換参照だけのpatch candidate `0.9.1` をmanifest、CHANGELOG、edition metadata、導入案内、互換性検査、配布先で一意に整合できる。反対edition、曖昧なworkspace、同一版、downgradeではデータを変えずに停止し、旧0.7.0 updaterの既知blockerを対応済みと誤表示しない。
 17. agentic／yasashiiの全会話が、内容に応じた改行・段落・Markdown箇条書きで読める。ChatworkのSecret登録ではGitHub画面の `Name` と `Secret` に入れる内容が具体的に分かる。
 18. `agentic-secretary` を4つの正式対象ホスト（Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLI）で、共通本体＋host adapterの構成により導入・検証でき、対応対象と検証済みが別集計で正直に表示される。
 19. 初回の呼び方を4選択肢から確認して保存でき、既存変更後は現役3正本が一致する。配布物と現行製品正本は個人名・端末固有path・私用workspaceへ依存しない。
@@ -268,7 +268,7 @@ CHANGELOGで旧挙動が残る可能性と確認箇所を案内する。
 - Node／shellの書込み・削除はsymlinkを含む実体境界を守り、workspace外の本体を変更しない。外部CLI・HTTPはtimeout後に安全に停止し、部分成功または未完了を正直に示す。
 - loopback wizardは同一origin・同一session・正しいContent-Typeの状態変更だけを受け付け、OAuth callbackは再送・再入でtoken交換やSecret登録を重複しない。後始末失敗を成功と表示しない。
 - Google Chat本文に内部markerと同じ文字列が含まれても、既存履歴と新規履歴を欠落させない。GitHub Actionsは今回のdispatchに因果的に対応するrunだけを追跡し、古いrunや時刻不明runを成功扱いしない。
-- `0.7.0`／`0.8.0` のmanifest、migration、fixture、評価記録、tag、Git履歴は不変である。最初の明示配布候補 `0.8.0` の新規導入、equal／downgrade副作用0停止、portable gateは履歴回帰として成立し、旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。現在candidate `0.9.0` はmarketplace、Claude／Codex manifest、正本／旧raw CHANGELOG新entry、更新台帳、公開ガイドで一致する。
+- `0.7.0`／`0.8.0`／`0.9.0` のmanifest、migration、fixture、評価記録、tag、Git履歴は不変である。最初の明示配布候補 `0.8.0` の新規導入、equal／downgrade副作用0停止、portable gateは履歴回帰として成立し、旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。現在patch candidate `0.9.1` はmarketplace、Claude／Codex manifest、正本／旧raw CHANGELOG新entry、edition metadata、build導線、README、互換性検査、公開ガイドで一致する。
 - 両editionの会話、診断、確認、進行、結果、エラー、handoffで、複数要素が改行なしの平文に連結されず、段落またはMarkdown箇条書きとして読める。edition固有の対象・内容差は保たれる。
 - Chatwork wizardのGitHub Secret案内は `Name` 欄=`CHATWORK_API_TOKEN`、`Secret` 欄=本人が公式画面で取得したAPI Tokenと示し、実値をwizardや会話へ入力させない。
 - master回帰は受入済みSprint 015とSprint 020 Patch 002を含む必要な全suiteを実行し、Git checkoutとGit archive相当の両方で合格する。配布可否を個別suiteの成功だけで代替しない。
