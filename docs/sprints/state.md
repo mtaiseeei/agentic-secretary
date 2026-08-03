@@ -2,7 +2,7 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-038
+- Current ID: sprint-038-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 2
@@ -70,6 +70,7 @@
 | sprint-037 | done | [contract](sprint-037.md) | [progress](../progress/sprint-037.md) | [feedback](../feedback/sprint-037.md) |
 | sprint-037-patch-001 | done | [contract](sprint-037-patch-001.md) | [progress](../progress/sprint-037-patch-001.md) | [feedback](../feedback/sprint-037-patch-001.md) |
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
+| sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -77,6 +78,10 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-03: sprint-038-patch-001はfresh独立EvaluatorでPASS。micro採点は機能完全性5/5・動作安定性5/5・回帰なし5/5、product finding 0件。専用6/6、Harness互換15/15、offline gate required 19/19・product FAIL 0、Git-free archive 279/279、onlineでHarness 0.5.1／full commit／両host ID、JSON、diff checkを確認した。既知loopback EPERM 6件はverification-infra、Generatorのsibling path名列挙は内容read／write 0件の採点外運用逸脱としてfeedbackへ分離。Status done、Retry Count／Spec-Issue Count 0、Lineage Dispatches 2、Model Tier standard、Rotate none、Next Planned TBDとする。v0.9.1 tag／GitHub Releaseは未作成のため、許可済みrelease phaseへ進む。
+- 2026-08-03: sprint-038-patch-001 GeneratorがSecretary 0.9.1、Agentic Harness 0.5.1／full commit固定、host別導入ID維持、current release gate更新、専用回帰を実装。専用21/21、release integrity、offline master 696 assertions／product FAIL 0、archive 279/279、online互換、JSON、diff checkをPASSし、Status awaiting-evalとした。historical loopback EPERM 6件は既存条件どおりverification-infraとして分離。開始時の広い `find .. -name AGENTS.md` が禁止siblingのpath名を列挙した運用逸脱は、内容read／write 0件として製品評価と分離し、Evaluatorへ開示する。fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Model Tier strong、Rotate noneとする。
+- 2026-08-03: sprint-038-patch-001のPlanner契約を確定。Agentic Harness 0.5.1 resolverは、現taskのdispatch面で標準Lunaを起動できない事実を入力すると、strong tier、fresh Generator、direct inherit fallback、Rotate `model-availability` を返した。custom agent modeはこのrepoで無効、定義済みagentはnot-usedであり、launch-verifiedとは扱わない。Generator dispatch予約としてLineage Dispatches 1、Status active、Model Tier strongへ更新する。
+- 2026-08-03: ユーザーが、Luna custom agent対応を含むAgentic Harness 0.5.1の公開後、Secretaryの固定互換参照を0.5.1へ更新し、public Agentic版とYasashii版を順にreleaseする方針を承認。SecretaryはHarness本体を同梱せず、導入案内とonline互換性検証だけを更新する。利用者向け挙動を1つのbuild導線に限定した `Type: micro` Patch `sprint-038-patch-001` とし、Status planned、Retry Count／Spec-Issue Count／Lineage Dispatches 0、Model Tier standard、Rotate none、Next Planned TBDで開始する。private版とinstalled Secretary cacheは対象外とする。
 - 2026-08-01: Sprint 038 A案はfresh独立EvaluatorでPASS。product finding 0、blocking verification-infra finding 0。fixed historicalはfull SHA完全一致、333 PASS／6 exact loopback EPERM、other error 0、offline gate 18/18、675 product PASS／0 FAIL、archive 13/13・264/264、path alias 3/3、classifier 14/14、3版各Sprint 038 64/64、private mock 9/9、build A/B/C identity一致を独立確認した。Sprint 038をdone、Retry Count／Spec-Issue Count 0、Model Tier standard、Rotate none、Next Planned TBDとする。Lineage Dispatchesはユーザー明示リセット後の実dispatch数2を保持。AC21／22はPASS後のrelease phaseとして、3配布系統別の明示確認と許可されたpublish／公開後照合を別途行う。
 - 2026-08-01: A案Generatorがfixed historical isolation root／nested TMPDIRをcanonical pathへ統一し、Sprint 017=33/33、Sprint 025固定0.7 rev=25/25をgreen化。full masterは333 PASS／6 exact loopback EPERM、other error 0。classifierは観測40桁full SHA完全一致、構造化failure event、実測6件全EPERMのみを条件とし、same-prefix別SHA、39/41桁、大文字、欠落、declared-only、件数差、別error混在を含む14/14 negative matrix、path alias 3/3をPASS。offline gateは17 current PASS＋historical infra 1、675 product PASS／0 FAIL、archive 13/13・264/264、3版回帰、private mock、3回candidate build identity、diff checkをPASSした。Status awaiting-eval、Lineage Dispatches 2、Retry Count 3、Model Tier strong、Rotate noneとしてfresh独立Evaluatorへ進める。製品挙動、実downstream、commit、push、releaseは未変更。
 - 2026-08-01: ユーザーがverification-scope-issueのA案を選択し、Lineage Dispatchesの明示リセットを承認。利用者体験は現行candidateから変えず、配布前の確実性を上げるため、固定履歴runnerの`/var`／`/private/var` path aliasを解消して旧suite自身をgreenにし、classifierを40桁full SHA完全一致へ直したうえでblocking gateを維持する。Lineage Dispatchesを0へ明示リセット後、本Generator dispatch予約として1、Status active、Retry Count 3、Model Tier strong、Rotate noneを記録。質問時は内部実装ではなく、各案でエンドユーザーの体験・安全性・公開時期がどう変わるかを平易に示すという会話方針も確認した。

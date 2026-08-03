@@ -261,6 +261,9 @@
 31. version gateは「履歴回帰」と「現在candidate整合」を別結果で表示する。履歴回帰は0.7.0／0.8.0の既存期待値、現在candidate整合は0.9.0のmanifest／CHANGELOG／配布先／artifact identityを検査し、一方のPASSで他方を代替しない。
 32. 現在candidateの同一版 `0.9.0 → 0.9.0` とdowngradeは副作用0件で停止する。過去の `0.8.0 → 0.8.0`／downgrade fixtureは履歴回帰として別に保持する。
 33. release確認は配布系統別に行う。public upstream `agentic-secretary`、private downstream `agentic-secretary-my-vault`、public downstream `yasashii-secretary` ごとに、source SHA、version、destination、artifact、rollback、再インストール／cache更新の要否を列挙し、未許可の系統へ横展開しない。
+34. `0.9.0` はSprint 038で公開済みの履歴として保護する。Harness互換参照だけを更新する後方互換なpatchは `0.9.1` を現在candidateとし、`0.9.0` のtag、artifact、progress、feedback、履歴assertを書き換えない。
+35. Harness互換性の正本はedition metadataのversion、repository、検査済みfull commit、host別導入IDとする。build導線、README、回帰、online検査はそれと一致させ、network unavailable、commit不一致、manifest version不一致をPASSにしない。
+36. SecretaryはHarness本体、Harnessのagent定義、model routing、custom agent生成ロジックを同梱・複製・暗黙installしない。private版、installed cache、利用者workspaceは系統別の明示許可なしに更新しない。
 
 ## 15. 2 editionとprivate downstream境界
 

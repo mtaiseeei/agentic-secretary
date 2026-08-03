@@ -186,6 +186,10 @@ Sprint 038は、現在candidateを指すmanifest、marketplace、CHANGELOG新ent
 current release gateの期待値だけを `0.9.0` へ進める。0.7.0／0.8.0のsnapshot、migration、fixture、tag、
 progress、feedback、履歴assertはその版のまま保持する。version解決入力が一致しない場合はpublishしない。
 
+Sprint 038の `0.9.0` 公開後、Harness互換参照だけを更新する場合はpatch version `0.9.1` を現在candidateとする。
+editionごとのHarness version、repository、検査済みfull commit、host別導入IDはedition設定を正本とし、
+build導線、README、互換性回帰、online検査を一致させる。SecretaryはHarness本体やcustom agent機構を同梱しない。
+
 ## private my-vault downstreamの所有範囲
 
 my-vault側が所有し、public 2 editionへ同期しないもの:
@@ -241,7 +245,7 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 6. Git共通祖先、upstream base、下流overlayの冪等性、upstream push無効化が証拠化される。
 7. LICENSE、単段クレジット、README、upstream mapping、CHANGELOG互換が一致する。
 8. 外部repo作成、remote変更、push、公開、release、実plugin install／updateについてユーザーが明示許可した操作だけが実行される。
-9. 現在candidate／latest／manifest／CHANGELOG／ledger／migrationが `0.9.0` で整合し、公開済み `0.7.0`／`0.8.0` の記録・fixture・tag・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
+9. 現在candidate／latest／manifest／CHANGELOGが `0.9.1` で整合し、公開済み `0.7.0`／`0.8.0`／`0.9.0` の記録・fixture・tag・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
 10. 全会話面が改行・段落・必要なMarkdown箇条書きを持ち、agentic／yasashiiの4面の内容差を維持する。Chatwork wizardの `Name`／`Secret` 入力案内は両editionで同一かつ具体的である。
 11. 行き先・正本ルールが同じ共通会話golden setがagentic／yasashii／private my-vaultで同じ意味と安全境界を持つ。Notion routing等はprivate版固有caseとしてF57の5問題を独立評価し、共通比較は安全境界だけに限定する。各repo固有fileの同期前後digestが不変である。
 12. 次version、配布先、変更内容、rollbackが現在の正本から一意に示される。解決できない間はrelease candidate準備とgateまでに止め、tag、GitHub Release、marketplace更新、remote push、公開を行わない。

@@ -42,9 +42,9 @@
     ]
   },
   "harness": {
-    "version": "0.5.0",
+    "version": "0.5.1",
     "repository": "https://github.com/mtaiseeei/agentic-harness",
-    "observedCommit": "aafdf97d1f673a856c5a2a2fe72f87f1a4b57e89",
+    "observedCommit": "747a8fbd06000144ca7e27330bf1d32495475fe0",
     "marketplace": "agentic-harness",
     "plugin": "harness",
     "installId": "harness@agentic-harness",

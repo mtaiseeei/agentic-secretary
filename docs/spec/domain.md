@@ -207,6 +207,8 @@ token値、OAuth client値、不要な対象名、チャット本文、業務固
 現在はmanifest、CHANGELOG先頭、公開tag `v0.8.0` が一致するため、`0.8.0` を最高公開版とする。
 Sprint 038は後方互換な利用者向け機能追加なので、Semantic Versioningのminor更新を1回適用した `0.9.0` を現在candidateとする。
 以下の0.8.0 readinessは履歴回帰として保持し、現在candidateのidentityとgateは別結果で判定する。
+その後に公開された `0.9.0` を新たな履歴記録とし、Harness互換参照だけの後方互換な更新は
+patch version `0.9.1` を現在candidateとする。
 
 ### Git変更集合
 
@@ -289,6 +291,13 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 - `destination-ready`: agentic public、private my-vault、yasashii publicの各配布系統について、source SHA、version、artifact、destination、rollback、再インストール要否が一意である。
 
 version解決入力が一致しない、または変更分類からminor更新を一意に選べない場合は `version-unresolved` とし、publishせずPlannerへ戻す。
+
+### 現在candidate 0.9.1の状態
+
+- `version-resolved`: 公開済み `0.9.0` を確認し、Harness互換参照だけの後方互換なpatchとして `0.9.1` を一意に得た。
+- `candidate-aligned`: marketplace、両manifest、CHANGELOG新entry、edition metadata、README、build導線、current release gateが `0.9.1` と対応Harness情報で一致する。
+- `history-protected`: `0.7.0`／`0.8.0`／`0.9.0` のtag、artifact、fixture、progress、feedback、履歴assertが不変である。
+- `destination-ready`: agentic publicと後続するyasashii publicの配布先、source SHA、artifact、rollback、許可状態が別々に一意で、private版・installed cache・利用者workspaceは対象外である。
 
 ## ユーザー会話の構造
 
