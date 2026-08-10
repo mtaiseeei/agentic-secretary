@@ -48,6 +48,12 @@ Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLIの4つとす�
 現在正本ではmanifest、CHANGELOG先頭、公開tagが `0.8.0` で一致する。Sprint 038は後方互換な利用者向け機能追加なので、
 Semantic Versioningのminor更新として次candidateを `0.9.0` に一意に固定する。`0.7.0` と `0.8.0` の履歴回帰は
 期待値を変えず、現在candidateのmanifest／CHANGELOG／release gateだけを `0.9.0` へ進める。
+`0.9.0` の公開後、Harness互換参照の更新を `0.9.1` として公開した。
+2026-08-10に、Windowsネイティブ環境でWindows形式のpathがos固有shellの読み方へ渡ることにより、
+プロジェクト作成後のjournal記録が秘書ディレクトリ不在と誤判定される不具合を確認した。
+同じ記録・保存境界を使うproject／memory／TODO／settings／文書保存を共通coreで横断修正し、
+Windows実環境とmacOS／Linux回帰で検証する。現在patch candidateは `0.9.2`。Agenticを先に独立評価し、
+PASSした完全SHAからYasashii overlayを別評価する。private my-vault版は対象外とする。
 
 ## ひとことで
 
@@ -75,13 +81,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G11 | 2つの完成品を安全に育てる | `agentic-secretary` を上流、`yasashii-secretary` を狭いoverlayの下流とし、共通安全性・Git系譜・0.8.0配布準備・会話可読性・edition衝突停止を守る |
 | G12 | 呼び方と配布物を利用者中立にする | host提供済み文脈→Git→OSの順で安全な表示名候補をbest effortで示し、4選択肢と保存前確認を守る。既存設定変更では現役表示を同期し、配布物は個人名・端末固有path・私用環境へ依存しない |
 | G13 | 現在の依頼を自然に完了する | 明示依頼・自発提案・曖昧さ・高リスク操作を区別し、同じ内容の重複確認や内部都合による横取りをなくす。意味保存と副作用状態を3配布系統で検証する |
+| G14 | Windowsでも記録・保存できる | Windows形式pathでproject／memory／TODO／settings／文書保存を完了でき、path guard・rollback・journal整合をmacOS／Linuxと同じ強さで守る |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G13、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F57 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G14、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F58 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -132,6 +139,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-037](sprints/sprint-037.md) | 呼び方候補の優先探索・正規化、4選択肢、現役正本同期、配布物の個人・環境固有情報除去 | sprint-036を置換する次メインSprint |
 | [sprint-037-patch-001](sprints/sprint-037-patch-001.md) | 呼び方の値をjournal／commit subjectへ再掲しない共通transaction | sprint-037 |
 | [sprint-038](sprints/sprint-038.md) | 人間らしい会話フロー: 危険に応じた確認、現在用件優先、内容依存応答、意味保存golden set、3配布系統同期、限定Notion修正、release candidate gate | sprint-037-patch-001 |
+| [sprint-038-patch-002](sprints/sprint-038-patch-002.md) | Windowsネイティブのproject／memory／TODO／settings／文書保存、安全境界・rollback／journal整合、Agentic先行→Yasashii overlay同期、`0.9.2` release準備 | sprint-038-patch-001 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -174,3 +182,4 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 34. 明示された低リスク操作はその発話を実行許可として扱い、同じ内容を別ターンで再承認させない。自発提案と曖昧さでは答えられる質問を出し、削除・上書き・公開・push・認証・権限・課金・他者通知・大量操作・Secret保存は影響を示した事前確認を維持する。
 35. 現在の明示依頼を、再開しおり、決定0件監査、プロジェクト候補、内部index整合より優先する。応答は実際の副作用状態に合わせ、未実行を完了風に述べず、単純成功へ固定3項目や架空の次の行動を強制しない。
 36. 配布物と現行製品正本は、利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行前提にしない。MITの著作権表示、GitHub owner、公式repository URL等の製品所有・配布識別情報は維持する。
+37. Windowsの通常workspace pathでもproject／memory／TODO／settings／文書保存を利用できる。OS固有shellのpath解釈へ主要書込みの成否を依存させず、workspace外・path traversal・symlink／junction等の参照は副作用0件で拒否し、rollbackとjournal整合を維持する。

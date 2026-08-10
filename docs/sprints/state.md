@@ -2,11 +2,11 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-038-patch-001
+- Current ID: sprint-038-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
-- Model Tier: standard
+- Lineage Dispatches: 4
+- Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
 
@@ -71,6 +71,7 @@
 | sprint-037-patch-001 | done | [contract](sprint-037-patch-001.md) | [progress](../progress/sprint-037-patch-001.md) | [feedback](../feedback/sprint-037-patch-001.md) |
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
+| sprint-038-patch-002 | awaiting-eval | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -78,6 +79,8 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-10: sprint-038-patch-002 GeneratorがWindowsでBashを必須にしないNode-native共通保存境界、project／owner-nameの同process journal／TODO更新、POSIX互換wrapper、rollback／再実行／path guard回帰、Windows CI実行面、0.9.2配布準備を実装し、commit `d717938e0adebc108b41db1f271f4c660290a9e0` へ固定。macOS専用12/12、POSIX wrapper 56/56、安全境界69/69、offline master required 20/20・product FAIL 0、Git-free archive 291/291をPASSした。既知loopback EPERM 6件はverification-infra。Windowsネイティブ実runとYasashii隔離candidateはnot-runであり、Agentic PASSをまだ主張しない。fresh独立Evaluator dispatch予約としてLineage Dispatchesを4、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。remote push、tag、release、Yasashii実repo、private版、installed cache、利用者workspaceの変更は0件。
+- 2026-08-10: ユーザーがWindows形式pathをBashへ渡すことでproject作成後のjournal記録が秘書ディレクトリ不在と誤判定される問い合わせと、同種のscript経路を横断修正し、public Agentic版とYasashii版を順にreleaseする方針を承認。private my-vault版は対象外とする。Plannerはproject／memory／TODO／settings／文書保存、path guard、journal／rollback、Windows実環境、macOS／Linux回帰、Agentic先行評価から固定SHAでのYasashii別評価、0.9.2準備を通常Patch・high riskの `sprint-038-patch-002` に固定した。resolverはhigh-risk-sprintによりstrong tier、fresh Generator、direct inherit fallback、Rotate `model-escalation` を返した。Generator dispatch予約として同一Base Sprint系譜のLineage Dispatchesを3、Status active、Model Tier strongへ更新する。外部push、tag、release、installed cache、private版、利用者workspaceの変更はまだ行わない。
 - 2026-08-03: sprint-038-patch-001はfresh独立EvaluatorでPASS。micro採点は機能完全性5/5・動作安定性5/5・回帰なし5/5、product finding 0件。専用6/6、Harness互換15/15、offline gate required 19/19・product FAIL 0、Git-free archive 279/279、onlineでHarness 0.5.1／full commit／両host ID、JSON、diff checkを確認した。既知loopback EPERM 6件はverification-infra、Generatorのsibling path名列挙は内容read／write 0件の採点外運用逸脱としてfeedbackへ分離。Status done、Retry Count／Spec-Issue Count 0、Lineage Dispatches 2、Model Tier standard、Rotate none、Next Planned TBDとする。v0.9.1 tag／GitHub Releaseは未作成のため、許可済みrelease phaseへ進む。
 - 2026-08-03: sprint-038-patch-001 GeneratorがSecretary 0.9.1、Agentic Harness 0.5.1／full commit固定、host別導入ID維持、current release gate更新、専用回帰を実装。専用21/21、release integrity、offline master 696 assertions／product FAIL 0、archive 279/279、online互換、JSON、diff checkをPASSし、Status awaiting-evalとした。historical loopback EPERM 6件は既存条件どおりverification-infraとして分離。開始時の広い `find .. -name AGENTS.md` が禁止siblingのpath名を列挙した運用逸脱は、内容read／write 0件として製品評価と分離し、Evaluatorへ開示する。fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Model Tier strong、Rotate noneとする。
 - 2026-08-03: sprint-038-patch-001のPlanner契約を確定。Agentic Harness 0.5.1 resolverは、現taskのdispatch面で標準Lunaを起動できない事実を入力すると、strong tier、fresh Generator、direct inherit fallback、Rotate `model-availability` を返した。custom agent modeはこのrepoで無効、定義済みagentはnot-usedであり、launch-verifiedとは扱わない。Generator dispatch予約としてLineage Dispatches 1、Status active、Model Tier strongへ更新する。

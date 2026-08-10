@@ -200,7 +200,7 @@ token値、OAuth client値、不要な対象名、チャット本文、業務固
 - workflow、取得履歴、test workspaceを残す必要がある場合は、目的・保持期間・閲覧者をユーザーへ示す。
 - repoや履歴の削除・archiveは別の破壊的操作として、対象と影響を示した後の明示確認でだけ行う。
 
-## 0.7.0／0.8.0の歴史記録と現在candidate 0.9.0
+## 0.7.0〜0.9.1の歴史記録と現在candidate 0.9.2
 
 `0.7.0` と `0.8.0` は監査済みの不変なrelease記録であり、そのmanifest、migration、fixture、評価記録、tag、Git履歴を変更しない。
 当時まだ利用者へ明示配布していなかった2 editionの最初の明示配布candidate／latestは `0.8.0` とした。
@@ -208,7 +208,9 @@ token値、OAuth client値、不要な対象名、チャット本文、業務固
 Sprint 038は後方互換な利用者向け機能追加なので、Semantic Versioningのminor更新を1回適用した `0.9.0` を現在candidateとする。
 以下の0.8.0 readinessは履歴回帰として保持し、現在candidateのidentityとgateは別結果で判定する。
 その後に公開された `0.9.0` を新たな履歴記録とし、Harness互換参照だけの後方互換な更新は
-patch version `0.9.1` を現在candidateとする。
+patch version `0.9.1` を当時のcandidateとした。
+`0.9.1` の公開後はこれも履歴記録とし、Windowsの記録・保存互換を直す後方互換patch
+`0.9.2` を現在candidateとする。
 
 ### Git変更集合
 
@@ -251,7 +253,7 @@ Gitを使う各操作は、次の集合を混ぜずに扱う。
 ### release readiness状態
 
 - `blocked`: F36〜F42、master suite、version整合、Git archive相当のいずれかが未合格。live gateを開始しない。
-- `offline-passed`: 自動回帰、online参照検査、archive検査、現在candidate `0.9.0` 整合が合格し、同一release candidateを固定できた。
+- `offline-passed`: 自動回帰、online参照検査、archive検査、Sprint 038当時のcandidate `0.9.0` 整合が合格し、同一release candidateを固定できた。
 - `live-running`: 専用private test workspaceで両チャットのlive gateを実施中。片方の完了を全体合格にしない。
 - `cleanup-required`: live動作は完了したが、schedule、Secret、選択、Google OAuthの後始末が未完了。
 - `ready`: 同一release candidateで両チャットのActions、commit、push、pull後検索、冪等再実行と後始末がすべて合格した。
@@ -283,7 +285,7 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 旧0.7.0利用者向けexternal recovery／bootstrapは状態として持たない。same-version bridge、fixture削除、安全scan弱体化、
 公開済みartifactの改変で `legacy-live-blocked` を回避しない。将来この互換を提供する場合は、別のユーザー判断とSprint契約を必要とする。
 
-### 現在candidate 0.9.0の状態
+### 当時のcandidate 0.9.0の状態
 
 - `version-resolved`: marketplace／Claude manifest／Codex manifest／CHANGELOG先頭／公開tagが最高公開版 `0.8.0` で一致し、変更分類が後方互換な機能追加であるため `0.9.0` を一意に得た。
 - `candidate-aligned`: current version ownerであるmarketplace、両manifest、正本／legacy CHANGELOGの新entry、edition metadata、公開ガイド、current release gateが `0.9.0` で一致する。
@@ -292,12 +294,19 @@ candidate identityは配布対象bytesで決める。Git履歴やrepo所有の�
 
 version解決入力が一致しない、または変更分類からminor更新を一意に選べない場合は `version-unresolved` とし、publishせずPlannerへ戻す。
 
-### 現在candidate 0.9.1の状態
+### 当時のcandidate 0.9.1の状態
 
 - `version-resolved`: 公開済み `0.9.0` を確認し、Harness互換参照だけの後方互換なpatchとして `0.9.1` を一意に得た。
 - `candidate-aligned`: marketplace、両manifest、CHANGELOG新entry、edition metadata、README、build導線、current release gateが `0.9.1` と対応Harness情報で一致する。
 - `history-protected`: `0.7.0`／`0.8.0`／`0.9.0` のtag、artifact、fixture、progress、feedback、履歴assertが不変である。
 - `destination-ready`: agentic publicと後続するyasashii publicの配布先、source SHA、artifact、rollback、許可状態が別々に一意で、private版・installed cache・利用者workspaceは対象外である。
+
+### 現在candidate 0.9.2の状態
+
+- `version-resolved`: Agentic／Yasashiiの公開済み `0.9.1` を確認し、Windowsの記録・保存互換を直す後方互換patchとして `0.9.2` を一意に得た。
+- `candidate-aligned`: marketplace、Claude／Codex manifest、CHANGELOG新entry、edition metadata、README、Windows回帰、current release gateが `0.9.2` で一致する。
+- `history-protected`: `0.7.0`〜`0.9.1` のtag、artifact、migration、fixture、progress、feedback、履歴assertが不変である。
+- `destination-ready`: AgenticとYasashiiのcandidate、source SHA、artifact、destination、rollback、許可状態が別々に一意で、private my-vault版は対象外である。
 
 ## ユーザー会話の構造
 
@@ -335,7 +344,7 @@ version解決入力が一致しない、または変更分類からminor更新�
 
 ### 操作規約
 
-- `memory-tools.sh journal-add <sec> <did|decided|next|note> "<本文>"` は対象日ファイルの末尾にだけ追記する。各シームが共有する追記境界は `scripts/lib/journal.sh` の `journal_append` とする。
+- `journal-add <sec> <did|decided|next|note> "<本文>"` は対象日ファイルの末尾にだけ追記する。各シームはOSに依存しない同じ追記契約を共有する。
 - 空本文、未知type、安全境界外を非ゼロで拒否する。既存行の更新・削除は提供しない。
 - 定義済みシームは本来処理の成功後にだけ追記し、失敗した処理を活動として残さない。
 - 日付は `CC_SECRETARY_NOW` で固定可能。曜日は表示しない。
@@ -356,7 +365,7 @@ version解決入力が一致しない、または変更分類からminor更新�
 
 ## timeline
 
-`memory-tools.sh timeline <sec> [--from <日付>] [--to <日付>] [--type decisions|journal|all] [--grep <キーワード>]`
+`timeline <sec> [--from <日付>] [--to <日付>] [--type decisions|journal|all] [--grep <キーワード>]`
 
 - journalとdecisionsを日付キーで読み、逆時系列のMarkdownに整形する。
 - 日付範囲とtypeを組み合わせられる。`--grep` は日付だけでは答えられない横断検索を担う。
@@ -650,7 +659,7 @@ OAuth client JSON本文、client secret、認可URL、認可コード、tokenは
 ```
 
 既定値は、口調=丁寧（標準）、専門用語=ふつう、報告=みじかく（内容依存）、決定確認=都度。
-`memory-tools.sh pref-set <セクション> <キー> <値>` は指定行だけを更新し、`memory-tools.sh pref-note-add <本文>` は秘書のメモに追記する。
+`pref-set <セクション> <キー> <値>` は指定行だけを更新し、`pref-note-add <本文>` は秘書のメモに追記する。実行方法が異なっても操作名と意味契約を維持する。
 利用者が値を明示した単一の可逆変更は重複確認なしで適用し、変更後はjournalへ `did` を追記して節目コミットする。
 値不足または秘書側の自発提案では、必要なら例文プレビューを示して確認する。
 
