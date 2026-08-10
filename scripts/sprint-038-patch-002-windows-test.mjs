@@ -86,7 +86,13 @@ try {
   });
 
   check("project decision, TODO and deliverables use Node-native boundary", () => {
+    const existingDirectory = join(secretary, "projects/open/顧客まとめ/作業 資料/日本語");
+    const existingFile = join(existingDirectory, "既存ファイル.txt");
+    mkdirSync(existingDirectory, { recursive: true });
+    writeFileSync(existingFile, "transaction前からある内容\n", "utf8");
+    const existingDigest = digest(existingFile);
     run(PROJECT, ["add-decision", secretary, "顧客まとめ", "--decision", "章立てを3部にする", "--current", "章立て確定", "--next", "本文作成", "--confirm"]);
+    assert.equal(digest(existingFile), existingDigest, "project transactionのfile-by-file stage copyで既存treeを保持する");
     run(PROJECT, ["add-note", secretary, "顧客まとめ", "--note", "一次資料は3文書", "--confirm"]);
     run(PROJECT, ["promote-full", secretary, "顧客まとめ", "--hard-to-read", "--confirm"]);
     run(PROJECT, ["add-decision", secretary, "顧客まとめ", "--decision", "要約を先頭に置く", "--current", "本文確認中", "--next", "確定版を作る", "--confirm"]);
@@ -105,6 +111,9 @@ try {
   });
 
   check("memory, settings, standalone document and retry are idempotent", () => {
+    const preferences = join(secretary, "memory/preferences.md");
+    const preferenceBefore = `${readFileSync(preferences, "utf8").trimEnd()}\n- 手書きメモ: CRLFでも保持する\n`.replace(/\r?\n/gu, "\r\n");
+    writeFileSync(preferences, preferenceBefore, "utf8");
     run(MEMORY, ["remember-decision", secretary, "2026-08-10", "WindowsでもNode.js境界を使う"]);
     run(MEMORY, ["remember-decision", secretary, "2026-08-10", "WindowsでもNode.js境界を使う"]);
     run(MEMORY, ["topic-add", secretary, "Windows確認", "空白と日本語pathで成功"]);
@@ -123,6 +132,11 @@ try {
     assert.equal(count(todo, /回帰を確認/gu), 1);
     assert.match(readFileSync(todo, "utf8"), /完了: 2026-08-10/u);
     assert.match(readFileSync(todo, "utf8"), /繰越: 2026-08-11/u);
+    const preferenceAfter = readFileSync(preferences, "utf8");
+    assert.equal((preferenceAfter.match(/^## 言葉遣い\r?$/gmu) || []).length, 1);
+    assert.match(preferenceAfter, /- 報告の詳しさ: くわしく\r?$/mu);
+    assert.match(preferenceAfter, /- 手書きメモ: CRLFでも保持する\r?$/mu);
+    assert.doesNotMatch(preferenceAfter, /(^|[^\r])\n/u, "CRLF preferencesへLFを混在させない");
   });
 
   check("timeline, weekly, archive, reindex and resume use the native boundary", () => {
@@ -142,17 +156,33 @@ try {
 
   check("protected memory update and two-step delete keep their contract", () => {
     run(MEMORY, ["pref-note-add", secretary, "Windowsでも同じ保存境界"]);
+    const preferences = readFileSync(join(secretary, "memory/preferences.md"), "utf8");
+    assert.equal((preferences.match(/^## 秘書のメモ\r?$/gmu) || []).length, 1);
+    assert.match(preferences, /- Windowsでも同じ保存境界\r?$/mu);
+    assert.match(preferences, /- 手書きメモ: CRLFでも保持する\r?$/mu);
+    assert.doesNotMatch(preferences, /(^|[^\r])\n/u, "pref-note-addもCRLFを維持する");
     run(MEMORY, ["guarded-write", secretary, "topics/delete-me.md"], { input: "削除確認用\n" });
     run(MEMORY, ["delete", secretary, "topics/delete-me.md"], { expected: 3 });
     assert.ok(existsSync(join(secretary, "memory/topics/delete-me.md")));
     run(MEMORY, ["delete", secretary, "topics/delete-me.md", "--confirm"]);
     assert.ok(!existsSync(join(secretary, "memory/topics/delete-me.md")));
+    const deleteTree = join(secretary, "memory/topics/削除 tree/入れ子");
+    mkdirSync(deleteTree, { recursive: true }); writeFileSync(join(deleteTree, "記録.md"), "削除確認用\n");
+    run(MEMORY, ["delete", secretary, "topics/削除 tree", "--confirm"]);
+    assert.ok(!existsSync(join(secretary, "memory/topics/削除 tree")));
   });
 
   check("journal failure rolls project creation back", () => {
     const journal = join(secretary, "memory/journal/2026-08-10.md"); const before = digest(journal);
     run(PROJECT, ["create-light", secretary, "失敗注入", "--overview", "rollback確認", "--goal", "残さない", "--success", "副作用0", "--current", "開始", "--next", "停止", "--confirm"], { env: { CC_SECRETARY_FAIL_AT: "journal-after-write" }, expected: 3 });
     assert.ok(!existsSync(join(secretary, "projects/open/失敗注入"))); assert.equal(digest(journal), before);
+    const project = join(secretary, "projects/open/顧客まとめ/PROJECT.md");
+    const decisions = join(secretary, "projects/open/顧客まとめ/DECISIONS.md");
+    const nested = join(secretary, "projects/open/顧客まとめ/作業 資料/日本語/既存ファイル.txt");
+    const updateBefore = [digest(project), digest(decisions), digest(nested), digest(journal)];
+    run(PROJECT, ["add-decision", secretary, "顧客まとめ", "--decision", "rollbackで残らない", "--current", "rollback確認", "--next", "開始前へ戻す", "--confirm"], { env: { CC_SECRETARY_FAIL_AT: "journal-after-write" }, expected: 3 });
+    assert.deepEqual([digest(project), digest(decisions), digest(nested), digest(journal)], updateBefore);
+    assert.doesNotMatch(readFileSync(project, "utf8"), /rollbackで残らない/u);
   });
 
   check("TODO failure rolls main file and journal back", () => {
@@ -200,6 +230,8 @@ try {
     for (const path of [MEMORY, WORKSPACE, PROJECT, join(ROOT, "plugins/secretary/scripts/owner-name-transaction.mjs")]) {
       assert.doesNotMatch(readFileSync(path, "utf8"), /runExternalSync\(["']bash["']|spawnSync\(["']bash["']/u);
     }
+    assert.doesNotMatch(readFileSync(PROJECT, "utf8"), /cpSync\([^\n]*recursive:\s*true/u);
+    assert.doesNotMatch(readFileSync(MEMORY, "utf8"), /cpSync\([^\n]*recursive:\s*true/u);
   });
 } finally {
   rmSync(sandbox, { recursive: true, force: true });

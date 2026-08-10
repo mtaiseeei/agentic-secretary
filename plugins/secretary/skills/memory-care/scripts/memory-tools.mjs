@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import {
-  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -31,6 +30,8 @@ import {
   usage,
   validDate,
 } from "../../../scripts/lib/secretary-store.mjs";
+import { copyTreeNoFollow } from "../../../scripts/lib/safe-fs.mjs";
+import { parseMarkdownLines, preferredLineEnding, renderMarkdownLines } from "../../../scripts/lib/markdown-lines.mjs";
 import { commitOwnedChanges } from "../../../scripts/lib/safe-git.mjs";
 import { runExternalSync } from "../../../scripts/lib/external-ops.mjs";
 
@@ -55,17 +56,20 @@ function validatePreference(section, key, rawValue) {
 }
 
 function replaceSetting(content, section, key, value) {
-  const lines = content.split("\n"); let inSection = false; let sectionSeen = false; let changed = false; let insertAt = lines.length;
+  const lines = parseMarkdownLines(content); const eol = preferredLineEnding(content); let inSection = false; let sectionSeen = false; let changed = false; let insertAt = lines.length;
   for (let i = 0; i < lines.length; i += 1) {
-    if (lines[i].startsWith("## ")) {
+    if (lines[i].text.startsWith("## ")) {
       if (inSection && !changed) { insertAt = i; break; }
-      inSection = lines[i] === `## ${section}`; if (inSection) sectionSeen = true;
+      inSection = lines[i].text === `## ${section}`; if (inSection) sectionSeen = true;
     }
-    if (inSection && lines[i].startsWith(`- ${key}:`)) { lines[i] = `- ${key}: ${value}`; changed = true; }
+    if (inSection && lines[i].text.startsWith(`- ${key}:`)) { lines[i].text = `- ${key}: ${value}`; changed = true; }
   }
-  if (sectionSeen && !changed) lines.splice(insertAt, 0, `- ${key}: ${value}`);
-  if (!sectionSeen) lines.push("", `## ${section}`, `- ${key}: ${value}`);
-  return lines.join("\n");
+  if (sectionSeen && !changed) lines.splice(insertAt, 0, { text: `- ${key}: ${value}`, ending: eol });
+  if (!sectionSeen) {
+    if (lines.length && !lines.at(-1).ending) lines.at(-1).ending = eol;
+    lines.push({ text: "", ending: eol }, { text: `## ${section}`, ending: eol }, { text: `- ${key}: ${value}`, ending: "" });
+  }
+  return renderMarkdownLines(lines);
 }
 
 function rememberDecision(args) {
@@ -109,9 +113,9 @@ function prefNote(args) {
   const [sec, ...parts] = args; if (!sec) usage("secretary を指定"); const note = oneLine(parts.join(" "), "秘書のメモ", { secret: true });
   const root = secretaryRoot(sec), target = safePath(root, "memory/preferences.md"), index = safePath(root, "memory/MEMORY.md"); if (!existsSync(dirname(target))) refuse("保存先のmemoryフォルダがありません。");
   transaction([target, index], () => {
-    let content = existsSync(target) ? readFileSync(target, "utf8") : defaultPreferences(); const marker = "## 秘書のメモ"; const at = content.indexOf(marker);
-    if (at < 0) content = `${content.trimEnd()}\n\n${marker}\n`; else if (/^## /mu.test(content.slice(at + marker.length).trimStart())) refuse("秘書のメモ欄がファイル末尾にありません。既存内容を守るため追記しません。");
-    if (!content.split(/\r?\n/u).includes(`- ${note}`)) writeFileSync(target, `${content.trimEnd()}\n- ${note}\n`, "utf8");
+    let content = existsSync(target) ? readFileSync(target, "utf8") : defaultPreferences(); const marker = "## 秘書のメモ"; const at = content.indexOf(marker); const eol = preferredLineEnding(content);
+    if (at < 0) content = `${content.trimEnd()}${eol}${eol}${marker}${eol}`; else if (/^## /mu.test(content.slice(at + marker.length).trimStart())) refuse("秘書のメモ欄がファイル末尾にありません。既存内容を守るため追記しません。");
+    if (!content.split(/\r?\n/u).includes(`- ${note}`)) writeFileSync(target, `${content.trimEnd()}${eol}- ${note}${eol}`, "utf8");
     reindex(root);
   });
   console.log("確認済みの内容を秘書のメモへ追記しました。");
@@ -128,7 +132,7 @@ function deleteMemory(args) {
   if (!existsSync(target) && !lstatOptional(target)) usage(`見つかりません: memory/${rel}`);
   const stat = lstatSync(target); if (flag !== "--confirm") refuse(`確認: これから消そうとしているのは次の記憶です。\n  ${rel}${stat.isSymbolicLink() ? "\n  種類: symlink（参照先は削除しません）" : ""}\n本当に消してよければ、確認のうえ --confirm を付けて実行します（消すと元に戻せません）。\n未確認のため削除しませんでした。`);
   const index = safePath(root, "memory/MEMORY.md"), backup = resolve(tmpdir(), `secretary-delete-${process.pid}-${Date.now()}`); mkdirSync(backup, { recursive: true });
-  try { cpSync(target, join(backup, "item"), { recursive: true, dereference: false }); const idx = readFileSync(index); rmSync(target, { recursive: stat.isDirectory() && !stat.isSymbolicLink(), force: true }); try { reindex(root); } catch (error) { cpSync(join(backup, "item"), target, { recursive: true, dereference: false }); writeFileSync(index, idx); throw error; } }
+  try { copyTreeNoFollow(target, join(backup, "item")); const idx = readFileSync(index); rmSync(target, { recursive: stat.isDirectory() && !stat.isSymbolicLink(), force: true }); try { reindex(root); } catch (error) { copyTreeNoFollow(join(backup, "item"), target); writeFileSync(index, idx); throw error; } }
   finally { rmSync(backup, { recursive: true, force: true }); }
   console.log(`削除し、目次を更新しました: ${rel}`);
 }

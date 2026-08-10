@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, rmSync, renameSync, cpSync, readdirSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, writeFileSync, mkdirSync, rmSync, renameSync, readdirSync } from "node:fs";
 import { basename, dirname, join, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { safeWritePath, workingRoot } from "./lib/safe-fs.mjs";
+import { copyTreeNoFollow, safeWritePath, workingRoot } from "./lib/safe-fs.mjs";
 import { journalAppend, todoAdd } from "./lib/secretary-store.mjs";
 
 class ProjectError extends Error {
@@ -250,7 +250,7 @@ function mutateProject(root, name, { create = false, journalType = "did", journa
   const backup = safePath(root, `projects/.project-backup-${nonce}`);
   try {
     if (create) mkdirSync(stage);
-    else cpSync(target, stage, { recursive: true, dereference: false, errorOnExist: true });
+    else copyTreeNoFollow(target, stage);
     mutate(stage);
     if (!existsSync(join(stage, "PROJECT.md"))) refuse("PROJECT.md が生成されませんでした。変更を中止します。");
     if (create) {
@@ -291,7 +291,7 @@ function moveProject(root, name, fromScope, toScope, { journalType = "did", jour
   const stage = safePath(root, `projects/.project-stage-${nonce}`);
   const backup = safePath(root, `projects/.project-backup-${nonce}`);
   try {
-    cpSync(source, stage, { recursive: true, dereference: false, errorOnExist: true });
+    copyTreeNoFollow(source, stage);
     mutate(stage);
     if (!existsSync(join(stage, "PROJECT.md"))) refuse("PROJECT.md が生成されませんでした。変更を中止します。");
     renameSync(source, backup);

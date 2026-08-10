@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { commitOwnedChanges } from "./lib/safe-git.mjs";
 import { runExternalSync } from "./lib/external-ops.mjs";
 import { journalAppend } from "./lib/secretary-store.mjs";
+import { parseMarkdownLines, renderMarkdownLines } from "./lib/markdown-lines.mjs";
 import { normalizeNameCandidate } from "./name-candidates.mjs";
 
 function requireRegularFile(path, label) {
@@ -25,18 +26,18 @@ function requireInside(root, path, label) {
 }
 
 function replaceSetting(content, section, key, value) {
-  const lines = content.split("\n");
+  const lines = parseMarkdownLines(content);
   let inside = false;
   let found = 0;
   for (let index = 0; index < lines.length; index += 1) {
-    if (lines[index].startsWith("## ")) inside = lines[index] === `## ${section}`;
-    if (inside && lines[index].startsWith(`- ${key}:`)) {
-      lines[index] = `- ${key}: ${value}`;
+    if (lines[index].text.startsWith("## ")) inside = lines[index].text === `## ${section}`;
+    if (inside && lines[index].text.startsWith(`- ${key}:`)) {
+      lines[index].text = `- ${key}: ${value}`;
       found += 1;
     }
   }
   if (found !== 1) throw new Error(`${section} の ${key} を一意に確認できません。`);
-  return lines.join("\n");
+  return renderMarkdownLines(lines);
 }
 
 function snapshot(path) {
