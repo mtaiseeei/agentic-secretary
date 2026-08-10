@@ -29,6 +29,14 @@ function insideOrSame(root, target) {
   return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
+function isPlatformRootAlias(path) {
+  if (process.platform !== "darwin" || (path !== "/var" && path !== "/tmp")) return false;
+  try {
+    const resolved = realpathSync(path);
+    return (path === "/var" && resolved === "/private/var") || (path === "/tmp" && resolved === "/private/tmp");
+  } catch { return false; }
+}
+
 export function workingRoot(value) {
   const requested = resolve(value || ".");
   const root = parse(requested).root;
@@ -37,7 +45,7 @@ export function workingRoot(value) {
   for (const component of components) {
     cursor = join(cursor, component);
     const componentStat = lstatOptional(cursor);
-    if (componentStat?.isSymbolicLink()) {
+    if (componentStat?.isSymbolicLink() && !isPlatformRootAlias(cursor)) {
       throw new FilesystemBoundaryError("working rootの途中にsymlinkがあるため、変更を止めました。", "working-root-unsafe");
     }
   }

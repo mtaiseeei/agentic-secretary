@@ -3,10 +3,11 @@
 import {
   existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join, parse, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 import { commitOwnedChanges } from "./lib/safe-git.mjs";
 import { runExternalSync } from "./lib/external-ops.mjs";
+import { journalAppend } from "./lib/secretary-store.mjs";
 import { normalizeNameCandidate } from "./name-candidates.mjs";
 
 function requireRegularFile(path, label) {
@@ -73,6 +74,7 @@ export function updateOwnerName({
   }
 
   const rootInput = resolve(String(secretaryRoot || ""));
+  if (rootInput === parse(rootInput).root) throw new Error("ドライブまたはfilesystemの直下はsecretaryとして使えません。");
   if (!existsSync(rootInput) || lstatSync(rootInput).isSymbolicLink() || !lstatSync(rootInput).isDirectory()) {
     throw new Error("secretary ディレクトリを安全に確認できません。");
   }
@@ -116,15 +118,13 @@ export function updateOwnerName({
     });
     if (failAt === "before-journal") throw new Error("テスト用のjournal失敗");
 
-    const memoryTools = join(dirname(fileURLToPath(import.meta.url)), "..", "skills", "memory-care", "scripts", "memory-tools.sh");
-    runExternalSync(memoryTools, [
-      "journal-add", root, "did", "設定を変更: 呼び方",
-    ], {
-      encoding: "utf8",
-      env: { ...process.env, CC_SECRETARY_NOW: now },
-      timeoutMs: 30_000,
-      label: "呼び方変更journal",
-    });
+    const previousNow = process.env.CC_SECRETARY_NOW;
+    process.env.CC_SECRETARY_NOW = now;
+    try { journalAppend(root, "did", "設定を変更: 呼び方"); }
+    finally {
+      if (previousNow === undefined) delete process.env.CC_SECRETARY_NOW;
+      else process.env.CC_SECRETARY_NOW = previousNow;
+    }
     if (failAt === "before-commit") throw new Error("テスト用のcommit失敗");
 
     const journalRelative = relative(repo, journal).split(sep).join("/");
