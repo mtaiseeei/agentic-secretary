@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync,
+  copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -33,20 +33,50 @@ function run(script, args, { input = "", env = {}, expected = 0 } = {}) {
 
 function count(path, pattern) { return (readFileSync(path, "utf8").match(pattern) || []).length; }
 function digest(path) { return createHash("sha256").update(readFileSync(path)).digest("hex"); }
+function fixtureEntries(path) {
+  return readdirSync(path, { withFileTypes: true }).sort((a, b) => (a.name === b.name ? 0 : a.name < b.name ? -1 : 1));
+}
+
+function copyFixtureTree(source, destination) {
+  mkdirSync(destination, { recursive: true });
+  for (const entry of fixtureEntries(source)) {
+    const sourcePath = join(source, entry.name);
+    const destinationPath = join(destination, entry.name);
+    if (entry.isDirectory()) copyFixtureTree(sourcePath, destinationPath);
+    else if (entry.isFile()) copyFileSync(sourcePath, destinationPath);
+    else throw new Error(`unsupported fixture entry: ${sourcePath}`);
+  }
+}
+
+function fixtureSnapshot(root, relative = "") {
+  const snapshot = [];
+  for (const entry of fixtureEntries(join(root, relative))) {
+    const entryRelative = relative ? `${relative}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      snapshot.push(`directory:${entryRelative}`);
+      snapshot.push(...fixtureSnapshot(root, entryRelative));
+    } else if (entry.isFile()) snapshot.push(`file:${entryRelative}:${digest(join(root, entryRelative))}`);
+    else snapshot.push(`other:${entryRelative}`);
+  }
+  return snapshot;
+}
 
 const sandbox = mkdtempSync(join(tmpdir(), "agentic secretary Windows 日本語-"));
 const secretary = join(sandbox, "secretary");
 try {
-  cpSync(join(ROOT, "plugins/secretary/templates"), secretary, { recursive: true });
-  const placeholder = join(secretary, "memory/decisions/_first-decision.md");
-  if (existsSync(placeholder)) renameSync(placeholder, join(secretary, "memory/decisions/2026-07-08-decisions.md"));
+  const templates = join(ROOT, "plugins/secretary/templates");
+  copyFixtureTree(templates, secretary);
 
   check("native OS metadata", () => {
     console.log(`OS=${process.platform} arch=${process.arch} node=${process.version} workspace=${secretary}`);
     if (requireWindows) assert.equal(process.platform, "win32", "Windowsネイティブrunnerではありません");
     if (process.platform === "win32") assert.match(secretary, /^[A-Za-z]:\\/u);
     assert.match(secretary, /Windows 日本語/u);
+    assert.deepEqual(fixtureSnapshot(secretary), fixtureSnapshot(templates));
   });
+
+  const placeholder = join(secretary, "memory/decisions/_first-decision.md");
+  if (existsSync(placeholder)) renameSync(placeholder, join(secretary, "memory/decisions/2026-07-08-decisions.md"));
 
   check("project create and journal are one operation", () => {
     run(PROJECT, ["create-light", secretary, "顧客まとめ", "--overview", "複数文書の整理", "--goal", "まとめ文書", "--success", "たたき台完成", "--current", "資料確認済み", "--next", "構成を整える", "--confirm"]);
