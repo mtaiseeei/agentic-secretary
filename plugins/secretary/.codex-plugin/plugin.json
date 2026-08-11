@@ -1,6 +1,6 @@
 {
   "name": "agentic-secretary",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "技術者向けAI秘書。証拠、command、path、error、残課題を直接示しつつ、記憶・プロジェクト・選択したチャット履歴を安全に管理します。",
   "author": {
     "name": "mtaiseeei",

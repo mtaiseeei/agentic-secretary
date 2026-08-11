@@ -261,9 +261,10 @@
 31. version gateは「履歴回帰」と「現在candidate整合」を別結果で表示する。履歴回帰は0.7.0／0.8.0の既存期待値、現在candidate整合は0.9.0のmanifest／CHANGELOG／配布先／artifact identityを検査し、一方のPASSで他方を代替しない。
 32. 現在candidateの同一版 `0.9.0 → 0.9.0` とdowngradeは副作用0件で停止する。過去の `0.8.0 → 0.8.0`／downgrade fixtureは履歴回帰として別に保持する。
 33. release確認は配布系統別に行う。public upstream `agentic-secretary`、private downstream `agentic-secretary-my-vault`、public downstream `yasashii-secretary` ごとに、source SHA、version、destination、artifact、rollback、再インストール／cache更新の要否を列挙し、未許可の系統へ横展開しない。
-34. `0.9.0` はSprint 038で公開済みの履歴として保護する。Harness互換参照だけを更新する後方互換なpatchは `0.9.1` を現在candidateとし、`0.9.0` のtag、artifact、progress、feedback、履歴assertを書き換えない。
+34. `0.9.0` はSprint 038で公開済みの履歴として保護する。Harness互換参照だけを更新する後方互換なpatchは `0.9.1` を当時のcandidateとし、`0.9.0` のtag、artifact、progress、feedback、履歴assertを書き換えない。
 35. Harness互換性の正本はedition metadataのversion、repository、検査済みfull commit、host別導入IDとする。build導線、README、回帰、online検査はそれと一致させ、network unavailable、commit不一致、manifest version不一致をPASSにしない。
 36. SecretaryはHarness本体、Harnessのagent定義、model routing、custom agent生成ロジックを同梱・複製・暗黙installしない。private版、installed cache、利用者workspaceは系統別の明示許可なしに更新しない。
+37. `0.9.1` はAgentic／Yasashiiで公開済みの履歴として保護する。Windowsの記録・保存互換を直す後方互換patchは `0.9.2` を現在candidateとし、`0.7.0`〜`0.9.1` のtag、artifact、migration、fixture、Sprint記録、履歴assertを書き換えない。
 
 ## 15. 2 editionとprivate downstream境界
 
@@ -347,3 +348,16 @@
 17. 会話golden setの各caseは、case ID、対象edition、入力、前提、期待intent、期待side effect、期待response state、必須応答要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、前後snapshotを持つ。意味の欠落・反転・入力にない追加を各要素へ注入するnegative fixtureを用意し、決定的に機械判定できない項目はEvaluatorが判定根拠を記録する。
 18. 応答状態は、read-only照会等へ副作用0件で答えた`answered`、不足回答を求める`question`、実write成功の`saved`、失敗の`error`、一部成功の`partial`を区別する。必須要素・禁止表現・意味tuple・snapshotのいずれかが期待と異なれば、文面が自然でも当該caseは不合格とする。
 19. 旧回帰の置換は新契約と衝突するassertだけに限定する。`scripts/lib/sprint-032-patch-001-conversation.mjs`とそのreadability／smoke judge、`scripts/check-report-schema.py`、固定報告shapeを要求するSprint 010／011／012／029／032系assertは対象inventoryに含める。同じsuiteのpath guard、timeline決定性、Secret非露出、Git所有範囲、cleanup等は削除・緩和しない。削除・置換・追加したassertの一覧と、保持した安全assertの一覧をEvaluator証拠へ残す。
+
+## 21. Windowsネイティブの記録・保存境界
+
+1. Windowsの通常のローカルworkspace pathは正式対象である。drive letter、空白、日本語を含むpathを、実在する秘書workspaceとして正しく扱う。
+2. project／memory／TODO／settings／文書保存の主要操作は、OS固有のshellが無いこと、または異なるshellがWindows pathを別の意味で解釈することにより利用不能になってはならない。
+3. path guardはOSごとのpath表記を扱っても、最終的に確認済みworkspaceの実体内部への書込みかで判定する。文字列の前方一致、単純なseparator置換、存在するshellのみに依存した安全判定へ緩和しない。
+4. ドライブ直下、workspace外、path traversal、同じ先頭文字列を持つ別ディレクトリ、最終要素／途中ancestor／workspace基点自体の外向きsymlink／junction等の参照を、副作用0件で拒否する。
+5. 本体処理とjournalがひとつの契約上の操作である場合、どちらかの必須工程が失敗したら部分更新を残さない。ファイル、journal、索引、Git HEAD／index／working treeは、操作ごとの既存rollback契約に従う。
+6. 同じ操作のretried実行でproject、memory、TODO、journal、文書、commitを重複させない。成功、部分成功、失敗の報告は実際の副作用と一致させる。
+7. Windows対応のために、空上書き拒否、削除2段階、純追加journal、所有pathだけのcommit、push禁止、Secret非露出、macOS／Linux回帰を削除・緩和しない。
+8. Windows対応のPASSにはWindowsネイティブの実行証跡を必要とする。別OSでWindows形式path文字列を模擬した結果だけで「Windows対応済み」と表示しない。
+9. Agentic共通coreを先に独立評価し、PASSした完全SHAからだけYasashii overlayを同期する。Yasashiiは固有copy・identity・README・repo所有docsを保護した別回帰・独立評価を必要とする。
+10. `agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillは本変更の対象外とし、本Patchの対応済み表示に含めない。

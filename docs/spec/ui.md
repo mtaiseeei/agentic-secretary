@@ -389,11 +389,17 @@ Chatworkと同じ共通wizard骨格を使い、全画面の可視見出しとacc
 - 旧raw CHANGELOG byte一致、新規0.8.0導入、equal／downgrade停止、旧blockerの未解消状態を別項目として示す。
 - checkout専用gateとarchive配布gateを別項目で表示し、監査evidenceをarchiveへ含めた状態や、どちらか一方だけの合格を「同一candidate合格」と表示しない。
 
-### 現在candidate 0.9.0の表示
+### Sprint 038当時のcandidate 0.9.0の表示
 
 - marketplace、Claude／Codex manifest、CHANGELOG先頭、公開tagが最高公開版 `0.8.0` で一致し、Sprint 038が後方互換な利用者向け機能追加であるためminor更新 `0.9.0` を選んだ根拠を保守者向けに示す。
 - 現在candidate／latest／manifest／CHANGELOG新entry／ledger／公開ガイドが `0.9.0` で一致しているかを、0.7.0／0.8.0履歴回帰とは別項目で示す。
 - agentic public、private my-vault、yasashii publicを配布先別に並べ、各source SHA、artifact、destination、rollback、再インストール要否、許可状態を示す。1系統の許可・成功を他系統へ流用しない。
+
+### 現在candidate 0.9.2の表示
+
+- 利用者向けには、Windowsでproject／memory／TODO／settings／文書保存が失敗する不具合の修正であること、workspace migrationが不要であることを先に示す。
+- 保守者向けには、公開済み `0.9.1`、現在candidate `0.9.2`、Windows実環境の回帰結果、macOS／Linux回帰結果を別項目で示す。
+- AgenticとYasashiiのcandidate／source SHA／評価／release状態を別々に示し、AgenticのPASSだけでYasashiiを同期・公開済みと表示しない。my-vault版は対象外と明示する。
 
 ## edition別の表現
 
@@ -414,7 +420,7 @@ Chatwork／Google Chat wizardは両editionで同じ画面、copy、DOM、focus�
 
 ## 非機能要件
 
-- macOS / Windowsで、ファイル構造と案内が破綻しない。
+- macOS／Linux／Windowsで、ファイル構造と案内が破綻しない。Windowsのdrive letter・空白・日本語pathで主要な記録・保存操作を完了できる。
 - Chatwork／Google Chat wizardは主要desktop browserで動き、外部interfaceへbindしない。OAuth callbackもloopback以外へ公開しない。
 - Chatwork／Google Chat wizardの状態変更は同一session・同一origin・正しいContent-Typeだけを受け付け、OAuth callbackは同一sessionで一度だけ処理する。
 - `CC_SECRETARY_NOW` により日付依存の体験を固定して検証できる。

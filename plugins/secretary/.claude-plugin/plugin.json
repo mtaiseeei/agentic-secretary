@@ -1,7 +1,7 @@
 {
   "name": "agentic-secretary",
   "description": "技術者向けAI秘書。診断、実行証拠、developer handoffを直接示し、記憶、プロジェクト、選択したChatwork／Google Chat履歴を1つのprivate GitHub repoで管理する。",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "author": {
     "name": "mtaiseeei"
   },

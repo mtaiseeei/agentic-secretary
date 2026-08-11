@@ -418,6 +418,15 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - 3配布系統の共通parity caseは、行き先と正本ルールが同じcaseだけに限定する。Notion routing等、保存先が版で異なるcaseはedition固有golden setとし、intentと安全境界だけを共通比較し、response stateと保存先は各版の正本に従う。
 - 3配布系統のcandidateは、共通caseの意味、安全境界、版固有差分、同期後のrepo-owned file不変を確認してからrelease gateへ進む。
 
+### F58 Windowsネイティブの記録・保存操作
+
+- Windowsの通常のローカルworkspace pathで、一般プロジェクトの作成・更新・整理・完了・再開、関連TODO、memory、daily、weekly、settings、単発／PJ文書保存を利用できる。
+- drive letter、空白、日本語を含むpathを有効なworkspaceとして扱い、OS固有のshellの有無やpath解釈の違いを理由に「秘書ディレクトリが見つかりません」と誤報しない。
+- project／memory／TODO／settings／文書保存が共有するjournal、索引、commitの境界は、OSにかかわらず同じ意味を持つ。成功時は必要な副作用が1回だけ完了し、失敗時は契約どおり開始前へ戻るか、実際の部分成功範囲を正確に示す。
+- workspace外、path traversal、前方一致する別ディレクトリ、外向きsymlink／junction等の参照は副作用0件で拒否する。Windows対応のためにpath guardを文字列の前方一致へ緩和しない。
+- Windows回帰はWindowsの実行環境で行い、path文字列の模擬だけを合格にしない。macOS／Linuxの既存回帰と安全assertもすべて維持する。
+- 公開済み `0.9.1` の次の後方互換patchを `0.9.2` とし、Agenticの共通coreを先に独立評価する。YasashiiはPASSしたAgentic完全SHAからoverlay同期し、別の回帰と独立評価を行う。private my-vault版は変更しない。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -435,3 +444,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G11 | F30 F31 F36 F40 F41 F42 F43 F44 F45 F46 F47 F48 F49 F50 F51 F52 |
 | G12 | F04 F16 F20 F41 F42 F53 |
 | G13 | F03 F05 F06 F10 F17 F19 F20 F28 F30 F31 F51 F54 F55 F56 F57 |
+| G14 | F05 F06 F07 F08 F17 F20 F28 F31 F53 F54 F55 F58 |

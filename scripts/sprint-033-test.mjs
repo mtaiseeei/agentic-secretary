@@ -159,16 +159,16 @@ function completePassRecord(loaded, hostId) {
   };
 }
 
-check("distribution identity and candidate version are agentic-secretary 0.8.0", () => {
+check("distribution identity and candidate version are agentic-secretary 0.9.2", () => {
   const marketplace = json(join(root, ".claude-plugin/marketplace.json"));
   const manifest = json(join(pluginRoot, ".claude-plugin/plugin.json"));
   const edition = json(join(pluginRoot, "edition.json"));
   assert.equal(marketplace.name, "agentic-secretary");
   assert.equal(marketplace.plugins.length, 1);
   assert.equal(marketplace.plugins[0].name, "agentic-secretary");
-  assert.equal(marketplace.plugins[0].version, "0.8.0");
+  assert.equal(marketplace.plugins[0].version, "0.9.2");
   assert.equal(manifest.name, "agentic-secretary");
-  assert.equal(manifest.version, "0.8.0");
+  assert.equal(manifest.version, "0.9.2");
   assert.equal(edition.edition, "agentic-secretary");
   assert.equal(edition.distribution.pluginId, "agentic-secretary@agentic-secretary");
   assert.equal(edition.harness.installId, "harness@agentic-harness");
@@ -227,7 +227,7 @@ check("Codex formal manifest and repository marketplace share the canonical skil
   assert.deepEqual(codexMarketplace.plugins[0].policy, { installation: "AVAILABLE", authentication: "ON_INSTALL" });
   assert.equal(codexMarketplace.plugins[0].category, "Productivity");
   assert.equal(codexManifest.name, "agentic-secretary");
-  assert.equal(codexManifest.version, "0.8.0");
+  assert.equal(codexManifest.version, "0.9.2");
   assert.equal(codexManifest.skills, "./skills/");
   assert.equal(walk(join(pluginRoot, "skills")).filter((path) => path.endsWith("/SKILL.md")).length, 15);
   assert(!existsSync(join(root, ".agents/skills")));
