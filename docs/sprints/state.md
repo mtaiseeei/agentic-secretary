@@ -5,7 +5,7 @@
 - Current ID: sprint-039-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -73,7 +73,7 @@
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
-| sprint-039-patch-001 | active | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
+| sprint-039-patch-001 | awaiting-eval | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -81,6 +81,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-14: fresh strong Generatorがpublic Agentic candidate `3fa8d97e5dbfb2afa314f4ad179f17401b76d320` を作成。renameでworkspace所有pathが変わる場合だけ正確なGit rootから所有path限定local checkpointを作り、既存dirty／stage／untrackedを保持する。`stage`／`commit`／`post-commit`を実在failure pointへ接続し、失敗時はworkspace／有効user-scope／HEAD／index／working treeを開始前へrollback、retryは1 commit、成功後rerunは0差分・0追加commit。親repo／nested repo／開始前target dirtyもsafe stopする。Patch専用16/16、Sprint039 69/69＋7/7、safe Git／secret scan 71/71、formal16 Skills 4/4、schema21面＋unknown negative、release integrity、clean checkout、Git-free archive、archive master required17/17・306/306をPASS。common candidate digestは `c810f60c3664ca331338e34680eec9bb6d21f8d850b97a39eef29f1a24f58557` だが、fresh Evaluator PASS前はaccepted downstream inputにしない。既知Sprint033／035 digestとloopback `EPERM`は開始HEAD同一のverification-infraとして分離。実HOME、cache、下流repo、Mac mini、remote、release変更0。fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneとする。
 - 2026-08-14: Yasashii Sprint 039のfresh独立評価で、共通renameに実在するGit checkpoint段階がなく、`rename-apply --fail-at commit`がexit 0で変更とdirty Git状態を残す下流findingを確認した。3 edition共通挙動を守るためYasashii固有anchorではなくpublic Agentic common coreのregular Patch `sprint-039-patch-001`として、所有workspace path限定のlocal checkpoint、commit失敗／commit後確認失敗時のworkspace・user-scope・Git rollback、既存dirty／stage／untracked保持、push／remote操作0を契約化した。user-scope-onlyはworkspace変更0件の場合だけcheckpoint `not-applicable`。fresh Evaluator PASS後だけ新完全SHA／common digestを下流固定入力として発行する。新PatchとしてRetry／Spec-Issueを0、fresh strong Generator dispatch予約としてLineage Dispatches 1、Status active、Model Tier strong、Rotate noneとする。
 - 2026-08-14: Sprint 039 Retry 1 candidate `3e08eb6d377392440e753bd5073c73d1d63399b6` はfresh独立EvaluatorでPASS。P1〜P4の独立fixture 11/11、clean checkout／同SHA Git-free archiveのSprint 039各76/76、release integrity、Codex plugin 4/4、report-schema正式21面＋unknown negative、Sprint 032 Patch 002 32/32、archive gate 14/14、正式archive master required 16/16・298/298をPASS。AC1〜16、C2／C5／C6／C9／C10／C12〜C16は全5/5、product finding 0件。開始commitと同一のSprint 033固定digest、Sprint 035 wizard digest、sandbox loopback EPERMはverification-infra 3件として分離。Windows新identity面はnative NOT-RUNを明記し、既存Windows suite 12/12だけを採用した。Sprint 039をdone、Retry Count／Spec-Issue Count 0、Lineage Dispatches 4、Model Tier strong、Rotate noneとする。下流はこのPASS済み完全SHAとcommon digest `7498d3550734ba63b689463f01e2a52e16d2ce3f8eb31cebead16aef2181f883` から別repo Sprint・独立評価し、release／cache／Mac mini同期は3版PASS後まで行わない。
 - 2026-08-14: Sprint 039 Retry 1 GeneratorがEvaluator P1〜P4を候補 `3e08eb6d377392440e753bd5073c73d1d63399b6` へ限定修正。renameは有効なmanaged blockだけ更新し未作成／disabledを保持、AGENTSは製品所有の表示名fieldだけ構造更新し顧客等の自由記述をD分類で保持、routerは文頭direct addressと依頼本文を分離、report-schemaはname Skillを含む正式21面と未知surface拒否を両立した。Evaluator独立caseを回帰へ取り込み、専用69/69＋wrapper 7/7、Sprint 038 64＋14＋3、Windows互換12、Sprint 011 68、Sprint 035 15、Sprint 032 Patch 002 32、Codex plugin 4、report-schema、release integrityをPASS。clean handoff common digestは `7498d3550734ba63b689463f01e2a52e16d2ce3f8eb31cebead16aef2181f883`。fresh独立Evaluator dispatch予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate noneへ更新する。開始commit由来digest不一致とloopback EPERMは未変更のverification-infraとして分離し、実HOME、下流、cache、Mac mini、remote、release変更0件を維持する。
