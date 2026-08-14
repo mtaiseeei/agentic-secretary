@@ -34,7 +34,7 @@ try {
   check("forkedFrom uses the single credit", entry.forkedFrom === "https://github.com/Shin-sibainu/cc-company");
   check("plugin source is present", entry.source === "./plugins/secretary" && existsSync(join(root, entry.source.slice(2))));
   check("Codex marketplace uses the formal local source", codexMarket.name === "agentic-secretary" && codexEntry.name === "agentic-secretary" && codexEntry.source?.source === "local" && codexEntry.source?.path === "./plugins/secretary");
-  check("Codex manifest uses the shared skills tree", codexPlugin.name === "agentic-secretary" && codexPlugin.skills === "./skills/" && readdirSync(join(root, "plugins/secretary/skills")).filter((name) => existsSync(join(root, "plugins/secretary/skills", name, "SKILL.md"))).length === 15);
+  check("Codex manifest uses the shared skills tree", codexPlugin.name === "agentic-secretary" && codexPlugin.skills === "./skills/" && readdirSync(join(root, "plugins/secretary/skills")).filter((name) => existsSync(join(root, "plugins/secretary/skills", name, "SKILL.md"))).length === 16);
 } catch (error) {
   check(`distribution manifests parse (${error.message})`, false);
 }

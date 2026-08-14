@@ -229,7 +229,7 @@ check("Codex formal manifest and repository marketplace share the canonical skil
   assert.equal(codexManifest.name, "agentic-secretary");
   assert.equal(codexManifest.version, "0.9.2");
   assert.equal(codexManifest.skills, "./skills/");
-  assert.equal(walk(join(pluginRoot, "skills")).filter((path) => path.endsWith("/SKILL.md")).length, 15);
+  assert.equal(walk(join(pluginRoot, "skills")).filter((path) => path.endsWith("/SKILL.md")).length, 16);
   assert(!existsSync(join(root, ".agents/skills")));
 });
 

@@ -105,8 +105,8 @@ done
 check "active styleの内容依存serializer唯一正本はI1-I3境界を満たす" "serializer_contract_ok '$RULES'"
 check "安全・証拠境界はstyleから分離" \
   "grep -q 'push.*明示的に指示' '$SAFETY_RULES' && grep -q '実コネクタ' '$EVIDENCE_RULES' && grep -q '接続状態.*未確認' '$EVIDENCE_RULES' && ! grep -q '実コネクタの証跡が無い' '$RULES'"
-check "templates/tones/全15スキルは正本参照だけでschema重複0" \
-  "[ '${#REFERENCE_SURFACES[@]}' -eq 20 ] && [ '$reference_bad' -eq 0 ]"
+check "templates/tones/全16スキルは正本参照だけでschema重複0" \
+  "[ '${#REFERENCE_SURFACES[@]}' -eq 21 ] && [ '$reference_bad' -eq 0 ]"
 SCHEMA_OWNER_COUNT="$(grep -Rsl '^- やったこと:' "$PLUGIN/rules" "$PLUGIN/skills" "$PLUGIN/templates" --include='*.md' | wc -l | tr -d ' ')"
 check "現役固定schema所有ファイルは0件" \
   "[ '$SCHEMA_OWNER_COUNT' -eq 0 ]"
@@ -140,12 +140,12 @@ check "preferences v2は4セクション" \
 check "preferences v2は4つのcategorical項目" \
   "grep -q '^- 口調: 丁寧（標準）' '$TEMPLATES/memory/preferences.md' && grep -q '^- 専門用語: ふつう' '$TEMPLATES/memory/preferences.md' && grep -q '^- 報告の詳しさ:' '$TEMPLATES/memory/preferences.md' && grep -q '^- 決定の確認: 都度' '$TEMPLATES/memory/preferences.md'"
 
-# 初回5問
-QCOUNT="$(grep -Ec '^### Q[1-5]:' "$ONBOARD")"
-check "初回質問は5問" "[ '$QCOUNT' -eq 5 ]"
+# 初回6問（Q0は秘書自身の名前、Q1〜5は利用者設定）
+QCOUNT="$(grep -Ec '^### Q[0-5]:' "$ONBOARD")"
+check "初回質問は6問" "[ '$QCOUNT' -eq 6 ]"
 check "初回に仕事・役割と説明の詳しさを聞く" "grep -q '^### Q4: お仕事・役割' '$ONBOARD' && grep -q '^### Q5: 説明の詳しさ' '$ONBOARD'"
 check "詳しさは3択で既定みじかく" "grep -q '1) \*\*みじかく' '$ONBOARD' && grep -q '2) \*\*くわしく' '$ONBOARD' && grep -q '3) \*\*おまかせ' '$ONBOARD'"
-check "口調を初回質問にしない" "! grep -qE '^### Q[1-5]: .*口調' '$ONBOARD' && grep -q '口調は初回に質問しない' '$ONBOARD'"
+check "口調を初回質問にしない" "! grep -qE '^### Q[0-5]: .*口調' '$ONBOARD' && grep -q '口調は初回に質問しない' '$ONBOARD'"
 check "初回後に設定変更導線を案内" "grep -q '設定はいつでも.*設定変えたい' '$ONBOARD'"
 
 # settings規律とプリセット
@@ -170,7 +170,7 @@ missing_pref_ref=0
 while IFS= read -r skill; do
   grep -q 'preferences.md' "$skill" || { printf '  preferences参照なし: %s\n' "$skill"; missing_pref_ref=$((missing_pref_ref+1)); }
 done < <(find "$PLUGIN/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | sort)
-check "全15スキルがpreferencesを参照" "[ '$missing_pref_ref' -eq 0 ] && [ \"\$(find '$PLUGIN/skills' -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')\" -eq 15 ]"
+check "全16スキルがpreferencesを参照" "[ '$missing_pref_ref' -eq 0 ] && [ \"\$(find '$PLUGIN/skills' -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')\" -eq 16 ]"
 
 # 部分更新・追記・確認後のjournal/commit
 SEC="$WORK/main/secretary"

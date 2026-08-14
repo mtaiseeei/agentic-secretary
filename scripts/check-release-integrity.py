@@ -116,11 +116,11 @@ def validate(root: Path) -> list[str]:
     skills_root = root / "plugins/secretary/skills"
     skill_names = sorted(path.parent.name for path in skills_root.glob("*/SKILL.md"))
     expected_skills = sorted([
-        "build", "chatwork", "connections", "daily", "google-chat", "memory-care", "onboarding",
+        "build", "chatwork", "connections", "daily", "google-chat", "memory-care", "name", "onboarding",
         "projects", "secretary", "settings", "setup-google", "setup-microsoft", "setup-notion", "update", "weekly",
     ])
     if skill_names != expected_skills:
-        errors.append("Codex plugin must reference the 15 unique shared skills")
+        errors.append("Codex plugin must reference the 16 unique shared skills")
     if (root / ".agents/skills").exists():
         errors.append("repo-local .agents/skills duplicates the formal bundled skills")
 
