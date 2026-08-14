@@ -749,3 +749,18 @@ legacy fileはredirectの説明だけに置き換えない。正本と同じ `0.
 - downstream remote: `upstream` fetch enabled、push disabled
 
 directory／repo作成、remote変更、push、公開は該当Sprintでユーザーが明示許可するまで未実行状態を正常とする。
+
+## 秘書identityとcanonical workspace
+
+- `display_name`: 利用者が確認した現在の英語名。変更可能。
+- `secretary_id`: renameで変わらないstable ID。作者主体とregistryを結ぶ。
+- `actor_type`: `ai-secretary`。人間authorとの識別に使う。
+- `aliases`: 過去の表示名。履歴照合と連続性説明に使い、旧名だけの呼びかけを自動routingする根拠にはしない。
+- `canonical_workspace`: 実体path、edition、marker検証状態を持つ現在の秘書workspace。現在cwdとは別概念。
+
+user-scope managed blockはrouting hintでありidentityやworkspaceの正本ではない。resolverはregistryを読んだ後、
+workspace実体境界、edition marker、必要な秘書正本を再検証する。移動、欠落、重複、反対edition、symlink／junction、
+改ざん値では書き込まず、利用者が判断できる差分を示す。registryには利用者コンテンツやSecretを入れない。
+
+rename candidateは `current-config`、`user-content`、`historical-author`、`unknown-or-conflict` に分類する。
+current-configはtransaction対象、user-contentは個別opt-in、historical-authorは既定保持、unknown-or-conflictは自動変更禁止とする。

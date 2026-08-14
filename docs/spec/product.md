@@ -341,3 +341,4 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 - 2026-07-20、Repo分割前に全会話のMarkdown可読性とChatwork Secretの具体的な `Name`／`Secret` 入力案内を共通実装する。改行は好みとして質問せず、両editionの思想・対象差は維持する。
 - 2026-07-20、`agentic-secretary` の正式対象環境を Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLI の4つと確定した。その他のコーディングエージェントは設計対象だが受入・保証・検証必須対象外とし、共通本体はホスト非依存、host固有部分だけをadapterに分け、対応対象と検証済みを別集計する。未検証環境を「対応済み」と表示しない。
 - 2026-07-20、Sprint 032 Patch 002で、一般回答を固定3項目へ押し込まない分離、実会話runnerの安全化（env allowlist・最小ツール・workspace内fixture・cleanup）、完了報告テストの誤合格解消、wizard進捗一貫性、GitHub用語の初出説明、serializer正本の明確化、yasashii向け `ルーム` 表記統一を確定した。設定確認の `key=value` 表現改善はSprint 034へ延期する。
+- 2026-08-14、利用者の呼び方と別に秘書自身の英語名とstable identityを持たせる方針を承認した。初回／既存利用者向けSkill、安全なrename、明示opt-inのuser-scope routing、canonical workspace解決を共通コアにし、Agentic PASS後にYasashiiとprivate my-vaultを別Sprintで評価する。

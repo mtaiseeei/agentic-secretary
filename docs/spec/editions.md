@@ -257,3 +257,9 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 12. 次version `0.9.2`、Agentic先行→固定SHAからのYasashii overlay同期という順序、配布先、変更内容、rollbackが現在の正本から一意に示される。解決できない間はrelease candidate準備とgateまでに止め、tag、GitHub Release、marketplace更新、remote push、公開を行わない。
 
 許可不足や外部サービス未準備は `external-live-gate-unavailable` として不合格にし、実装不具合とは分けて記録する。
+
+## 秘書identityの下流境界
+
+秘書の英語名、stable ID／AI種別、aliases、name Skill、managed block契約、canonical resolver、rename分類と安全境界はAgentic共通コアが所有する。Agenticの独立PASS後、固定完全SHAと宣言済み共通pathからだけ下流へ渡す。
+
+Yasashiiはedition copyとoverlayを保護し、private my-vaultはNotion／vault固有Skill、private値、root AGENTSを保護する。各repoのspec、Sprint、progress、feedback、README、release判断は同期しない。Agentic Sprint 039のPASSだけで下流反映、release、installed cache、Mac mini同期を完了扱いにしない。

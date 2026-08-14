@@ -9,7 +9,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 ## 合格の基本条件
 
 - Evaluatorは対象スプリントの実物を動かし、実行コマンド、結果、対象ファイル／repo、模擬会話の入力と観測結果を feedback に残す。
-- C2・C5・C6・C9・C10・C11・C12・C13・C14・C15 は5/5必須。対象Sprintの保証範囲で、1件でも構文欠陥、secret露出、安全違反、新規回帰、現行面の配布チャネル依存、無確認の高リスク副作用、Google ChatのOAuth／選択スペース境界違反、配布前gateの未達、edition境界違反、会話可読性違反、authorization誤分類、応答状態不整合、または意味保存違反があれば不合格。
+- C2・C5・C6・C9・C10・C11・C12・C13・C14・C15・C16 は5/5必須。対象Sprintの保証範囲で、1件でも構文欠陥、secret露出、安全違反、新規回帰、現行面の配布チャネル依存、無確認の高リスク副作用、Google ChatのOAuth／選択スペース境界違反、配布前gateの未達、edition境界違反、会話可読性違反、authorization誤分類、応答状態不整合、意味保存違反、または秘書identity／名前routing／rename境界違反があれば不合格。
 - Sprint 021は、Google Chatのlocal wizard session memory→`gh` stdin→Repository Secretと、Chatworkの利用者本人によるGitHub Repository Secret画面への直接入力という既存の2導線、および製品管理対象／初回publish inventoryにおける合理的な誤混入を0許容で評価する。Chatwork wizardへToken取得・受領・登録機能を要求しない。利用者が任意のJS／TS／shell／JSONを意図的に特殊構文・難読化・computed／escaped key・偽placeholderへ改変したケースの未検出だけでは不合格にしない。その形式を製品が生成する、または通常導線が実値を残すなら不合格とする。
 - 1軸でも閾値を下回ればスプリント全体を不合格にする。
 - やさしさの得点で安全・規律・回帰の欠陥を相殺しない。
@@ -129,6 +129,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C13 | edition分離・互換 | Git系譜、別repo、共通path、overlay、衝突停止、旧raw CHANGELOG、公開済み0.8.0履歴、隔離private candidate | **5** |
 | C14 | 会話のMarkdown可読性 | 改行、段落、必要な箇条書き、内容依存の構造、edition差維持、過剰Markdownなし | **5** |
 | C15 | 会話authorization・意味保存 | intent分類、副作用、応答状態、意味保存、現在用件優先、3配布系統parity、限定Notion変更 | **5** |
+| C16 | 秘書identity・名前routing・rename | 英語名、stable ID、AI author、managed block、canonical resolver、同名誤routing 0件、分類preview、rollback | **5** |
 
 ## スコアアンカー
 
@@ -212,6 +213,21 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - 5: `explicit / inferred / ambiguous / destructive / external` の境界がgolden setどおりで、低リスク明示依頼は同じassistant turnに1回、自発提案・曖昧さ・高リスク操作は必要な質問または影響確認前0件となる。引用・伝聞・仮定・訂正・取消・過去照会は誤発火せず、保存済み取消は削除2段階となる。`answered / question / saved / error / partial` が実副作用と一致し、現在用件が内部状態より優先される。caseごとの必須要素・禁止表現・意味tuple・前後snapshotが期待と一致し、negative fixtureを拒否する。行き先・正本ルールが同じ共通caseだけが3配布系統で同じ意味と安全境界を持ち、Notion routingはprivate版固有期待に従う。
 - 4以下: 明示低リスクの二重承認、retryでの重複、引用等の誤write、取消の即時削除、質問なし停止、自発提案・曖昧入力の無断write、高リスク操作の確認漏れ、副作用0件での完了表示、部分成功の全体成功表示、現在用件の横取り、必須要素・意味tuple・snapshotの不一致、negative fixtureの見逃し、異なる正本間の誤parity、my-vaultのNotion過剰変更、またはrepo-owned/private値の同期漏洩が1件でもある。→不合格。
 
+### C16 秘書identity・user-scope routing・rename【ゼロ許容】
+
+- 5: 利用者の呼び方と秘書名が別fieldで、初回／専用Skillの英語名確認、stable IDとAI種別、human／AI author識別が成立する。user-scope managed blockは明示確認後だけ製品所有範囲をatomic更新し、canonical resolverが別repo cwdを誤初期化しない。人間・顧客・author等の同名negative caseは誤routing 0件。renameはread-only分類preview、分類別確認、履歴保持、aliases、rollback、再実行差分0件を満たす。
+- 4以下: 呼び方との混同、不適格名保存、確認前HOME write、guidance全面上書き、override優先の誤り、既存block破壊、cwdへの誤onboarding、同名人間の誤routing、盲目的全置換、過去author改変、未確認user-content変更、部分更新、rollback不能、stable ID変化のいずれかが1件でもある。→不合格。
+
+## Sprint 039の検証方法（safe harbor）
+
+1. 合成HOMEでCodex AGENTS通常／override／両方、Claude CLAUDE、空file、既存内容、既存・重複managed block、利用者編集、permission失敗を操作し、対象選択、前後digest、rollback、再実行差分0件を記録する。
+2. 隔離workspaceで新規／既存identity、別repo cwd、workspace移動・欠落・重複、反対edition、symlink／junction、read-onlyを操作し、canonical解決と誤onboarding 0件を確認する。
+3. 希望名、おまかせ、取消、不適格名、直接name Skill、現在名呼びかけ、「名前に聞いて」、人間／顧客／author／引用／コード／曖昧文脈をcase IDつきで実行する。
+4. renameの4分類、同名、alias衝突、許可／拒否／一部選択、途中失敗、retryを操作し、preview 0変更、履歴不変、alias連続性、rollback、冪等性をsnapshotで確認する。
+5. checkoutとGit archive相当の同一candidateでSkill／manifest validator、secret scan、master回帰、配布対象と下流handoff契約を検査する。
+
+実HOME、installed cache、実下流repo、Mac mini、external publish、歴史的live evidenceを必須にしない。command、exit code、fixture root、case ID、前後digest、期待／観測、not-runがあれば十分とし、新しいcollectorや統一attestationを要求しない。
+
 ## スプリント別の重点
 
 | Sprint | 重点 |
@@ -254,6 +270,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 037-patch-001 | 呼び方変更の3正本同期、journal／commit subjectの設定値非再掲、metacharacter／Unicode fixture、下流common script byte一致 |
 | 038 | explicit／inferred／ambiguous／destructive／external、side effect 0／1／partial、response answered／question／saved／error／partial、引用等の誤発火負例、意味tuple・snapshot・negative fixture、現在用件優先、固定3項目・exact copy旧回帰の衝突assertだけを置換、既存AGENTSのtemplate行限定migration、共通／版固有case分離、隔離private candidate、Fable R1〜R9反映、0.9.0一意解決と配布先別publish確認gate |
 | 038-patch-001 | public Agentic版の0.9.1 patch release、Agentic Harness 0.5.1／検査済みfull commitへの互換参照整合、build／README／edition metadata／回帰／online検査の一致、Harness本体・custom agent機構の非同梱、private／cache／利用者workspace無変更 |
+| 039 | 秘書英語名、stable ID／AI author、初回＋専用name Skill、user-scope managed block、override優先、canonical resolver、同名negative routing、rename 4分類／rollback／冪等性、隔離HOME、下流handoff |
 
 ## 差し戻し分類
 

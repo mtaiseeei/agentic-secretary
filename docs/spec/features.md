@@ -427,6 +427,26 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Windows回帰はWindowsの実行環境で行い、path文字列の模擬だけを合格にしない。macOS／Linuxの既存回帰と安全assertもすべて維持する。
 - 公開済み `0.9.1` の次の後方互換patchを `0.9.2` とし、Agenticの共通coreを先に独立評価する。YasashiiはPASSしたAgentic完全SHAからoverlay同期し、別の回帰と独立評価を行う。private my-vault版は変更しない。
 
+### F59 秘書自身の英語名とidentity
+
+- F53の「利用者をどう呼ぶか」と別に、秘書自身の英語名を持つ。初回オンボーディングでは「希望の英語名」または「おまかせ」を選び、解決した候補を確認してから保存する。Alexは例であり固定値ではない。
+- 既存利用者は専用name Skillを直接起動でき、後から変更できる。英語名として不適格な空値、メール、path／command風、制御文字、汎用bot名は保存しない。
+- identityは変更可能な表示名、stable ID、種別 `ai-secretary`、aliasesを持つ。作者表示は `Alex (AI Secretary)` のように人とAIを区別し、構造化記録でもstable IDと種別を保持する。renameで過去の作者主体を変えない。
+
+### F60 user-scopeの名前routingとcanonical workspace
+
+- 別repoから名前で呼べる効果、対象host/file、無効化方法を説明し、推奨yesとして明示確認後だけ有効化する。
+- Codexは `~/.codex/AGENTS.override.md` の有無と優先を扱い、実際に読まれるuser-scope AGENTSへ製品所有managed blockを置く。Claude Codeは `~/.claude/CLAUDE.md` を扱う。既存内容、他block、改行を保持し、全面上書きしない。
+- registry/resolverはstable ID、edition、canonical workspace実体path等の最小metadataだけを持つ。別repoのcwdを新しい秘書workspaceと誤認せず、edition markerと必要正本を再検証して既存秘書へ接続する。
+- 現在名への直接呼びかけと「現在名に聞いて」を正のcaseとする。人間、顧客、取引先、author、引用、コード、ファイル本文の同名はroutingしない。曖昧時だけ副作用0件で一度確認する。
+
+### F61 安全なrenameと下流handoff
+
+- rename previewは現在名の利用箇所を、A: identity／現行設定／managed block／registry、B: 利用者作成コンテンツ、C: 履歴／author、D: 所有不明／衝突へ分類し、件数、対象、推奨処理、非対象、rollbackを示す。previewはread-onlyである。
+- applyは新名と分類別対象を明示確認後だけ更新する。Aは一体更新、Bは個別許可だけ、Cは原則保持してaliasesへ旧名追加、Dは変更しない。途中失敗は開始前へrollbackし、retry／再実行で重複を作らない。盲目的な全件置換は禁止する。
+- Agentic共通コアを先に独立評価し、PASSした完全SHAと宣言済み共通pathからだけYasashiiとprivate my-vaultを別repo Sprintへ渡す。Yasashii overlay、private固有Notion／vault、root AGENTS、各repo docsを上書きしない。
+- 実利用者HOME、installed cache、実下流repo、release、Mac mini同期はSprint 039の実装ACではなく、各repoの独立PASS後の運用phaseとする。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -445,3 +465,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G12 | F04 F16 F20 F41 F42 F53 |
 | G13 | F03 F05 F06 F10 F17 F19 F20 F28 F30 F31 F51 F54 F55 F56 F57 |
 | G14 | F05 F06 F07 F08 F17 F20 F28 F31 F53 F54 F55 F58 |
+| G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
