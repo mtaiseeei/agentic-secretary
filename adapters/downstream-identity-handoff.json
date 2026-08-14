@@ -1,9 +1,17 @@
 {
   "schemaVersion": 1,
   "sourceEdition": "agentic-secretary",
-  "sourceRevision": "accepted-full-git-sha-required",
+  "sourceRevision": "candidate-full-git-sha-after-evaluator-pass-required",
+  "publicationStatus": "candidate-unverified",
+  "previousAccepted": {
+    "agenticFullSha": "3e08eb6d377392440e753bd5073c73d1d63399b6",
+    "commonTreeSha256": "7498d3550734ba63b689463f01e2a52e16d2ce3f8eb31cebead16aef2181f883",
+    "note": "Sprint 039 historical input only; not the Patch 001 fixed downstream input."
+  },
   "commonPaths": [
+    "plugins/secretary/scripts/lib/external-ops.mjs",
     "plugins/secretary/scripts/lib/secretary-identity.mjs",
+    "plugins/secretary/scripts/lib/safe-git.mjs",
     "plugins/secretary/scripts/lib/user-scope-routing.mjs",
     "plugins/secretary/scripts/lib/workspace-registry.mjs",
     "plugins/secretary/scripts/lib/name-router.mjs",

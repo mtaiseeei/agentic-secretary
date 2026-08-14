@@ -17,22 +17,28 @@ for (const path of [...manifest.commonPaths].sort()) {
   hash.update("\0");
 }
 let gitSha = null;
+let baseGitSha = null;
 let candidateGitStatus = "git-free";
 try {
   const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
     cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
   }).trim();
   candidateGitStatus = dirty ? "dirty" : "clean";
-  if (!dirty) gitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  baseGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  if (!dirty) gitSha = baseGitSha;
 } catch { /* Git-free archiveではnullを正直に返す */ }
 if (gitSha && !/^[0-9a-f]{40}$/u.test(gitSha)) throw new Error("Agentic完全SHAを確認できません。");
 process.stdout.write(`${JSON.stringify({
   schemaVersion: 1,
+  publicationStatus: manifest.publicationStatus,
+  acceptedDownstreamInput: null,
   agenticFullSha: gitSha,
+  baseGitSha,
   candidateGitStatus,
   commonTreeSha256: hash.digest("hex"),
   commonPaths: manifest.commonPaths,
   excludedPaths: manifest.excludedPaths,
   protectedDownstreamPaths: manifest.protectedDownstreamPaths,
+  previousAccepted: manifest.previousAccepted,
   rollback: manifest.rollback,
 }, null, 2)}\n`);
