@@ -265,6 +265,7 @@
 35. Harness互換性の正本はedition metadataのversion、repository、検査済みfull commit、host別導入IDとする。build導線、README、回帰、online検査はそれと一致させ、network unavailable、commit不一致、manifest version不一致をPASSにしない。
 36. SecretaryはHarness本体、Harnessのagent定義、model routing、custom agent生成ロジックを同梱・複製・暗黙installしない。private版、installed cache、利用者workspaceは系統別の明示許可なしに更新しない。
 37. `0.9.1` はAgentic／Yasashiiで公開済みの履歴として保護する。Windowsの記録・保存互換を直す後方互換patchは `0.9.2` を現在candidateとし、`0.7.0`〜`0.9.1` のtag、artifact、migration、fixture、Sprint記録、履歴assertを書き換えない。
+38. `0.9.2` と、秘書identity機能を追加した `0.10.0` は3版で公開済みの履歴として保護する。既存workspaceのidentity完全移行を直す後方互換patchは `0.10.1` を現在candidateとし、Agentic→Yasashii／private固定handoff→3版独立PASS→release／Mac mini同期の順序を守る。
 
 ## 15. 2 editionとprivate downstream境界
 
@@ -378,3 +379,20 @@
 12. 修正版の下流handoff完全SHA／common digestはfresh独立Evaluator PASS後だけ正本として公開する。PASS前candidate、Generator自己評価、旧accepted SHAを修正版の同期入力として扱わず、Yasashii／private版の実repoへ先行反映しない。
 13. 受入は合成HOMEと隔離workspaceで行い、実HOME、installed cache、実下流repo、Mac mini、external releaseへ書き込まない。
 14. Agentic PASS前にYasashii／private my-vaultへ反映しない。下流は固定SHA、保護digest、別Sprint、独立評価を必要とし、private固有挙動とroot AGENTSを上書きしない。
+
+## 23. 既存workspaceのidentity migration境界
+
+1. Plugin更新とworkspace migrationは別の状態である。新しいSkillが読み込まれていても、`secretary/identity.json`、AGENTS／CLAUDEの製品所有identity管理節、最小台帳が新規導入相当でなければ「移行完了」と表示しない。
+2. Plugin更新後の新sessionは、canonical workspaceとeditionをread-onlyで再確認し、identity未作成、identityだけ作成済み、完全適用済み、利用者編集衝突、所有不明を区別する。cwdに`secretary/`がないことを新規onboardingの根拠にしない。
+3. identityが無い場合は希望の英語名またはおまかせ候補を示し、保存名を確認する。既存identityがschema、edition、workspaceと整合する場合は、そのdisplay name、stable ID、`ai-secretary`種別、作成時刻を保持し、再生成しない。不正または曖昧ならwrite 0件で停止する。
+4. migration previewは完全なread-onlyとし、identity、AGENTS／CLAUDEの製品所有identity管理節、最小台帳をpathごとに追加・更新・維持・衝突へ分類する。対象、変更理由、local checkpoint、rollback、非対象を示し、本文やSecretを複製しない。
+5. 名前確認とmigration apply確認は別にする。名前候補の了承だけでworkspaceを変更せず、previewと影響を示した後の明示確認までidentity、guidance、ledger、Git、user-scope、registryを変更しない。
+6. AGENTS／CLAUDEは一意な製品所有marker間だけを追加・更新し、利用者自由記述、他のmanaged block、周辺行、改行、modeを保持する。marker重複、閉じ忘れ、既知基準と異なる既存節、symlink／junction、read-only、edition不一致では全面置換せず停止する。
+7. 最小台帳は移行した管理対象path、適用version、基準hash等の非機密metadataだけを扱う。秘書名、stable ID、利用者本文、記憶、顧客名、path以外の私的内容、Secretを台帳へ保存しない。既存recordと無関係なrecordを並べ替え・削除しない。
+8. migration applyはidentity、AGENTS／CLAUDE管理節、台帳を一transactionで新規導入相当へ揃え、構文・stable identity・AI author表示・台帳整合を確認する。適用対象がある場合は正確なGit rootから今回の所有pathだけをlocal checkpointへ含め、既存stage／unstaged／untrackedと対象外pathを保持する。
+9. file write、整合確認、台帳、stage、commit、commit後確認の失敗では、今回変更したfile、作成file、Git HEAD、index、working treeを開始前へ戻す。開始前の利用者変更を失わず、部分stage、部分commit、backup、一時file、identityだけの部分成功を残さない。rollback不能を成功表示しない。
+10. 成功後の同じ診断・migration再実行は、追加file差分、marker重複、ledger重複、stable ID変化、追加commitが0件である。確認拒否、既に完全適用済み、Git root不一致、target所有pathの開始前dirty、Git-free target workspaceでは副作用0件で停止する。
+11. user-scope registry／routingはローカルmigrationから除外し、移行後も別の任意確認を必要とする。rename、B分類の利用者コンテンツ、既存文書のgrep置換、過去author変更もmigrationへ混ぜない。
+12. `0.10.1`は公開済み`0.10.0`の後方互換patch candidateである。`0.10.0`以前のtag、artifact、CHANGELOG entry、migration、fixture、評価記録を変更せず、同一版差替えやsame-version bridgeを行わない。
+13. Agenticのfresh独立Evaluator PASS後だけ、完全SHA、共通digest、共通path、除外・保護path、rollbackを固定handoffとして発行する。Yasashii／private my-vaultは各repoの別Sprintと独立評価を必要とし、3版PASS前にrelease、cache更新、Mac mini同期、受講者向け配布文作成を完了扱いにしない。
+14. Agentic Patchの実装・評価は合成HOME、隔離workspace、clean checkout、同一bytesのGit-free archiveを使い、実HOME、実利用者workspace、installed cache、実下流repo、Mac mini、remote、external service、releaseへ書き込まない。

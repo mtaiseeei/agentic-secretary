@@ -401,6 +401,12 @@ Chatworkと同じ共通wizard骨格を使い、全画面の可視見出しとacc
 - 保守者向けには、公開済み `0.9.1`、現在candidate `0.9.2`、Windows実環境の回帰結果、macOS／Linux回帰結果を別項目で示す。
 - AgenticとYasashiiのcandidate／source SHA／評価／release状態を別々に示し、AgenticのPASSだけでYasashiiを同期・公開済みと表示しない。my-vault版は対象外と明示する。
 
+### 現在candidate 0.10.1の表示
+
+- 利用者向けには、`0.10.0`へpluginを更新しただけでは既存ローカルworkspaceの名前設定が未完了の場合があることと、更新後の新sessionでread-only診断→名前確認→migration preview→別確認の順に進むことを先に示す。
+- 保守者向けには、公開済み`0.10.0`、現在candidate`0.10.1`、Agentic／Yasashii／private my-vaultのsource SHA／digest／評価／release状態を別々に示す。
+- 3版PASS前はrelease、installed cache、Mac mini同期を未実行と表示する。受講者向け更新文はrelease後に作る順序を崩さない。
+
 ## edition別の表現
 
 Chatwork／Google Chat wizardは両editionで同じ画面、copy、DOM、focus、accessibilityを使う。edition選択や切替UIを追加しない。
@@ -437,3 +443,11 @@ Chatwork／Google Chat wizardは両editionで同じ画面、copy、DOM、focus�
 - user-scope連携の確認では「どのhostのどのfileへ、何を追加し、別repoでどう動き、どう無効化できるか」を先に示す。推奨yesでも自動適用しない。
 - rename previewは分類別に、変更するもの／確認が必要なもの／履歴として残すもの／変更できないものを分ける。本文を大量表示せず、path、件数、短い理由で判断できるようにする。
 - 人間と秘書の同名が曖昧な場合は「秘書のAlexへの依頼ですか」のように一度だけ確認する。人間・顧客・author文脈を秘書へ横取りしない。
+
+### Plugin更新後の既存利用者向けname onboarding
+
+- Plugin更新後に新しいsessionが必要な場合は、まず「Pluginは更新済み／ローカルworkspaceは未確認」を分けて示す。再開後のread-only診断でidentity面が未導入または部分適用なら、更新完了と誤表示せずname onboardingを案内する。
+- identityが無い場合は「希望の英語名」「おまかせ」を示す。正当なidentityがすでにある場合は同じ質問を繰り返さず、現在名とstable identityを保持して不足するローカル移行だけを案内する。
+- migration previewは、追加・更新・維持・衝突をpath単位で示し、「利用者が書いた内容は変更しない」「user-scope連携はこの確認に含まれない」「pushしない」「失敗時は開始前へ戻す」を短く明示する。本文やhashの羅列を主表示にしない。
+- 名前の保存確認とローカルmigrationの確認を一つにまとめない。migrationの別確認では、identity、AGENTS／CLAUDEの製品所有identity管理節、最小台帳、local checkpointを対象として示す。拒否、取消、無回答はwrite 0件で終える。
+- 完了時は、Plugin版、ローカルidentity移行、local checkpointの結果を分けて示す。user-scope routingは「別repoでも名前で呼ぶ場合だけ」の任意設定として、効果と対象fileを改めて示し、別確認前に有効化しない。

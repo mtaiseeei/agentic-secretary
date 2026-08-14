@@ -218,6 +218,19 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 `agentic-secretary` の共通coreを先に独立評価し、PASSした完全SHAから
 `yasashii-secretary` をoverlay同期する。`agentic-secretary-my-vault` は今回の対象に含めない。
 
+### G15 秘書名をworkspace全体で一貫させる
+
+利用者の呼び方とは別に、秘書自身の英語名、renameで変わらないstable ID、`ai-secretary`種別を持つ。
+初回利用者はオンボーディングで、既存利用者は専用name Skillで設定し、作者表示と別repoからの呼びかけでも
+人間・顧客・取引先と区別できる。user-scope連携は任意で、明示確認前には変更しない。
+
+### G16 既存workspaceも更新後に新規導入相当へ揃える
+
+Plugin更新は新しいSkillと処理を読み込む段階であり、既存workspaceのローカルファイル移行とは区別する。
+更新後の新sessionで不足状態をread-only診断し、希望の英語名または既存identityを確定したうえで、
+変更予定をpreviewする。別確認後だけidentity、製品所有のAGENTS／CLAUDE identity管理節、最小台帳を
+一体移行し、利用者自由記述を保持する。移行後もuser-scope routingは別確認の任意操作である。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -242,6 +255,8 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 20. 明示された低リスク操作は重複確認なしで同じターンに完了し、自発提案・曖昧さ・高リスク操作では必要な事前確認が働く。応答は実際の副作用状態と一致する。
 21. 共通会話契約と意味保存golden setが3配布系統で成立し、my-vaultのNotion変更は承認済み5問題に限定される。
 22. Windowsの通常workspace pathでproject／memory／TODO／settings／文書保存が完了し、中途失敗で利用者データとjournalの片方だけを残さない。同時にmacOS／Linuxの既存回帰と安全境界を維持する。
+23. 秘書自身の英語名、stable identity、AI authorが初回と既存利用者で一貫し、別repo routingは任意の明示確認、renameは分類previewから安全に行える。
+24. 公開済み`0.10.0`へplugin更新済みでもローカルidentity面が未導入または部分適用のworkspaceを、新sessionのread-only診断、preview、別確認、atomic migration、local checkpoint、rollbackで新規導入相当へ揃えられる。
 
 ## 成功状態
 
@@ -280,7 +295,7 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 - Node／shellの書込み・削除はsymlinkを含む実体境界を守り、workspace外の本体を変更しない。外部CLI・HTTPはtimeout後に安全に停止し、部分成功または未完了を正直に示す。
 - loopback wizardは同一origin・同一session・正しいContent-Typeの状態変更だけを受け付け、OAuth callbackは再送・再入でtoken交換やSecret登録を重複しない。後始末失敗を成功と表示しない。
 - Google Chat本文に内部markerと同じ文字列が含まれても、既存履歴と新規履歴を欠落させない。GitHub Actionsは今回のdispatchに因果的に対応するrunだけを追跡し、古いrunや時刻不明runを成功扱いしない。
-- `0.7.0`／`0.8.0`／`0.9.0`／`0.9.1` のmanifest、migration、fixture、評価記録、tag、Git履歴は不変である。最初の明示配布候補 `0.8.0` の新規導入、equal／downgrade副作用0停止、portable gateは履歴回帰として成立し、旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。現在patch candidate `0.9.2` はmarketplace、Claude／Codex manifest、正本／旧raw CHANGELOG新entry、edition metadata、README、Windows回帰、release gateで一致する。
+- `0.7.0`／`0.8.0`／`0.9.0`／`0.9.1`／`0.9.2`／`0.10.0` のmanifest、migration、fixture、評価記録、tag、Git履歴は不変である。最初の明示配布候補 `0.8.0` の新規導入、equal／downgrade副作用0停止、portable gateは履歴回帰として成立し、旧0.7.0 updaterの既知blockerは未解消のlive互換として区別される。現在patch candidate `0.10.1` はmarketplace、Claude／Codex manifest、正本／旧raw CHANGELOG新entry、edition metadata、README、既存workspace移行回帰、release gateで一致する。
 - Windowsネイティブの通常ローカルworkspaceで、drive letter・空白・日本語を含むpathからプロジェクト、記憶、TODO、settings、文書保存を実行できる。失敗時は契約どおりrollbackし、workspace外の参照先を変更しない。
 - 両editionの会話、診断、確認、進行、結果、エラー、handoffで、複数要素が改行なしの平文に連結されず、段落またはMarkdown箇条書きとして読める。edition固有の対象・内容差は保たれる。
 - Chatwork wizardのGitHub Secret案内は `Name` 欄=`CHATWORK_API_TOKEN`、`Secret` 欄=本人が公式画面で取得したAPI Tokenと示し、実値をwizardや会話へ入力させない。
@@ -328,6 +343,8 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 - Windowsネイティブ対応を理由に、Chatwork／Google Chat、Notion、my-vault固有機能、全外部CLIのWindows互換を一括して再設計しない。
 - Windowsネイティブ対応を理由に、path guard、rollback、journal純追加、空上書き拒否、削除2段階を緩和しない。
 - Windowsネットワーク共有path、すべてのUNC変種、WSL／Windows間の任意path相互変換は本Patchの保証範囲に含めない。
+- 既存workspaceの名前オンボーディング確認を、user-scope registry／routingの有効化、rename、既存文書のgrep置換、push、release、Mac mini同期の許可へ拡張しない。
+- Sprint 039 Patch 002では実HOME、installed cache、実下流repo、実利用者workspace、remote、GitHub Releaseを変更しない。3版PASS後のrelease／Mac mini同期と、release後の受講者向け文面は別の運用phaseとする。
 
 ## 承認済みの条件付き判断
 
@@ -342,3 +359,4 @@ OS固有のshellやpath表記の違いは利用者に回避させず、製品側
 - 2026-07-20、`agentic-secretary` の正式対象環境を Claude Code Desktop App／Claude Code CLI／Codex App／Codex CLI の4つと確定した。その他のコーディングエージェントは設計対象だが受入・保証・検証必須対象外とし、共通本体はホスト非依存、host固有部分だけをadapterに分け、対応対象と検証済みを別集計する。未検証環境を「対応済み」と表示しない。
 - 2026-07-20、Sprint 032 Patch 002で、一般回答を固定3項目へ押し込まない分離、実会話runnerの安全化（env allowlist・最小ツール・workspace内fixture・cleanup）、完了報告テストの誤合格解消、wizard進捗一貫性、GitHub用語の初出説明、serializer正本の明確化、yasashii向け `ルーム` 表記統一を確定した。設定確認の `key=value` 表現改善はSprint 034へ延期する。
 - 2026-08-14、利用者の呼び方と別に秘書自身の英語名とstable identityを持たせる方針を承認した。初回／既存利用者向けSkill、安全なrename、明示opt-inのuser-scope routing、canonical workspace解決を共通コアにし、Agentic PASS後にYasashiiとprivate my-vaultを別Sprintで評価する。
+- 2026-08-14、公開済み`0.10.0`ではplugin更新だけで既存workspaceのidentity管理節と台帳が新規導入相当にならない欠陥を確認し、`0.10.1`の通常Patchで修正する方針を承認した。Agentic固定handoff後にYasashii／privateを別評価し、3版PASS後だけrelease、Mac mini同期、受講者向け案内へ進む。

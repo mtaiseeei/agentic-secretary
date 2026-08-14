@@ -2,11 +2,11 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-039-patch-001
+- Current ID: sprint-039-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
-- Model Tier: strong
+- Lineage Dispatches: 3
+- Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
 
@@ -74,6 +74,7 @@
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
+| sprint-039-patch-002 | active | [contract](sprint-039-patch-002.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -81,6 +82,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-14: ユーザーが、Plugin更新だけでは既存利用者のローカルworkspaceが新しい秘書identity仕様へ完全移行されないという欠陥を確認し、`0.10.1` Patchとして修正する方針を承認。fresh PlannerがF62／G16／C17と通常Patch `sprint-039-patch-002` を確定した。既存`0.10.0` workspaceをread-only診断し、英語名とmigration適用を別確認した後、identity正本、AGENTS／CLAUDEの製品所有identity管理節、最小台帳を新規導入相当へ移行する。利用者自由記述・他managed block・既存Git変更を保持し、所有path限定checkpoint、全failure point rollback、retry成功、rerun 0差分を要求する。user-scope registry／routingは別確認のまま。Agentic fresh Evaluator PASS後だけ固定SHA／digestを下流へ渡し、Yasashii／private独立PASS後にrelease、Mac mini同期、受講者向け案内へ進む。resolverのsprint-changeはstandard tierを選択し、resume保持未確認のためfresh Generatorをdispatchする。Lineage Dispatchesを3、Model Tier standard、Rotate none、Status activeとする。
 - 2026-08-14: Sprint 039 Patch 001は製品candidate `3fa8d97e5dbfb2afa314f4ad179f17401b76d320` でfresh独立Evaluator PASS。独自fixture10/10、Patch専用16/16、Sprint039 69/69＋7/7、safe Git／secret71/71、formal16 Skills、schema21面、release integrity、clean checkout／Git-free archive、archive master required17/17を0 FAILで確認。commit／post-commit failureを含む全rollback、既存dirty／stage／untracked保持、retry1commit、rerun0、push／remote0を実証しproduct finding0。開始commitでも同一のSprint033／035 digestとsandbox loopback `EPERM`はverification-infra3件。common digest `c810f60c3664ca331338e34680eec9bb6d21f8d850b97a39eef29f1a24f58557`を再計算一致したため、本candidate完全SHAとdigestをYasashii／privateの新しいaccepted downstream inputとして固定する。実HOME、cache、下流、Mac mini、remote、release変更0。Status done、Retry／Spec-Issue0、Lineage Dispatches2、Model Tier strong、Rotate noneを維持し、下流再同期へ進む。
 - 2026-08-14: fresh strong Generatorがpublic Agentic candidate `3fa8d97e5dbfb2afa314f4ad179f17401b76d320` を作成。renameでworkspace所有pathが変わる場合だけ正確なGit rootから所有path限定local checkpointを作り、既存dirty／stage／untrackedを保持する。`stage`／`commit`／`post-commit`を実在failure pointへ接続し、失敗時はworkspace／有効user-scope／HEAD／index／working treeを開始前へrollback、retryは1 commit、成功後rerunは0差分・0追加commit。親repo／nested repo／開始前target dirtyもsafe stopする。Patch専用16/16、Sprint039 69/69＋7/7、safe Git／secret scan 71/71、formal16 Skills 4/4、schema21面＋unknown negative、release integrity、clean checkout、Git-free archive、archive master required17/17・306/306をPASS。common candidate digestは `c810f60c3664ca331338e34680eec9bb6d21f8d850b97a39eef29f1a24f58557` だが、fresh Evaluator PASS前はaccepted downstream inputにしない。既知Sprint033／035 digestとloopback `EPERM`は開始HEAD同一のverification-infraとして分離。実HOME、cache、下流repo、Mac mini、remote、release変更0。fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneとする。
 - 2026-08-14: Yasashii Sprint 039のfresh独立評価で、共通renameに実在するGit checkpoint段階がなく、`rename-apply --fail-at commit`がexit 0で変更とdirty Git状態を残す下流findingを確認した。3 edition共通挙動を守るためYasashii固有anchorではなくpublic Agentic common coreのregular Patch `sprint-039-patch-001`として、所有workspace path限定のlocal checkpoint、commit失敗／commit後確認失敗時のworkspace・user-scope・Git rollback、既存dirty／stage／untracked保持、push／remote操作0を契約化した。user-scope-onlyはworkspace変更0件の場合だけcheckpoint `not-applicable`。fresh Evaluator PASS後だけ新完全SHA／common digestを下流固定入力として発行する。新PatchとしてRetry／Spec-Issueを0、fresh strong Generator dispatch予約としてLineage Dispatches 1、Status active、Model Tier strong、Rotate noneとする。

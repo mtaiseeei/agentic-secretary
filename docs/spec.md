@@ -54,6 +54,12 @@ Semantic Versioningのminor更新として次candidateを `0.9.0` に一意に�
 同じ記録・保存境界を使うproject／memory／TODO／settings／文書保存を共通coreで横断修正し、
 Windows実環境とmacOS／Linux回帰で検証する。現在patch candidateは `0.9.2`。Agenticを先に独立評価し、
 PASSした完全SHAからYasashii overlayを別評価する。private my-vault版は対象外とする。
+2026-08-14に、秘書自身の英語名、stable identity、別repoからの名前routing、安全なrenameを `0.10.0` として公開した。
+同日、既存利用者ではplugin更新だけではローカルworkspaceが新規導入相当にならず、現行name Skillも
+`identity.json`作成後のAGENTS／CLAUDE identity管理節と最小台帳を完全移行しない欠陥を確認した。
+後方互換な修正candidateを `0.10.1` とし、plugin更新後の新sessionから既存workspaceをread-only診断、preview、
+別確認、所有範囲だけのatomic migration、local checkpoint、rollbackへ案内する。Agenticの独立PASS後だけ
+固定handoffをYasashii／private my-vaultへ渡し、3版すべての独立PASS後だけreleaseとMac mini同期へ進む。
 
 ## ひとことで
 
@@ -82,13 +88,15 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G12 | 呼び方と配布物を利用者中立にする | host提供済み文脈→Git→OSの順で安全な表示名候補をbest effortで示し、4選択肢と保存前確認を守る。既存設定変更では現役表示を同期し、配布物は個人名・端末固有path・私用環境へ依存しない |
 | G13 | 現在の依頼を自然に完了する | 明示依頼・自発提案・曖昧さ・高リスク操作を区別し、同じ内容の重複確認や内部都合による横取りをなくす。意味保存と副作用状態を3配布系統で検証する |
 | G14 | Windowsでも記録・保存できる | Windows形式pathでproject／memory／TODO／settings／文書保存を完了でき、path guard・rollback・journal整合をmacOS／Linuxと同じ強さで守る |
+| G15 | 秘書名をworkspace全体で一貫させる | 初回と既存利用者の双方で英語名、stable identity、AI authorを持ち、別repo呼び出しと安全なrenameを選べる |
+| G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G14、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F58 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G16、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F62 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -141,6 +149,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-038](sprints/sprint-038.md) | 人間らしい会話フロー: 危険に応じた確認、現在用件優先、内容依存応答、意味保存golden set、3配布系統同期、限定Notion修正、release candidate gate | sprint-037-patch-001 |
 | [sprint-038-patch-002](sprints/sprint-038-patch-002.md) | Windowsネイティブのproject／memory／TODO／settings／文書保存、安全境界・rollback／journal整合、Agentic先行→Yasashii overlay同期、`0.9.2` release準備 | sprint-038-patch-001 |
 | [sprint-039](sprints/sprint-039.md) | 秘書identity: 英語名、stable ID／AI author、name Skill、user-scope managed block、canonical resolver、安全なrename、下流handoff | sprint-038-patch-002 |
+| [sprint-039-patch-001](sprints/sprint-039-patch-001.md) | renameの所有path限定local Git checkpointと、commit失敗を含むworkspace／user-scope／Git rollback | sprint-039 |
+| [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -188,3 +198,6 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 39. user-scope routingは明示確認後だけmanaged blockを更新し、Codexのoverride優先とClaude Codeのuser-scope fileを安全に扱う。別repo cwdへ誤onboardingせずcanonical secretary workspaceを解決する。
 40. renameは現行設定・利用者コンテンツ・履歴・所有不明を分類したread-only previewから始め、分類別確認、履歴保持、aliases、rollback、再実行差分0件を守る。無条件全置換をしない。
 41. Sprint 039はAgentic共通コアと下流handoffまでを対象とし、実HOME、Yasashii／private my-vault反映、release、Mac mini同期は各独立PASS後の運用phaseとする。評価はC16と隔離HOME／workspaceのsafe harborに従う。
+42. 既存利用者の名前導入はplugin更新だけで完了扱いにしない。新sessionでcanonical workspaceをread-only診断し、`identity.json`、製品所有のAGENTS／CLAUDE identity管理節、最小台帳の不足・既存・衝突をpreviewする。
+43. 既存workspace migrationは、英語名または既存identityを確定した後も別確認までwrite 0件とする。適用は利用者自由記述をbyte保持し、所有pathだけを一transactionで更新してlocal checkpointを作る。失敗時はworkspaceとGitを開始前へ戻し、再実行は0差分とする。
+44. user-scope registry／routingは既存workspace migrationに含めず、従来どおり効果と対象を示した別確認を必要とする。Agenticの固定handoff後にYasashii／privateを別Sprint・独立評価し、3版PASS前に`0.10.1` release、installed cache更新、Mac mini同期、受講者向け配布文作成を完了扱いにしない。
