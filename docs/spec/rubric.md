@@ -215,15 +215,15 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C16 秘書identity・user-scope routing・rename【ゼロ許容】
 
-- 5: 利用者の呼び方と秘書名が別fieldで、初回／専用Skillの英語名確認、stable IDとAI種別、human／AI author識別が成立する。user-scope managed blockは明示確認後だけ製品所有範囲をatomic更新し、canonical resolverが別repo cwdを誤初期化しない。人間・顧客・author等の同名negative caseは誤routing 0件。renameはread-only分類preview、分類別確認、履歴保持、aliases、rollback、再実行差分0件を満たす。
-- 4以下: 呼び方との混同、不適格名保存、確認前HOME write、guidance全面上書き、override優先の誤り、既存block破壊、cwdへの誤onboarding、同名人間の誤routing、盲目的全置換、過去author改変、未確認user-content変更、部分更新、rollback不能、stable ID変化のいずれかが1件でもある。→不合格。
+- 5: 利用者の呼び方と秘書名が別fieldで、初回／専用Skillの英語名確認、stable IDとAI種別、human／AI author識別が成立する。user-scope managed blockは明示確認後だけ製品所有範囲をatomic更新し、canonical resolverが別repo cwdを誤初期化しない。人間・顧客・author等の同名negative caseは誤routing 0件。renameはread-only分類preview、分類別確認、履歴保持、aliases、再実行差分0件を満たし、workspace所有fileを変える場合は正確なrootから所有path限定local checkpointを作る。commit段階の失敗ではuser-scopeとGit状態を含む全体が開始前へrollbackし、push 0件である。
+- 4以下: 呼び方との混同、不適格名保存、確認前HOME write、guidance全面上書き、override優先の誤り、既存block破壊、cwdへの誤onboarding、同名人間の誤routing、盲目的全置換、過去author改変、未確認user-content変更、必須checkpointの欠落／別root commit／対象外path混入、commit失敗のexit 0、部分更新、rollback不能、既存Git状態の破壊、push、stable ID変化のいずれかが1件でもある。→不合格。
 
 ## Sprint 039の検証方法（safe harbor）
 
 1. 合成HOMEでCodex AGENTS通常／override／両方、Claude CLAUDE、空file、既存内容、既存・重複managed block、利用者編集、permission失敗を操作し、対象選択、前後digest、rollback、再実行差分0件を記録する。
 2. 隔離workspaceで新規／既存identity、別repo cwd、workspace移動・欠落・重複、反対edition、symlink／junction、read-onlyを操作し、canonical解決と誤onboarding 0件を確認する。
 3. 希望名、おまかせ、取消、不適格名、直接name Skill、現在名呼びかけ、「名前に聞いて」、人間／顧客／author／引用／コード／曖昧文脈をcase IDつきで実行する。
-4. renameの4分類、同名、alias衝突、許可／拒否／一部選択、途中失敗、retryを操作し、preview 0変更、履歴不変、alias連続性、rollback、冪等性をsnapshotで確認する。
+4. renameの4分類、同名、alias衝突、許可／拒否／一部選択、途中失敗、commit失敗、retryを操作し、preview 0変更、履歴不変、alias連続性、所有path限定local checkpoint、push 0件、rollback、冪等性をfile／Git snapshotで確認する。
 5. checkoutとGit archive相当の同一candidateでSkill／manifest validator、secret scan、master回帰、配布対象と下流handoff契約を検査する。
 
 実HOME、installed cache、実下流repo、Mac mini、external publish、歴史的live evidenceを必須にしない。command、exit code、fixture root、case ID、前後digest、期待／観測、not-runがあれば十分とし、新しいcollectorや統一attestationを要求しない。
@@ -271,6 +271,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 038 | explicit／inferred／ambiguous／destructive／external、side effect 0／1／partial、response answered／question／saved／error／partial、引用等の誤発火負例、意味tuple・snapshot・negative fixture、現在用件優先、固定3項目・exact copy旧回帰の衝突assertだけを置換、既存AGENTSのtemplate行限定migration、共通／版固有case分離、隔離private candidate、Fable R1〜R9反映、0.9.0一意解決と配布先別publish確認gate |
 | 038-patch-001 | public Agentic版の0.9.1 patch release、Agentic Harness 0.5.1／検査済みfull commitへの互換参照整合、build／README／edition metadata／回帰／online検査の一致、Harness本体・custom agent機構の非同梱、private／cache／利用者workspace無変更 |
 | 039 | 秘書英語名、stable ID／AI author、初回＋専用name Skill、user-scope managed block、override優先、canonical resolver、同名negative routing、rename 4分類／rollback／冪等性、隔離HOME、下流handoff |
+| 039-patch-001 | renameの所有path限定local Git checkpoint、commit failure injection、workspace／user-scope／Git完全rollback、push 0件、formal inventory維持、PASS後だけの固定下流handoff |
 
 ## 差し戻し分類
 
