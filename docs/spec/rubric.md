@@ -60,7 +60,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 42. **実会話回帰の安全性とホスト集計**: 実会話runnerについて、子プロセスenvのallowlist（合成credential注入で非伝播を確認）、合成HOME（実HOME非透過。内容一覧の証跡記録を含む）、plugin本体のread-only参照、原則Bashなしの最小ツール許可、workspace内fixtureだけの境界テスト、OS sandboxまたはpath-scoped permissionによる書込み先限定と制御されたworkspace外canaryへの書込みが実際に拒否される実証、成功／失敗両方のcleanup、サニタイズ済み証跡を検証する。canary拒否を実証できない構成でWrite/Editを使うscenarioが自動実行されないこと、外部変更の主張が無限定の「0件」ではなく検査対象を列挙した範囲限定表現であることを確認する。実会話出力の回帰はlive conversation gateとしてoffline回帰・master gateと分離して三値（pass／fail／incomplete）で集計し、未実行・未認証は「未完了（incomplete）」と表示され、offline PASSや構文チェックが実会話の回帰保証として数えられていないこと、「解消済み」「回帰保証」の主張が実行済みの検証に限定されていることを確認する。応答判定は `intent × side effect × response state` と意味保存を使い、固定3項目、固定prefix、自然文byte一致、質問禁止を主条件にしない。証跡のhost・runner・実行面記録、unverifiedホストの別集計、1ホストPASSの非昇格、未検証環境の「対応済み」誤表示0件を確認する。
 43. **呼び方と利用者中立性**: Claude Code／Codexのオンボーディング文面で4選択肢、host-task-context→Git→OSの優先順位、任意の過去会話／生session logの直接探索なし、正規化・不適格値除外、出典表示、複数候補の推奨、候補なし、探索結果非保存、保存前確認、未回答の「あなた」を確認する。既存変更は `preferences.md`／`AGENTS.md`／`MEMORY.md` の一致と初回決定ログ不変を実fileで検証する。Unicode、空白、引用符、shell／Markdown風metacharacterを含む合成値でも、新しい値は3正本だけへ反映され、journal本文とGit commit subjectが項目名だけの固定文言になり、値、その一部、値由来表現を含まないことを実Git fixtureで確認する。配布物・現行製品正本scanは対象pathとallowlistを記録し、個人名・端末固有path・私用workspace依存0件、正式な製品所有情報の維持、fixtureの合成人物化を正負fixtureで確認する。
 44. **authorization・意味保存・3配布系統**: `explicit / inferred / ambiguous / destructive / external` と副作用 `0 / 1 / partial`、応答 `answered / question / saved / error / partial` のgolden setを実行する。明示低リスクは同じassistant turnで1回、自発提案・曖昧さは質問前0件、高リスクは影響確認前0件、retry／resumeでも同じoperation idの重複0件、応答は実状態と一致することを確認する。引用、伝聞、仮定・条件、訂正、取消、過去依頼照会は`explicit=false`でwrite 0件、保存済み取消は削除2段階となることを確認する。各caseの必須要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、前後snapshotを比較し、欠落・反転・追加negative fixtureを拒否する。行き先・正本ルールが同じ共通caseだけを3配布系統で比較し、Notion routingはprivate版固有caseとしてresponse stateと保存先を評価、安全境界だけを共通比較する。my-vaultはF57の5点だけを独立評価し、Notion property／relation／TaskDB正本／write後再読確認の無回帰を確認する。
-45. **既存workspace migration・回帰最小差分・release version**: 旧 `secretary/AGENTS.md` を持つfixtureでdry-run、template由来行の完全一致／fingerprint、利用者編集衝突、所有判定不能、atomic適用、rollback、再実行差分0件を確認し、全面上書きと周辺行変更が0件であることをsnapshotで示す。固定3項目等の旧judgeは新契約と衝突するassertだけを置換し、同一suiteのpath guard、timeline決定性、Secret、Git所有範囲、cleanupを維持する。削除・置換・追加assert一覧を記録する。versionは公開済み `0.9.1` とそれ以前の履歴を確認し、Windowsの記録・保存互換を直す後方互換patch `0.9.2` を一意に解決する。0.7.0〜0.9.1履歴回帰と0.9.2 current gateを別結果で検査し、配布系統別のdestination／artifact／rollback／許可状態を確認する。
+45. **既存会話契約migration・回帰最小差分・release version**: 旧 `secretary/AGENTS.md` を持つfixtureでdry-run、template由来行の完全一致／fingerprint、利用者編集衝突、所有判定不能、atomic適用、rollback、再実行差分0件を確認し、全面上書きと周辺行変更が0件であることをsnapshotで示す。固定3項目等の旧judgeは新契約と衝突するassertだけを置換し、同一suiteのpath guard、timeline決定性、Secret、Git所有範囲、cleanupを維持する。削除・置換・追加assert一覧を記録する。versionは公開済み `0.10.0` とそれ以前の履歴を確認し、既存workspaceのidentity移行欠陥を直す後方互換patch `0.10.1` を一意に解決する。0.7.0〜0.10.0履歴回帰と0.10.1 current gateを別結果で検査し、配布系統別のdestination／artifact／rollback／許可状態を確認する。
 
 ## 必須の模擬会話
 
@@ -106,7 +106,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 38. **explicit誤発火の負例**: 引用、伝聞、仮定・条件、訂正、取消、過去依頼照会に「覚えて」「記録して」を含め、現在write 0件を確認する。read-only照会は`answered`、不足時だけ`question`、未保存取消は0件、保存済み取消は対象提示後の削除確認待ちとなる。
 39. **複合依頼の順序**: 独立した低リスク→external、external→低リスク、相互依存、一括指定の4caseを行う。記載順を守り、確認境界より後は未実行、先行成功は`partial`、相互依存・一括は最初の副作用前0件となる。
 40. **既存workspace migration**: template由来旧行だけ、利用者編集あり、所有判定不能、適用済みの4fixtureでdry-runと本実行を行い、全面上書き0件、衝突時0変更、適用時atomic、rollback可能、再実行差分0件、CHANGELOG警告を確認する。
-41. **現在candidateと配布先別release確認**: `v0.8.0`／`v0.9.0`／`v0.9.1`／manifest／CHANGELOGを公開履歴として照合し、Windowsの記録・保存互換を直す後方互換patchから `0.9.2` を解決する。agentic public、yasashii public、対象外のprivate my-vaultのsource SHA、artifact、destination、rollback、再インストール要否、許可状態を別々に確認し、1系統の結果を他へ昇格させない。
+41. **現在candidateと配布先別release確認**: `v0.8.0`／`v0.9.0`／`v0.9.1`／`v0.9.2`／`v0.10.0`／manifest／CHANGELOGを公開履歴として照合し、既存workspaceのidentity移行欠陥を直す後方互換patchから `0.10.1` を解決する。agentic public、yasashii public、private my-vaultのsource SHA、artifact、destination、rollback、再インストール要否、許可状態を別々に確認し、1系統の結果を他へ昇格させない。3版PASS前はrelease／Mac mini同期を未実行とする。
 
 個人化された文面の完全一致はassertしない。設定の読込、許可された分岐、既定へのフォールバック、確認フローを評価する。
 
@@ -125,11 +125,12 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C9 | 配布チャネル非依存 | 現行正本・公開面・配布物の固有表現0件、一般利用者だけで理解できること、維持項目 | **5** |
 | C10 | 更新の安全性 | 診断無副作用、説明後の明示確認、カスタマイズ保護、冪等migration、rollback、push禁止 | **5** |
 | C11 | Google Chat境界 | 各社所有Internal OAuth、最小read-only scope、通常スペース限定、秘密非露出、同意済み同期 | **5** |
-| C12 | release履歴・現在candidate整合 | 0.7.0〜0.9.1履歴不変、0.9.2一意解決、current version gate、配布先別外部許可 | **5** |
+| C12 | release履歴・現在candidate整合 | 0.7.0〜0.10.0履歴不変、0.10.1一意解決、current version gate、配布先別外部許可 | **5** |
 | C13 | edition分離・互換 | Git系譜、別repo、共通path、overlay、衝突停止、旧raw CHANGELOG、公開済み0.8.0履歴、隔離private candidate | **5** |
 | C14 | 会話のMarkdown可読性 | 改行、段落、必要な箇条書き、内容依存の構造、edition差維持、過剰Markdownなし | **5** |
 | C15 | 会話authorization・意味保存 | intent分類、副作用、応答状態、意味保存、現在用件優先、3配布系統parity、限定Notion変更 | **5** |
 | C16 | 秘書identity・名前routing・rename | 英語名、stable ID、AI author、managed block、canonical resolver、同名誤routing 0件、分類preview、rollback | **5** |
+| C17 | 既存workspace identity migration | plugin更新との状態分離、read-only診断、製品所有節、台帳、自由記述保持、local checkpoint、完全rollback、冪等性 | **5** |
 
 ## スコアアンカー
 
@@ -195,8 +196,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C12 release履歴・現在candidate整合【ゼロ許容】
 
-- 5: `0.7.0`〜`0.9.1` の公開記録・fixture・tag・履歴を変えず、公開済み0.9.1とWindows記録・保存互換のpatch分類からcandidate `0.9.2` を一意に解決する。current candidate／全配布面が0.9.2で整合し、Agenticの合格済み完全SHAからYasashii候補を作る順序と、対象外のprivate my-vaultが分離される。
-- 4以下: `0.7.0`〜`0.9.1` の履歴書換え、0.9.2以外の推測candidate、Agentic未合格SHAからのYasashii同期、suite未実行、配布先混同、private my-vault変更、無許可のexternal writeのいずれかが1件でもある。→不合格。
+- 5: `0.7.0`〜`0.10.0` の公開記録・fixture・tag・履歴を変えず、公開済み0.10.0と既存workspace identity migrationのpatch分類からcandidate `0.10.1` を一意に解決する。current candidate／全配布面が0.10.1で整合し、Agenticの合格済み完全SHA／digestからYasashiiとprivate my-vault候補を別々に作り、3版PASS後だけreleaseとMac mini同期へ進む順序が成立する。
+- 4以下: `0.7.0`〜`0.10.0` の履歴書換え、0.10.1以外の推測candidate、Agentic未合格SHAからの下流同期、1版の結果を他版へ昇格、suite未実行、配布先混同、3版PASS前release／Mac mini同期、無許可のexternal writeのいずれかが1件でもある。→不合格。
 
 ### C13 edition分離・互換【ゼロ許容】
 
@@ -218,6 +219,11 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - 5: 利用者の呼び方と秘書名が別fieldで、初回／専用Skillの英語名確認、stable IDとAI種別、human／AI author識別が成立する。user-scope managed blockは明示確認後だけ製品所有範囲をatomic更新し、canonical resolverが別repo cwdを誤初期化しない。人間・顧客・author等の同名negative caseは誤routing 0件。renameはread-only分類preview、分類別確認、履歴保持、aliases、再実行差分0件を満たし、workspace所有fileを変える場合は正確なrootから所有path限定local checkpointを作る。commit段階の失敗ではuser-scopeとGit状態を含む全体が開始前へrollbackし、push 0件である。
 - 4以下: 呼び方との混同、不適格名保存、確認前HOME write、guidance全面上書き、override優先の誤り、既存block破壊、cwdへの誤onboarding、同名人間の誤routing、盲目的全置換、過去author改変、未確認user-content変更、必須checkpointの欠落／別root commit／対象外path混入、commit失敗のexit 0、部分更新、rollback不能、既存Git状態の破壊、push、stable ID変化のいずれかが1件でもある。→不合格。
 
+### C17 既存workspace identity migration【ゼロ許容】
+
+- 5: plugin更新とローカルmigrationを別状態として報告し、新sessionのread-only診断がidentity未作成／identity-only／完全適用／衝突を区別する。previewと別確認後だけidentity、AGENTS／CLAUDEの製品所有identity管理節、最小台帳を新規導入相当へatomicに揃え、利用者自由記述と既存Git状態を保持する。所有path限定local checkpoint、途中失敗のworkspace／Git完全rollback、成功後再実行0差分・0追加commitが成立し、user-scope routingは別確認のままである。
+- 4以下: plugin更新だけの完了表示、確認前write、英語名未確認、既存stable ID再生成、AGENTS／CLAUDE全面上書き、利用者自由記述や他blockの変更、identity／管理節／台帳の部分成功、台帳への私的値保存、別root／対象外pathのcommit、開始前Git変更の破壊、rollback不能、rerun差分／重複commit、user-scope routingの同時有効化、3版PASS前release／Mac mini同期のいずれかが1件でもある。→不合格。
+
 ## Sprint 039の検証方法（safe harbor）
 
 1. 合成HOMEでCodex AGENTS通常／override／両方、Claude CLAUDE、空file、既存内容、既存・重複managed block、利用者編集、permission失敗を操作し、対象選択、前後digest、rollback、再実行差分0件を記録する。
@@ -227,6 +233,19 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 5. checkoutとGit archive相当の同一candidateでSkill／manifest validator、secret scan、master回帰、配布対象と下流handoff契約を検査する。
 
 実HOME、installed cache、実下流repo、Mac mini、external publish、歴史的live evidenceを必須にしない。command、exit code、fixture root、case ID、前後digest、期待／観測、not-runがあれば十分とし、新しいcollectorや統一attestationを要求しない。
+
+## Sprint 039 Patch 002の検証方法（safe harbor）
+
+1. 現行`0.10.0` pluginを読み込んだがローカルworkspaceはidentity未導入のfixture、現行name Skillで`identity.json`だけ作成済みのfixture、新規導入相当fixture、利用者編集／marker衝突fixtureを隔離workspaceに作る。fixtureの旧状態は配布済みartifactまたは固定した履歴bytesから再現し、現在templateから都合よく作り直さない。
+2. 各fixtureで新session相当の入口を実行し、診断とpreviewの前後でworkspace、Git、合成HOMEのdigestが一致すること、plugin更新済み／ローカル未移行／完全適用済みの表示が実状態と一致することを確認する。
+3. identity未導入では希望名、おまかせ、取消、不適格名を、identity-onlyでは既存display name／stable ID／AI種別保持を操作する。名前確認後もmigration別確認前はwrite 0件であることを確認する。
+4. apply成功ではidentity、AGENTS／CLAUDE製品所有管理節、最小台帳、local checkpointを前後比較する。利用者自由記述、他managed block、記憶、project、chat、Secret、user-scope、registry、開始前stage／unstaged／untrackedがbyteまたはsnapshotで不変で、所有pathだけが1 commitに含まれることを確認する。
+5. file write、整合確認、台帳、stage、commit、commit後確認の代表failureを実行し、workspace tree、HEAD、index、working treeが開始前と一致し、部分file／stage／commit／backup／一時fileが0件であることを確認する。失敗後retryは1回で成功し、成功後rerunは0差分・0追加commitとする。
+6. marker重複、利用者編集衝突、edition不一致、symlink／junction、read-only、別Git root、target dirty、Git-free target workspaceは副作用0件で停止する。user-scope routingは移行確認では変わらず、別確認の既存回帰を維持する。
+7. clean checkoutと同一candidate bytesのGit-free archiveから、隔離Git workspaceをfixtureとして使ってPatch回帰、formal Skill／manifest、report schema、secret scan、release integrity、関連Sprint回帰、archive masterを実行する。Git-free archive自体にrepo履歴を要求せず、製品sourceの`.git`不在と利用者targetのcheckpoint要件を混同しない。
+8. fresh独立Evaluatorは固定candidateを実操作し、Agentic完全SHA、共通digest、共通path、下流除外・保護pathを再計算する。実HOME、実利用者workspace、installed cache、実下流repo、Mac mini、remote、release、外部serviceへのwriteは0件とする。
+
+上記のcommand、exit code、fixture root、case ID、対象path一覧、前後digest、Git commit path一覧、期待／観測、not-runを記録すれば十分である。利用者本文・秘書名・stable ID・Secretの証拠への複製、統一attestation、専用collector、実HOME操作、実downstream反映を追加の合否条件にしない。
 
 ## スプリント別の重点
 
@@ -272,6 +291,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 038-patch-001 | public Agentic版の0.9.1 patch release、Agentic Harness 0.5.1／検査済みfull commitへの互換参照整合、build／README／edition metadata／回帰／online検査の一致、Harness本体・custom agent機構の非同梱、private／cache／利用者workspace無変更 |
 | 039 | 秘書英語名、stable ID／AI author、初回＋専用name Skill、user-scope managed block、override優先、canonical resolver、同名negative routing、rename 4分類／rollback／冪等性、隔離HOME、下流handoff |
 | 039-patch-001 | renameの所有path限定local Git checkpoint、commit failure injection、workspace／user-scope／Git完全rollback、push 0件、formal inventory維持、PASS後だけの固定下流handoff |
+| 039-patch-002 | v0.10.0既存workspace fixture、更新後new-session handoff、identity／AGENTS／CLAUDE／台帳の完全移行、自由記述保持、所有checkpoint、全failure rollback、rerun 0、0.10.1固定下流handoff |
 
 ## 差し戻し分類
 
@@ -281,6 +301,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ## 更新履歴
 
+- 2026-08-14: Sprint 039 Patch 002としてC17とsafe harborを追加。公開済み0.10.0のplugin更新だけでは既存workspaceが新規導入相当にならない欠陥を、read-only診断、preview、別確認、製品所有identity面のatomic migration、所有path限定local checkpoint、workspace／Git rollback、rerun 0で評価する。0.10.1はAgentic→Yasashii／private固定handoff→3版PASS→release／Mac mini同期の順とする。
 - 2026-08-03: Sprint 038 Patch 001のHarness互換参照更新に合わせ、公開済み0.9.0を履歴保護しながら0.9.1を現在patch candidateとする。edition metadataを正本にbuild・README・回帰・online検査のHarness情報を照合し、Harness本体・custom agent機構の非同梱と対象外系統の無変更を評価対象にした。
 - 2026-07-31: Fable敵対的レビューR1〜R9を反映。内容依存応答、0.7.0／0.8.0履歴と0.9.0 current gateの分離、既存AGENTSのtemplate行限定migration、引用等の誤発火負例、隔離private candidate、共通／版固有parity分離、destructive／大量定義、case必須要素・意味tuple・snapshot・negative fixture、旧回帰の衝突assertだけを置換する証拠を追加した。
 - 2026-07-31: Sprint 038の承認済み提案に基づきC15を追加。明示低リスク依頼は発話自体をauthorizationとし、自発提案・曖昧さ・高リスク操作は必要な確認を維持する。固定3項目、原文byte一致、質問禁止を会話合格条件から外し、`intent × side effect × response state`、意味保存、現在用件優先、3配布系統parity、my-vault限定5点を評価対象にした。

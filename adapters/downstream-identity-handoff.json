@@ -11,19 +11,23 @@
   "commonPaths": [
     "plugins/secretary/scripts/lib/external-ops.mjs",
     "plugins/secretary/scripts/lib/secretary-identity.mjs",
+    "plugins/secretary/scripts/lib/secretary-identity-migration.mjs",
     "plugins/secretary/scripts/lib/safe-git.mjs",
     "plugins/secretary/scripts/lib/user-scope-routing.mjs",
     "plugins/secretary/scripts/lib/workspace-registry.mjs",
     "plugins/secretary/scripts/lib/name-router.mjs",
     "plugins/secretary/scripts/lib/secretary-rename.mjs",
     "plugins/secretary/scripts/secretary-name.mjs",
+    "plugins/secretary/scripts/update-ledger.mjs",
     "plugins/secretary/scripts/workspace-tools.mjs",
     "plugins/secretary/skills/name/SKILL.md",
     "plugins/secretary/skills/onboarding/SKILL.md",
     "plugins/secretary/skills/secretary/SKILL.md",
     "plugins/secretary/skills/settings/SKILL.md",
+    "plugins/secretary/skills/update/SKILL.md",
     "plugins/secretary/templates/identity.json",
     "plugins/secretary/templates/AGENTS.md",
+    "plugins/secretary/templates/CLAUDE.md",
     "plugins/secretary/templates/memory/decisions/_first-decision.md"
   ],
   "excludedPaths": [

@@ -74,7 +74,7 @@ function validateFormalDistribution(candidateRoot) {
     category: "Productivity",
   });
   assert.equal(manifest.name, "agentic-secretary");
-  assert.equal(manifest.version, "0.10.0");
+  assert.equal(manifest.version, "0.10.1");
   assert.equal(manifest.skills, "./skills/");
   assert.equal(manifest.repository, "https://github.com/mtaiseeei/agentic-secretary");
   assert.equal(manifest.license, "MIT");
@@ -156,11 +156,11 @@ check("Codex CLI ingests the local marketplace with synthetic HOME and CODEX_HOM
     const available = runJson("plugin", "list", "--available", "--json");
     assert.equal(available.available.length, 1);
     assert.equal(available.available[0].pluginId, "agentic-secretary@agentic-secretary");
-    assert.equal(available.available[0].version, "0.10.0");
+    assert.equal(available.available[0].version, "0.10.1");
     assert.equal(available.available[0].installed, false);
 
     const installed = runJson("plugin", "add", "agentic-secretary@agentic-secretary", "--json");
-    assert.equal(installed.version, "0.10.0");
+    assert.equal(installed.version, "0.10.1");
     assert(installed.installedPath.startsWith(`${codexHome}/plugins/cache/`));
     const cachedRoot = resolve(installed.installedPath);
     assert.equal(json(join(cachedRoot, ".codex-plugin/plugin.json")).skills, "./skills/");
@@ -173,7 +173,7 @@ check("Codex CLI ingests the local marketplace with synthetic HOME and CODEX_HOM
     const listed = runJson("plugin", "list", "--json");
     assert.equal(listed.installed.length, 1);
     assert.equal(listed.installed[0].enabled, true);
-    assert.equal(listed.installed[0].version, "0.10.0");
+    assert.equal(listed.installed[0].version, "0.10.1");
 
     const after = Object.fromEntries(walk(sourcePlugin).map((path) => [path.slice(sourcePlugin.length + 1), digest(path)]));
     assert.deepEqual(after, before, "Codex ingestion modified the source plugin");

@@ -196,6 +196,12 @@ build導線、README、互換性回帰、online検査を一致させる。Secret
 Yasashii overlayを同期する。Yasashiiは固有copy、identity、README、repo所有docsを保護した別回帰・
 独立評価を必要とする。`agentic-secretary-my-vault` は対象外である。
 
+`0.9.2`公開後、秘書identity、英語名、別repo routing、安全なrenameを後方互換なminor `0.10.0` として
+Agentic／Yasashii／private my-vaultへ公開した。既存利用者でplugin更新だけではローカルidentity面が
+新規導入相当にならない欠陥は、後方互換patch `0.10.1` を現在candidateとして直す。Agenticを先に
+独立評価し、PASSした完全SHAと共通digestからだけYasashii／privateへ固定handoffする。各下流は
+repo固有正本とprivate固有面を保護した別Sprint・独立評価を必要とする。
+
 ## private my-vault downstreamの所有範囲
 
 my-vault側が所有し、public 2 editionへ同期しないもの:
@@ -241,7 +247,7 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 
 ## 公開gate
 
-両editionを公開可能とするには、次がすべて必要である。
+現在candidateを3配布系統で公開可能とするには、次がすべて必要である。
 
 1. 共通回帰、edition別回帰、Git archive相当、公式manifest／marketplace validatorが0 FAIL。
 2. wizardのDOM、copy、OAuth scope、同期・安全挙動が両editionで同一。
@@ -251,15 +257,15 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 6. Git共通祖先、upstream base、下流overlayの冪等性、upstream push無効化が証拠化される。
 7. LICENSE、単段クレジット、README、upstream mapping、CHANGELOG互換が一致する。
 8. 外部repo作成、remote変更、push、公開、release、実plugin install／updateについてユーザーが明示許可した操作だけが実行される。
-9. 現在candidate／latest／manifest／CHANGELOGが `0.9.2` で整合し、公開済み `0.7.0`／`0.8.0`／`0.9.0`／`0.9.1` の記録・fixture・tag・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
+9. 現在candidate／latest／manifest／CHANGELOGが `0.10.1` で整合し、公開済み `0.7.0`／`0.8.0`／`0.9.0`／`0.9.1`／`0.9.2`／`0.10.0` の記録・fixture・tag・履歴が不変で、same-version bridge・equal update・downgradeが0件である。
 10. 全会話面が改行・段落・必要なMarkdown箇条書きを持ち、agentic／yasashiiの4面の内容差を維持する。Chatwork wizardの `Name`／`Secret` 入力案内は両editionで同一かつ具体的である。
 11. 行き先・正本ルールが同じ共通会話golden setがagentic／yasashii／private my-vaultで同じ意味と安全境界を持つ。Notion routing等はprivate版固有caseとしてF57の5問題を独立評価し、共通比較は安全境界だけに限定する。各repo固有fileの同期前後digestが不変である。
-12. 次version `0.9.2`、Agentic先行→固定SHAからのYasashii overlay同期という順序、配布先、変更内容、rollbackが現在の正本から一意に示される。解決できない間はrelease candidate準備とgateまでに止め、tag、GitHub Release、marketplace更新、remote push、公開を行わない。
+12. 次version `0.10.1`、Agentic先行→固定SHA／digestからのYasashiiとprivate my-vault同期→各版独立PASS→3版release→Mac mini同期という順序、配布先、変更内容、rollbackが現在の正本から一意に示される。3版PASS前はrelease candidate準備とgateまでに止め、tag、GitHub Release、marketplace更新、remote push、cache／Mac mini更新を行わない。受講者向け更新文はrelease後に作る。
 
 許可不足や外部サービス未準備は `external-live-gate-unavailable` として不合格にし、実装不具合とは分けて記録する。
 
 ## 秘書identityの下流境界
 
-秘書の英語名、stable ID／AI種別、aliases、name Skill、managed block契約、canonical resolver、rename分類と安全境界はAgentic共通コアが所有する。Agenticの独立PASS後、固定完全SHAと宣言済み共通pathからだけ下流へ渡す。
+秘書の英語名、stable ID／AI種別、aliases、name Skill、managed block契約、canonical resolver、rename分類、安全境界、既存workspaceのidentity migrationはAgentic共通コアが所有する。Agenticの独立PASS後、固定完全SHA、共通digest、宣言済み共通pathからだけ下流へ渡す。
 
-Yasashiiはedition copyとoverlayを保護し、private my-vaultはNotion／vault固有Skill、private値、root AGENTSを保護する。各repoのspec、Sprint、progress、feedback、README、release判断は同期しない。Agentic Sprint 039のPASSだけで下流反映、release、installed cache、Mac mini同期を完了扱いにしない。
+Yasashiiはedition copyとoverlayを保護し、private my-vaultはNotion／vault固有Skill、private値、root AGENTSを保護する。各repoのspec、Sprint、progress、feedback、README、release判断は同期しない。Agentic Sprint 039 Patch 002のPASSだけで下流反映、release、installed cache、Mac mini同期を完了扱いにしない。

@@ -308,6 +308,14 @@ version解決入力が一致しない、または変更分類からminor更新�
 - `history-protected`: `0.7.0`〜`0.9.1` のtag、artifact、migration、fixture、progress、feedback、履歴assertが不変である。
 - `destination-ready`: AgenticとYasashiiのcandidate、source SHA、artifact、destination、rollback、許可状態が別々に一意で、private my-vault版は対象外である。
 
+### 現在candidate 0.10.1の状態
+
+- `version-resolved`: 3版の公開済み`0.10.0`を確認し、既存workspace identity migrationの後方互換patchとして`0.10.1`を一意に得た。
+- `candidate-aligned`: marketplace、Claude／Codex manifest、CHANGELOG新entry、edition metadata、README、identity migration回帰、current release gateが`0.10.1`で一致する。
+- `history-protected`: `0.7.0`〜`0.10.0`のtag、artifact、migration、fixture、progress、feedback、履歴assertが不変である。
+- `downstream-gated`: Agenticの独立PASS後だけ完全SHA／digestをYasashiiとprivateへ固定handoffし、各repoの別Sprint・独立PASS前はrelease入力へ昇格しない。
+- `operations-gated`: 3版PASS後だけreleaseとMac mini同期へ進み、その完了後に受講者向け更新文を作成する。
+
 ## ユーザー会話の構造
 
 ユーザー向けの意味単位を次のように扱う。
@@ -764,3 +772,21 @@ workspace実体境界、edition marker、必要な秘書正本を再検証する
 
 rename candidateは `current-config`、`user-content`、`historical-author`、`unknown-or-conflict` に分類する。
 current-configはtransaction対象、user-contentは個別opt-in、historical-authorは既定保持、unknown-or-conflictは自動変更禁止とする。
+
+### ExistingIdentityMigration
+
+既存workspaceの名前導入状態は、plugin versionだけではなくローカル正本の組合せで判定する。
+
+| 状態 | 意味 | 次の動作 |
+|---|---|---|
+| `identity-missing` | identity、identity管理節、台帳recordの全部または一部が無い | 英語名を確認し、read-only previewへ進む |
+| `identity-only` | 正当なidentityはあるが、AGENTS／CLAUDE管理節または台帳が新規導入相当でない | stable identityを保持してpreviewへ進む |
+| `migration-ready` | 所有範囲とGit rootを一意に確認し、変更予定を表示済み | 別のapply確認を待つ |
+| `migration-conflict` | 利用者編集、marker重複、所有不明、edition／path／Git境界不一致 | write 0件で停止し、衝突pathと理由を示す |
+| `migration-applied` | identity、管理節、台帳、local checkpointが一transactionで整合 | user-scope routingを別の任意操作として案内できる |
+| `migration-current` | すでに新規導入相当 | 追加変更・追加commit 0件で完了済みと示す |
+| `migration-rolled-back` | 途中失敗後にworkspaceとGitが開始前へ戻った | 成功扱いにせず、再試行可能な理由を示す |
+
+Identity managed sectionはAGENTS／CLAUDE内の製品所有範囲であり、利用者自由記述やuser-scope guidanceとは別概念である。
+Migration ledger recordは管理対象pathと版・基準の判定metadataであり、display name、stable ID、author本文を正本として持たない。
+Plugin更新完了、ローカルmigration完了、user-scope routing有効化は別の状態として報告する。

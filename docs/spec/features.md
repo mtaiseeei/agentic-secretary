@@ -1,6 +1,6 @@
 # Features
 
-機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合である。
+機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合、F58はWindows保存互換、F59〜F61は秘書identity／routing／rename、F62は既存workspaceの名前オンボーディング完全移行である。
 
 ## 既存機能（F01〜F16）
 
@@ -447,6 +447,16 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Agentic共通コアを先に独立評価し、PASSした完全SHAと宣言済み共通pathからだけYasashiiとprivate my-vaultを別repo Sprintへ渡す。Yasashii overlay、private固有Notion／vault、root AGENTS、各repo docsを上書きしない。
 - 実利用者HOME、installed cache、実下流repo、release、Mac mini同期はSprint 039の実装ACではなく、各repoの独立PASS後の運用phaseとする。
 
+### F62 既存workspaceの名前オンボーディング完全移行
+
+- pluginの更新と、利用者workspaceへコピー済みのローカルファイルの移行を別の段階として扱う。plugin更新後の新sessionでは、canonical workspaceを読み取り専用で診断し、名前設定が未完了または部分適用なら、pluginだけが新しくなりローカル移行が残っていることを明示してname onboardingを案内する。
+- 既存workspaceは、identity未作成、現行 `0.10.0` name Skillでidentityだけ作成済み、新規導入相当まで適用済み、利用者編集または所有衝突ありを区別する。希望の英語名またはおまかせ候補を確認し、既存identityが正当ならdisplay name、stable ID、AI種別を再生成せず使う。
+- read-only previewは、`secretary/identity.json`、製品所有のAGENTS／CLAUDE identity管理節、最小台帳について、追加・更新・維持・衝突、対象path、local checkpoint、rollback、非対象を示す。利用者自由記述、記憶、プロジェクト、チャット履歴、Secret、user-scope fileを変更候補へ含めない。
+- 別turnの明示確認後だけ、上記の製品所有範囲を新規導入相当へatomicに揃える。AGENTS／CLAUDEは管理節だけを扱い、台帳は管理対象metadataだけを更新して秘書名やstable ID等の私的値を保存しない。成功には構文・identity整合・台帳整合・所有path限定local checkpointの確認を含む。
+- 書込み、整合確認、台帳、stage、commit、commit後確認のどこかが失敗したら、今回の変更、Git HEAD、index、working treeを開始前へ戻す。開始前の利用者変更を保持し、部分file、部分stage、部分commit、backup、一時fileを残さない。成功後の再実行はfile差分、台帳重複、追加commitが0件である。
+- user-scope registry／routingは完全移行の必須条件にせず、ローカル移行完了後も別の任意操作とする。名前の変更や既存コンテンツのgrep置換はF61のrename導線へ送り、初回移行の確認をrename authorizationへ流用しない。
+- `0.10.1`は公開済み`0.10.0`の既存workspace移行欠陥を直す後方互換patch candidateとする。Agenticの独立PASS後だけ完全SHA、共通digest、宣言済み共通pathをYasashii／private my-vaultへ固定handoffし、両下流の別Sprint・独立PASS後だけ3版releaseとMac mini同期を行う。受講者向け更新文はrelease後に作成する。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -466,3 +476,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G13 | F03 F05 F06 F10 F17 F19 F20 F28 F30 F31 F51 F54 F55 F56 F57 |
 | G14 | F05 F06 F07 F08 F17 F20 F28 F31 F53 F54 F55 F58 |
 | G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
+| G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
