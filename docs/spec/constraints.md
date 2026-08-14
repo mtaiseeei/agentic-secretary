@@ -361,3 +361,20 @@
 8. Windows対応のPASSにはWindowsネイティブの実行証跡を必要とする。別OSでWindows形式path文字列を模擬した結果だけで「Windows対応済み」と表示しない。
 9. Agentic共通coreを先に独立評価し、PASSした完全SHAからだけYasashii overlayを同期する。Yasashiiは固有copy・identity・README・repo所有docsを保護した別回帰・独立評価を必要とする。
 10. `agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillは本変更の対象外とし、本Patchの対応済み表示に含めない。
+
+## 22. 秘書identity・名前routing・rename境界
+
+1. 利用者の呼び方と秘書自身の名前は別field・別導線とし、一方の変更で他方を暗黙変更しない。
+2. 秘書名は英語名だけとし、保存候補を確認前に書き込まない。表示名を変えてもstable IDと `ai-secretary` 種別は維持する。
+3. user-scope連携は既定で未変更とする。効果、対象file、managed block、無効化方法を示した明示確認後だけ有効にする。
+4. user-scope guidanceは製品所有marker間だけを扱う。全面上書き、既存内容の並べ替え、他blockの削除、重複block、symlink越しの境界外書込みを禁止する。
+5. registryはcanonical workspace解決に必要な最小metadataだけを持ち、Secret、記憶、会話、顧客名、成果物本文を保存しない。cwdや単純文字列一致だけでworkspaceを決めない。
+6. 名前routingは秘書への直接呼びかけと依頼文脈だけに限定する。人間、顧客、author、引用、コード、ファイル本文の同名はroutingせず、曖昧時は確認前副作用0件とする。
+7. rename探索はread-onlyで分類する。無条件grep置換、Git履歴書換え、利用者コンテンツの無確認変更を禁止する。
+8. rename applyは分類別の影響を示した明示確認後だけ行う。履歴authorは原則保持し、旧名をaliasesへ加える。衝突・所有不明は自動変更せず、途中失敗はrollbackする。
+9. user-scope複数file、identity、registryの更新はtransactionとして扱い、部分成功を全体成功と表示せず、再実行は同じ状態へ収束する。
+10. renameがcanonical workspace内の製品所有fileを変更する場合、実体path、edition marker、Git top-levelが同じ正確なworkspace rootを指すことを再検証し、今回の所有pathだけをlocal commitへ含める。既存index、対象外のstage／unstaged／untracked変更、別履歴を変えず、push、fetch、remote変更を行わない。Git repoの新規初期化や親／子の別repoへの代替commitは禁止する。
+11. 必須local checkpointの作成、検証、またはcommit後確認に失敗した場合は、renameのworkspace／user-scope変更とGit HEAD／index／working treeを開始前へrollbackする。stable ID、過去author／履歴、開始前aliases、未選択を含む利用者コンテンツを保持し、backup、一時file、部分commit、旧名／新名混在を残さない。成功に見えるexit 0や`checkpoint skipped`への格下げは禁止する。
+12. 修正版の下流handoff完全SHA／common digestはfresh独立Evaluator PASS後だけ正本として公開する。PASS前candidate、Generator自己評価、旧accepted SHAを修正版の同期入力として扱わず、Yasashii／private版の実repoへ先行反映しない。
+13. 受入は合成HOMEと隔離workspaceで行い、実HOME、installed cache、実下流repo、Mac mini、external releaseへ書き込まない。
+14. Agentic PASS前にYasashii／private my-vaultへ反映しない。下流は固定SHA、保護digest、別Sprint、独立評価を必要とし、private固有挙動とroot AGENTSを上書きしない。

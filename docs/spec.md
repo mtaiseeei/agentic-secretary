@@ -140,6 +140,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-037-patch-001](sprints/sprint-037-patch-001.md) | 呼び方の値をjournal／commit subjectへ再掲しない共通transaction | sprint-037 |
 | [sprint-038](sprints/sprint-038.md) | 人間らしい会話フロー: 危険に応じた確認、現在用件優先、内容依存応答、意味保存golden set、3配布系統同期、限定Notion修正、release candidate gate | sprint-037-patch-001 |
 | [sprint-038-patch-002](sprints/sprint-038-patch-002.md) | Windowsネイティブのproject／memory／TODO／settings／文書保存、安全境界・rollback／journal整合、Agentic先行→Yasashii overlay同期、`0.9.2` release準備 | sprint-038-patch-001 |
+| [sprint-039](sprints/sprint-039.md) | 秘書identity: 英語名、stable ID／AI author、name Skill、user-scope managed block、canonical resolver、安全なrename、下流handoff | sprint-038-patch-002 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -183,3 +184,7 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 35. 現在の明示依頼を、再開しおり、決定0件監査、プロジェクト候補、内部index整合より優先する。応答は実際の副作用状態に合わせ、未実行を完了風に述べず、単純成功へ固定3項目や架空の次の行動を強制しない。
 36. 配布物と現行製品正本は、利用者・保守者の個人名、利用者端末固有の絶対path、私用workspaceを実行前提にしない。MITの著作権表示、GitHub owner、公式repository URL等の製品所有・配布識別情報は維持する。
 37. Windowsの通常workspace pathでもproject／memory／TODO／settings／文書保存を利用できる。OS固有shellのpath解釈へ主要書込みの成否を依存させず、workspace外・path traversal・symlink／junction等の参照は副作用0件で拒否し、rollbackとjournal整合を維持する。
+38. F59〜F61の秘書identityでは、利用者の呼び方と別に英語名、stable ID、AI種別、aliasesを持ち、初回または専用name Skillから確認して設定する。
+39. user-scope routingは明示確認後だけmanaged blockを更新し、Codexのoverride優先とClaude Codeのuser-scope fileを安全に扱う。別repo cwdへ誤onboardingせずcanonical secretary workspaceを解決する。
+40. renameは現行設定・利用者コンテンツ・履歴・所有不明を分類したread-only previewから始め、分類別確認、履歴保持、aliases、rollback、再実行差分0件を守る。無条件全置換をしない。
+41. Sprint 039はAgentic共通コアと下流handoffまでを対象とし、実HOME、Yasashii／private my-vault反映、release、Mac mini同期は各独立PASS後の運用phaseとする。評価はC16と隔離HOME／workspaceのsafe harborに従う。

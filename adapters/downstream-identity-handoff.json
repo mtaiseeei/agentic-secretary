@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sourceEdition": "agentic-secretary",
+  "sourceRevision": "candidate-full-git-sha-after-evaluator-pass-required",
+  "publicationStatus": "candidate-unverified",
+  "previousAccepted": {
+    "agenticFullSha": "3e08eb6d377392440e753bd5073c73d1d63399b6",
+    "commonTreeSha256": "7498d3550734ba63b689463f01e2a52e16d2ce3f8eb31cebead16aef2181f883",
+    "note": "Sprint 039 historical input only; not the Patch 001 fixed downstream input."
+  },
+  "commonPaths": [
+    "plugins/secretary/scripts/lib/external-ops.mjs",
+    "plugins/secretary/scripts/lib/secretary-identity.mjs",
+    "plugins/secretary/scripts/lib/safe-git.mjs",
+    "plugins/secretary/scripts/lib/user-scope-routing.mjs",
+    "plugins/secretary/scripts/lib/workspace-registry.mjs",
+    "plugins/secretary/scripts/lib/name-router.mjs",
+    "plugins/secretary/scripts/lib/secretary-rename.mjs",
+    "plugins/secretary/scripts/secretary-name.mjs",
+    "plugins/secretary/scripts/workspace-tools.mjs",
+    "plugins/secretary/skills/name/SKILL.md",
+    "plugins/secretary/skills/onboarding/SKILL.md",
+    "plugins/secretary/skills/secretary/SKILL.md",
+    "plugins/secretary/skills/settings/SKILL.md",
+    "plugins/secretary/templates/identity.json",
+    "plugins/secretary/templates/AGENTS.md",
+    "plugins/secretary/templates/memory/decisions/_first-decision.md"
+  ],
+  "excludedPaths": [
+    "README.md",
+    "docs/**",
+    "adapters/**",
+    "plugins/secretary/rules/copy/**",
+    "plugins/secretary/rules/styles/**"
+  ],
+  "protectedDownstreamPaths": {
+    "yasashii-secretary": [
+      "README.md",
+      "docs/**",
+      "plugins/secretary/rules/copy/yasashii.json",
+      "plugins/secretary/rules/styles/yasashii.md"
+    ],
+    "agentic-secretary-my-vault": [
+      "AGENTS.md",
+      "README.md",
+      "docs/**",
+      "plugins/secretary/skills/notion-tasks/**",
+      "plugins/secretary/skills/task-triage/**",
+      "plugins/secretary/skills/vault-documents/**",
+      "plugins/secretary/skills/vault-search/**"
+    ]
+  },
+  "rollback": "下流ごとの同期前commitへfile-scopedに戻し、保護pathとrepo正本を変更しない。"
+}
