@@ -4,13 +4,30 @@ import {
 } from "node:fs";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { identityPath, readIdentity, renamedIdentity } from "./secretary-identity.mjs";
-import { composeManagedBlock, selectUserScopeTargets } from "./user-scope-routing.mjs";
+import {
+  composeManagedBlock, inspectManagedRoutingBlock, inspectUserScopeRouting,
+} from "./user-scope-routing.mjs";
 
 const TEXT_EXTENSIONS = new Set([".md", ".txt", ".json", ".yaml", ".yml", ".toml"]);
 
 function digest(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
 function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"); }
 function namePattern(name) { return new RegExp(`(?<![A-Za-z])${escapeRegExp(name)}(?![A-Za-z])`, "gu"); }
+
+function agentsIdentityPattern(name) {
+  return new RegExp(`^([ \\t]*-[ \\t]*(?:表示名|display)[ \\t]*:[ \\t]*)${escapeRegExp(name)}([ \\t]+\\(AI Secretary\\)[ \\t]*)(\\r?)$`, "gimu");
+}
+
+function inspectAgentsIdentity(content, oldName, newName = oldName) {
+  const pattern = agentsIdentityPattern(oldName);
+  let ownedCount = 0;
+  const updated = content.replace(pattern, (_match, prefix, suffix, carriageReturn) => {
+    ownedCount += 1;
+    return `${prefix}${newName}${suffix}${carriageReturn}`;
+  });
+  const totalCount = [...content.matchAll(namePattern(oldName))].length;
+  return { content: updated, ownedCount, unownedCount: Math.max(0, totalCount - ownedCount) };
+}
 
 function walk(root, current = root, rows = []) {
   for (const entry of readdirSync(current, { withFileTypes: true })) {
@@ -23,7 +40,7 @@ function walk(root, current = root, rows = []) {
 }
 
 function classification(relativePath) {
-  if (relativePath === "identity.json" || relativePath === "AGENTS.md") return "current-config";
+  if (relativePath === "identity.json") return "current-config";
   if (/^(?:docs|projects|inbox)\//u.test(relativePath)) return "user-content";
   if (/^memory\/(?:journal|archive|decisions)\//u.test(relativePath)) return "historical-author";
   return "unknown-or-conflict";
@@ -50,14 +67,27 @@ export function previewRename({ secretaryRoot, newName, home = null } = {}) {
     const count = [...content.matchAll(pattern)].length;
     if (!count) continue;
     const rel = relative(root, path).split(sep).join("/");
+    if (rel === "AGENTS.md") {
+      const inspected = inspectAgentsIdentity(content, identity.display_name);
+      if (inspected.ownedCount) matches.push({
+        classification: "current-config", path: rel, count: inspected.ownedCount,
+        recommended: recommendation("current-config"), ownedField: "display-name",
+      });
+      if (inspected.unownedCount) matches.push({
+        classification: "unknown-or-conflict", path: rel, count: inspected.unownedCount,
+        recommended: recommendation("unknown-or-conflict"), ownedField: null,
+      });
+      continue;
+    }
     const kind = classification(rel);
     matches.push({ classification: kind, path: rel, count, recommended: recommendation(kind) });
   }
   if (home) {
-    for (const target of selectUserScopeTargets(home)) {
-      if (!existsSync(target.path)) continue;
+    for (const target of inspectUserScopeRouting({ home })) {
+      if (!target.enabled) continue;
       const content = readFileSync(target.path, "utf8");
-      const count = [...content.matchAll(pattern)].length;
+      const managed = inspectManagedRoutingBlock(content);
+      const count = [...managed.content.matchAll(pattern)].length;
       if (count) matches.push({ classification: "current-config", path: target.path, count, recommended: recommendation("current-config"), scope: "user" });
     }
   }
@@ -119,8 +149,8 @@ export function applyRename({
   const agentsPath = join(root, "AGENTS.md");
   if (existsSync(agentsPath)) {
     const before = readFileSync(agentsPath, "utf8");
-    const after = replaceExact(before, identity.display_name, nextIdentity.display_name);
-    if (after !== before) targets.set(agentsPath, after);
+    const inspected = inspectAgentsIdentity(before, identity.display_name, nextIdentity.display_name);
+    if (inspected.content !== before) targets.set(agentsPath, inspected.content);
   }
   for (const rel of selectedUserContent) {
     const path = resolve(root, rel);
@@ -129,8 +159,8 @@ export function applyRename({
     targets.set(path, replaceExact(readFileSync(path, "utf8"), identity.display_name, nextIdentity.display_name));
   }
   if (home) {
-    for (const target of selectUserScopeTargets(home)) {
-      if (!existsSync(target.path)) continue;
+    for (const target of inspectUserScopeRouting({ home })) {
+      if (!target.enabled) continue;
       const before = readFileSync(target.path, "utf8");
       const composed = composeManagedBlock(before, nextIdentity, { operation: "enable" });
       if (composed.status !== "unchanged") targets.set(target.path, composed.content);

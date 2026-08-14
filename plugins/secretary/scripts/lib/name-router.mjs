@@ -13,13 +13,20 @@ export function classifyNameRouting(textValue, identityValue, { alreadyAsked = f
   const patternName = escaped(name);
   const contains = new RegExp(`(?:^|[^A-Za-z])${patternName}(?:$|[^A-Za-z])`, "iu").test(text);
   if (!contains) return { action: "none", reason: "name-not-mentioned", sideEffects: 0 };
+
+  // 文頭の直接呼びかけは、その後ろの依頼本文と分けて判定する。依頼本文に顧客名や引用が
+  // 含まれても、呼びかけ先が秘書である事実は変わらない。
+  const directPattern = new RegExp(`^${patternName}(?:[、,:：!！?？]|\\s+(?:お願い|教えて|調べて|確認して|やって|まとめて|聞いて))`, "iu");
+  if (directPattern.test(text)) {
+    return { action: "route", reason: "direct-address", secretary_id: identity.secretary_id, sideEffects: 0 };
+  }
+
   if (QUOTE_OR_CODE.test(text)) return { action: "none", reason: "quote-code-or-body", sideEffects: 0 };
   if (HUMAN_CONTEXT.test(text)) return { action: "none", reason: "human-or-business-context", sideEffects: 0 };
 
   const askPattern = new RegExp(`(?:^|[、,。.!！?？\\s])${patternName}に(?:聞いて|確認して|頼んで|相談して)(?:$|[、,。.!！?？\\s])`, "iu");
-  const directPattern = new RegExp(`^${patternName}(?:[、,:：!！?？]|\\s+(?:お願い|教えて|調べて|確認して|やって|まとめて|聞いて))`, "iu");
-  if (askPattern.test(text) || directPattern.test(text)) {
-    return { action: "route", reason: askPattern.test(text) ? "ask-secretary" : "direct-address", secretary_id: identity.secretary_id, sideEffects: 0 };
+  if (askPattern.test(text)) {
+    return { action: "route", reason: "ask-secretary", secretary_id: identity.secretary_id, sideEffects: 0 };
   }
 
   if (foldName(text.replace(/[、,。.!！?？]/gu, "")) === foldName(name)

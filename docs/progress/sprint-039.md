@@ -1,6 +1,6 @@
 # Sprint 039 — Generator handoff
 
-**状態:** 製品実装とSprint専用回帰は完了。独立Evaluator判定待ち。
+**状態:** Retry 1の製品修正とSprint専用回帰は完了。独立Evaluator再判定待ち。
 
 ## 実装したこと
 
@@ -27,6 +27,19 @@
   だけ完全SHAを返す。
 - Skill数を15から16へ更新し、checkout/archive/master gateへSprint 039 suiteを組み込んだ。
 
+## Retry 1 — Evaluator P1〜P4
+
+- renameはuser-scope fileが存在するだけではroutingを作成しない。現在有効なmanaged blockだけ表示名を
+  更新し、一度も有効化していないhostと明示disable済みhostはdisabledのまま保持する。
+- `secretary/AGENTS.md`はfile全体を置換せず、製品所有の`表示名`（互換表記`display`）fieldだけを
+  構造的に更新する。同じfile内の顧客名・自由記述は`unknown-or-conflict`としてpreviewへ分離し、変更しない。
+- routerは文頭の直接呼びかけと依頼本文を分離した。呼びかけ後の顧客・取引先・著者・引用語は正caseを
+  抑止せず、人間への「Morganさんに聞いて」、取引先／author文脈、引用・code内だけの名前は従来どおりrouteしない。
+- report-schema validatorへ`name` Skillを含む正式21面を列挙した。単なる件数許容ではなく、21面のまま
+  `name`を未知Skillへ差し替えるnegative fixtureも拒否する。
+- Evaluatorの独立caseをSprint 039回帰へ取り込み、未作成／disabled routing、既存template＋custom本文、
+  routing正4件・負5件、正式／未知surfaceを自動回帰にした。
+
 ## 起動・回帰
 
 - UI/URL: なし。SkillとNode.js CLI/libraryの機能である。
@@ -40,7 +53,9 @@
 
 ### PASS
 
-- `bash scripts/sprint-039-regression.sh`: product 56 PASS / 0 FAIL、wrapper 7 PASS / 0 FAIL。
+- `bash scripts/sprint-039-regression.sh`: product 69 PASS / 0 FAIL、wrapper 7 PASS / 0 FAIL。
+- `node scripts/sprint-032-patch-002-test.mjs`: 32 PASS / 0 FAIL。21 surfaceを走査する既存serializer回帰を含む。
+- `python3 scripts/check-report-schema.py --plugin-root plugins/secretary`: 21 surfaces、1 PASS / 0 FAIL。
 - `bash scripts/sprint-038-regression.sh`: 64 PASS / 0 FAIL、historical classifier 14 PASS / 0 FAIL、
   historical path 3 PASS / 0 FAIL。
 - `node scripts/sprint-038-patch-002-windows-test.mjs`: 12 PASS / 0 FAIL。
@@ -89,13 +104,19 @@ installed cache、Yasashii/private実repo、remote、外部serviceの対象別di
    部分失敗を操作し、対象file、既存内容、他block、rollback、disable、冪等性を確認する。
 4. 別repo cwdからregistryのcanonical workspaceを解決し、cwdへの`secretary/`、ledger、commit、pushが
    0であることを確認する。欠落、移動、重複、反対edition、symlinkも操作する。
-5. `Alex、今日の予定を整理して`と`Alexに聞いて`だけがroutingされ、人間／顧客／author／引用／code／
-   file本文はroutingされないこと、曖昧文が一度だけ確認されることを確認する。
+5. 文頭の`Alex、…`と`Alexに聞いて`がroutingされ、名前自体が人間／顧客／author／引用／code／
+   file本文にあるcaseはroutingされないこと、曖昧文が一度だけ確認されることを確認する。
 6. rename preview前後digestを比較し、A〜Dの件数と推奨処理を確認する。applyではA、選択B、保持C＋alias、
    不変D、stable ID、過去author不変を比較し、同名、alias衝突、途中失敗、retryも操作する。
 7. candidate commit後にhandoffの完全SHAとcommon tree digestを記録し、clean checkoutと同一commitの
    Git-free archiveでSprint 039、manifest/Skill validator、secret scan、master gateを実行する。
 8. 実HOME、cache、実下流、Mac mini、external publishへwrite 0であることを独立に確認する。
+9. managed block未作成HOMEとenable後disableしたHOMEでrenameし、user-scope bytesとdisabled状態が不変、
+   rename authorizationがrouting enableへ拡張されないことを確認する。
+10. 既存`templates/AGENTS.md`へ`顧客Alexの案件は変更しない`を追加し、表示名fieldだけMorganへ更新、
+    顧客記述はAlexのまま、previewではAとDへ分離されることを確認する。
+11. `Morgan、顧客への提案書を作って`等4正caseと、人間／取引先／author／引用／codeの負caseを再操作する。
+12. report-schemaの正式21面がPASSし、`name`を未知surfaceへ差し替えた件数21のfixtureがFAILすることを確認する。
 
 ## 外部操作
 

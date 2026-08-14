@@ -9,6 +9,7 @@ import {
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { copyTreeNoFollow } from "../plugins/secretary/scripts/lib/safe-fs.mjs";
 import {
   ACTOR_TYPE, authorMetadata, createIdentity, readIdentity, suggestSecretaryName, validateSecretaryName, writeNewIdentity,
 } from "../plugins/secretary/scripts/lib/secretary-identity.mjs";
@@ -55,7 +56,7 @@ function makeWorkspace(name, { edition = "agentic-secretary", secretaryId = rand
   mkdirSync(join(secretary, "inbox"), { recursive: true });
   mkdirSync(join(workspace, ".secretary"), { recursive: true });
   writeFileSync(join(workspace, ".secretary", "workspace-edition.json"), `${JSON.stringify({ schemaVersion: 1, edition })}\n`);
-  writeFileSync(join(secretary, "AGENTS.md"), `# Secretary\n\n- owner-call-name: Taisei\n- display: ${displayName} (AI Secretary)\n`);
+  writeFileSync(join(secretary, "AGENTS.md"), `# Secretary\n\n- owner-call-name: Taisei\n- 表示名: ${displayName} (AI Secretary)\n`);
   writeFileSync(join(secretary, "memory", "MEMORY.md"), "# Memory\n\n- owner-call-name: Taisei\n");
   writeFileSync(join(secretary, "identity.json"), `${JSON.stringify(createIdentity({ displayName, secretaryId, createdAt: "2026-08-14T00:00:00.000Z" }), null, 2)}\n`);
   return { workspace, secretary, secretaryId };
@@ -115,9 +116,23 @@ try {
 
   for (const text of ["Alex、今日の予定を整理して", "Alexに聞いて、結果をまとめて"]) check(`名前routing正case: ${text}`, () => assert.equal(classifyNameRouting(text, identity).action, "route"));
   for (const text of ["取引先のAlexさんにメールして", "著者Alexの本", "author: Alex", "「Alexに聞いて」引用です", "`Alexに聞いて`", "ファイル本文にAlexとあります", "顧客Alexの契約"]) check(`名前routing negative: ${text}`, () => assert.equal(classifyNameRouting(text, identity).action, "none"));
+  const morganIdentity = { ...identity, display_name: "Morgan", aliases: ["Alex"] };
+  for (const text of ["Morgan、顧客への提案書を作って", "Morgan、取引先の予定を整理して", "Morgan、著者Alexの本を調べて", "Morgan、「Q3」の文言を直して"]) {
+    check(`直接呼びかけ後の依頼本文はroutingを抑止しない: ${text}`, () => assert.equal(classifyNameRouting(text, morganIdentity).action, "route"));
+  }
+  for (const text of ["Morganさんに聞いて", "取引先Morganに聞いて", "author Morganに聞いて", "「Morgan、顧客への提案書を作って」", "`Morgan、顧客への提案書を作って`"]) {
+    check(`人間・引用・code内だけの同名はroutingしない: ${text}`, () => assert.equal(classifyNameRouting(text, morganIdentity).action, "none"));
+  }
   check("曖昧caseは一度だけ確認", () => { assert.equal(classifyNameRouting("Alex", identity).action, "confirm"); assert.equal(classifyNameRouting("Alex", identity, { alreadyAsked: true }).action, "none"); });
 
+  const neverEnabledRename = makeWorkspace("rename-never-enabled"); const neverEnabledHome = makeHome("rename-never-enabled-home"); mkdirSync(join(neverEnabledHome, ".codex")); mkdirSync(join(neverEnabledHome, ".claude")); writeFileSync(join(neverEnabledHome, ".codex", "AGENTS.md"), "利用者メモ Alex は人間です。\n"); writeFileSync(join(neverEnabledHome, ".claude", "CLAUDE.md"), "CLAUDE KEEP Alex\n");
+  check("renameは未作成routingを有効化せずuser-scope本文も変更しない", () => { const before = treeSnapshot(neverEnabledHome); const previewResult = previewRename({ secretaryRoot: neverEnabledRename.secretary, newName: "Morgan", home: neverEnabledHome }); assert.equal(previewResult.matches.some((item) => item.scope === "user"), false); applyRename({ secretaryRoot: neverEnabledRename.secretary, newName: "Morgan", home: neverEnabledHome, confirm: true, confirmedClasses: ["current-config"] }); assert.deepEqual(treeSnapshot(neverEnabledHome), before); assert.ok(inspectUserScopeRouting({ home: neverEnabledHome }).every((item) => !item.enabled)); });
+  const disabledRename = makeWorkspace("rename-disabled"); const disabledHome = makeHome("rename-disabled-home"); mkdirSync(join(disabledHome, ".codex")); mkdirSync(join(disabledHome, ".claude")); updateUserScopeRouting({ home: disabledHome, identity: readIdentity(disabledRename.secretary), confirm: true }); updateUserScopeRouting({ home: disabledHome, identity: readIdentity(disabledRename.secretary), operation: "disable", confirm: true });
+  check("renameは明示disable済みroutingをdisabledのまま保つ", () => { const before = treeSnapshot(disabledHome); applyRename({ secretaryRoot: disabledRename.secretary, newName: "Morgan", home: disabledHome, confirm: true, confirmedClasses: ["current-config"] }); assert.deepEqual(treeSnapshot(disabledHome), before); assert.ok(inspectUserScopeRouting({ home: disabledHome }).every((item) => !item.enabled)); });
+
   const renameFixture = makeWorkspace("rename"); const renameHome = makeHome("rename-home"); mkdirSync(join(renameHome, ".codex")); mkdirSync(join(renameHome, ".claude")); updateUserScopeRouting({ home: renameHome, identity: readIdentity(renameFixture.secretary), confirm: true });
+  const agentsTemplate = readFileSync(join(ROOT, "plugins/secretary/templates/AGENTS.md"), "utf8").replaceAll("{{SECRETARY_NAME}}", "Alex");
+  writeFileSync(join(renameFixture.secretary, "AGENTS.md"), `${agentsTemplate}\n- 顧客Alexの案件は変更しない\n`);
   writeFileSync(join(renameFixture.secretary, "docs", "note.md"), "Alexが作った現在の案です。\n");
   writeFileSync(join(renameFixture.secretary, "memory", "journal", "2026-08-14.md"), "author: Alex (AI Secretary)\nauthor_id: stable\n");
   writeFileSync(join(renameFixture.secretary, "misc.txt"), "所有不明 Alex\n");
@@ -126,7 +141,7 @@ try {
   check("rename preview前後snapshot一致", () => { assert.deepEqual(treeSnapshot(renameFixture.workspace), previewBefore); assert.deepEqual(treeSnapshot(renameHome), homePreviewBefore); });
   throwsNoMutation("rename apply確認前write 0", renameFixture.workspace, () => applyRename({ secretaryRoot: renameFixture.secretary, newName: "Morgan", home: renameHome }), /明示確認前/u);
   const historicalBefore = readFileSync(join(renameFixture.secretary, "memory", "journal", "2026-08-14.md")); const unknownBefore = readFileSync(join(renameFixture.secretary, "misc.txt"));
-  check("renameはA一体・許可Bのみ・C保持alias・D不変", () => { const result = applyRename({ secretaryRoot: renameFixture.secretary, newName: "Morgan", home: renameHome, confirm: true, confirmedClasses: ["current-config", "user-content"], selectedUserContent: ["docs/note.md"] }); const after = readIdentity(renameFixture.secretary); assert.equal(after.secretary_id, renameFixture.secretaryId); assert.deepEqual(after.aliases, ["Alex"]); assert.match(readFileSync(join(renameFixture.secretary, "docs", "note.md"), "utf8"), /Morgan/u); assert.deepEqual(readFileSync(join(renameFixture.secretary, "memory", "journal", "2026-08-14.md")), historicalBefore); assert.deepEqual(readFileSync(join(renameFixture.secretary, "misc.txt")), unknownBefore); assert.match(readFileSync(join(renameHome, ".codex", "AGENTS.md"), "utf8"), /Morgan/u); assert.equal(result.preservedHistorical >= 1, true); });
+  check("renameはtemplateのidentity fieldだけを構造更新しcustom本文を保持", () => { assert.ok(preview.matches.some((item) => item.path === "AGENTS.md" && item.classification === "current-config" && item.ownedField === "display-name")); assert.ok(preview.matches.some((item) => item.path === "AGENTS.md" && item.classification === "unknown-or-conflict")); const result = applyRename({ secretaryRoot: renameFixture.secretary, newName: "Morgan", home: renameHome, confirm: true, confirmedClasses: ["current-config", "user-content"], selectedUserContent: ["docs/note.md"] }); const after = readIdentity(renameFixture.secretary); const agentsAfter = readFileSync(join(renameFixture.secretary, "AGENTS.md"), "utf8"); assert.equal(after.secretary_id, renameFixture.secretaryId); assert.deepEqual(after.aliases, ["Alex"]); assert.match(agentsAfter, /- 表示名: Morgan \(AI Secretary\)/u); assert.match(agentsAfter, /顧客Alexの案件は変更しない/u); assert.doesNotMatch(agentsAfter, /顧客Morgan/u); assert.match(readFileSync(join(renameFixture.secretary, "docs", "note.md"), "utf8"), /Morgan/u); assert.deepEqual(readFileSync(join(renameFixture.secretary, "memory", "journal", "2026-08-14.md")), historicalBefore); assert.deepEqual(readFileSync(join(renameFixture.secretary, "misc.txt")), unknownBefore); assert.match(readFileSync(join(renameHome, ".codex", "AGENTS.md"), "utf8"), /Morgan/u); assert.equal(result.preservedHistorical >= 1, true); });
   throwsNoMutation("同名renameは安全停止し差分0", renameFixture.workspace, () => applyRename({ secretaryRoot: renameFixture.secretary, newName: "Morgan", confirm: true, confirmedClasses: ["current-config"] }), /同じ名前/u);
   throwsNoMutation("alias衝突renameは安全停止", renameFixture.workspace, () => applyRename({ secretaryRoot: renameFixture.secretary, newName: "Alex", confirm: true, confirmedClasses: ["current-config"] }), /alias/u);
   const rollbackRename = makeWorkspace("rename-rollback"); const rollbackRenameHome = makeHome("rename-rollback-home"); mkdirSync(join(rollbackRenameHome, ".codex")); mkdirSync(join(rollbackRenameHome, ".claude")); updateUserScopeRouting({ home: rollbackRenameHome, identity: readIdentity(rollbackRename.secretary), confirm: true }); writeFileSync(join(rollbackRename.secretary, "docs", "b.md"), "Alex text\n"); const rrBefore = treeSnapshot(rollbackRename.workspace); const rrhBefore = treeSnapshot(rollbackRenameHome);
@@ -139,6 +154,8 @@ try {
   check("実HOME・cache・実下流・remoteへwrite 0", () => assert.deepEqual(realHomeTargets.map((path) => [path, sha(path)]), realHomeBefore));
   check("name Skillはowner呼び方とidentityを分離", () => { const skill = readFileSync(join(ROOT, "plugins/secretary/skills/name/SKILL.md"), "utf8"); assert.match(skill, /利用者の「呼び方」と秘書自身の名前は別設定/u); assert.match(skill, /無条件grep置換/u); });
   check("onboardingは英語名確認前write 0を明記", () => { const skill = readFileSync(join(ROOT, "plugins/secretary/skills/onboarding/SKILL.md"), "utf8"); assert.match(skill, /明示了承までdirectory、identity、marker、registry、user-scope file、journal、commitを変更しない/u); });
+  check("report-schemaはname Skillを含む正式21面を受理", () => { const output = execFileSync("python3", [join(ROOT, "scripts/check-report-schema.py"), "--plugin-root", join(ROOT, "plugins/secretary")], { encoding: "utf8" }); assert.match(output, /surfaces=21/u); });
+  check("report-schemaは未知surfaceを件数一致でも拒否", () => { const copiedPlugin = join(sandbox, "schema-plugin"); copyTreeNoFollow(join(ROOT, "plugins/secretary"), copiedPlugin); rmSync(join(copiedPlugin, "skills", "name"), { recursive: true }); mkdirSync(join(copiedPlugin, "skills", "unknown")); writeFileSync(join(copiedPlugin, "skills", "unknown", "SKILL.md"), "# unknown\n\nrules/plain-language.md の最終応答serializerを使う。\n"); let observed = ""; try { execFileSync("python3", [join(ROOT, "scripts/check-report-schema.py"), "--plugin-root", copiedPlugin], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (error) { observed = `${error.stdout || ""}${error.stderr || ""}`; } assert.match(observed, /unexpected user-facing surface: skills\/unknown\/SKILL\.md/u); assert.match(observed, /expected user-facing surface missing from inventory: skills\/name\/SKILL\.md/u); });
   check("Claude/Codex共通CLIは構文上portable", () => execFileSync(process.execPath, ["--check", join(ROOT, "plugins/secretary/scripts/secretary-name.mjs")], { stdio: "ignore" }));
   check("routing状態検査はtargetごとにmanaged block 1件", () => { const state = inspectUserScopeRouting({ home: renameHome }); assert.equal(state.length, 2); assert.ok(state.every((item) => item.managedBlocks === 1)); });
 } finally {

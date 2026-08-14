@@ -72,6 +72,15 @@ function occurrences(content) {
   return { begin, finish };
 }
 
+export function inspectManagedRoutingBlock(contentValue) {
+  const content = String(contentValue ?? "");
+  const range = occurrences(content);
+  return {
+    enabled: Boolean(range),
+    content: range ? content.slice(range.begin, range.finish) : "",
+  };
+}
+
 export function renderRoutingBlock(identity, { newline = "\n" } = {}) {
   const parsed = parseIdentity(identity);
   return [
