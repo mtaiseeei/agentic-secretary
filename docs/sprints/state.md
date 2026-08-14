@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-039
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -72,7 +72,7 @@
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
-| sprint-039 | awaiting-eval | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
+| sprint-039 | active | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -80,6 +80,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-14: candidate `17c6a19e75aa4822f688d07cb88e4bb8847bf845` のfresh独立EvaluatorはFAIL、failure kind `implementation-issue`、product finding 4件。renameが無効／未作成のuser-scope routingを無確認で再有効化する、`secretary/AGENTS.md`全体置換で同file内の顧客名を変える、文頭の直接呼びかけでも依頼本文中の顧客／取引先／著者／引用語で誤抑止する、name Skill追加にreport-schema正本が追随せずcheckout／archive masterを失敗させる欠陥を独立fixtureで再現した。開始commit由来のSprint 033／035 digest不一致とsandbox loopback EPERMはverification-infra 3件として分離。専用checkout／archive 63/63、CRLF／mode、parent symlink、B traversal、全対象rollbackはPASS。Retry Count 1、fresh strong Generator dispatch予約としてLineage Dispatches 3、Status active、Model Tier strong、Rotate noneへ更新し、P1〜P4だけを限定修正する。実HOME、下流repo、cache、Mac mini、remote、release変更0件を維持する。
 - 2026-08-14: Sprint 039 Generatorが秘書英語名、stable identity、AI author、name Skill、user-scope managed block、canonical workspace registry/resolver、名前routing、A〜D分類rename、下流handoffを候補 `17c6a19e75aa4822f688d07cb88e4bb8847bf845` に実装した。専用56/56＋wrapper 7/7、Sprint 038 64/64、Windows回帰12/12、Sprint 011 68/68、Sprint 035 15/15、Codex plugin 4/4、release integrityをPASSし、実HOME／cache／下流repo／remote書込み0件。clean handoffは完全SHAとcommon tree digest `8470a142441683e86b06c3eed68a2c84239edf7e7f1a86e0a70bc7b2545e1668` を返した。master全体とGit archive相当はGenerator段階で未完走、既存Sprint 033 neutral-base digest不一致とsandbox loopback EPERMは未分類のため、fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。Evaluatorは同一候補のclean checkout／archive、Windows上書き互換性を含むAC1〜16とC16を独立判定する。
 - 2026-08-14: ユーザーが、利用者の呼び方とは別に秘書自身の英語名を初回／既存利用者向けに設定し、stable identity、AI author、user-scope managed block、別repoからの名前routing、canonical workspace解決、安全なrenameをAgentic／Yasashii／private my-vaultへ反映してreleaseし、Mac miniへ同期する方針を承認。PlannerがF59〜F61、C16とmain Sprint 039のAC16件を確定した。実装順序はAgentic共通コアを先行PASSさせ、固定完全SHAから下流2repoを別Sprint・独立評価し、その後にreleaseとMac mini同期を行う。Sprint 039はuser-scope guidanceと既存コンテンツrenameを扱うhigh riskのため、resolverのhigh-risk routingに従いModel Tier strong、Rotate model-escalation、fresh Generator dispatch予約としてLineage Dispatches 1、Retry Count／Spec-Issue Count 0、Status activeで開始する。実HOME、実下流repo、installed cache、remote、releaseは本Sprint PASS前に変更しない。
 - 2026-08-11: sprint-038-patch-002はfresh独立EvaluatorでPASS。評価対象の製品／test candidateは `24520a1d06f8d3833568a1386bf814e1085f5da9` で、以降の差分がfeedback／stateだけ、製品／test bytes変更0件であることを実diffで確認した。ユーザー所有Windows実機の `SPRINT038_PATCH002_WINDOWS_PASS=12 FAIL=0 OS=win32`、exit 0をAC1〜7、AC10、AC13へ採用し、macOS対象12/12、offline required 20/20・product FAIL 0、Git-free archive 291/291、release integrity、path guard、failure injection、rollback、retryの同一candidate証跡を増分採用した。全適用Rubric thresholdとAC1〜14のAgentic段階を満たし、product finding 0件、blocking verification-infra finding 0件。固定historical fixtureのsandbox `listen EPERM` 6件は既存classifierどおり非blockingのverification-infraとして分離した。本PASSはYasashii完了を意味せず、契約の二段階gateに従い、次はPASSしたAgentic完全SHAを固定したYasashii下流Patchでoverlay同期、固有surface保護、Windows回帰、別の独立Evaluator PASSを確認する。sprint-038-patch-002をdone、Lineage Dispatches 9、Retry Count 1、Spec-Issue Count 0、Model Tier standard、Rotate none、Next Planned TBDとする。Agentic `0.9.2` のreleaseは下流同期準備と配布先の最終確認後に行う。
