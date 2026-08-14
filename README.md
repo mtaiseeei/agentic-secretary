@@ -199,10 +199,9 @@ Application type `Desktop app` のOAuth clientを準備します。管理者ま�
 更新は、対象と復元方法を示して了承を得た後だけ開始します。変更内容の正本は
 [CHANGELOG](plugins/secretary/CHANGELOG.md)です。
 
-現在のmanifest candidateは **0.9.2** です。公開済み最新版は
-**[v0.9.1](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.9.1)** で、0.9.2はWindowsの記録・保存互換を修正するpatchです。
-Windows workspaceの変換やmigrationは不要です。Agentic版の独立評価後、その完全SHAからYasashii版を別評価して公開します。
-privateの`agentic-secretary-my-vault`は今回の対象外です。
+現在のmanifest candidateは **0.10.0** です。英語の秘書名、stable identity、別repoからの呼びかけ、
+確認付きの安全な改名を追加します。workspaceの一括migrationは行わず、既存利用者は更新後の新しいsessionで
+`name` Skillから名前を選びます。user-scope連携は任意で、対象を表示して明示確認した場合だけ有効になります。
 旧 `0.7.0` updaterには既知の停止要因があるため、
 `0.7.0 → 0.8.0` のlive updateは保証していません。該当する場合は、新規導入を含む安全な移行方法を確認してください。
 
