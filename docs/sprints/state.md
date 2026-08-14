@@ -5,9 +5,9 @@
 - Current ID: sprint-039
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
-- Rotate: model-escalation
+- Rotate: none
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -72,7 +72,7 @@
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
-| sprint-039 | active | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
+| sprint-039 | awaiting-eval | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -80,6 +80,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-14: Sprint 039 Generatorが秘書英語名、stable identity、AI author、name Skill、user-scope managed block、canonical workspace registry/resolver、名前routing、A〜D分類rename、下流handoffを候補 `17c6a19e75aa4822f688d07cb88e4bb8847bf845` に実装した。専用56/56＋wrapper 7/7、Sprint 038 64/64、Windows回帰12/12、Sprint 011 68/68、Sprint 035 15/15、Codex plugin 4/4、release integrityをPASSし、実HOME／cache／下流repo／remote書込み0件。clean handoffは完全SHAとcommon tree digest `8470a142441683e86b06c3eed68a2c84239edf7e7f1a86e0a70bc7b2545e1668` を返した。master全体とGit archive相当はGenerator段階で未完走、既存Sprint 033 neutral-base digest不一致とsandbox loopback EPERMは未分類のため、fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。Evaluatorは同一候補のclean checkout／archive、Windows上書き互換性を含むAC1〜16とC16を独立判定する。
 - 2026-08-14: ユーザーが、利用者の呼び方とは別に秘書自身の英語名を初回／既存利用者向けに設定し、stable identity、AI author、user-scope managed block、別repoからの名前routing、canonical workspace解決、安全なrenameをAgentic／Yasashii／private my-vaultへ反映してreleaseし、Mac miniへ同期する方針を承認。PlannerがF59〜F61、C16とmain Sprint 039のAC16件を確定した。実装順序はAgentic共通コアを先行PASSさせ、固定完全SHAから下流2repoを別Sprint・独立評価し、その後にreleaseとMac mini同期を行う。Sprint 039はuser-scope guidanceと既存コンテンツrenameを扱うhigh riskのため、resolverのhigh-risk routingに従いModel Tier strong、Rotate model-escalation、fresh Generator dispatch予約としてLineage Dispatches 1、Retry Count／Spec-Issue Count 0、Status activeで開始する。実HOME、実下流repo、installed cache、remote、releaseは本Sprint PASS前に変更しない。
 - 2026-08-11: sprint-038-patch-002はfresh独立EvaluatorでPASS。評価対象の製品／test candidateは `24520a1d06f8d3833568a1386bf814e1085f5da9` で、以降の差分がfeedback／stateだけ、製品／test bytes変更0件であることを実diffで確認した。ユーザー所有Windows実機の `SPRINT038_PATCH002_WINDOWS_PASS=12 FAIL=0 OS=win32`、exit 0をAC1〜7、AC10、AC13へ採用し、macOS対象12/12、offline required 20/20・product FAIL 0、Git-free archive 291/291、release integrity、path guard、failure injection、rollback、retryの同一candidate証跡を増分採用した。全適用Rubric thresholdとAC1〜14のAgentic段階を満たし、product finding 0件、blocking verification-infra finding 0件。固定historical fixtureのsandbox `listen EPERM` 6件は既存classifierどおり非blockingのverification-infraとして分離した。本PASSはYasashii完了を意味せず、契約の二段階gateに従い、次はPASSしたAgentic完全SHAを固定したYasashii下流Patchでoverlay同期、固有surface保護、Windows回帰、別の独立Evaluator PASSを確認する。sprint-038-patch-002をdone、Lineage Dispatches 9、Retry Count 1、Spec-Issue Count 0、Model Tier standard、Rotate none、Next Planned TBDとする。Agentic `0.9.2` のreleaseは下流同期準備と配布先の最終確認後に行う。
 - 2026-08-11: ユーザー所有Windows実機から、最終candidateの再検証結果を受領した。ユーザー宣言は「再検証は両candidateとも期待値どおりPASSしました。ソース変更やmachine設定変更はありません」。Secretaryは完全SHA `24520a1d06f8d3833568a1386bf814e1085f5da9`、Windows `10.0.26200.8875`、Node.js `v22.23.2`、`win32 x64`、開始時／終了時cleanで `node scripts/sprint-038-patch-002-windows-test.mjs --require-windows` を実行し、`SPRINT038_PATCH002_WINDOWS_PASS=12 FAIL=0 OS=win32`、signed／unsigned exit 0、native crash 0件だった。fixture copy、project作成＋journal、決定／TODO／成果物、nested project transaction、memory／settings／文書、CRLF保持と見出し重複0、timeline／weekly／archive／reindex／resume、protected memoryとdirectory delete、4系統のrollback、traversal／prefix sibling、junction／symlink、Node entrypointのBash非依存が全てPASSしたため、変更後SHAに対するAC1〜7、AC10、AC13のWindows観測へ採用する。Harnessも完全SHA `4e2f9b921e01b5d7daadfd4b3c6340b4544f893a`、同一Windows環境、開始時／終了時cleanで `node scripts/check-windows-init.mjs --require-windows` を実行し、`WINDOWS_INIT_PASS=8 FAIL=0 OS=win32`、exit 0。Node-native initializer、POSIXのBash維持、path変換、Bash契約互換、git setup、日本語／空白／shell記号path、read-only check、冪等性を確認した。両repoともsource／test／document変更、commit、push、tag、Release、package追加、Git global設定、installed cache、既存workspace、Yasashii、my-vault、machine software、永続PATH変更は0件。Secretaryのfresh独立Evaluator dispatch予約としてLineage Dispatchesを9、Status awaiting-eval、Retry Count 1、Model Tier standard、Rotate noneへ更新する。Evaluatorは同SHAの既存macOS／archive証跡と今回のWindows証跡を増分採用し、Agentic先行PASSと後続Yasashii隔離candidateの契約順序をrelease gateに沿って判定する。
