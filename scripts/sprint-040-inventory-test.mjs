@@ -51,11 +51,29 @@ function candidateDigest(candidateRoot) {
 }
 
 check("tracked source inventory and report schema are fixed", () => {
-  assert.equal(handoff.schemaVersion, 2);
-  assert.equal(report.schemaVersion, 2);
+  assert.equal(handoff.schemaVersion, 3);
+  assert.equal(report.schemaVersion, 3);
+  assert.equal(report.manifestSha256, sha(readFileSync(join(root, "scripts/fixtures/sprint-040/downstream-handoff.json"))));
   assert.equal(report.sourceInventorySha256, sha(readFileSync(join(root, handoff.inventory))));
   assert.deepEqual(report.candidates.map((item) => item.id), ["agentic", "yasashii", "private-my-vault"]);
   assert.equal(new Set(inventory.surfaces.map((item) => item.id)).size, 17);
+});
+
+check("handoff roles are exclusive and execution-derived", () => {
+  for (const edition of report.candidates) {
+    for (const paths of Object.values(edition.roleIntersections)) assert.deepEqual(paths, [], `${edition.id}:role-overlap`);
+    const rolePaths = Object.values(edition.roles).flat().map((item) => item.path);
+    assert.deepEqual(edition.declaredInputUnion, [...new Set(rolePaths)].sort((a, b) => Buffer.from(a).compare(Buffer.from(b))), `${edition.id}:declared-union`);
+    assert.equal(new Set(rolePaths).size, rolePaths.length, `${edition.id}:exclusive-role-paths`);
+    if (edition.id !== "agentic") {
+      const writable = new Set([...edition.roles.parity, ...edition.roles.adapted].map((item) => item.path));
+      assert.deepEqual(edition.actualCandidateDiffPaths.filter((path) => !writable.has(path)), [], `${edition.id}:unclassified-diff`);
+      assert.deepEqual(edition.roles.supporting.map((item) => item.path).filter((path) => edition.actualCandidateDiffPaths.includes(path)), [], `${edition.id}:supporting-diff`);
+      assert.ok(edition.roles.adapted.some((item) => item.path === "scripts/sprint-038-test.mjs"), `${edition.id}:sprint038-adapted`);
+      assert.equal(edition.roles.parity.some((item) => item.path === "scripts/sprint-038-test.mjs"), false, `${edition.id}:sprint038-not-parity`);
+    }
+    for (const action of ["read", "copy", "write", "execute", "protect"]) assert.ok(Array.isArray(edition.trace[action]), `${edition.id}:trace:${action}`);
+  }
 });
 
 for (const edition of report.candidates) check(`${edition.id}: candidate root inventory body digest marker and tracked proof`, () => {

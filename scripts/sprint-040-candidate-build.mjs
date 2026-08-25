@@ -72,12 +72,60 @@ function copyPublicTree(source, destination) {
 }
 
 function materializeFixedBase(source, head, destination) {
-  const observed = run("git", ["-C", source, "rev-parse", "HEAD"]);
-  if (observed !== head) throw new Error(`fixed-base-head-mismatch:${head}:${observed}`);
   mkdirSync(destination, { recursive: false });
   const archive = run("git", ["-C", source, "archive", "--format=tar", head], { encoding: null });
   run("tar", ["-xf", "-", "-C", destination], { input: archive });
   return new Set(run("git", ["-C", source, "ls-tree", "-r", "--name-only", head]).split("\n").filter(Boolean));
+}
+
+function mode(root, path) { return lstatSync(join(root, path)).mode & 0o111 ? "100755" : "100644"; }
+
+function treeEntries(root) {
+  return new Map(walk(root).map((path) => [path, { path, mode: mode(root, path), sha256: digest(root, path) }]));
+}
+
+function changedEntries(before, after) {
+  const paths = [...new Set([...before.keys(), ...after.keys()])].sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
+  return paths.filter((path) => JSON.stringify(before.get(path) ?? null) !== JSON.stringify(after.get(path) ?? null)).map((path) => ({
+    path,
+    before: before.get(path) ?? null,
+    after: after.get(path) ?? null,
+  }));
+}
+
+function sorted(values) { return [...new Set(values)].sort((a, b) => Buffer.from(a).compare(Buffer.from(b))); }
+
+function intersection(left, right) {
+  const rightSet = new Set(right);
+  return sorted(left.filter((item) => rightSet.has(item)));
+}
+
+function roleSets(handoff, edition) {
+  if (edition.id === "agentic") return { parity: [], adapted: [], supporting: [] };
+  const adapted = sorted(edition.roles.adapted ?? []);
+  const adaptedSet = new Set(adapted);
+  return {
+    parity: sorted([...(handoff.sharedParity ?? []).filter((path) => !adaptedSet.has(path)), ...(edition.roles.parity ?? [])]),
+    adapted,
+    supporting: sorted(edition.roles.supporting ?? []),
+  };
+}
+
+function validateRoleDeclaration(publicRoot, baseRoot, handoff, edition, roles) {
+  const overlaps = {
+    parityAdapted: intersection(roles.parity, roles.adapted),
+    paritySupporting: intersection(roles.parity, roles.supporting),
+    adaptedSupporting: intersection(roles.adapted, roles.supporting),
+  };
+  if (Object.values(overlaps).some((items) => items.length)) throw new Error(`${edition.id}:role-overlap:${JSON.stringify(overlaps)}`);
+  for (const path of roles.parity) if (!existsSync(join(publicRoot, path))) throw new Error(`${edition.id}:stale-path:parity:${path}`);
+  for (const path of [...roles.adapted, ...roles.supporting]) if (!existsSync(join(baseRoot, path))) throw new Error(`${edition.id}:stale-path:base:${path}`);
+  const protectedPaths = sorted((edition.protected ?? []).map((item) => item.path));
+  const unusedSupporting = roles.supporting.filter((path) => !protectedPaths.includes(path));
+  const undeclaredProtected = protectedPaths.filter((path) => !roles.supporting.includes(path));
+  if (unusedSupporting.length) throw new Error(`${edition.id}:unused-declaration:${unusedSupporting.join(",")}`);
+  if (undeclaredProtected.length) throw new Error(`${edition.id}:undeclared-protect:${undeclaredProtected.join(",")}`);
+  return overlaps;
 }
 
 function copyFile(sourceRoot, candidateRoot, path) {
@@ -172,15 +220,26 @@ function adaptPrivate(publicRoot, candidateRoot) {
     .replace(oldEvidenceKeys, '["caseId", "edition", "input", "precondition", "classifierInput", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]')
     .replace(oldRunnerCall, "const observed = runConversationScenario({ input: item.input, precondition: item.precondition, classifierInput: item.classifierInput, execution: item.execution });");
   writeFileSync(sprint038Path, sprint038);
+  return [
+    "plugins/secretary/skills/daily/SKILL.md",
+    "plugins/secretary/skills/memory-care/SKILL.md",
+    "plugins/secretary/skills/projects/SKILL.md",
+    "plugins/secretary/skills/secretary/SKILL.md",
+    "plugins/secretary/skills/settings/SKILL.md",
+    "scripts/sprint-038-test.mjs",
+  ];
 }
 
-function adaptYasashii(candidateRoot) {
-  const path = join(candidateRoot, "plugins/secretary/skills/secretary/SKILL.md");
-  let body = readFileSync(path, "utf8");
-  body = body.replace("# agentic-secretary —", "# yasashii-secretary —")
+function adaptYasashii(publicRoot, candidateRoot) {
+  const secretaryRelative = "plugins/secretary/skills/secretary/SKILL.md";
+  copyFile(publicRoot, candidateRoot, secretaryRelative);
+  const secretaryPath = join(candidateRoot, secretaryRelative);
+  let secretary = readFileSync(secretaryPath, "utf8");
+  secretary = secretary.replace("# agentic-secretary —", "# yasashii-secretary —")
     .replace("開発の入口（Agentic Harness）", "開発の入口（やさしいハーネス）");
-  writeFileSync(path, body);
+  writeFileSync(secretaryPath, secretary);
   const regressionPath = join(candidateRoot, "scripts/sprint-010-regression.sh");
+  copyFile(publicRoot, candidateRoot, "scripts/sprint-010-regression.sh");
   let regression = readFileSync(regressionPath, "utf8");
   regression = regression.replaceAll("styles/agentic.md", "styles/yasashii.md")
     .replaceAll("copy/agentic.json", "copy/yasashii.json");
@@ -201,6 +260,11 @@ function adaptYasashii(candidateRoot) {
     .replace(oldEvidenceKeys, '["caseId", "edition", "input", "precondition", "classifierInput", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]')
     .replace(oldRunnerCall, "const observed = runConversationScenario({ input: item.input, precondition: item.precondition, classifierInput: item.classifierInput, execution: item.execution });");
   writeFileSync(sprint038Path, sprint038);
+  return [
+    secretaryRelative,
+    "scripts/sprint-010-regression.sh",
+    "scripts/sprint-038-test.mjs",
+  ];
 }
 
 function markerCounts(root, inventory) {
@@ -223,10 +287,13 @@ function main() {
   const output = option("--output");
   const yasashiiSource = option("--yasashii-source", resolve(publicRoot, "../yasashii-secretary"));
   const privateSource = option("--private-source", resolve(publicRoot, "../agentic-secretary-my-vault"));
+  const manifestPath = option("--manifest", join(publicRoot, "scripts/fixtures/sprint-040/downstream-handoff.json"));
+  const skipExecute = process.argv.includes("--skip-execute");
   if (!output) throw new Error("--output is required");
   if (existsSync(output)) throw new Error("candidate-output-already-exists");
 
-  const handoff = JSON.parse(readFileSync(join(publicRoot, "scripts/fixtures/sprint-040/downstream-handoff.json"), "utf8"));
+  const handoff = JSON.parse(readFileSync(manifestPath, "utf8"));
+  if (handoff.schemaVersion !== 3) throw new Error(`unsupported-handoff-schema:${handoff.schemaVersion}`);
   const inventory = JSON.parse(readFileSync(join(publicRoot, handoff.inventory), "utf8"));
   mkdirSync(output, { recursive: false });
   const reports = [];
@@ -235,41 +302,93 @@ function main() {
     const candidate = join(output, edition.id);
     let tracked;
     let baseMarkerCounts;
+    let baseEntries = new Map();
+    let roles;
+    let actualDiff = [];
+    let overlaps = { parityAdapted: [], paritySupporting: [], adaptedSupporting: [] };
+    const trace = { read: [handoff.inventory, "scripts/fixtures/sprint-040/downstream-handoff.json"], copy: [], write: [], execute: [], protect: [] };
     if (edition.id === "agentic") {
       copyPublicTree(publicRoot, candidate);
       tracked = existsSync(join(publicRoot, ".git"))
         ? new Set(run("git", ["-C", publicRoot, "ls-files"]).split("\n").filter(Boolean))
         : new Set(walk(publicRoot));
       baseMarkerCounts = markerCounts(candidate, inventory);
+      roles = { parity: sorted(walk(publicRoot)), adapted: [], supporting: [] };
+      trace.read.push(...roles.parity);
+      trace.copy.push(...roles.parity);
+      trace.write.push(...roles.parity);
     } else {
       const source = edition.sourceKey === "yasashii" ? yasashiiSource : privateSource;
       tracked = materializeFixedBase(source, edition.baseHead, candidate);
       baseMarkerCounts = markerCounts(candidate, inventory);
-      for (const path of handoff.exactCommonPaths) {
+      baseEntries = treeEntries(candidate);
+      roles = roleSets(handoff, edition);
+      overlaps = validateRoleDeclaration(publicRoot, candidate, handoff, edition, roles);
+      for (const path of roles.parity) {
         copyFile(publicRoot, candidate, path);
         tracked.add(path);
+        trace.read.push(path);
+        trace.copy.push(path);
+        trace.write.push(path);
       }
-      if (edition.id === "yasashii") {
-        for (const path of handoff.yasashiiExactPaths) { copyFile(publicRoot, candidate, path); tracked.add(path); }
-        adaptYasashii(candidate);
-      } else {
-        for (const path of handoff.privateExactPaths) { copyFile(publicRoot, candidate, path); tracked.add(path); }
-        adaptPrivate(publicRoot, candidate);
+      const mutated = edition.id === "yasashii" ? adaptYasashii(publicRoot, candidate) : adaptPrivate(publicRoot, candidate);
+      trace.read.push(...mutated);
+      trace.write.push(...mutated);
+      for (const path of mutated) tracked.add(path);
+      const undeclaredMutations = sorted(mutated.filter((path) => !roles.adapted.includes(path)));
+      const unusedAdapted = sorted(roles.adapted.filter((path) => !mutated.includes(path)));
+      if (undeclaredMutations.length) throw new Error(`${edition.id}:undeclared-mutation:${undeclaredMutations.join(",")}`);
+      if (unusedAdapted.length) throw new Error(`${edition.id}:unused-declaration:${unusedAdapted.join(",")}`);
+      actualDiff = changedEntries(baseEntries, treeEntries(candidate));
+      const classifiedChanges = new Set([...roles.parity, ...roles.adapted]);
+      const unclassified = actualDiff.map((item) => item.path).filter((path) => !classifiedChanges.has(path));
+      if (unclassified.length) throw new Error(`${edition.id}:actual-diff-unclassified:${unclassified.join(",")}`);
+      for (const path of roles.parity) {
+        if (digest(candidate, path) !== digest(publicRoot, path) || mode(candidate, path) !== mode(publicRoot, path)) throw new Error(`${edition.id}:parity-mismatch:${path}`);
+      }
+      for (const path of roles.adapted) {
+        if (!actualDiff.some((item) => item.path === path)) throw new Error(`${edition.id}:adapted-not-changed:${path}`);
       }
     }
     const protectedBefore = Object.fromEntries((edition.protected ?? []).map((item) => [item.path, item.sha256]));
     const protectedAfter = Object.fromEntries((edition.protected ?? []).map((item) => [item.path, digest(candidate, item.path)]));
-    for (const item of edition.protected ?? []) if (protectedAfter[item.path] !== item.sha256) throw new Error(`${edition.id}:protected-changed:${item.path}`);
+    for (const item of edition.protected ?? []) {
+      trace.read.push(item.path);
+      trace.protect.push(item.path);
+      if (protectedAfter[item.path] !== item.sha256) throw new Error(`${edition.id}:protected-changed:${item.path}`);
+      if (actualDiff.some((entry) => entry.path === item.path)) throw new Error(`${edition.id}:supporting-changed:${item.path}`);
+    }
+    if (!skipExecute) {
+      const suitePath = join(candidate, edition.suite);
+      const suiteOutput = run("bash", [suitePath, edition.id], { cwd: candidate });
+      process.stdout.write(`${suiteOutput}\n`);
+      trace.execute.push(edition.suite);
+    }
     const actualInventory = candidateInventory(candidate, inventory, tracked, edition.id);
     const identity = candidateDigest(candidate);
+    const declaredUnion = sorted([...roles.parity, ...roles.adapted, ...roles.supporting]);
+    const roleRecords = Object.fromEntries(Object.entries(roles).map(([role, paths]) => [role, paths.map((path) => ({
+      path,
+      input: role === "parity" ? "public-source" : "fixed-base",
+      actions: role === "parity" ? ["read", "copy", "write"] : role === "adapted" ? ["read", "write"] : ["read", "protect"],
+      finalSha256: digest(candidate, path),
+    }))]));
     reports.push({
       id: edition.id,
       candidateRoot: edition.id,
       baseHead: edition.baseHead,
+      previousCandidateId: handoff.previousCandidateIds[edition.id],
       baseMarkerCounts,
       candidateMarkerCounts: markerCounts(candidate, inventory),
       protectedBefore,
       protectedAfter,
+      roles: roleRecords,
+      roleCounts: Object.fromEntries(Object.entries(roles).map(([role, paths]) => [role, paths.length])),
+      roleIntersections: overlaps,
+      declaredInputUnion: declaredUnion,
+      actualCandidateDiff: actualDiff,
+      actualCandidateDiffPaths: actualDiff.map((item) => item.path),
+      trace: Object.fromEntries(Object.entries(trace).map(([action, paths]) => [action, sorted(paths)])),
       inventory: actualInventory,
       candidate: identity,
       suite: edition.suite,
@@ -277,9 +396,10 @@ function main() {
   }
 
   const report = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     publicationStatus: handoff.publicationStatus,
     notExecuted: handoff.notExecuted,
+    manifestSha256: sha(readFileSync(manifestPath)),
     sourceInventorySha256: digest(publicRoot, handoff.inventory),
     candidates: reports,
   };
