@@ -340,13 +340,13 @@
 8. 会話テストは自然文のbyte一致、固定prefix、質問禁止を主条件にせず、intent、side effect、response state、保存された主体・日付・行動・否定・条件の意味保存を検査する。
 9. my-vaultのNotion変更はF57の5点だけに限定する。TaskDB正本、property、relation、通常の作成計画提示、connector write後の再読確認、未確認外部状態の非成功扱いを維持する。
 10. 既存Sprintの契約・progress・feedbackは当時の履歴として改変しない。現行仕様と衝突するexact copy・固定3項目等の旧テストは、Sprint 038で意味契約へ置換し、旧記録の遡及改変ではなく新しい回帰結果として残す。
-11. 引用、伝聞、仮定・条件、訂正、取消、過去依頼への照会に「覚えて」「記録して」等が含まれても、現在の`explicit` write依頼へ昇格させない。未保存の取消は副作用0件、保存済み内容の取消は対象提示と明示確認を分ける削除2段階へ接続する。
+11. 依頼語そのものの引用、現在の実行依頼ではない仮定・条件、取消、過去依頼への照会に「覚えて」「記録して」等が含まれても、現在の`explicit` write依頼へ昇格させない。一方、現在利用者が保存を明示した発話に含まれる伝聞・推量・留保・訂正はcontentの属性であり、それだけを理由にauthorizationを取り消さない。未保存の取消は副作用0件、保存済み内容の取消は対象提示と明示確認を分ける削除2段階へ接続する。
 12. 「同じターン」は、1つのユーザー発話を受け、必要なtool実行を含み、1つの最終応答で終わるassistant turnとする。timeout、応答再送、resumeでも同じoperation idの副作用は1回だけとし、既実行なら前後状態を確認して重複実行しない。
 13. 低リスク操作とexternal／destructive操作が混在する複合依頼は、利用者の記載順を守る。確認境界より前にある独立した低リスク操作だけは実行できるが、その結果は`partial`として示し、境界以降は確認後まで実行しない。操作が相互依存する、「まとめて／一括」と指定された、またはatomicな結果が期待される場合は、最初の副作用前に全体の影響を確認する。
 14. 別確認を維持する既存操作には、記憶削除、週次の古い月の退避、`MEMORY.md`上限超過時の退避、既存`secretary/`の再初期化・backup、一般PJのフル昇格、customized管理対象の上書き、plugin／workspace rollback、公開・push・認証・権限・他者通知を含む。現在の明示依頼を即時実行できる規則で、これらの境界を上書きしない。
 15. connector接続状態を確認できない場合は「未接続」と推定してsetupへ送らない。read-only診断を第一選択として示し、利用者がsetupを明示しても認証・権限変更・外部writeの直前確認を維持する。
 16. 既存workspaceの `secretary/AGENTS.md` に残る旧会話契約は、配布template由来と証明できる行または管理blockだけをmigration対象にする。dry-runで対象行、期待旧値、新値、衝突、backup／rollbackを示し、完全一致または記録済みtemplate fingerprintがない行、利用者編集がある行、所有判定不能な行では停止する。ファイル全面上書き、周辺の利用者指示の並べ替え・削除は禁止する。適用はatomic、同じmigrationの再実行差分0件を必須とし、対象外workspaceにはCHANGELOGで旧挙動が残る可能性と手動確認箇所を示す。
-17. 会話golden setの各caseは、case ID、対象edition、入力、前提、期待intent、期待side effect、期待response state、必須応答要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、前後snapshotを持つ。意味の欠落・反転・入力にない追加を各要素へ注入するnegative fixtureを用意し、決定的に機械判定できない項目はEvaluatorが判定根拠を記録する。
+17. 会話golden setの各caseは、case ID、対象edition、入力、前提、期待intent、期待side effect、期待response state、必須応答要素、禁止表現、意味tuple（主体、日付・期限、行動、対象、否定・条件、情報源・確実性・訂正関係、行き先）、前後snapshotを持つ。意味の欠落・反転・入力にない追加を各要素へ注入するnegative fixtureを用意し、決定的に機械判定できない項目はEvaluatorが判定根拠を記録する。
 18. 応答状態は、read-only照会等へ副作用0件で答えた`answered`、不足回答を求める`question`、実write成功の`saved`、失敗の`error`、一部成功の`partial`を区別する。必須要素・禁止表現・意味tuple・snapshotのいずれかが期待と異なれば、文面が自然でも当該caseは不合格とする。
 19. 旧回帰の置換は新契約と衝突するassertだけに限定する。`scripts/lib/sprint-032-patch-001-conversation.mjs`とそのreadability／smoke judge、`scripts/check-report-schema.py`、固定報告shapeを要求するSprint 010／011／012／029／032系assertは対象inventoryに含める。同じsuiteのpath guard、timeline決定性、Secret非露出、Git所有範囲、cleanup等は削除・緩和しない。削除・置換・追加したassertの一覧と、保持した安全assertの一覧をEvaluator証拠へ残す。
 
@@ -396,3 +396,17 @@
 12. `0.10.1`は公開済み`0.10.0`の後方互換patch candidateである。`0.10.0`以前のtag、artifact、CHANGELOG entry、migration、fixture、評価記録を変更せず、同一版差替えやsame-version bridgeを行わない。
 13. Agenticのfresh独立Evaluator PASS後だけ、完全SHA、共通digest、共通path、除外・保護path、rollbackを固定handoffとして発行する。Yasashii／private my-vaultは各repoの別Sprintと独立評価を必要とし、3版PASS前にrelease、cache更新、Mac mini同期、受講者向け配布文作成を完了扱いにしない。
 14. Agentic Patchの実装・評価は合成HOME、隔離workspace、clean checkout、同一bytesのGit-free archiveを使い、実HOME、実利用者workspace、installed cache、実下流repo、Mac mini、remote、external service、releaseへ書き込まない。
+
+## 24. 明示memory依頼のauthorization・訂正・retry境界
+
+1. 「覚えて」「記録して」により低リスクのmemory保存が明示された場合、user-visible scopeの `memory` は行き先として十分である。decision／topic等の内部分類、保存先path、要約文案を利用者に選ばせず、それらを理由に同じ内容を再確認しない。
+2. authorizationは会話router、呼び出されたSkill、保存シーム、journal、local checkpointまで一方向に維持する。内部routeの変更は許可の格下げ理由にならない。Secret、削除、destructive、external、一括操作、memory外へのscope変更は独立した安全分類として停止できる。
+3. request hedgeとcontent hedgeを分離する。「覚えといたほうがいいかも」は未承認の提案、「Xだと思う。覚えて」は明示依頼である。伝聞元、推量、留保、否定、条件、訂正理由を確定事実へ変換せず、不要な会話全文・完全verbatimを保存しない。
+4. pending confirmationは1件のcontentとuser-visible scopeだけに束縛する。別話題が介在した時点で失効し、後の短い了承を古い候補へ適用しない。「はい、ただしX」は修正済みcontentへの明示許可として同じturnで実行し、修正版を再確認しない。
+5. topic訂正はappend-onlyとし、旧内容を編集・削除しない。訂正前、訂正後、明示された理由または不確実性を追跡できる形で追加し、同じ訂正のretryは0件追加とする。
+6. idempotencyは同じoperation idだけに依存しない。memory種別、正本scope、正規化した意味内容、訂正関係が同じ既保存内容は、別turn・別operation id・再起動後でもtopic／decision／journal／checkpointを重複追加しない。異なる確実性、否定、条件、訂正関係を同一内容として誤dedupeしない。
+7. memory本体と必須journalが成功しcheckpoint commitだけが失敗した場合、保存をrollbackまたは全体失敗へ偽装せず`partial`とする。retryは未完了commitだけを行い、memory、journal、索引を再実行しない。commit成功後のretryは追加差分・追加commit 0件である。
+8. conversation-core inventoryはtrackedな正本として恒久化し、対象path、surfaceの役割、適用edition、実内容から得た現行契約marker、禁止された旧契約markerを機械検査できるようにする。fileの存在や名前だけで合格にしない。
+9. inventoryは少なくとも会話rule／copy、`memory-care`、`secretary`、`settings`、`daily`、`projects`、workspace templates、runtime classifier、memory保存シーム、golden fixture、Sprint 010を含む現役回帰を対象とする。topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧契約を、言い換え・別surfaceを含めて負検査する。
+10. Agentic、Yasashii、private my-vaultのsourceは、各版固有の文体・Notion／vault routing・repo-owned docsを保ちながら同じauthorization、安全分類、内容冪等性を持つ。共通caseは実内容markerとoffline file fixtureで3版を別々に検査し、1版のPASSを他版へ昇格しない。
+11. Sprint 040ではsourceとoffline regressionまでを完了範囲とする。push、tag、GitHub Release、marketplace、installed cache、利用者workspace、Mac mini、release後の新session／loaded version確認は別phaseであり、offline PASSをlive反映済みと表示しない。

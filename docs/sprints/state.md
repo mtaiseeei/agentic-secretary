@@ -2,12 +2,12 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-039-patch-002
+- Current ID: sprint-040
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 1
+- Model Tier: strong
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -75,6 +75,7 @@
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
+| sprint-040 | active | [contract](sprint-040.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -82,6 +83,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-25: ユーザーが明示memory依頼の二重確認を3版で解消する方針と、既存修正を不変条件へ統合する進め方を承認。Fableの敵対的レビューを踏まえ、Plannerがrequest／content hedge分離、pending一件束縛、append-only訂正、内容冪等性、checkpoint partial、3版実内容inventoryを次のメインSprint `sprint-040` に固定した。旧Sprint 038系譜はLineage Dispatches 9で実装＋独立評価の枠が不足するため、最新mainの次Sprintとして新しい系譜を開始する。memory／journal／Git checkpointを扱うhigh risk Sprintとしてresolverのstrong routeを採用し、fresh Generator dispatch予約でLineage Dispatches 1、Model Tier strong、Rotate model-escalation、Status activeとする。push、tag、Release、marketplace、installed cache、利用者workspace、Mac mini、external serviceは対象外。
 - 2026-08-14: Sprint 039 Patch 002はcandidate HEAD `ba4fe4de39df483b984fef5045bb1e21fdde1373`、product commit `3ef792819a4a445df089f70aa74ca09176762e5e` でfresh独立Evaluator PASS。current／clean checkout／同一HEAD Git-free archive wrapper各exit 0、専用23/23、独自success fixture、独自post-commit failure exit 3からのworkspace／HEAD／index／working tree完全rollbackを確認した。AC1〜18、C2／C5／C6／C9／C10／C12〜C17は全PASS／5点、product finding 0、verification-infra finding 0。common digest `a7d74a7a9bb42ea67815a75132acf588fe312314f98b7f9685cef97fdfca59c9` を、Yasashii／private my-vaultの次Patchが固定するaccepted downstream inputへ昇格する。実HOME、installed cache、下流repo、Mac mini、remote、releaseへのwrite 0。Status done、Retry／Spec-Issue 0、Lineage Dispatches 4、Model Tier standard、Rotate noneを維持し、下流を別Harness正本・別評価で進める。
 - 2026-08-14: Sprint 039 Patch 002 Generatorが製品candidate `3ef792819a4a445df089f70aa74ca09176762e5e` を実装。既存`0.10.0` workspaceのidentity未導入／identity-only／完全適用／衝突をread-only分類し、別確認後にidentity正本、AGENTS／CLAUDEの製品所有identity管理節、最小台帳を新規導入相当へ移行する。所有path限定checkpoint、write／整合確認／台帳／stage／commit／post-commit failureのworkspace・Git rollback、retry成功、rerun 0差分、rename追随、更新後handoffを追加。専用23/23、Patch001 16/16、Sprint039 69/69＋wrapper、safe Git71/71、formal、schema、release integrity、clean clone／Git-free archive wrapperを0 FAILで確認した。archive masterのSprint033固定digestとSprint038 Patch001の0.9.2 CHANGELOG固定期待は開始HEADでも同一のhistorical verification-infraとして分離し、full masterは反復しない。common digestは `a7d74a7a9bb42ea67815a75132acf588fe312314f98b7f9685cef97fdfca59c9` だがfresh Evaluator PASS前はacceptedにしない。実HOME、cache、downstream、Mac mini、remote、release write 0。fresh独立Evaluator dispatch予約としてLineage Dispatchesを4、Status awaiting-eval、Model Tier standard、Rotate noneとする。
 - 2026-08-14: ユーザーが、Plugin更新だけでは既存利用者のローカルworkspaceが新しい秘書identity仕様へ完全移行されないという欠陥を確認し、`0.10.1` Patchとして修正する方針を承認。fresh PlannerがF62／G16／C17と通常Patch `sprint-039-patch-002` を確定した。既存`0.10.0` workspaceをread-only診断し、英語名とmigration適用を別確認した後、identity正本、AGENTS／CLAUDEの製品所有identity管理節、最小台帳を新規導入相当へ移行する。利用者自由記述・他managed block・既存Git変更を保持し、所有path限定checkpoint、全failure point rollback、retry成功、rerun 0差分を要求する。user-scope registry／routingは別確認のまま。Agentic fresh Evaluator PASS後だけ固定SHA／digestを下流へ渡し、Yasashii／private独立PASS後にrelease、Mac mini同期、受講者向け案内へ進む。resolverのsprint-changeはstandard tierを選択し、resume保持未確認のためfresh Generatorをdispatchする。Lineage Dispatchesを3、Model Tier standard、Rotate none、Status activeとする。
