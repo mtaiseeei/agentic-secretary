@@ -3,7 +3,7 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-040
-- Retry Count: 2
+- Retry Count: 3
 - Spec-Issue Count: 0
 - Lineage Dispatches: 6
 - Model Tier: strong
@@ -75,7 +75,7 @@
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
-| sprint-040 | awaiting-eval | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
+| sprint-040 | active | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -83,6 +83,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-26: Sprint 040 Retry 2のfresh独立EvaluatorはFAIL、主分類 `implementation-issue`。旧互換memory外destinationの停止と3版各17/17 inventoryは解消し、Git-free 3版wrapper、meaning、pending、訂正、dedupe、checkpoint partial、安全境界、版固有fixtureは0 FAIL。一方、明示依頼判定を`operation: save-memory`へ狭めたことで、既存のdecision保存・設定変更・Task作成・TODO完了／持越し・文書作成の6操作が3版すべて`explicit / saved / 1`から`inferred / question / 0`へ回帰したP4を独立再現。Sprint 038 runnerがgolden classifierInputを実runtime classifierへ渡さず回帰を見逃すV3はverification-infraとして分離。Retry Count 3に達したためHarness自動loopを停止し、Status active、Lineage Dispatches 6、Model Tier strong、Rotate noneを維持して、(a) 明示操作の汎用判定を復元しmemory scope gateを直交適用する限定Retry、(b) 残余回帰を受け入れるdone-by-user-decision、(c) Plannerへ仕様・検証構造を戻す、のユーザー判断を待つ。下流実repoと外部状態の変更0。
 - 2026-08-26: Sprint 040 Retry 2 Generatorがcandidate commit `cb55f19` で残存P1／V2を限定修正。旧互換`explicit:true + save-memory`もdestination allowlistへ統合し、TODO／Notion／projectはquestion・0件、memory／decision／topicはsaved・1件を専用13/13で固定。inventoryは3版各17/17 surfaceの本文／candidate digest／entry marker／tracked性を実検査する。3版wrapper、各版Sprint 038 67/67、Sprint 010 56/56、安全境界71/71、Git-free再構築、Sprint 039近傍、Windows境界を0 FAILで引き渡した。下流実repoと外部状態は不変。fresh独立最終評価予約としてLineage Dispatches 6、Status awaiting-eval、Retry Count 2、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-26: Sprint 040 Retry 1のfresh独立EvaluatorはFAIL、主分類 `implementation-issue`。P2のmeaning保存／誤dedupe、P3の3版隔離candidate、V1のpublic root流用は解消し、3版wrapperと版別回帰は0 FAIL。一方、P1は`explicitMemoryRequest`経路で解消したが、旧互換の`explicit:true + operation:save-memory + scopeChange:true`経路ではTODO／Notion TaskDB／projectが`saved / 1`となるためAC10／C5／C15／C18未達。inventory 17 surfaceのうち各edition実内容検査が16件となるV2はverification-infraとして分離。Retry Count 2、fresh strong Generator dispatch予約としてLineage Dispatches 5、Status active、Model Tier strong、Rotate noneとし、この2点だけへ限定差し戻す。下流実repoと外部状態の変更0。
 - 2026-08-26: Sprint 040 Retry 1 Generatorがcandidate commit `a5011da3d3a75a09a98a108662fa04a159d20c20` でP1〜P3／V1を限定修正。memory外scope変更を確認前0件へ戻し、空／不整合meaning tupleを保存前に拒否して情報源・確実性等を正本から復元可能にした。固定HEADからGit-freeの3版candidateを実構築し、各版の17 surface本文／digest／marker／tracked性／protected bytesと版別原因範囲suiteを検査。3版wrapper、専用12/12、各版Sprint 038 67/67、Sprint 010 56/56、安全境界71/71、版固有fixtureを0 FAILで引き渡す。実下流repoはHEAD／clean status／protected digest不変、push、tag、Release、cache、workspace、external write 0。fresh独立再評価予約としてLineage Dispatches 4、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。

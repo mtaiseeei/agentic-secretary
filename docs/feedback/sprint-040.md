@@ -448,3 +448,213 @@ commit、branch、remote変更は0件。candidate側の同じprotected pathも�
 P-02、P-03、V-01は解消した。P-01は`explicitMemoryRequest`表現では解消したが、同じclassifierが受理する
 generic明示memory表現ではscope変更が確認なしで保存される。AC10とC5／C15／C18のゼロ許容閾値に未達である。
 加えて、各edition rootの17 entry本文検査を16件へfilterするV-02を、product findingと混同せず残す。
+
+---
+
+## Retry 2 fresh independent evaluation
+
+### 判定
+
+**FAIL**
+
+- Failure classification: `implementation-issue`
+- Retry 2 product findings: **1**
+- Retry 2 verification-infra findings: **1**
+- Retry 1残存finding解消: **P-01-R1、V-02**
+- 初回解消済みfindingの回帰: **P-02、P-03、V-01は回帰なし**
+- Escalation Recommendation: `none`
+
+Retry 2の主目的だった旧互換memory表現のscope gateと、各edition 17/17 inventory検査は解消した。
+Git-freeな`cb55f19`から3版candidateを再構築し、各版のSprint 040、Sprint 038、Sprint 010、
+Git／Secret安全回帰、版固有fixtureは0 FAILだった。meaning復元、invalid tuple拒否、pending、訂正、dedupe、
+checkpoint partial／commit-only retry、protected bytesも維持された。
+
+一方、Retry 2差分はruntime classifierの明示依頼判定を`operation === "save-memory"`だけへ狭めた。
+そのためSprint 038から受入済みの低リスク明示操作であるdecision保存、設定変更、Notion Task作成、TODO完了／持越し、
+現在用件の文書作成が、3版すべてで`explicit / saved / 1`から`inferred / question / 0`へ回帰した。
+Retry 1の同runtime classifierでは同じ6件が`explicit / saved / 1`だったため、新規product regressionである。
+
+提供suiteがgreenなのは、Sprint 038 testがgolden fixtureの`classifierInput`をruntime classifierへ渡さず、
+別のnatural-language runnerだけを評価するためである。この検証漏れを`verification-infra`へ分離するが、
+最終failure kindは実製品classifierの回帰に基づく`implementation-issue`とする。
+
+### 評価対象とcandidate識別
+
+- Evaluated docs-state HEAD: `f235261bfe98fc5e23df5071ab0f1facff9fdf57`
+- Retry 2 product／test candidate commit: `cb55f19dd37f97fff82185ca14b7a15ff96f85de`
+- Retry 2開始HEAD: `ccd9b262cd7c42198968a003e353d9b551618493`
+- Sprint固定base: `5b48b7ba0784aa9b9d6552aed5162fafbc831c99`
+- `cb55f19`からdocs-state HEADまでの差分: `docs/sprints/state.md`だけ。製品／test bytesは同一。
+- Branch: `codex/sprint-040-memory-authorization`
+- Git-free clean archive: `/tmp/sprint-040-retry2-evaluator.LaQ16C/archive`。`git archive cb55f19`から展開し、`.git`なし。
+- Candidate output: `/tmp/sprint-040-retry2-evaluator.LaQ16C/candidates`。reportは相対rootだけを持つ。
+- UI／URL: なし。Skill、Node.js runtime classifier／CLI、実file／Git fixtureを評価対象とし、browser／screenshotは不要。
+
+3版candidate IDはsorted relative path、mode、実bytesから再計算され、progressのhandoffと一致した。
+
+| Edition | 固定base | Candidate ID | Files | inventory |
+|---|---|---|---:|---:|
+| Agentic | `5b48b7ba0784aa9b9d6552aed5162fafbc831c99` | `602083b2f0102c775114fa0383cfc6d448827ac3bbbaf7ea4ad8c8d32c00017b` | 624 | 17/17 unique |
+| Yasashii | `3c472dd9a2b5299f27741ae2c418094486b7d035` | `485d8f38d47ac938e960f1fe1c9dc46698693ecfb86a004617d0c216f4076ffe` | 601 | 17/17 unique |
+| private my-vault | `8e0796c9aba49d9a3dccb020912b0e1cf3989abf` | `e7a0780797a45f0f41c5237fd23306327dc1cf028038ae07ad18a3cfd527bbae` | 711 | 17/17 unique |
+
+### 実行commandと結果
+
+| Command / surface | Exit | PASS／FAILと観測 |
+|---|---:|---|
+| Git-free archive `SPRINT040_YASASHII_SOURCE=... SPRINT040_PRIVATE_SOURCE=... bash scripts/sprint-040-regression.sh` | 0 | build 3/3、inventory 7/7、3 edition suite 0 FAIL。上記candidate IDを再現。 |
+| 各版 `scripts/sprint-040-candidate-suite.sh`（wrapper内） | 0 | 各版Sprint 040 13/13、Sprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、安全境界71/71。Agentic edition 2/2、Yasashii／private edition 3/3、下流版ではprivate相当9/9。 |
+| `node scripts/sprint-040-candidate-build.mjs --output ...` | 0 | 固定baseから3つの別Git-free candidateを再構築。ID／file数はhandoffと一致。 |
+| `node scripts/sprint-040-inventory-test.mjs --candidate-report ...` | 0 | 7/7。各版17/17 unique entryの実本文、candidate digest、entry固有marker宣言、禁止marker／phrase、tracked性、candidate全tree digestを検査。 |
+| 独立scope fixtureを3 candidateで実行 | 0 | 各版12/12。旧互換`explicit:true + operation:save-memory + scopeChange:true`はTODO／Notion TaskDB／project=`question / 0`、memory／decision／topic=`saved / 1`。`scopeChange:false`とabsentでもmemory外3 destinationは`question / 0`。 |
+| 独立meaning fixture | 0 | 9/9。`source=田中 / certainty=hearsay / target=開始は9月 / destination=topic`をmemoryとjournalの`memory-meaning-v1`から復元。同意味表記揺れは追加0、source差は別件。空tuple、target不足、不整合、TODO destinationはexit 2／write 0。 |
+| 独立inventory敵対fixture | 0 | 5/5。移設reportはabsolute workspace参照なしでPASS。16 entry化、Yasashiiのpublic root流用、markerを別entryへ移したglobal偽PASS、`tracked:false`を各exit 1で検出。 |
+| Retry 2 runtime classifierの独立既存契約fixture | 0 | 3版それぞれ6/6で回帰を再現。`save / update / create-task / complete / carry / create`が全件`inferred / question / 0`。 |
+| Retry 1 `a5011da`の同runtime classifierへ同じ6件 | 0 | `NONMEMORY_EXPECTED_PASS=6 FAIL=0`。全件`explicit / saved / 1`。Retry 2で導入された差分であることを確認。 |
+| private candidate `bash plugins/secretary/skills/memory-care/scripts/memory-tools.sh`（引数なし） | 2 | shell入口からNode正本が実行され、正式usage errorを返した。必要な`secretary-store.mjs`／`markdown-lines.mjs`／`safe-fs.mjs`を含む保存面は専用suite 13/13で実行済み。 |
+| 変更Node entrypointの`node --check`、inventory JSON parse、`git diff --check cb55f19^ cb55f19` | 0 | 構文／JSON／whitespace error 0。 |
+
+### Retry 1残存findingと初回findingの再確認
+
+#### P-01-R1 `product` — **解消**
+
+`requiresConfirmation`は`explicitMemoryRequest`と旧互換`explicit + operation:"save-memory"`の両方を
+memory scope gateへ通し、`scopeChange` flagに依存せずdestination allowlistで停止する。
+TODO／Notion TaskDB／projectはflagがtrue／false／absentのいずれでも`question / 0`、
+memory／decision／topicは内部routeとして`saved / 1`だった。AC10のscope変更境界は解消した。
+
+#### V-02 `verification-infra` — **解消**
+
+builderはedition filterでentryを捨てず、全17 entryへ`appliesToEdition`を付ける。
+inventory testは各版で17件、正本と同じID順、17 unique、実本文digest、entry marker宣言、tracked性を検査した。
+16件化をexit 1で拒否し、非適用copyも各candidate rootの実本文として検査対象になった。
+
+#### P-02／P-03／V-01 — **解消維持**
+
+- meaning tupleはmemory／journalから機械復元でき、空tuple、必須target不足、表示不整合、memory外destinationを保存前に拒否した。
+- 3版の別Git-free candidate、版固有fixture、Sprint 038／010、安全回帰、protected bytesを別々に実行した。
+- candidate reportは相対rootだけを持ち、移設後もinventory 7/7。public root流用、global marker移動、stale／tracked不整合を拒否した。
+- pending一件束縛、別話題失効、修正付き了承、append-only訂正、content dedupe、checkpoint `partial`→commit-only retry→再retry 0は3版13/13と実file fixtureで回帰なし。
+
+### Retry 2 Findings
+
+#### P-04-R2 `product` — memory修正のために既存の低リスク明示操作を`inferred`へ回帰させる
+
+`plugins/secretary/scripts/lib/conversation-contract.mjs:8-10`の`hasCurrentExplicitRequest`は、Retry 1まで
+`explicit && operation && target && destination`を明示依頼として扱っていた。Retry 2はこれを
+`operation === "save-memory"`へ狭めた。`requiresConfirmation`側のmemory scope修正は同file `33-40`で
+独立して成立しており、一般明示操作の分類を狭める必要はない。
+
+Sprint 038の受入済みgolden fixtureは、低リスク明示操作を次のように表す。
+
+| 既存case相当 | classifier input | Retry 1 | Retry 2観測 |
+|---|---|---|---|
+| decision保存 | `explicit:true, operation:"save", destination:"memory/decisions"` | `explicit / saved / 1` | `inferred / question / 0` |
+| 設定変更 | `operation:"update", destination:"preferences.md"` | `explicit / saved / 1` | `inferred / question / 0` |
+| Notion Task作成 | `operation:"create-task", destination:"Notion TaskDB"` | `explicit / saved / 1` | `inferred / question / 0` |
+| TODO完了 | `operation:"complete", destination:"inbox/todo.md"` | `explicit / saved / 1` | `inferred / question / 0` |
+| TODO持越し | `operation:"carry", destination:"inbox/todo.md"` | `explicit / saved / 1` | `inferred / question / 0` |
+| 現在用件の文書作成 | `operation:"create", destination:"docs"` | `explicit / saved / 1` | `inferred / question / 0` |
+
+この6件を3 candidateへ直接通し、各版6/6で同じ回帰を再現した。decision保存はmemory内部routeそのものであり、
+明示依頼を内部分類後に`inferred`へ戻して再質問するためC18にも直接抵触する。他の5件はSprint 038で確定した
+低リスク明示依頼のrun-onceを壊す。C6、C15、C18のゼロ許容閾値に抵触する。
+
+#### V-03 `verification-infra` — Sprint 038 greenがruntime classifierのgolden入力を実行しない
+
+`scripts/sprint-038-test.mjs:26-46`はfixture各caseを回すが、`classifierInput`を
+`conversation-contract.mjs`へ渡さず、別実装`runConversationScenario`へ自然文とpreconditionだけを渡す。
+そのためgolden fixture上は`explicit`の6件をruntime classifierが`inferred`へ変えても67/67になる。
+
+Retry 2専用testも`explicitMemoryRequest`と`operation:"save-memory"`だけを直接分類し、既存の
+`save / update / create-task / complete / carry / create`を通さない。このためwrapper全体がgreenのままP-04-R2を見逃す。
+これは検証基盤のfindingであり、単独で製品FAILへ昇格していない。最終FAILはP-04-R2に基づく。
+
+### 下流実repoのread-only不変確認
+
+#### Yasashii
+
+- HEAD: `3c472dd9a2b5299f27741ae2c418094486b7d035`
+- `git status --short`: 出力0
+- `README.md`: `35361391ad9a74c9403f8a2cc20616b5e3aa0635d76a067c1022fb35b794b527`
+- `AGENTS.md`: `dd4343eb57b108bc54f867f458040d3315060da4ccf3df476106323401f7b5da`
+- `docs/spec.md`: `694c582a5200901a4669741956017aedcc242056620d051e9e621d0423d8de76`
+- edition／Yasashii style: `663c14cc51b92a936a1dbaf34d5ab4f7ded65f20d57ad0ed645dfd3e8d9bf7b7` ／ `50c9df0ff79fb43d5e051eb0c42070e31393b210a7fb78076c6e7e6996b1699c`
+
+#### private my-vault
+
+- HEAD: `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
+- `git status --short`: 出力0
+- `README.md`: `08046efc3648633b0e80f182c254755bb4e1a5e086607e1674abef22783ff293`
+- `AGENTS.md`: `dd4343eb57b108bc54f867f458040d3315060da4ccf3df476106323401f7b5da`
+- `docs/spec.md`: `58755995d733d454daad0da28ab98b83c0829f5f1c1ebfe6f0516d30bf78ef1f`
+- edition: `29d70da3b1b9c6c48716488919a9de35a38c4087853363563f385eb07dacf7b9`
+- Notion／vault-search: `8c40b2007c952b88a38165ef308dc723098ddca9e31cec3ec503d723a84c4527` ／ `54d0e7094a03497ceaeda5a48d753124763982f80bf1e60494034cb7faceca88`
+
+初回、Retry 1、Retry 2の値は一致した。candidate側もreportの`protectedBefore`／`protectedAfter`が一致し、
+Yasashii identity／style、private Notion／vault／root guidance／repo-owned docsは固定base bytesを保持した。
+実下流repoへのapply、checkout、commit、branch、remote変更は0件である。
+
+### Retry 2 Acceptance Criteria
+
+| AC | 判定 | 根拠 |
+|---:|---|---|
+| 1 | PASS | 明示memoryのdecision／topic相当は`explicitMemoryRequest`と旧互換`save-memory`で質問0、各1件保存。 |
+| 2 | PASS | request hedgeは質問前0。推量／伝聞の明示保存は同turn 1件。 |
+| 3 | PASS | source／certainty／target／destinationをmemory／journalから復元し、不整合negativeを拒否。 |
+| 4 | PASS | 引用、非現在仮定、取消、過去照会write 0。削除2段階も安全回帰green。 |
+| 5 | PASS | pending 1件、別話題失効、修正付き了承の同turn実行を3版で確認。 |
+| 6 | PASS | topic旧event不変、新訂正event 1、同訂正retry 0。 |
+| 7 | PASS | 表記違い、別turn／operation相当、再retryでmemory／journal／commit追加0。 |
+| 8 | PASS | source／certainty／訂正関係差は別件。空tuple等は保存前拒否。 |
+| 9 | PASS | checkpointはpartial `1/1/0`、retry `0/0/1`、再retry `0/0/0`。 |
+| 10 | PASS | Secret／削除／destructive／external／bulkと、flag true／false／absentのmemory外scope変更は質問前0。 |
+| 11 | PASS | 各版17/17 unique entryの実本文、digest、entry marker、tracked性を検査し、16件化等を拒否。 |
+| 12 | PASS | 下流旧base marker 0、3 candidateの現行marker 3 surface、禁止旧marker／phrase 0。 |
+| 13 | PASS | settings／daily／projects／templates／runtime／memory seam／golden／Sprint 010を17 entryへ収載。 |
+| 14 | **FAIL** | P-04-R2／V-03。Sprint 038 fixtureの受入済みexplicit classifier input 6件とruntime classifierが不一致。 |
+| 15 | **FAIL** | wrapperは3版0 FAILだが、触ったruntime classifierの既存golden入力を実行せずP-04-R2を見逃すため、無回帰証拠として成立しない。 |
+| 16 | **FAIL** | protected bytesと版固有fixtureはPASSしたが、3 candidate共通のruntime authorizationが同じ6件で誤分類。 |
+| 17 | PASS | 実source remoteへのpush、tag、Release、marketplace、cache、workspace、Mac mini、external service変更0。 |
+| 18 | PASS | offline candidateだけを報告し、release／cache／new session／live反映と分離。 |
+| 19 | **FAIL** | 独立EvaluatorでC6／C15／C18とAC14〜16が必須閾値未達。 |
+
+### Retry 2 Rubric scores
+
+| Rubric | Score | 根拠 |
+|---|---:|---|
+| C2 構文・整合 | **5/5** | Node構文、JSON、candidate ID、17-entry report、base／root、protected digestは整合。 |
+| C5 安全・規律 | **5/5** | scope gate、Secret、削除、external、bulk、path／Git所有境界、下流read-onlyは全て維持。 |
+| C6 無回帰 | **4/5** | 提供suiteはgreenだが、Retry 2差分で既存の明示低リスク6操作が3版すべて質問へ回帰した。 |
+| C13 edition分離・互換 | **5/5** | 固定baseから3 candidateを別構築し、17/17 inventory、版固有fixture、protected bytes、実下流read-onlyを確認。 |
+| C14 会話のMarkdown可読性 | **5/5** | 3版のSkill／copy／Sprint 010回帰、partial表示、edition差に可読性回帰なし。 |
+| C15 会話authorization・意味保存 | **4/5** | meaning／pending／安全境界は成立したが、既存の明示低リスク6入力を`inferred`へ誤分類する。 |
+| C18 明示memory authorization・内容冪等性 | **4/5** | P-01-R1／V-02は解消したが、既存の`operation:"save" + memory/decisions`内部routeを`inferred`へ戻して再質問する。 |
+
+### Safety／外部操作／Not-run
+
+- 評価はGit-free `/tmp` candidate／fixture、read-only下流source、隔離ローカルGit fixtureだけで実施した。network、connector、live serviceは未使用。
+- 安全suite内のpush検査は`/tmp`のlocal bare remoteだけ。実source remoteへのpush、tag、GitHub Release、marketplace、installed cache、利用者workspace migration、Mac mini同期、external service writeは0件。
+- 実下流2repoは固定HEAD、clean status、protected digest不変。製品repoはfeedback追記前にHEAD `f235261`、status cleanだった。
+- UI／browser／screenshotは対象なし。installed cache、new session、loaded version、実利用者workspaceはNOT-RUNで、合格条件へ追加していない。
+- 新しいcollector、統一attestation、live cache検査は要求していない。
+
+### Evaluator self-review
+
+- Generatorの会話履歴と自己評価を判定根拠にせず、spec、rubric、Sprint契約、state、progress、初回／Retry 1 feedback、Retry 2実diffを読み直した。
+- `cb55f19`をGit archiveから展開し、固定baseから3版candidateを再構築した。candidate ID、各版suite、inventory 17/17、protected bytesを独立確認した。
+- 残存P-01-R1をflag trueだけでなくfalse／absentでも、V-02を16件化／public root／global marker／tracked性／移設reportで敵対的に確認した。
+- 初回解消済みmeaning、invalid tuple、3版分離、pending、訂正、dedupe、checkpoint partial、安全境界を変更candidateで再実行した。
+- Retry 2 diffの`hasCurrentExplicitRequest`変更を近傍だけでなく、Sprint 038で受入済みの低リスクexplicit操作へ戻して比較した。Retry 1 moduleの同一6件が6/6 PASS、Retry 2の3版が各6/6回帰であることを確認した。
+- findingを`product` 1件、`verification-infra` 1件へ分離した。V-03単独をproduct FAILへ昇格していない。
+- safe harborを証拠の上限として守り、UI、live/cache/new session、attestationを追加条件にしていない。
+- 書き込んだ正本は本feedbackだけ。製品、tests、spec、progress、state、Git commitは変更していない。
+
+### Retry 2 最終Verdict
+
+**FAIL — `implementation-issue`**
+
+P-01-R1とV-02は解消し、初回P-02／P-03／V-01の修正も維持した。しかしP-01修正と同じdiffで、
+一般の明示依頼判定まで`save-memory`限定へ狭めたため、既存の低リスク明示操作6件が3版すべて再質問へ回帰した。
+C6／C15／C18は5/5必須であり未達である。Sprint 038 suiteのgreenだけでは、runtime classifierへ
+golden `classifierInput`を通していないためこの回帰を否定できない。
