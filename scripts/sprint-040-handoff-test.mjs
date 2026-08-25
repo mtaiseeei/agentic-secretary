@@ -56,6 +56,7 @@ check("undeclared mutation fails", () => {
   const fixture = clone();
   const edition = fixture.editions.find((item) => item.id === "yasashii");
   edition.roles.adapted = edition.roles.adapted.filter((path) => path !== "scripts/sprint-038-test.mjs");
+  delete edition.transformations["scripts/sprint-038-test.mjs"];
   runBuild("undeclared-mutation", fixture, /undeclared-mutation:scripts\/sprint-038-test\.mjs/u);
 });
 check("role overlap fails", () => {

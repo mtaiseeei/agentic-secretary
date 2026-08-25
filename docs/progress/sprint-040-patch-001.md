@@ -46,6 +46,8 @@ read／copy／write／execute／protect trace、declared input union、固定bas
 private固有adaptedは `daily`／`memory-care`／`projects`／`secretary`／`settings` の5 Skillと
 `scripts/sprint-038-test.mjs`。supportingはREADME、root AGENTS、repo spec、edition identity、
 Notion Task routing、vault-searchの6 path。`scripts/sprint-038-test.mjs` は両下流でadaptedであり、parityとの重複は0。
+各adapted recordは入力種別、transformer ID、固定base／public source上の変換anchor、`applicationCount: 1`、
+最終SHA-256を持ち、宣言欠落・余分なtransformer宣言もbuild前に拒否する。
 
 actual diff pathは次のとおり。各pathのbefore／after mode・SHA-256はcandidate reportへ同一runで記録した。
 
@@ -60,13 +62,13 @@ Yasashii `37/29/32/1/5`、private `38/26/32/1/6`。`--skip-execute` は負fixtur
 
 ## Candidate identity
 
-manifest digest: `bc357daa442b4dca17942288c2f271cfeb6732ac2e657cbfaaa1febccfbd8e8c`
+manifest digest: `bdcd5dbd21eed979f224180a44366ddf2d070d57c8507a0c0a66faf6f65ea88f`
 
 | Edition | 旧ID | 新ID | Files |
 |---|---|---|---:|
-| Agentic | `428b3ff435ee63bf47837e38792873264e14336e85ca1190bd823e80cbc67e0a` | `80171b24dbc111ac6ade81e19e787d907a4516032ba327de23a45154de49e7c6` | 628 |
-| Yasashii | `bb194d55a3cff4fe6fbfdb588f1db665d4fcd2ed4446482410ca9dc525490cfd` | `b245943499e19f7a876f20d50ad8248bbc89c03f768d219fe1598e070cf533c9` | 604 |
-| private my-vault | `95b7c5346dd9173817e40479e7599d39f4660f3efbb2b6d6122ab723b148bc84` | `c03de41ee8cc8f282499269d2a31a4f20be6a054f7f74e55088c48a81407eb63` | 714 |
+| Agentic | `428b3ff435ee63bf47837e38792873264e14336e85ca1190bd823e80cbc67e0a` | `cb1cbf70ff37bc20184d7114e96ddcda6eede65243519245344217b013bb4e4c` | 628 |
+| Yasashii | `bb194d55a3cff4fe6fbfdb588f1db665d4fcd2ed4446482410ca9dc525490cfd` | `73b10b501aea2019e8689e573c56fa5d761783c619c166288585ddc74e3fd7e9` | 604 |
+| private my-vault | `95b7c5346dd9173817e40479e7599d39f4660f3efbb2b6d6122ab723b148bc84` | `bdb9587aa7be8fb22087c80205ab49260516acdc9b70027b94fa1d93d45dfe5d` | 714 |
 
 別の空directoryへ同じ固定入力から再構築し、3 IDとも一致した。candidate reportのrootは
 `agentic`／`yasashii`／`private-my-vault` の相対pathだけで、実workspaceの絶対pathをidentityへ含めない。

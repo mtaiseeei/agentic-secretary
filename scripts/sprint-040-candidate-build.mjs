@@ -125,6 +125,14 @@ function validateRoleDeclaration(publicRoot, baseRoot, handoff, edition, roles) 
   const undeclaredProtected = protectedPaths.filter((path) => !roles.supporting.includes(path));
   if (unusedSupporting.length) throw new Error(`${edition.id}:unused-declaration:${unusedSupporting.join(",")}`);
   if (undeclaredProtected.length) throw new Error(`${edition.id}:undeclared-protect:${undeclaredProtected.join(",")}`);
+  const transformationPaths = sorted(Object.keys(edition.transformations ?? {}));
+  const missingTransformations = roles.adapted.filter((path) => !transformationPaths.includes(path));
+  const unusedTransformations = transformationPaths.filter((path) => !roles.adapted.includes(path));
+  if (missingTransformations.length) throw new Error(`${edition.id}:missing-transformation:${missingTransformations.join(",")}`);
+  if (unusedTransformations.length) throw new Error(`${edition.id}:unused-transformation:${unusedTransformations.join(",")}`);
+  for (const [path, definition] of Object.entries(edition.transformations ?? {})) {
+    if (!definition.input || !definition.transformer || !Array.isArray(definition.anchors) || definition.anchors.length === 0) throw new Error(`${edition.id}:invalid-transformation:${path}`);
+  }
   return overlaps;
 }
 
@@ -367,12 +375,19 @@ function main() {
     const actualInventory = candidateInventory(candidate, inventory, tracked, edition.id);
     const identity = candidateDigest(candidate);
     const declaredUnion = sorted([...roles.parity, ...roles.adapted, ...roles.supporting]);
-    const roleRecords = Object.fromEntries(Object.entries(roles).map(([role, paths]) => [role, paths.map((path) => ({
-      path,
-      input: role === "parity" ? "public-source" : "fixed-base",
-      actions: role === "parity" ? ["read", "copy", "write"] : role === "adapted" ? ["read", "write"] : ["read", "protect"],
-      finalSha256: digest(candidate, path),
-    }))]));
+    const roleRecords = Object.fromEntries(Object.entries(roles).map(([role, paths]) => [role, paths.map((path) => {
+      const transformation = edition.transformations?.[path] ?? null;
+      return {
+        path,
+        input: transformation?.input ?? (role === "parity" ? "public-source" : "fixed-base"),
+        actions: role === "parity" ? ["read", "copy", "write"] : role === "adapted" ? ["read", "write"] : ["read", "protect"],
+        reason: role === "supporting" ? "protected-digest" : undefined,
+        transformer: transformation?.transformer,
+        anchors: transformation?.anchors,
+        applicationCount: role === "adapted" ? 1 : undefined,
+        finalSha256: digest(candidate, path),
+      };
+    })]));
     reports.push({
       id: edition.id,
       candidateRoot: edition.id,

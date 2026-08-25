@@ -71,6 +71,11 @@ check("handoff roles are exclusive and execution-derived", () => {
       assert.deepEqual(edition.roles.supporting.map((item) => item.path).filter((path) => edition.actualCandidateDiffPaths.includes(path)), [], `${edition.id}:supporting-diff`);
       assert.ok(edition.roles.adapted.some((item) => item.path === "scripts/sprint-038-test.mjs"), `${edition.id}:sprint038-adapted`);
       assert.equal(edition.roles.parity.some((item) => item.path === "scripts/sprint-038-test.mjs"), false, `${edition.id}:sprint038-not-parity`);
+      for (const item of edition.roles.adapted) {
+        assert.equal(item.applicationCount, 1, `${edition.id}:${item.path}:application-count`);
+        assert.ok(item.transformer, `${edition.id}:${item.path}:transformer`);
+        assert.ok(item.anchors.length > 0, `${edition.id}:${item.path}:anchors`);
+      }
     }
     for (const action of ["read", "copy", "write", "execute", "protect"]) assert.ok(Array.isArray(edition.trace[action]), `${edition.id}:trace:${action}`);
   }
