@@ -2,12 +2,12 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-040
+- Current ID: sprint-040-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 8
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 9
+- Model Tier: strong
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -76,6 +76,7 @@
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
+| sprint-040-patch-001 | active | [contract](sprint-040-patch-001.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -83,6 +84,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-26: Yasashii実適用pre-write gateで、公開handoff schema2の`exactCommonPaths=23`と`yasashiiExactPaths=5`はintersection 0／union 28であり、Planner固定値のintersection 1／union 27と不一致、さらにbuilderが変更する`scripts/sprint-038-test.mjs`が両listに未収載と判明。固定base→Yasashii candidateの実差分25件は宣言24＋未宣言1で、宣言限定・未分類0・candidate再現を同時に満たせない。下流製品writeは0。公開Sprint 040の会話／memory挙動を変えず、handoffのparity／adapted／supporting分類とbuilder実動作を完全一致させるhigh-risk `sprint-040-patch-001`を開始する。同Base系譜の残枠内でfresh Generator予約をLineage Dispatches 9、Model Tier strong、Rotate model-escalation、Status activeとして記録。下流実repo、release、cache、push、external stateは対象外。
 - 2026-08-26: ユーザー承認済み限定Retryはcandidate commit `09267e3` でfresh独立Evaluator PASS。Git-free 3版candidateを再構築し、既存6操作の各版6/6 `explicit / saved / 1`、memory scope 36/36、Sprint 038全35 goldenの実runtime通過、classifierInput欠落／runtime tamper／旧操作回帰の負例拒否を確認した。3版wrapper、各版Sprint 040 15/15、Sprint 038 67/67、Sprint 010 56/56、安全71/71、inventory各17/17、版固有fixtureは0 FAIL。AC1〜19全PASS、C2／C5／C6／C13／C14／C15／C18全5/5、product finding 0、verification-infra finding 0。Sprint 040をdone、Retry／Spec-Issue 0、Lineage Dispatches 8、Model Tier standard、Rotate noneとする。公開版source candidate PASSであり、実Yasashii／private repo適用と各repo独立評価、release／cache／new sessionは未実行のまま。
 - 2026-08-26: ユーザー承認済み限定Retry Generatorがcandidate commit `09267e3` でP4／V3を限定修正。既存6操作を`explicit / saved / 1`へ復元し、memory scope gateを`save-memory`へ直交適用して外部destinationはquestion・0件、内部routeはsaved・1件に固定した。Sprint 038全goldenはclassifierInput必須となり、実runtime `executeConversation`の判定からintent／response／side effectを取得する。3版wrapperは各Sprint 040 15/15、Sprint 038 67/67、Sprint 010 56/56、安全71/71、inventory各17/17、版固有fixtureを0 FAIL。近傍Windows 12/12、Sprint 039 wrapper 6/6。下流実repoと外部状態は不変。fresh独立評価予約としてLineage Dispatches 8、Status awaiting-eval、Retry Count 0、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-26: 3回連続failure停止後、ユーザーが推奨A「既存6操作の明示判定を復元し、memory scope gateを直交適用、Sprint 038 runnerを実classifierへ接続する限定Retry」を明示選択。過去3回のFAILとfeedbackは保持したまま、新しい限定再試行cycleとしてRetry Countを0へ戻し、Generator dispatch予約でLineage Dispatches 7、Status active、Model Tier strong、Rotate noneとする。修正範囲はP4とV3、その直接回帰だけ。3版candidate builder、memory保存シーム、下流実repo、release／cache／external stateは変更しない。

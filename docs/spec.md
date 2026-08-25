@@ -157,6 +157,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-039-patch-001](sprints/sprint-039-patch-001.md) | renameの所有path限定local Git checkpointと、commit失敗を含むworkspace／user-scope／Git rollback | sprint-039 |
 | [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
 | [sprint-040](sprints/sprint-040.md) | 明示memory依頼のrun-once、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版conversation-core inventory | sprint-039-patch-002 |
+| [sprint-040-patch-001](sprints/sprint-040-patch-001.md) | 3版handoff manifestのpath役割完全化、機械算出した集合照合、candidate再現と下流pre-write gate | sprint-040 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

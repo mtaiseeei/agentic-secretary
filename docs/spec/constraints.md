@@ -286,6 +286,7 @@
 15. 共通coreのintent分類、response state、内容依存応答、安全境界はpublic upstreamが所有する。`task-triage`、`notion-tasks`、`vault-search`、`vault-documents` 等のmy-vault固有SkillとNotion routingはprivate repoが所有し、public upstreamへ複製しない。
 16. private所有変更は同じSprint 038契約を継承したprivate側の作業単位で行うが、Generator／Evaluator中は実downstreamではなく隔離candidateだけを変更する。共通candidate SHA、private base SHA、対象pathを固定し、独立Evaluator PASS後かつ配布系統別の明示確認後だけ実downstreamへfast-forward相当で反映し、再インストールする。
 17. 共通parity caseは保存先・正本ルールまで同じcaseに限る。Notion TaskDB routing等はedition固有caseとし、共通比較はintentと確認・Secret・外部状態等の安全境界に限定する。保存先とresponse stateは各editionの正本に従う。
+18. 3版handoffは、builderが下流candidateについて直接copy、adapt、read、execute、保護digest照合する全pathをmanifestへ役割別に宣言する。宣言集合、builderの実アクセス／変更集合、固定baseからの実candidate差分は実行時に機械算出し、重複、未分類、builder変更pathの未収載、利用実績のない宣言、stale pathを0件とする。件数を手入力した期待値へ固定せず、candidate identityはsorted relative path、mode、実bytesから版別に再計算する。
 
 ## 16. ホスト対応・検証表示と実会話回帰の安全境界
 
