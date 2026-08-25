@@ -658,3 +658,192 @@ P-01-R1とV-02は解消し、初回P-02／P-03／V-01の修正も維持した。
 一般の明示依頼判定まで`save-memory`限定へ狭めたため、既存の低リスク明示操作6件が3版すべて再質問へ回帰した。
 C6／C15／C18は5/5必須であり未達である。Sprint 038 suiteのgreenだけでは、runtime classifierへ
 golden `classifierInput`を通していないためこの回帰を否定できない。
+
+## ユーザー選択A 限定Retry fresh independent evaluation
+
+### 判定
+
+**PASS**
+
+- Failure classification: なし
+- Product findings: **0**
+- Verification-infra findings: **0**
+- Retry 2残存finding解消: **P-04-R2、V-03**
+- 初回／Retry 1で解消済みfinding: **P-01-R1、P-02、P-03、V-01、V-02は回帰なし**
+- Escalation Recommendation: `none`
+
+ユーザーが選んだ限定Retryの範囲で、P-04-R2とV-03は解消した。candidate commit `09267e3`の
+Git-free archiveから3版candidateを再構築し、既存6操作は3版とも`explicit / saved / 1`へ戻った。
+memory scope gateはmemory保存操作にだけ適用され、TODO／Notion TaskDB／projectは`scopeChange`が
+true／false／absentの全状態で`question / 0`、memory／decision／topicは同じ3状態で`saved / 1`だった。
+
+Sprint 038の全35 golden caseは必須`classifierInput`と`execution`をrunnerへ渡し、実runtime
+`executeConversation`から`classifyIntent`と`requiresConfirmation`を経たintent／response／side effectで
+実file副作用を制御した。`classifierInput`欠落、runtime判定tamper、旧6操作を再び`save-memory`限定へ戻す
+3つの負fixtureは全て`exit 1`となり、runnerの手書き理解・期待値だけではgreenにならないことを確認した。
+
+meaning、invalid tuple、pending、訂正、content dedupe、checkpoint partial、3版builder、各版17/17 inventory、
+private入口／依存、safe Git／Secret、protected bytesも0 FAILである。新しいfindingはない。
+
+### 評価対象とcandidate識別
+
+- Evaluated docs-state HEAD: `1b7c284093293d6409ffa5c3c5ac66eb9b2fe748`
+- Product／test candidate commit: `09267e3`
+- 限定Retry開始HEAD: `50934d6`
+- Sprint固定base: `5b48b7ba0784aa9b9d6552aed5162fafbc831c99`
+- `09267e3`からdocs-state HEADまでの差分: `docs/sprints/state.md`だけ。製品／test bytesは同一。
+- Branch: `codex/sprint-040-memory-authorization`
+- Git-free archive: `/tmp/sprint-040-limited-evaluator.YqNqhJ/archive`。`git archive 09267e3`から展開し、`.git`なし。
+- Candidate output: `/tmp/sprint-040-limited-evaluator.YqNqhJ/candidates`。reportは相対rootだけを持つ。
+- UI／URL: なし。Skill、Node.js runtime、CLI、実file／Git fixtureが評価対象で、browser／screenshotは不要。
+
+3版candidate IDはsorted relative path、mode、実bytesから再計算され、progressのhandoffと一致した。
+
+| Edition | 固定base | Candidate ID | Files | inventory |
+|---|---|---|---:|---:|
+| Agentic | `5b48b7ba0784aa9b9d6552aed5162fafbc831c99` | `428b3ff435ee63bf47837e38792873264e14336e85ca1190bd823e80cbc67e0a` | 624 | 17/17 unique |
+| Yasashii | `3c472dd9a2b5299f27741ae2c418094486b7d035` | `bb194d55a3cff4fe6fbfdb588f1db665d4fcd2ed4446482410ca9dc525490cfd` | 601 | 17/17 unique |
+| private my-vault | `8e0796c9aba49d9a3dccb020912b0e1cf3989abf` | `95b7c5346dd9173817e40479e7599d39f4660f3efbb2b6d6122ab723b148bc84` | 711 | 17/17 unique |
+
+### 実行commandと結果
+
+| Command / surface | Exit | PASS／FAILと観測 |
+|---|---:|---|
+| Git-free archiveで`SPRINT040_YASASHII_SOURCE=... SPRINT040_PRIVATE_SOURCE=... bash scripts/sprint-040-regression.sh` | 0 | build 3/3、inventory 7/7、3 edition suite 0 FAIL。上記candidate IDを再現。 |
+| 各版`scripts/sprint-040-candidate-suite.sh`（wrapper内） | 0 | 各版Sprint 040 15/15、Sprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、安全境界71/71。Agentic edition 2/2、Yasashii／private edition 3/3、下流版private相当9/9。 |
+| `node scripts/sprint-040-candidate-build.mjs --public-root . --yasashii-source ... --private-source ... --output ...` | 0 | 固定baseから3つの別Git-free candidateを再構築。ID／file数はhandoffと一致。 |
+| 3 candidateへの独立authorization敵対fixture | 0 | 各版、旧6操作6/6、`scopeChange` 3状態を含む非memory scope非漏洩18/18、2表現×6 destination×3状態のmemory scope 36/36、Sprint 038 golden runtime 35/35。 |
+| `classifierInput`を1件欠落させたSprint 038負fixture | 1（期待値） | `explicit-save-decision:classifierInput`を拒否し、`SPRINT038_PASS=66 SPRINT038_FAIL=1`。 |
+| runtime `classifyIntent`のexplicit判定をtamperしたSprint 038負fixture | 1（期待値） | explicit golden群が失敗。手書きresponse／snapshotだけではgreenにならない。 |
+| `hasCurrentExplicitRequest`を旧`save-memory`限定へ戻したSprint 038負fixture | 1（期待値） | decision、setting、Notion、TODO、文書等のgoldenが失敗し、P-04-R2回帰を拒否。 |
+| private candidate `bash plugins/secretary/skills/memory-care/scripts/memory-tools.sh`（引数なし） | 2（期待値） | shell入口がNode正本へ到達し、正式usage errorを返した。`secretary-store.mjs`／`markdown-lines.mjs`／`safe-fs.mjs`は3/3存在。 |
+| `node scripts/sprint-038-patch-002-windows-test.mjs` | 0 | Darwin上のNode-native path境界12/12。Windows native実runへは昇格しない。 |
+| `bash scripts/sprint-039-patch-002-regression.sh` | 0 | Patch 002 23/23、Patch 001 16/16、Sprint 039 69/69を含むwrapper 6/6。 |
+| 変更Node entrypoint 5本の`node --check` | 0 | 5/5。 |
+| repo checkoutで`git diff --check 09267e3^ 09267e3` | 0 | whitespace error 0。Git-free archiveから同commandを試した1回は`.git`がないためexit 1となり、正しいrepo面で再実行してPASS。 |
+
+### P-04-R2／V-03の解消確認
+
+#### P-04-R2 `product` — **解消**
+
+`hasCurrentExplicitRequest`は、memory専用のscope gateとは独立して、`explicit && operation && target && destination`を
+一般の低リスク明示操作として再び認識する。3版candidateへdecision保存、設定変更、Notion Task作成、TODO完了、
+TODO持越し、現在用件の文書作成を直接通すと、各版6/6で`explicit / saved / 1`だった。
+
+同じ6操作へ`scopeChange` true／false／absentを付けた18 caseも全て`saved / 1`であり、memory専用gateの漏洩はない。
+一方、memory保存は`explicitMemoryRequest`と旧互換`explicit + operation:save-memory`の両表現で、
+TODO／Notion TaskDB／projectが3状態とも`question / 0`、memory／decision／topicが3状態とも`saved / 1`だった。
+C5／C6／C15／C18の境界が同時に成立する。
+
+#### V-03 `verification-infra` — **解消**
+
+Sprint 038 testは全caseへ`classifierInput`を必須化し、runnerはそれを`executeConversation`へ渡す。
+runtimeは`classifyIntent`と`requiresConfirmation`を実行し、その結果がrunnerの実file更新可否を決める。
+3版の35/35 goldenを直接比較し、版別suiteでは各67/67を確認した。
+
+敵対確認では、`classifierInput`欠落がschema検査でexit 1、runtime判定tamperがexplicit群の比較でexit 1、
+P-04-R2の旧実装再注入が既存6操作を含むgolden比較でexit 1となった。golden側の`expected`、応答断片、
+snapshotはrunnerへ判定入力として渡されず、実runtimeが壊れたままoracleだけでgreenになる経路はない。
+
+### 主要回帰と3版境界
+
+- meaningは`source=田中 / certainty=hearsay / target=開始は9月 / destination=memory`をmemory／journalの
+  `memory-meaning-v1`から復元する。空tuple A/B、target不足、表示不整合、memory外destinationはexit 2／write 0。
+- request/content hedge、引用、非現在仮定、取消、過去照会、pending一件束縛、別話題失効、修正付き了承を回帰した。
+- topic旧event byte不変＋訂正event 1、表記揺れ／別turn／別operation相当retry 0、source／certainty差は別件。
+- checkpoint failureは`partial`でmemory／journal／commit=`1/1/0`、retry=`0/0/1`、再retry=`0/0/0`。
+- inventoryは各版17/17 unique entryの実本文、candidate digest、entry marker、禁止旧marker／phrase、tracked性を検査。
+- private candidateはNode入口と必要依存3本が実在し、Notion／vault routingとroot guidanceを保つ。
+- safe Git／Secret 71/71は所有path commit、既存stage／unstaged／untracked保持、資格情報拒否、
+  local bare remoteだけのpush／rollbackを確認した。実remoteへのpushはない。
+
+### 下流実repoのread-only不変確認
+
+#### Yasashii
+
+- HEAD: `3c472dd9a2b5299f27741ae2c418094486b7d035`
+- `git status --short`: 出力0
+- `README.md`: `35361391ad9a74c9403f8a2cc20616b5e3aa0635d76a067c1022fb35b794b527`
+- `AGENTS.md`: `dd4343eb57b108bc54f867f458040d3315060da4ccf3df476106323401f7b5da`
+- `docs/spec.md`: `694c582a5200901a4669741956017aedcc242056620d051e9e621d0423d8de76`
+- edition／Yasashii style: `663c14cc51b92a936a1dbaf34d5ab4f7ded65f20d57ad0ed645dfd3e8d9bf7b7` ／ `50c9df0ff79fb43d5e051eb0c42070e31393b210a7fb78076c6e7e6996b1699c`
+
+#### private my-vault
+
+- HEAD: `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
+- `git status --short`: 出力0
+- `README.md`: `08046efc3648633b0e80f182c254755bb4e1a5e086607e1674abef22783ff293`
+- `AGENTS.md`: `dd4343eb57b108bc54f867f458040d3315060da4ccf3df476106323401f7b5da`
+- `docs/spec.md`: `58755995d733d454daad0da28ab98b83c0829f5c1ebfe6f0516d30bf78ef1f`
+- edition: `29d70da3b1b9c6c48716488919a9de35a38c4087853363563f385eb07dacf7b9`
+- Notion／vault-search: `8c40b2007c952b88a38165ef308dc723098ddca9e31cec3ec503d723a84c4527` ／ `54d0e7094a03497ceaeda5a48d753124763982f80bf1e60494034cb7faceca88`
+
+初回、Retry 1、Retry 2、今回の値は一致した。candidate reportの`protectedBefore`／`protectedAfter`も一致し、
+Yasashii identity／style、private Notion／vault／root guidance／repo-owned docsは固定base bytesを保持した。
+実下流repoへのapply、checkout、commit、branch、remote変更は0件である。
+
+### 限定Retry Acceptance Criteria
+
+| AC | 判定 | 根拠 |
+|---:|---|---|
+| 1 | PASS | 明示memoryのdecision／topic相当は質問0、同turn各1件保存。旧6操作も3版6/6でrun-once。 |
+| 2 | PASS | request hedgeは質問前0。推量／伝聞の明示保存は同turn 1件。 |
+| 3 | PASS | source／certainty／target／destinationを正本から復元し、欠落・反転・追加negativeを拒否。 |
+| 4 | PASS | 引用、非現在仮定、取消、過去照会write 0。保存済み取消は削除2段階。 |
+| 5 | PASS | pending 1件、別話題失効、修正付き了承は同turnで修正版1件・再確認0。 |
+| 6 | PASS | topic旧event不変、新訂正event 1、同訂正retry 0。 |
+| 7 | PASS | 表記違い、別turn／operation相当、再retryでmemory／journal／commit追加0。 |
+| 8 | PASS | 否定／条件／source／certainty／訂正関係差を別意味として保持。 |
+| 9 | PASS | checkpointはpartial `1/1/0`、retry `0/0/1`、再retry `0/0/0`。 |
+| 10 | PASS | Secret／削除／destructive／external／bulkとmemory外scope変更は確認前0。3状態を両memory表現で確認。 |
+| 11 | PASS | 各版17/17 unique entryの実path、本文、digest、entry marker、tracked性を検査。 |
+| 12 | PASS | 3 candidateの現行marker各3 surface、禁止旧marker／phrase 0。 |
+| 13 | PASS | settings／daily／projects／templates／runtime／memory seam／golden／Sprint 010を17 entryへ収載。 |
+| 14 | PASS | Sprint 038 fixtureへclassifierInputを必須化し、request/content hedge、pending、訂正、retry、partialをruntime経由で67/67。 |
+| 15 | PASS | 3版専用offline suite、共通安全回帰、Git-free gateが各版0 FAIL。1版の結果を流用していない。 |
+| 16 | PASS | 3版の共通runtime authorization／meaning／idempotencyが一致し、版固有protected bytes不変。 |
+| 17 | PASS | push、tag、Release、marketplace、cache、workspace、Mac mini、external service変更0。 |
+| 18 | PASS | source／offline PASSだけを報告し、release／cache／new session／loaded version未反映と分離。 |
+| 19 | PASS | fresh独立EvaluatorでC2／C5／C6／C13／C14／C15／C18が全て5/5、本AC1〜19を満たす。 |
+
+### 限定Retry Rubric scores
+
+| Rubric | Score | 根拠 |
+|---|---:|---|
+| C2 構文・整合 | **5/5** | Node check 5/5、JSON／inventory、candidate ID、17/17 report、base／root、protected digest、diff checkが整合。 |
+| C5 安全・規律 | **5/5** | scope gate、Secret、削除、external、bulk、path／Git所有境界、下流read-onlyに違反0。 |
+| C6 無回帰 | **5/5** | 3版wrapper、Sprint 038／010、安全71、近傍Windows 12、Sprint 039 wrapper 6が全て0 FAIL。P-04再注入も負fixtureで拒否。 |
+| C13 edition分離・互換 | **5/5** | 固定baseから3 candidateを別構築し、各17/17 inventory、版固有fixture、private入口、protected bytesを確認。実下流変更0。 |
+| C14 会話のMarkdown可読性 | **5/5** | 3版Skill／copy／Sprint 010回帰、partialの完了／未完了分離、edition固有表現を維持。 |
+| C15 会話authorization・意味保存 | **5/5** | 全35 goldenを実runtimeへ通し67/67。旧6操作、scope非漏洩、meaning、pending、安全境界、応答状態に不一致0。 |
+| C18 明示memory authorization・内容冪等性 | **5/5** | memory scope 36/36、訂正／dedupe／partial、各版17/17、禁止旧marker 0、offline／live分離が成立。 |
+
+### Safety／外部操作／Not-run
+
+- 評価はGit-free `/tmp` candidate／負fixture、read-only下流source、隔離ローカルGit fixtureだけで実施した。network、connector、live serviceは未使用。
+- 安全suite内のpushは`/tmp` local bare remoteだけ。実source remoteへのpush、tag、GitHub Release、marketplace、installed cache、利用者workspace migration、Mac mini同期、external service writeは0件。
+- 実下流2repoは固定HEAD、clean status、protected digest不変。製品repoはfeedback追記前にHEAD `1b7c284`、status clean。
+- UI／browser／screenshotは対象なし。Windows native、installed cache、new session、loaded version、実利用者workspaceはNOT-RUNで、合格条件へ追加していない。
+- 新しいcollector、統一attestation、live cache検査は要求していない。
+
+### Evaluator self-review
+
+- Generatorの会話履歴や自己評価を判定根拠にせず、spec、rubric、Sprint契約、state、progress、初回／Retry 1／Retry 2 feedback、限定Retry実diffを読み直した。
+- `09267e3`をGit archiveから展開し、固定baseから3版candidateを再構築した。candidate ID、版別suite、inventory 17/17、protected bytesを独立確認した。
+- P-04は旧6操作の通常caseだけでなく、`scopeChange` 3状態を付けた18 caseでmemory gate非漏洩を確認した。memory scopeは新旧2表現、外部／内部各3 destination、3状態の36 caseで確認した。
+- V-03は全35 goldenのruntime結果比較に加え、classifierInput欠落、runtime tamper、旧P-04再注入を別copyへ行い、全てexit 1になることを確認した。
+- meaning、invalid tuple、pending、訂正、dedupe、checkpoint partial、private入口／依存、安全Git／Secret、近傍回帰を変更candidateで再実行した。
+- finding分類を再点検し、新しい`product`／`verification-infra` findingは0件。過去FAILは書き換えず、本節を追記した。
+- safe harborを証拠の上限として守り、UI、live/cache/new session、attestationを追加条件にしていない。
+- 書き込んだ正本は本feedbackだけ。製品、tests、spec、progress、state、Git commitは変更していない。
+
+### 限定Retry 最終Verdict
+
+**PASS**
+
+P-04-R2とV-03は解消し、初回／Retry 1で解消済みのfindingも回帰していない。3版candidateは同じ
+authorization、意味保存、内容冪等性を持ち、memory外scope変更だけを確認前0件で停止する。
+全AC1〜19とC2／C5／C6／C13／C14／C15／C18の5/5必須閾値を満たす。
+
+これはsource／offline candidateのPASSである。push、tag、Release、marketplace、installed cache、
+利用者workspace、Mac mini、new session、loaded version、external serviceへの反映は未実行である。
