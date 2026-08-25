@@ -5,7 +5,7 @@
 - Current ID: sprint-040
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -75,7 +75,7 @@
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
-| sprint-040 | active | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
+| sprint-040 | awaiting-eval | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -83,6 +83,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-26: Sprint 040 Retry 1 Generatorがcandidate commit `a5011da3d3a75a09a98a108662fa04a159d20c20` でP1〜P3／V1を限定修正。memory外scope変更を確認前0件へ戻し、空／不整合meaning tupleを保存前に拒否して情報源・確実性等を正本から復元可能にした。固定HEADからGit-freeの3版candidateを実構築し、各版の17 surface本文／digest／marker／tracked性／protected bytesと版別原因範囲suiteを検査。3版wrapper、専用12/12、各版Sprint 038 67/67、Sprint 010 56/56、安全境界71/71、版固有fixtureを0 FAILで引き渡す。実下流repoはHEAD／clean status／protected digest不変、push、tag、Release、cache、workspace、external write 0。fresh独立再評価予約としてLineage Dispatches 4、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-25: Sprint 040初回fresh独立EvaluatorはFAIL、主分類 `implementation-issue`。clean checkout／Git-free archiveの提供wrapper、checkpoint partial→commit-only retry→再retry 0はPASSしたが、P1としてmemory外scope変更が確認なしで`saved`、P2としてmeaning tupleと保存本文の不整合により情報源・確実性の欠落と空tuple誤dedupe、P3としてYasashii／privateの隔離candidateと版別offline suite欠落を独立再現した。inventoryが3版ともpublic root本文を読む偽PASSはverification-infraとして分離。Retry Count 1、fresh strong Generator dispatch予約としてLineage Dispatches 3、Status active、Model Tier strong、Rotate noneとし、P1〜P3とV1だけへ限定差し戻す。下流実repo、push、tag、Release、cache、workspace、external writeは0。
 - 2026-08-25: Sprint 040 Generatorが製品candidate commit `3b67284c62308e33df19e34086920743e0d3450d` を実装。明示memory依頼のrun-once、request／content hedge分離、pending一件束縛、append-only topic訂正、内容冪等性、checkpoint partial／commit-only retry、tracked conversation-core inventory、下流固定handoffを追加した。専用9/9、inventory 6/6、Sprint 038 67/67、Sprint 010 56/56、安全境界71/71、Sprint 039近傍wrapper、Git-free archiveの専用／inventoryを0 FAILで引き渡す。Yasashii／private実repoは固定baseのままcleanで編集0、push、tag、Release、cache、external write 0。fresh独立Evaluator dispatch予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-25: ユーザーが明示memory依頼の二重確認を3版で解消する方針と、既存修正を不変条件へ統合する進め方を承認。Fableの敵対的レビューを踏まえ、Plannerがrequest／content hedge分離、pending一件束縛、append-only訂正、内容冪等性、checkpoint partial、3版実内容inventoryを次のメインSprint `sprint-040` に固定した。旧Sprint 038系譜はLineage Dispatches 9で実装＋独立評価の枠が不足するため、最新mainの次Sprintとして新しい系譜を開始する。memory／journal／Git checkpointを扱うhigh risk Sprintとしてresolverのstrong routeを採用し、fresh Generator dispatch予約でLineage Dispatches 1、Model Tier strong、Rotate model-escalation、Status activeとする。push、tag、Release、marketplace、installed cache、利用者workspace、Mac mini、external serviceは対象外。
