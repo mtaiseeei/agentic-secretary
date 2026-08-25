@@ -96,6 +96,25 @@ check("memory authorizationはmemory内routeだけrun-once、scope変更は質�
   }
 });
 
+check("旧互換explicit分類もdestination allowlistでmemory scopeを守る", () => {
+  for (const destination of ["TODO", "Notion TaskDB", "project"]) {
+    const observed = executeConversation({
+      classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange: true },
+      beforeSnapshot: { writes: 0 },
+      changes: [{ key: "writes", delta: 1 }],
+    });
+    assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "question", 0, 0], destination);
+  }
+  for (const destination of ["memory", "decision", "topic"]) {
+    const observed = executeConversation({
+      classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange: true },
+      beforeSnapshot: { writes: 0 },
+      changes: [{ key: "writes", delta: 1 }],
+    });
+    assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "saved", 1, 1], destination);
+  }
+});
+
 check("引用・非現在仮定・取消・過去照会はwrite要求にしない", () => {
   for (const input of [
     { explicitMemoryRequest: true, target: "引用内", quotedRequest: true },

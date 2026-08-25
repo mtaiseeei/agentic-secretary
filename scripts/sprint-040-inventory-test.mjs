@@ -61,10 +61,12 @@ check("tracked source inventory and report schema are fixed", () => {
 for (const edition of report.candidates) check(`${edition.id}: candidate root inventory body digest marker and tracked proof`, () => {
   const candidateRoot = join(reportRoot, edition.candidateRoot);
   assert.equal(existsSync(join(candidateRoot, ".git")), false, "candidate must be Git-free");
-  assert.equal(edition.inventory.length, inventory.surfaces.filter((item) => item.editions.includes(edition.id)).length);
+  assert.equal(edition.inventory.length, 17, `${edition.id}:inventory-count`);
+  assert.deepEqual(edition.inventory.map((item) => item.id), inventory.surfaces.map((item) => item.id), `${edition.id}:inventory-surface-ids`);
   for (const item of edition.inventory) {
     const source = inventory.surfaces.find((entry) => entry.id === item.id);
-    assert.ok(source?.editions.includes(edition.id), `${item.id}:edition`);
+    assert.ok(source, `${item.id}:source-entry`);
+    assert.equal(item.appliesToEdition, source.editions.includes(edition.id), `${item.id}:edition-applicability`);
     assert.equal(item.tracked, true, `${item.id}:tracked`);
     const body = readFileSync(join(candidateRoot, item.path), "utf8");
     assert.equal(sha(Buffer.from(body)), item.candidateSha256, `${item.id}:digest`);
@@ -73,6 +75,7 @@ for (const edition of report.candidates) check(`${edition.id}: candidate root in
     for (const marker of inventory.forbiddenLegacyMarkers) assert.equal(body.includes(marker), false, `${item.id}:legacy-marker:${marker}`);
     for (const phrase of inventory.forbiddenLegacyPhrases) assert.equal(body.includes(phrase), false, `${item.id}:legacy-phrase:${phrase}`);
   }
+  assert.equal(new Set(edition.inventory.map((item) => item.id)).size, 17, `${edition.id}:unique-inventory-count`);
   for (const marker of inventory.requiredMarkers) assert.ok(edition.candidateMarkerCounts[marker] >= 3, `candidate-marker:${marker}`);
 });
 

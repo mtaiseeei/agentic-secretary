@@ -199,8 +199,9 @@ function markerCounts(root, inventory) {
 }
 
 function candidateInventory(root, sourceInventory, tracked, editionId) {
-  return sourceInventory.surfaces.filter((item) => item.editions.includes(editionId)).map((item) => ({
+  return sourceInventory.surfaces.map((item) => ({
     ...item,
+    appliesToEdition: item.editions.includes(editionId),
     requiredMarkers: item.requiredMarkers ?? [],
     candidateSha256: digest(root, item.path),
     tracked: tracked.has(item.path),

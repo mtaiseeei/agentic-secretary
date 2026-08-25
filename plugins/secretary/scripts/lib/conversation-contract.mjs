@@ -7,7 +7,7 @@ const RESPONSES = new Set(["answered", "question", "saved", "error", "partial"])
 
 function hasCurrentExplicitRequest(input = {}) {
   if (input.explicitMemoryRequest && input.target) return true;
-  return Boolean(input.explicit && input.operation && input.target && input.destination);
+  return Boolean(input.explicit && input.operation === "save-memory" && input.target && input.destination);
 }
 
 export function isMemoryDestination(destination) {
@@ -33,7 +33,9 @@ export function classifyIntent(input = {}) {
 export function requiresConfirmation(input = {}) {
   const intent = input.intent ?? classifyIntent(input);
   const bulk = input.bulkUnknown || Number(input.bulkCount ?? 0) >= 10 || input.multipleRepos || input.multipleRecipients;
-  const memoryScopeBoundary = input.explicitMemoryRequest === true
+  const explicitMemoryOperation = input.explicitMemoryRequest === true
+    || (input.explicit === true && input.operation === "save-memory");
+  const memoryScopeBoundary = explicitMemoryOperation
     && !isMemoryDestination(input.destination);
   return intent === "destructive" || intent === "external" || bulk || input.secret === true || memoryScopeBoundary;
 }
