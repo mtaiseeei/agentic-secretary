@@ -3,7 +3,7 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-040-patch-001
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
 - Lineage Dispatches: 10
 - Model Tier: strong
@@ -76,7 +76,7 @@
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
-| sprint-040-patch-001 | awaiting-eval | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | - |
+| sprint-040-patch-001 | active | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -84,6 +84,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-26: `sprint-040-patch-001`のLineage Dispatches 10最終fresh独立Evaluatorはcandidate `d6f2cdd`をFAIL／`implementation-issue`と判定。通常root／Git-free全回帰、3版ID再現、下流before/afterはgreenだが、存在しないadapted anchorでもexit 0・applicationCount 1・同IDとなり、`publicWholeTree.root`／`exclusions`不正でもhardcode walkによりexit 0・同ID、Yasashii adaptedの直接copy 2件がtrace.copyから欠落した。manifestが実行正本になっておらずAC2／3／5／15、C2／C5／C13が未達。専用suiteがこれを見逃すverification-infra findingも分離記録。Retry Count 1、Status active、Model Tier strong、Lineage Dispatches 10を保持し、自動修正と下流実適用を停止してユーザー判断を待つ。
 - 2026-08-26: `sprint-040-patch-001` Generatorの最終candidateはcommit `d6f2cdd450800f0efe7dbe9f8cee0968b16a726f`。handoffをschema 3へ更新し、parity／adapted／supportingを排他的に分類、builder実trace・declared union・actual diffを同一runから算出した。各adapted pathはinput／transformer／anchor／applicationCount 1／final digestをreportする。正例＋4負例、3版suite、inventory 8/8、別空directory ID再現3/3、Git-free archive、下流before/after 2/2、総合0 FAIL。新candidate IDはAgentic `cb1cbf70ff37bc20184d7114e96ddcda6eede65243519245344217b013bb4e4c`、Yasashii `73b10b501aea2019e8689e573c56fa5d761783c619c166288585ddc74e3fd7e9`、private `bdb9587aa7be8fb22087c80205ab49260516acdc9b70027b94fa1d93d45dfe5d`。会話／memory製品file変更0、下流write 0。最後のfresh独立Evaluator予約としてLineage Dispatches 10、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-26: Yasashii実適用pre-write gateで、公開handoff schema2の`exactCommonPaths=23`と`yasashiiExactPaths=5`はintersection 0／union 28であり、Planner固定値のintersection 1／union 27と不一致、さらにbuilderが変更する`scripts/sprint-038-test.mjs`が両listに未収載と判明。固定base→Yasashii candidateの実差分25件は宣言24＋未宣言1で、宣言限定・未分類0・candidate再現を同時に満たせない。下流製品writeは0。公開Sprint 040の会話／memory挙動を変えず、handoffのparity／adapted／supporting分類とbuilder実動作を完全一致させるhigh-risk `sprint-040-patch-001`を開始する。同Base系譜の残枠内でfresh Generator予約をLineage Dispatches 9、Model Tier strong、Rotate model-escalation、Status activeとして記録。下流実repo、release、cache、push、external stateは対象外。
 - 2026-08-26: ユーザー承認済み限定Retryはcandidate commit `09267e3` でfresh独立Evaluator PASS。Git-free 3版candidateを再構築し、既存6操作の各版6/6 `explicit / saved / 1`、memory scope 36/36、Sprint 038全35 goldenの実runtime通過、classifierInput欠落／runtime tamper／旧操作回帰の負例拒否を確認した。3版wrapper、各版Sprint 040 15/15、Sprint 038 67/67、Sprint 010 56/56、安全71/71、inventory各17/17、版固有fixtureは0 FAIL。AC1〜19全PASS、C2／C5／C6／C13／C14／C15／C18全5/5、product finding 0、verification-infra finding 0。Sprint 040をdone、Retry／Spec-Issue 0、Lineage Dispatches 8、Model Tier standard、Rotate noneとする。公開版source candidate PASSであり、実Yasashii／private repo適用と各repo独立評価、release／cache／new sessionは未実行のまま。
