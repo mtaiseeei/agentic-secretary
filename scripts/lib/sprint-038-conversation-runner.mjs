@@ -16,6 +16,7 @@ function initialState(input, precondition) {
   if (input.includes("予定とvault")) return { writes: 0 };
   if (input.includes("今日はここまで")) return { decisions: 0 };
   if (input.includes("保存済み") || input.includes("前に保存") || precondition.includes("実行済み") || input.includes("完了済み")) return { count: 1 };
+  if (input.includes("覚えといたほう") || input.includes("Rokunabe") || input.includes("田中さんから") || input.includes("訂正して保存")) return { count: 0 };
   if (input.includes("タスク") || input.includes("起票") || input.includes("請求する")) return input.includes("見積を送るタスク") ? { taskCount: 0 } : { tasks: 0 };
   if (input.includes("決定として") || input.includes("会議は対面") || input.startsWith("もし決まったら")) return { decisionCount: 0 };
   return { count: 0 };
@@ -34,7 +35,10 @@ function understand(input, precondition) {
   if (/前に保存して.*内容は何/.test(input)) return { intent: "inferred", response: "answered", text: "過去の記録を回答します。変更はしていません。", meaning: meaning("user", null, "read", "past request", null, "memory") };
   if (/さっきの保存は取り消して/.test(input) && precondition.includes("未保存")) return { intent: "inferred", response: "answered", text: "未保存なので変更はありません。", meaning: meaning("user", null, "cancel", "pending save", "not saved", "memory") };
   if (/保存済み.*取り消して/.test(input)) return { intent: "destructive", response: "question", text: "削除前に対象を確認します。保存済みの決定は元に戻せません。削除してよいですか？", meaning: meaning("user", null, "delete", "saved decision", null, "memory") };
-  if (/ではなく.*訂正して保存/.test(input)) return { intent: "inferred", response: "question", text: "訂正後の金曜で保存しますか？", meaning: meaning("user", "2026-08-07", "save", "予定", "not tomorrow", "memory") };
+  if (/覚えといたほうがいいかも/.test(input)) return { intent: "ambiguous", response: "question", text: "この企画を記憶に残しますか？", meaning: { ...meaning("user", null, "propose save", "企画", null, "memory"), source: null, certainty: null, correctionOf: null, correctionReason: null } };
+  if (/Rokunabeだと思う。覚えて/.test(input)) return { intent: "explicit", response: "saved", text: "Rokunabeだと思う、という推量のままmemoryへ保存しました。", meaning: { ...meaning("user", null, "remember", "Rokunabe", null, "memory"), source: "user", certainty: "speculation", correctionOf: null, correctionReason: null }, mutate: (state) => ({ ...state, count: state.count + 1 }), operation: { id: "content-memory-rokunabe-speculation", type: "save", target: "Rokunabe", destination: "memory" } };
+  if (/田中さんから開始は9月と聞いた。覚えて/.test(input)) return { intent: "explicit", response: "saved", text: "開始は9月と田中さんから聞いた内容としてmemoryへ保存しました。", meaning: { ...meaning("user", "2026-09", "remember", "開始", null, "memory"), source: "田中", certainty: "hearsay", correctionOf: null, correctionReason: null }, mutate: (state) => ({ ...state, count: state.count + 1 }), operation: { id: "content-memory-start-september-hearsay-tanaka", type: "save", target: "開始は9月", destination: "memory" } };
+  if (/ではなく.*訂正して保存/.test(input)) return { intent: "explicit", response: "saved", text: "明日から金曜への訂正として保存しました。", meaning: { ...meaning("user", "2026-08-07", "save", "予定", "not tomorrow", "memory"), source: null, certainty: null, correctionOf: "明日", correctionReason: "利用者訂正" }, mutate: (state) => ({ ...state, count: state.count + 1 }), operation: { id: "content-memory-schedule-friday-corrects-tomorrow", type: "save", target: "予定", destination: "memory" } };
   if (/全部消して/.test(input)) return { intent: "destructive", response: "question", text: "7月の決定を削除すると元に戻せません。対象を確認してよいですか？", meaning: meaning("user", "2026-07", "delete", "decisions", null, "memory/decisions") };
   if (/API token.*保存/.test(input)) return { intent: "external", response: "question", text: "Secretは保存しません。Repository Secretへの安全な登録方法を確認しますか？", meaning: meaning("user", null, "save", "Secret", "prohibited", "Repository Secret") };
   if (/担当者へ通知/.test(input)) return { intent: "external", response: "question", text: "通知の送信先と内容を確認してよいですか？", meaning: meaning("user", null, "notify", "staff", null, "Chat") };
