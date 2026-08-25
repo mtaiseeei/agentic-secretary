@@ -11,6 +11,8 @@ import {
   classifyIntent,
   compareMeaning,
   createPendingMemory,
+  executeConversation,
+  isMemoryDestination,
   resolvePendingMemory,
 } from "../plugins/secretary/scripts/lib/conversation-contract.mjs";
 
@@ -64,6 +66,36 @@ check("request hedgeとcontent hedgeをintentで分離", () => {
   assert.equal(classifyIntent({ explicitMemoryRequest: true, target: "金曜", correction: true }), "explicit");
 });
 
+check("memory authorizationはmemory内routeだけrun-once、scope変更は質問前0件", () => {
+  for (const destination of [undefined, "memory", "decision", "topic", "memory/topics"]) assert.equal(isMemoryDestination(destination), true);
+  for (const destination of ["TODO", "Notion TaskDB", "project"]) {
+    const observed = executeConversation({
+      classifierInput: { explicitMemoryRequest: true, target: "開始は9月", destination, scopeChange: true },
+      beforeSnapshot: { writes: 0 },
+      changes: [{ key: "writes", delta: 1 }],
+    });
+    assert.deepEqual([observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["question", 0, 0], destination);
+  }
+  for (const destination of ["TODO", "Notion TaskDB", "project"]) {
+    const observed = executeConversation({
+      classifierInput: { explicitMemoryRequest: true, target: "開始は9月", destination },
+      beforeSnapshot: { writes: 0 },
+      changes: [{ key: "writes", delta: 1 }],
+    });
+    assert.deepEqual([observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["question", 0, 0], destination);
+  }
+  for (const destination of ["memory", "decision", "topic"]) {
+    for (const scopeChange of [false, true]) {
+      const observed = executeConversation({
+        classifierInput: { explicitMemoryRequest: true, target: "開始は9月", destination, scopeChange },
+        beforeSnapshot: { writes: 0 },
+        changes: [{ key: "writes", delta: 1 }],
+      });
+      assert.deepEqual([observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["saved", 1, 1], `${destination}:${scopeChange}`);
+    }
+  }
+});
+
 check("引用・非現在仮定・取消・過去照会はwrite要求にしない", () => {
   for (const input of [
     { explicitMemoryRequest: true, target: "引用内", quotedRequest: true },
@@ -113,6 +145,38 @@ check("情報源・確実性が異なる内容を誤dedupeしない", () => {
     save(item.secretary, "topic", "開始時期", { ...base, source: "公式資料", certainty: "confirmed" }, "公式資料で開始は9月と確認した", [], 0, "2026-08-25T11:00:00+09:00");
     const body = readFileSync(join(item.secretary, "memory/topics/開始時期.md"), "utf8");
     assert.equal((body.match(/memory-content-key:/g) || []).length, 2);
+  } finally { rmSync(item.temporary, { recursive: true, force: true }); }
+});
+
+check("meaning tupleは表示と整合し、情報源・確実性を正本から復元できる", () => {
+  const item = workspace("meaning-persistence");
+  try {
+    const meaning = { subject: "user", action: "remember", target: "開始は9月", source: "田中", certainty: "hearsay", destination: "memory" };
+    const result = save(item.secretary, "topic", "開始時期", meaning, "開始は9月");
+    assert.deepEqual([result.memoryWrites, result.journalWrites], [1, 1]);
+    const body = readFileSync(join(item.secretary, "memory/topics/開始時期.md"), "utf8");
+    const encoded = body.match(/<!-- memory-meaning-v1:([A-Za-z0-9_-]+) -->/u)?.[1];
+    assert.ok(encoded, "meaning marker");
+    const restored = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    assert.deepEqual([restored.target, restored.source, restored.certainty, restored.destination], ["開始は9月", "田中", "hearsay", "memory"]);
+  } finally { rmSync(item.temporary, { recursive: true, force: true }); }
+});
+
+check("空tuple・必須意味不足・target不整合は保存前に拒否", () => {
+  const item = workspace("invalid-meaning");
+  try {
+    const before = git(item.temporary, ["status", "--short"]).stdout;
+    for (const [meaning, display] of [
+      [{}, "内容A"],
+      [{}, "内容B"],
+      [{ destination: "memory" }, "内容A"],
+      [{ target: "開始は10月", destination: "memory" }, "開始は9月"],
+      [{ target: "開始は9月", destination: "Notion TaskDB" }, "開始は9月"],
+    ]) {
+      run(process.execPath, [memoryTool, "save-memory", item.secretary, "topic", "2026-08-25", "不正fixture", JSON.stringify(meaning), display], { expected: 2 });
+    }
+    assert.equal(git(item.temporary, ["status", "--short"]).stdout, before);
+    assert.equal(existsSync(join(item.secretary, "memory/topics/不正fixture.md")), false);
   } finally { rmSync(item.temporary, { recursive: true, force: true }); }
 });
 

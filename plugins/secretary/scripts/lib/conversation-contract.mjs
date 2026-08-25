@@ -10,6 +10,15 @@ function hasCurrentExplicitRequest(input = {}) {
   return Boolean(input.explicit && input.operation && input.target && input.destination);
 }
 
+export function isMemoryDestination(destination) {
+  if (destination === null || destination === undefined || String(destination).trim() === "") return true;
+  const normalized = String(destination).normalize("NFKC").trim().toLocaleLowerCase("ja-JP").replaceAll("\\", "/");
+  return normalized === "memory"
+    || normalized === "decision"
+    || normalized === "topic"
+    || normalized.startsWith("memory/");
+}
+
 export function classifyIntent(input = {}) {
   if (input.destructive) return "destructive";
   if (input.external) return "external";
@@ -24,7 +33,9 @@ export function classifyIntent(input = {}) {
 export function requiresConfirmation(input = {}) {
   const intent = input.intent ?? classifyIntent(input);
   const bulk = input.bulkUnknown || Number(input.bulkCount ?? 0) >= 10 || input.multipleRepos || input.multipleRecipients;
-  return intent === "destructive" || intent === "external" || bulk || input.secret === true;
+  const memoryScopeBoundary = input.explicitMemoryRequest === true
+    && !isMemoryDestination(input.destination);
+  return intent === "destructive" || intent === "external" || bulk || input.secret === true || memoryScopeBoundary;
 }
 
 export function planOperations(operations, options = {}) {

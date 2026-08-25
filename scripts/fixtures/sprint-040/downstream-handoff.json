@@ -1,21 +1,66 @@
 {
-  "schemaVersion": 1,
-  "publicationStatus": "source-candidate-offline-only",
+  "schemaVersion": 2,
   "inventory": "plugins/secretary/conversation-core-inventory.json",
-  "sourceCandidate": {
-    "root": "/Users/taisei/workspace/agentic-secretary",
-    "baseHead": "5b48b7ba0784aa9b9d6552aed5162fafbc831c99"
-  },
+  "publicationStatus": "source-candidate-offline-only",
+  "requiredMarkers": [
+    "explicit-memory-request=run-once",
+    "content-uncertainty=preserve",
+    "retry-after-checkpoint-failure=commit-only"
+  ],
+  "exactCommonPaths": [
+    "plugins/secretary/conversation-core-inventory.json",
+    "plugins/secretary/rules/conversation-contract.md",
+    "plugins/secretary/rules/copy/agentic.json",
+    "plugins/secretary/rules/copy/yasashii.json",
+    "plugins/secretary/rules/safety.md",
+    "plugins/secretary/scripts/lib/conversation-contract.mjs",
+    "plugins/secretary/scripts/lib/markdown-lines.mjs",
+    "plugins/secretary/scripts/lib/safe-fs.mjs",
+    "plugins/secretary/scripts/lib/secretary-store.mjs",
+    "plugins/secretary/skills/memory-care/scripts/memory-tools.sh",
+    "plugins/secretary/skills/memory-care/scripts/memory-tools.mjs",
+    "plugins/secretary/templates/AGENTS.md",
+    "plugins/secretary/templates/CLAUDE.md",
+    "scripts/fixtures/sprint-038/conversation-golden.json",
+    "scripts/fixtures/sprint-040/downstream-handoff.json",
+    "scripts/lib/sprint-038-conversation-runner.mjs",
+    "scripts/sprint-010-regression.sh",
+    "scripts/sprint-040-candidate-build.mjs",
+    "scripts/sprint-040-candidate-suite.sh",
+    "scripts/sprint-040-edition-test.mjs",
+    "scripts/sprint-040-inventory-test.mjs",
+    "scripts/sprint-040-regression.sh",
+    "scripts/sprint-040-test.mjs"
+  ],
+  "yasashiiExactPaths": [
+    "plugins/secretary/skills/daily/SKILL.md",
+    "plugins/secretary/skills/memory-care/SKILL.md",
+    "plugins/secretary/skills/projects/SKILL.md",
+    "plugins/secretary/skills/secretary/SKILL.md",
+    "plugins/secretary/skills/settings/SKILL.md"
+  ],
+  "privateExactPaths": [],
+  "notExecuted": [
+    "push",
+    "tag",
+    "release",
+    "marketplace",
+    "installed-cache",
+    "workspace-migration",
+    "new-session",
+    "external-service"
+  ],
   "editions": [
     {
       "id": "agentic",
-      "sourceRoot": "/Users/taisei/workspace/agentic-secretary",
+      "sourceKey": "current-git-or-archive-root",
       "baseHead": "5b48b7ba0784aa9b9d6552aed5162fafbc831c99",
-      "protected": []
+      "protected": [],
+      "suite": ["bash scripts/sprint-040-candidate-suite.sh agentic"]
     },
     {
       "id": "yasashii",
-      "sourceRoot": "/Users/taisei/workspace/yasashii-secretary",
+      "sourceKey": "yasashii",
       "baseHead": "3c472dd9a2b5299f27741ae2c418094486b7d035",
       "protected": [
         {"path":"README.md","sha256":"35361391ad9a74c9403f8a2cc20616b5e3aa0635d76a067c1022fb35b794b527"},
@@ -23,11 +68,12 @@
         {"path":"docs/spec.md","sha256":"694c582a5200901a4669741956017aedcc242056620d051e9e621d0423d8de76"},
         {"path":"plugins/secretary/edition.json","sha256":"663c14cc51b92a936a1dbaf34d5ab4f7ded65f20d57ad0ed645dfd3e8d9bf7b7"},
         {"path":"plugins/secretary/rules/styles/yasashii.md","sha256":"50c9df0ff79fb43d5e051eb0c42070e31393b210a7fb78076c6e7e6996b1699c"}
-      ]
+      ],
+      "suite": ["bash scripts/sprint-040-candidate-suite.sh yasashii"]
     },
     {
       "id": "private-my-vault",
-      "sourceRoot": "/Users/taisei/workspace/agentic-secretary-my-vault",
+      "sourceKey": "private",
       "baseHead": "8e0796c9aba49d9a3dccb020912b0e1cf3989abf",
       "protected": [
         {"path":"README.md","sha256":"08046efc3648633b0e80f182c254755bb4e1a5e086607e1674abef22783ff293"},
@@ -36,8 +82,8 @@
         {"path":"plugins/secretary/edition.json","sha256":"29d70da3b1b9c6c48716488919a9de35a38c4087853363563f385eb07dacf7b9"},
         {"path":"plugins/secretary/skills/notion-tasks/SKILL.md","sha256":"8c40b2007c952b88a38165ef308dc723098ddca9e31cec3ec503d723a84c4527"},
         {"path":"plugins/secretary/skills/vault-search/SKILL.md","sha256":"54d0e7094a03497ceaeda5a48d753124763982f80bf1e60494034cb7faceca88"}
-      ]
+      ],
+      "suite": ["bash scripts/sprint-040-candidate-suite.sh private-my-vault"]
     }
-  ],
-  "notExecuted": ["push", "tag", "release", "marketplace", "installed-cache", "workspace-migration", "new-session", "external-service"]
+  ]
 }

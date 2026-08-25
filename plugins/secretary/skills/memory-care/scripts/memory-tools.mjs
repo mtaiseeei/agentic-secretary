@@ -35,7 +35,7 @@ import { copyTreeNoFollow } from "../../../scripts/lib/safe-fs.mjs";
 import { parseMarkdownLines, preferredLineEnding, renderMarkdownLines } from "../../../scripts/lib/markdown-lines.mjs";
 import { commitOwnedChanges, inspectOwnedCheckpoint } from "../../../scripts/lib/safe-git.mjs";
 import { runExternalSync } from "../../../scripts/lib/external-ops.mjs";
-import { canonicalMeaning } from "../../../scripts/lib/conversation-contract.mjs";
+import { canonicalMeaning, isMemoryDestination, meaningTuple } from "../../../scripts/lib/conversation-contract.mjs";
 
 function defaultPreferences() {
   return "# 好み・環境（preferences.md v2）\n\n## 基本\n- 呼び方: あなた\n- お仕事・役割: 未設定\n- 主に使うサービス: まだ決めていない\n\n## 言葉遣い\n- 口調: 丁寧（標準）\n- 専門用語: ふつう\n- 報告の詳しさ: みじかく\n- 決定の確認: 都度\n\n## 口調のお手本\n- NG: なし\n- OK: 丁寧で、堅すぎず、次の行動が分かる伝え方\n\n## 秘書のメモ\n";
@@ -123,6 +123,36 @@ function memoryContentKey(root, kind, meaning) {
 
 function markerFor(key) { return `<!-- memory-content-key:${key} -->`; }
 
+function meaningMarker(meaning) {
+  const encoded = Buffer.from(JSON.stringify(meaningTuple(meaning)), "utf8").toString("base64url");
+  return `<!-- memory-meaning-v1:${encoded} -->`;
+}
+
+function canonicalComparableText(value) {
+  return String(value ?? "").normalize("NFKC").toLocaleLowerCase("ja-JP").replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+
+function validateMemoryMeaning(meaning, display) {
+  const tuple = meaningTuple(meaning);
+  const supplied = Object.values(tuple).filter((value) => value !== null && value !== undefined && String(value).trim() !== "");
+  if (supplied.length === 0) usage("意味tupleが空です。保存対象とmemory destinationを指定してください。");
+  if (!String(tuple.target ?? "").trim()) usage("意味tupleのtargetがありません。保存内容を特定できないため記録しません。");
+  if (!isMemoryDestination(tuple.destination) || !String(tuple.destination ?? "").trim()) {
+    usage("save-memoryのdestinationはmemory内（memory / decision / topic）を指定してください。");
+  }
+  for (const [field, value] of Object.entries(tuple)) {
+    if (value !== null && value !== undefined && typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+      usage(`意味tupleの${field}は文字列・数値・真偽値のいずれかで指定してください。`);
+    }
+  }
+  const target = canonicalComparableText(tuple.target);
+  const rendered = canonicalComparableText(display);
+  if (!target || !rendered.includes(target)) {
+    usage("意味tupleのtargetと表示要点が一致しません。保存内容を確認してください。");
+  }
+  return tuple;
+}
+
 function findContentFiles(root, key) {
   const marker = markerFor(key);
   const content = [
@@ -171,13 +201,15 @@ function parseSaveMemoryArgs(args) {
   let meaning;
   try { meaning = JSON.parse(rawMeaning); } catch { usage("意味tupleはJSON objectで指定してください。"); }
   if (!meaning || Array.isArray(meaning) || typeof meaning !== "object") usage("意味tupleはJSON objectで指定してください。");
+  const display = oneLine(displayParts.join(" "), "記憶の要点", { secret: true });
+  meaning = validateMemoryMeaning(meaning, display);
   return {
     sec,
     kind,
     day,
     title: oneLine(rawTitle, "記憶の題名", { secret: true }),
     meaning,
-    display: oneLine(displayParts.join(" "), "記憶の要点", { secret: true }),
+    display,
     ...options,
   };
 }
@@ -217,7 +249,7 @@ function saveMemory(args) {
       const correction = input.meaning.correctionOf
         ? `訂正: ${input.meaning.correctionOf} → ${input.display}${input.meaning.correctionReason ? `（${input.meaning.correctionReason}）` : ""}`
         : input.display;
-      content = `${content.trimEnd()}\n- ${correction}\n${markerFor(key)}\n`;
+      content = `${content.trimEnd()}\n- ${correction}\n${meaningMarker(input.meaning)}\n${markerFor(key)}\n`;
       writeFileSync(target, content, "utf8");
       if (process.env.CC_SECRETARY_FAIL_AT === "memory-before-journal") refuse("テスト用のmemory中途失敗");
 
@@ -226,7 +258,7 @@ function saveMemory(args) {
         ? readFileSync(journal, "utf8")
         : `---\ncreatedAt: ${dateParts().day} ${dateParts().time}\ntags:\n  - journal\n---\n\n# ${dateParts().day} journal\n\n`;
       const journalText = input.kind === "decision" ? `決定を記録: ${input.display}` : `案件メモ「${input.title}」に要点を追加`;
-      journalContent = `${journalContent.trimEnd()}\n- ${dateParts().time} [${input.kind === "decision" ? "decided" : "note"}] ${journalText}\n${markerFor(key)}\n`;
+      journalContent = `${journalContent.trimEnd()}\n- ${dateParts().time} [${input.kind === "decision" ? "decided" : "note"}] ${journalText}\n${meaningMarker(input.meaning)}\n${markerFor(key)}\n`;
       writeFileSync(journal, journalContent, "utf8");
       if (process.env.CC_SECRETARY_FAIL_AT === "memory-after-journal") refuse("テスト用のmemory journal後失敗");
       reindex(root);

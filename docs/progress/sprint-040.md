@@ -1,56 +1,61 @@
 # Sprint 040 Progress — 会話の記憶authorizationと内容冪等性
 
-## 実装結果
+## Retry 1 実装結果
 
-- 明示された低リスクの記憶依頼は、保存先や要約の再確認を挟まず同じturnで1回実行する。秘書側からのdecision／topic保存提案だけは、従来どおり確認を待つ。`memory-care`、`secretary`、`settings`、`daily`、`projects`、生成用AGENTS／CLAUDE、copy contractを同じ区別へ揃えた。
-- 会話classifierで依頼自体の曖昧さ（request hedge）と、伝聞・推量・訂正など内容側の属性（content hedge）を分離した。引用された依頼語、現在依頼でない仮定、取消、過去照会はwrite 0を維持する。明示保存された伝聞・推量・訂正は`source`、`certainty`、`correctionOf`、`correctionReason`を意味tupleへ保持する。
-- pending memoryは同じ会話anchorに1件だけ保持する。別話題では失効し、`はい、ただしX`はXを反映して同じturnで実行する。
-- decision／topic／journal／checkpointを内容由来keyで冪等にした。つまり、別turnや別の表示文で同じ意味を再試行しても、memoryとjournalを増やさない。topic訂正は旧eventを残し、訂正eventをappend-onlyで追加する。
-- memoryとjournalが成功しcheckpoint commitだけが失敗した場合は`partial`を返す。retryは既存内容を検出してcommitだけを実行し、再retryは変更0・追加commit 0となる。既存の所有path限定commit、既存stage保持、Secret scan、rollbackを共通Git境界のまま使用する。
-- Sprint 038 golden／runnerとSprint 010の旧肯定assertを現契約へ更新した。固定されたhistorical classifier/path fixtureは変更していない。削除、external、一括処理、Git、Secretの安全境界は残した。
-- 17 surfaceのtracked inventoryと3版別の宣言的handoffを追加した。存在だけでなくSHA-256、必須marker、旧marker／旧文言の不在を検査し、settings／daily／projectsも含める。Yasashii／private実repoはread-onlyで照合し、編集していない。
+- P-01: `explicitMemoryRequest`でも、保存先がmemory外なら`scopeChange` flagの有無にかかわらず既存の安全確認へ戻す。TODO／Notion TaskDB／projectは`question`、side effect 0で止まり、`memory`／`decision`／`topic`は`scopeChange=true`でも内部routeとして同じturnで1回実行する。
+- P-02: `save-memory`は空tuple、必須`target`不足、memory外destination、表示本文からtargetを読み取れない不整合を保存前に拒否する。意味tuple全体を`memory-meaning-v1`のbase64url JSON markerとしてmemory正本とjournalへ残し、`source=田中`、`certainty=hearsay`、`target=開始は9月`を機械的に復元できるようにした。表記揺れは同じ意味としてdedupeし、source／certainty等が違う内容は別件のまま保持する。whole transcriptやexact copyは要求しない。
+- P-03/V-01: 固定HEADを`git archive`で隔離したGit-free candidateへ、宣言した共通pathと版固有適応を実際に適用するbuilderを追加した。Yasashii/privateの実repoはread-onlyのまま、各candidate rootの17 surface本文、digest、marker、tracked性、版固有fixture、master相当offline suiteを独立実行する。
+- private版では公開`memory-tools.mjs`が必要とする`secretary-store.mjs`、`markdown-lines.mjs`、`safe-fs.mjs`とNode入口`memory-tools.sh`を共通pathとして適用した。Sprint 038のschema 2 fixtureだけを版固有testへ限定適応し、private固有CHANGELOG、Notion／vault routing、root docsは置き換えていない。
+- 初回PASS済みのrequest/content hedge、pending 1件、訂正append-only、checkpoint `partial`→commit-only retry、削除／external／bulk／Secret／Git境界は維持した。
 
 ## 実行結果
 
 | Command | 結果 |
 |---|---|
-| `bash scripts/sprint-040-regression.sh` | wrapper `PASS=7 FAIL=0`。Sprint 040 9/9、inventory 6/6、Sprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、safe Git／Secret 71/71、report schema 1/1、release integrity PASS |
+| `node scripts/sprint-040-test.mjs` | 専用回帰 `PASS=12 FAIL=0`。P-01のmemory外3経路、memory内3経路、P-02の田中/hearsay、空tuple A/B、不足／不整合を含む |
+| `bash scripts/sprint-040-regression.sh` | `3_EDITIONS PASS / FAIL=0`。build 3/3、inventory 7/7。各版でSprint 040 12/12、Sprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、安全境界71/71を実行。Yasashii/privateは版専用fixtureも3/3、private相当9/9 |
 | `node scripts/sprint-038-patch-002-windows-test.mjs` | Darwin上の空白・日本語path互換回帰 `PASS=12 FAIL=0` |
-| `bash scripts/sprint-039-patch-002-regression.sh` | Sprint 039近傍回帰 wrapper `PASS=6 FAIL=0`。Patch002 23/23、Patch001 16/16、Sprint039 69/69、安全境界71/71、formal Codex 4/4、schema／release integrity PASS |
-| stage済み同一bytesのGit-free directoryで`bash scripts/sprint-040-regression.sh` | wrapper `PASS=7 FAIL=0`、3版inventory `PASS=6 FAIL=0`、candidate ID一致 |
-| `git diff --check`／変更したNode.js entrypointの`node --check` | PASS |
+| `bash scripts/sprint-039-patch-002-regression.sh` | 近傍回帰 wrapper `PASS=7 FAIL=0`。Patch002 23/23、Patch001 16/16、Sprint039 69/69を含む |
+| Git-free agentic candidate内の`node scripts/sprint-040-inventory-test.mjs --candidate-report ../candidate-report.json` | `PASS=7 FAIL=0`。candidate reportは相対rootだけを持ち、実workspaceのabsolute pathを証明入力に使わない |
+| 変更したNode.js entrypointの`node --check`／`git diff --check` | PASS |
 
-開始HEADは`5b48b7ba0784aa9b9d6552aed5162fafbc831c99`。今回実行した原因範囲・安全境界のsuiteにFAILはない。開始HEAD由来の非因果な既知FAILを今回の製品FAILへ混ぜていない。
-
-## 具体的な評価シナリオ
-
-1. 「たぶん覚えておいて」と、依頼は明示だが内容が推量／伝聞／訂正である依頼を分け、前者は不足一点を質問し、後者は同じturnで1回保存する。
-2. 依頼語の引用、現在依頼でない仮定、保存取消、過去の保存有無照会がwrite 0であることを確認する。
-3. pending 1件へ「はい」、別話題、「はい、ただしX」を返し、順に1回実行、失効、修正版1回実行となることを確認する。
-4. 同じdecisionを別turn・別表示で再試行し、memory／journal／commitが0件増加であることを確認する。情報源や確実性が異なる内容は誤dedupeしない。
-5. topic訂正で旧eventが残り、訂正eventだけが増えること、同じ訂正retryが0件であることを確認する。
-6. checkpoint commitを故意に失敗させ、`partial`後のretryがcommit-only、再retryが0件で、開始前の無関係stageがbyte単位で残ることを確認する。
-7. path traversalとSecretを保存前に拒否し、削除／external／一括確認とGit保護の既存回帰がPASSすることを確認する。
-8. 3版それぞれでinventory対象16 surfaceのdigest、必須marker、旧marker不在、下流固有保護path digestを照合する。
+Retry 1開始HEADは`85e5c05a57a6ea55328b73d44e5ab30cd7f09e3a`。candidateの元となる公開Sprint固定baseは`5b48b7ba0784aa9b9d6552aed5162fafbc831c99`。
 
 ## Candidate／3版handoff
 
-- 公開版: `agentic` candidate `7b82cbe616cf304877e4b0acdeeebd9ff1476dcfd7c59f11a000d489d6aedd31`
-- Yasashii handoff: `72b48383ad821907a48862a35ea6a42438363768a2808ce9d6caa60f5a383cd2`、固定base `3c472dd9a2b5299f27741ae2c418094486b7d035`
-- private my-vault handoff: `04a5d68946db83351f85d2e6a8b91ef1ea4d40059b594c2093f62ecaa06c495a`、固定base `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
-- 識別正本は`plugins/secretary/conversation-core-inventory.json`と`scripts/fixtures/sprint-040/downstream-handoff.json`。各candidate IDはedition、固定base、共通surface digest、保護path digestから算出する。
-- 下流2repoへの実適用は行わない。公開版PASS後、各repo固有Harnessがこのmanifestを入力として保護pathを維持しながら適用・独立評価する。
+- 公開版 `agentic`: `b201b56408fe8b2539f00934545023325e9b1b1fecd965c39c21693041dc7d30`（624 files）
+- Yasashii: `26dec9e8cf194716948cff57c74fce770c027ab8f83202a798a8bc1b20863bc0`（601 files）、固定base `3c472dd9a2b5299f27741ae2c418094486b7d035`
+- private my-vault: `3589554f24c96e7fc5a0ab1ab3def5b29da0f124eafa502d69c1f5d97e22543c`（711 files）、固定base `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
+- IDは各candidateのsorted relative path、mode、実bytesから算出した。下流旧sourceでは必須markerがすべて0、candidate適用後だけmarkerが現れることをinventoryで確認した。
+- candidateはすべて`.git`なし。配布状態は`source-candidate-offline-only`で、実repo、push、tag、release、cache、workspace、external serviceへは反映していない。
+
+## 下流read-only不変確認
+
+- Yasashiiは開始・終了ともHEAD `3c472dd9a2b5299f27741ae2c418094486b7d035`、status clean。README `35361391...`、AGENTS `dd4343eb...`、spec `694c582a...`、edition `663c14cc...`、Yasashii style `50c9df0f...`が不変。
+- privateは開始・終了ともHEAD `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`、status clean。README `08046efc...`、AGENTS `dd4343eb...`、spec `58755995...`、edition `29d70da3...`、Notion `8c40b200...`、vault-search `54d0e709...`が不変。
+- candidate側でも同じprotected digestを検査した。private固有copy／Notion／vault／root docsは固定base bytesを保持する。
+
+## 具体的な評価シナリオ
+
+1. 「覚えて。TODO／Notion TaskDB／projectにも移して」は質問で止まり、memory／journal／external writeが0件であること。
+2. 「覚えて」をmemory／decision／topic内で振り分ける場合は追加確認せず1回だけ保存すること。
+3. `source=田中`、`certainty=hearsay`、表示「開始は9月」を保存し、正本から意味tupleを復元できること。
+4. 空tuple A/B、target不足、targetと表示の不整合、memory外destinationを保存前に拒否し、異なる表示を空tupleで誤dedupeしないこと。
+5. 同じ意味の表記揺れは0件、source／certainty等が違う内容は別件となること。
+6. checkpoint失敗後は`partial`、retryはcommit-only、再retryは変更0・追加commit 0であること。
+7. 固定baseの各版候補で17 surface、protected bytes、版固有copy／routing、Sprint 038/010、安全境界がPASSすること。
 
 ## 起動・評価handoff
 
 - UI／対象URL: N/A。Skill、Node.js library／CLI、回帰fixtureの変更であり、起動する画面はない。
 - 専用回帰入口: `bash scripts/sprint-040-regression.sh`
 - 製品caseだけ: `node scripts/sprint-040-test.mjs`
-- 3版inventory: `node scripts/sprint-040-inventory-test.mjs [--root <candidate-root>]`
-- Evaluatorは同一commitのclean checkoutとGit-free archiveで専用wrapperを実行し、上記8 scenario、候補ID、下流実repoのHEAD／status／保護digest不変を独立に確認する。
+- candidate構築: `node scripts/sprint-040-candidate-build.mjs --output <new-dir> --yasashii-source <read-only-source> --private-source <read-only-source>`
+- inventory: `node scripts/sprint-040-inventory-test.mjs --candidate-report <candidate-report.json>`
+- Evaluatorは同一commitのclean checkoutでwrapperを再実行し、上記7 scenario、candidate ID、実下流HEAD／status／protected digest不変を独立確認する。
 
 ## Known issues／not-run
 
-- Yasashii／private実repoへの適用、実利用者workspace、installed cache、marketplace、new session、push、tag、release、workspace migration、external serviceへのwriteはnot-run／0件。これは`source-candidate-offline-only`であり、配布済み・同期済み・受入済みとは表示しない。
-- Windows native実行はnot-run。Node-native境界の近傍回帰をDarwin上の空白・日本語pathで実行したが、Windows native PASSとは扱わない。
-- whole transcript保存、exact copy、永続operation-ID ledger、統一attestation／collectorは追加していない。内容keyは実データから再計算し、隠しmarkerと既存ファイル走査だけで再試行を判定する。
+- Yasashii／private実repoへの適用、実利用者workspace、installed cache、marketplace、new session、push、tag、release、workspace migration、external serviceへのwriteはnot-run／0件。配布済み・同期済み・受入済みとは表示しない。
+- Windows native実行はnot-run。Darwin上のNode-native境界回帰12/12をWindows native PASSとは扱わない。
+- whole transcript、exact copy、永続operation-ID ledger、統一attestation／collectorは追加していない。

@@ -2,15 +2,16 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 
-const rootArg = process.argv.indexOf("--root");
-const root = rootArg >= 0
-  ? resolve(process.argv[rootArg + 1])
-  : resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const reportIndex = process.argv.indexOf("--candidate-report");
+if (reportIndex < 0 || !process.argv[reportIndex + 1]) throw new Error("--candidate-report is required");
+const reportPath = resolve(process.argv[reportIndex + 1]);
+const reportRoot = dirname(reportPath);
+const report = JSON.parse(readFileSync(reportPath, "utf8"));
 const handoff = JSON.parse(readFileSync(join(root, "scripts/fixtures/sprint-040/downstream-handoff.json"), "utf8"));
 const inventory = JSON.parse(readFileSync(join(root, handoff.inventory), "utf8"));
 const sha = (value) => createHash("sha256").update(value).digest("hex");
@@ -19,65 +20,83 @@ let fail = 0;
 
 function check(label, fn) {
   try { fn(); pass += 1; console.log(`PASS ${label}`); }
-  catch (error) { fail += 1; console.error(`FAIL ${label}: ${error.message}`); }
+  catch (error) { fail += 1; console.error(`FAIL ${label}: ${error.stack || error.message}`); }
 }
 
-function git(repo, args) {
-  const result = spawnSync("git", ["-C", repo, ...args], { encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr.trim()}`);
-  return result.stdout.trim();
+function walk(base, current = base) {
+  const paths = [];
+  for (const name of readdirSync(current).sort((a, b) => a.localeCompare(b, "en"))) {
+    const absolute = join(current, name);
+    const rel = relative(base, absolute).replaceAll("\\", "/");
+    if (rel === ".git" || rel.startsWith(".git/")
+      || rel === "docs/sprints/state.md"
+      || rel.startsWith("docs/progress/")
+      || rel.startsWith("docs/feedback/")) continue;
+    const stat = lstatSync(absolute);
+    if (stat.isDirectory()) paths.push(...walk(base, absolute));
+    else if (stat.isFile()) paths.push(rel);
+    else throw new Error(`unsupported-candidate-entry:${rel}`);
+  }
+  return paths;
 }
 
-function fileDigest(base, path) { return sha(readFileSync(join(base, path))); }
+function candidateDigest(candidateRoot) {
+  const hash = createHash("sha256");
+  const paths = walk(candidateRoot).sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
+  for (const path of paths) {
+    const mode = lstatSync(join(candidateRoot, path)).mode & 0o111 ? "100755" : "100644";
+    hash.update(path).update("\0").update(mode).update("\0").update(readFileSync(join(candidateRoot, path))).update("\0");
+  }
+  return { files: paths.length, sha256: hash.digest("hex") };
+}
 
-check("inventory schema and required surface IDs", () => {
-  assert.equal(inventory.schemaVersion, 1);
-  assert.equal(new Set(inventory.surfaces.map((item) => item.id)).size, inventory.surfaces.length);
-  for (const id of ["rules-contract", "copy-agentic", "copy-yasashii", "skill-memory-care", "skill-secretary", "skill-settings", "skill-daily", "skill-projects", "template-agents", "template-claude", "runtime-classifier", "memory-seam", "golden-fixture", "golden-runner", "sprint-010-regression", "sprint-040-regression"]) {
-    assert.ok(inventory.surfaces.some((item) => item.id === id), id);
+check("tracked source inventory and report schema are fixed", () => {
+  assert.equal(handoff.schemaVersion, 2);
+  assert.equal(report.schemaVersion, 2);
+  assert.equal(report.sourceInventorySha256, sha(readFileSync(join(root, handoff.inventory))));
+  assert.deepEqual(report.candidates.map((item) => item.id), ["agentic", "yasashii", "private-my-vault"]);
+  assert.equal(new Set(inventory.surfaces.map((item) => item.id)).size, 17);
+});
+
+for (const edition of report.candidates) check(`${edition.id}: candidate root inventory body digest marker and tracked proof`, () => {
+  const candidateRoot = join(reportRoot, edition.candidateRoot);
+  assert.equal(existsSync(join(candidateRoot, ".git")), false, "candidate must be Git-free");
+  assert.equal(edition.inventory.length, inventory.surfaces.filter((item) => item.editions.includes(edition.id)).length);
+  for (const item of edition.inventory) {
+    const source = inventory.surfaces.find((entry) => entry.id === item.id);
+    assert.ok(source?.editions.includes(edition.id), `${item.id}:edition`);
+    assert.equal(item.tracked, true, `${item.id}:tracked`);
+    const body = readFileSync(join(candidateRoot, item.path), "utf8");
+    assert.equal(sha(Buffer.from(body)), item.candidateSha256, `${item.id}:digest`);
+    assert.deepEqual(item.requiredMarkers, source.requiredMarkers ?? [], `${item.id}:marker-declaration`);
+    for (const marker of item.requiredMarkers) assert.ok(body.includes(marker), `${item.id}:missing-marker:${marker}`);
+    for (const marker of inventory.forbiddenLegacyMarkers) assert.equal(body.includes(marker), false, `${item.id}:legacy-marker:${marker}`);
+    for (const phrase of inventory.forbiddenLegacyPhrases) assert.equal(body.includes(phrase), false, `${item.id}:legacy-phrase:${phrase}`);
+  }
+  for (const marker of inventory.requiredMarkers) assert.ok(edition.candidateMarkerCounts[marker] >= 3, `candidate-marker:${marker}`);
+});
+
+check("downstream fixed bases begin without Sprint 040 markers and candidates gain them", () => {
+  for (const edition of report.candidates.filter((item) => item.id !== "agentic")) {
+    for (const marker of inventory.requiredMarkers) {
+      assert.equal(edition.baseMarkerCounts[marker], 0, `${edition.id}:base:${marker}`);
+      assert.ok(edition.candidateMarkerCounts[marker] >= 3, `${edition.id}:candidate:${marker}`);
+    }
   }
 });
 
-check("inventory paths are tracked and content digests are current", () => {
-  const tracked = existsSync(join(root, ".git"))
-    ? new Set(git(root, ["ls-files"]).split("\n"))
-    : new Set(inventory.surfaces.map((item) => item.path));
-  for (const item of inventory.surfaces) {
-    assert.ok(tracked.has(item.path), `tracked:${item.path}`);
-    assert.equal(fileDigest(root, item.path), item.sha256, `stale:${item.id}`);
+check("candidate IDs are derived from actual Git-free candidate content", () => {
+  for (const edition of report.candidates) {
+    const observed = candidateDigest(join(reportRoot, edition.candidateRoot));
+    assert.deepEqual(observed, { files: edition.candidate.files, sha256: edition.candidate.sha256 }, edition.id);
+    assert.match(edition.candidate.sha256, /^[a-f0-9]{64}$/u);
   }
 });
 
-for (const edition of handoff.editions) check(`${edition.id}: fixed base, content markers, legacy negatives and protected digests`, () => {
-  const sourceHead = git(edition.sourceRoot, ["rev-parse", "HEAD"]);
-  if (edition.id === "agentic") {
-    assert.equal(git(edition.sourceRoot, ["merge-base", "--is-ancestor", edition.baseHead, sourceHead]), "", `${edition.id}:baseHead-ancestor`);
-  } else {
-    assert.equal(sourceHead, edition.baseHead, `${edition.id}:baseHead`);
-  }
-  const surfaces = inventory.surfaces.filter((item) => item.editions.includes(edition.id));
-  assert.ok(surfaces.length >= 15, `${edition.id}:surface-count=${surfaces.length}`);
-  const bodies = surfaces.map((item) => readFileSync(join(root, item.path), "utf8"));
-  const combined = bodies.join("\n");
-  for (const marker of inventory.requiredMarkers) assert.ok(combined.includes(marker), `${edition.id}:missing-marker:${marker}`);
-  for (const marker of inventory.forbiddenLegacyMarkers) assert.equal(combined.includes(marker), false, `${edition.id}:legacy-marker:${marker}`);
-  for (const phrase of inventory.forbiddenLegacyPhrases) assert.equal(combined.includes(phrase), false, `${edition.id}:legacy-phrase:${phrase}`);
-  for (const item of edition.protected) {
-    assert.ok(existsSync(join(edition.sourceRoot, item.path)), `${edition.id}:protected-missing:${item.path}`);
-    assert.equal(fileDigest(edition.sourceRoot, item.path), item.sha256, `${edition.id}:protected-stale:${item.path}`);
-  }
-  const candidateId = sha(JSON.stringify({
-    edition: edition.id,
-    baseHead: edition.baseHead,
-    surfaces: surfaces.map((item) => [item.path, item.sha256]),
-    protected: edition.protected.map((item) => [item.path, item.sha256]),
-  }));
-  console.log(`SPRINT040_${edition.id.toUpperCase().replaceAll("-", "_")}_SURFACES=${surfaces.length} CANDIDATE=${candidateId}`);
-});
-
-check("offline handoff keeps release and live phases not executed", () => {
-  for (const item of ["push", "tag", "release", "marketplace", "installed-cache", "workspace-migration", "new-session", "external-service"]) assert.ok(handoff.notExecuted.includes(item));
-  assert.equal(handoff.publicationStatus, "source-candidate-offline-only");
+check("edition protected bytes and offline-only publication boundary are unchanged", () => {
+  for (const edition of report.candidates) assert.deepEqual(edition.protectedAfter, edition.protectedBefore, edition.id);
+  for (const item of ["push", "tag", "release", "marketplace", "installed-cache", "workspace-migration", "new-session", "external-service"]) assert.ok(report.notExecuted.includes(item));
+  assert.equal(report.publicationStatus, "source-candidate-offline-only");
 });
 
 console.log(`SPRINT040_INVENTORY_PASS=${pass} SPRINT040_INVENTORY_FAIL=${fail}`);
