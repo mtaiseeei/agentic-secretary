@@ -7,7 +7,7 @@ const RESPONSES = new Set(["answered", "question", "saved", "error", "partial"])
 
 function hasCurrentExplicitRequest(input = {}) {
   if (input.explicitMemoryRequest && input.target) return true;
-  return Boolean(input.explicit && input.operation === "save-memory" && input.target && input.destination);
+  return Boolean(input.explicit && input.operation && input.target && input.destination);
 }
 
 export function isMemoryDestination(destination) {

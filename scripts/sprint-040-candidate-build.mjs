@@ -161,11 +161,16 @@ function adaptPrivate(publicRoot, candidateRoot) {
   let sprint038 = readFileSync(sprint038Path, "utf8");
   const schemaAssertion = "assert.equal(fixture.schemaVersion, 1);";
   const oldBoundaries = '"quote", "hearsay", "hypothetical", "correction"';
+  const oldEvidenceKeys = '["caseId", "edition", "input", "precondition", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]';
   if (!sprint038.includes(schemaAssertion) || !sprint038.includes(oldBoundaries)) {
     throw new Error("private-adaptation-anchor-missing:scripts/sprint-038-test.mjs");
   }
+  const oldRunnerCall = "const observed = runConversationScenario({ input: item.input, precondition: item.precondition });";
+  if (!sprint038.includes(oldEvidenceKeys) || !sprint038.includes(oldRunnerCall)) throw new Error("private-adaptation-anchor-missing:scripts/sprint-038-test.mjs:runtime-input");
   sprint038 = sprint038.replace(schemaAssertion, "assert.equal(fixture.schemaVersion, 2);")
-    .replace(oldBoundaries, '"quote", "hearsay", "hypothetical", "request-hedge", "content-speculation", "content-hearsay", "correction"');
+    .replace(oldBoundaries, '"quote", "hearsay", "hypothetical", "request-hedge", "content-speculation", "content-hearsay", "correction"')
+    .replace(oldEvidenceKeys, '["caseId", "edition", "input", "precondition", "classifierInput", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]')
+    .replace(oldRunnerCall, "const observed = runConversationScenario({ input: item.input, precondition: item.precondition, classifierInput: item.classifierInput, execution: item.execution });");
   writeFileSync(sprint038Path, sprint038);
 }
 
@@ -185,11 +190,16 @@ function adaptYasashii(candidateRoot) {
   let sprint038 = readFileSync(sprint038Path, "utf8");
   const schemaAssertion = "assert.equal(fixture.schemaVersion, 1);";
   const oldBoundaries = '"quote", "hearsay", "hypothetical", "correction"';
+  const oldEvidenceKeys = '["caseId", "edition", "input", "precondition", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]';
   if (!sprint038.includes(schemaAssertion) || !sprint038.includes(oldBoundaries)) {
     throw new Error("yasashii-adaptation-anchor-missing:scripts/sprint-038-test.mjs");
   }
+  const oldRunnerCall = "const observed = runConversationScenario({ input: item.input, precondition: item.precondition });";
+  if (!sprint038.includes(oldEvidenceKeys) || !sprint038.includes(oldRunnerCall)) throw new Error("yasashii-adaptation-anchor-missing:scripts/sprint-038-test.mjs:runtime-input");
   sprint038 = sprint038.replace(schemaAssertion, "assert.equal(fixture.schemaVersion, 2);")
-    .replace(oldBoundaries, '"quote", "hearsay", "hypothetical", "request-hedge", "content-speculation", "content-hearsay", "correction"');
+    .replace(oldBoundaries, '"quote", "hearsay", "hypothetical", "request-hedge", "content-speculation", "content-hearsay", "correction"')
+    .replace(oldEvidenceKeys, '["caseId", "edition", "input", "precondition", "classifierInput", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]')
+    .replace(oldRunnerCall, "const observed = runConversationScenario({ input: item.input, precondition: item.precondition, classifierInput: item.classifierInput, execution: item.execution });");
   writeFileSync(sprint038Path, sprint038);
 }
 

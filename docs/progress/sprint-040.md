@@ -1,7 +1,11 @@
 # Sprint 040 Progress — 会話の記憶authorizationと内容冪等性
 
-## Retry 2 実装結果
+## ユーザー選択A 限定Retry 実装結果
 
+- P-04-R2: `explicit && operation && target && destination`というSprint 038からの汎用明示判定を復元した。decision保存、設定変更、Notion Task作成、TODO完了、TODO持越し、現在用件の文書作成は、memory destination allowlistの対象にせず`explicit / saved / 1`を維持する。
+- memory scope gate: `requiresConfirmation`側では`explicitMemoryRequest`と旧互換`explicit + operation:"save-memory"`だけをmemory保存操作として扱う。destinationがTODO／Notion TaskDB／projectなら`scopeChange` flagの有無にかかわらず`question / 0`、memory／decision／topicなら`saved / 1`となる。
+- V-03: Sprint 038の各goldenで`classifierInput`を必須にし、runnerへ`classifierInput`と`execution`を渡す。runnerはintent／response／side effectを手書き期待値から作らず、実runtime `executeConversation`を通じて`classifyIntent`、`requiresConfirmation`、ordered／atomic safety planから取得し、その判定が実fixtureの書込み可否を制御する。
+- candidate builderは下流版の既存Sprint 038 testへschema 2、追加boundary、`classifierInput`必須化、runtime runner接続だけを限定適応する。版固有のrelease検査やprivate差分は保持する。
 - P-01-R1: `explicitMemoryRequest`だけでなく、旧互換の`explicit:true + operation:"save-memory"`も同じmemory-scope gateへ通す。`scopeChange` flagだけには依存せずdestination allowlistで判定し、TODO／Notion TaskDB／projectは`question`、side effect 0、`memory`／`decision`／`topic`は内部routeとして`saved`、side effect 1となる。
 - P-02: `save-memory`は空tuple、必須`target`不足、memory外destination、表示本文からtargetを読み取れない不整合を保存前に拒否する。意味tuple全体を`memory-meaning-v1`のbase64url JSON markerとしてmemory正本とjournalへ残し、`source=田中`、`certainty=hearsay`、`target=開始は9月`を機械的に復元できるようにした。表記揺れは同じ意味としてdedupeし、source／certainty等が違う内容は別件のまま保持する。whole transcriptやexact copyは要求しない。
 - V-02: candidate report生成時のedition filterを撤去し、各edition rootで宣言inventoryの17 unique surfaceをすべて保持する。各entryの本文、candidate digest、entry固有marker宣言、禁止marker／phrase、tracked性を17/17で検査し、版への適用可否は`appliesToEdition`として保持する。global marker 3種の存在集計はentry固有marker検査と分離した。
@@ -13,20 +17,20 @@
 
 | Command | 結果 |
 |---|---|
-| `node scripts/sprint-040-test.mjs` | 専用回帰 `PASS=13 FAIL=0`。旧互換explicitのmemory外3件を`question / 0`、内部3件を`saved / 1`に固定し、Retry 1までのmeaning／pending／dedupe／partial／安全負例も維持 |
-| `bash scripts/sprint-040-regression.sh` | `3_EDITIONS PASS / FAIL=0`。build 3/3、inventory 7/7、各editionのinventory entry 17/17。各版でSprint 040 13/13、Sprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、安全境界71/71を実行。Yasashii/privateは版専用fixtureも3/3、private相当9/9 |
+| `node scripts/sprint-040-test.mjs` | 専用回帰 `PASS=15 FAIL=0`。旧6操作の`explicit / saved / 1`、memory外／内部destination、runnerのruntime接続の正負例を固定し、meaning／pending／dedupe／partial／安全負例も維持 |
+| `bash scripts/sprint-040-regression.sh` | `3_EDITIONS PASS / FAIL=0`。build 3/3、inventory 7/7、各editionのinventory entry 17/17。各版でSprint 040 15/15、runtime接続済みSprint 038 67/67、historical classifier 14/14、historical path 3/3、Sprint 010 56/56、安全境界71/71を実行。Yasashii/privateは版専用fixtureも3/3、private相当9/9 |
 | `node scripts/sprint-038-patch-002-windows-test.mjs` | Darwin上の空白・日本語path互換回帰 `PASS=12 FAIL=0` |
 | `bash scripts/sprint-039-patch-002-regression.sh` | 近傍回帰 wrapper `PASS=6 FAIL=0`。Patch002 23/23、Patch001 16/16、Sprint039 69/69を含む |
 | Git-free candidate群への`node scripts/sprint-040-inventory-test.mjs --candidate-report <candidate-report.json>` | `PASS=7 FAIL=0`。Agentic／Yasashii／privateの各rootで17/17 entryの本文、digest、entry marker、tracked性を検査。candidate reportは相対rootだけを持ち、実workspaceのabsolute pathを証明入力に使わない |
 | 変更したNode.js entrypointの`node --check`／`git diff --check` | PASS |
 
-Retry 2開始HEADは`ccd9b262cd7c42198968a003e353d9b551618493`。candidateの元となる公開Sprint固定baseは`5b48b7ba0784aa9b9d6552aed5162fafbc831c99`。
+限定Retry開始HEADは`50934d6`。candidateの元となる公開Sprint固定baseは`5b48b7ba0784aa9b9d6552aed5162fafbc831c99`。
 
 ## Candidate／3版handoff
 
-- 公開版 `agentic`: `602083b2f0102c775114fa0383cfc6d448827ac3bbbaf7ea4ad8c8d32c00017b`（624 files）
-- Yasashii: `485d8f38d47ac938e960f1fe1c9dc46698693ecfb86a004617d0c216f4076ffe`（601 files）、固定base `3c472dd9a2b5299f27741ae2c418094486b7d035`
-- private my-vault: `e7a0780797a45f0f41c5237fd23306327dc1cf028038ae07ad18a3cfd527bbae`（711 files）、固定base `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
+- 公開版 `agentic`: `428b3ff435ee63bf47837e38792873264e14336e85ca1190bd823e80cbc67e0a`（624 files）
+- Yasashii: `bb194d55a3cff4fe6fbfdb588f1db665d4fcd2ed4446482410ca9dc525490cfd`（601 files）、固定base `3c472dd9a2b5299f27741ae2c418094486b7d035`
+- private my-vault: `95b7c5346dd9173817e40479e7599d39f4660f3efbb2b6d6122ab723b148bc84`（711 files）、固定base `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`
 - IDは各candidateのsorted relative path、mode、実bytesから算出した。下流旧sourceでは必須markerがすべて0、candidate適用後だけmarkerが現れることをinventoryで確認した。
 - candidateはすべて`.git`なし。配布状態は`source-candidate-offline-only`で、実repo、push、tag、release、cache、workspace、external serviceへは反映していない。
 
@@ -38,13 +42,15 @@ Retry 2開始HEADは`ccd9b262cd7c42198968a003e353d9b551618493`。candidateの元
 
 ## 具体的な評価シナリオ
 
-1. 旧互換`explicit:true + operation:"save-memory" + scopeChange:true`でTODO／Notion TaskDB／projectを指定すると質問で止まり、writeが0件であること。
-2. 同じ旧互換表現をmemory／decision／topic内で振り分ける場合は追加確認せず1回だけ保存すること。
-3. `source=田中`、`certainty=hearsay`、表示「開始は9月」を保存し、正本から意味tupleを復元できること。
-4. 空tuple A/B、target不足、targetと表示の不整合、memory外destinationを保存前に拒否し、異なる表示を空tupleで誤dedupeしないこと。
-5. 同じ意味の表記揺れは0件、source／certainty等が違う内容は別件となること。
-6. checkpoint失敗後は`partial`、retryはcommit-only、再retryは変更0・追加commit 0であること。
-7. 固定baseの各版候補で17/17 surfaceの本文、entry digest、entry marker、tracked性、protected bytes、版固有copy／routing、Sprint 038/010、安全境界がPASSすること。
+1. decision保存、設定変更、Notion Task作成、TODO完了、TODO持越し、現在用件の文書作成を各版runtimeへ渡し、全件`explicit / saved / 1`であること。
+2. 旧互換`explicit:true + operation:"save-memory"`でTODO／Notion TaskDB／projectを指定すると、`scopeChange`が未指定／false／trueの全てで`question / 0`となること。
+3. 同じ旧互換表現をmemory／decision／topic内で振り分ける場合は、`scopeChange`が未指定／false／trueの全てで`saved / 1`となること。
+4. Sprint 038 runnerへ保存を示す自然文と`explicit`なしのclassifierInputを渡すと`inferred / question / 0`、`explicit`ありでは`explicit / saved / 1`となり、golden期待値がrunnerの実判定を駆動していないこと。
+5. `source=田中`、`certainty=hearsay`、表示「開始は9月」を保存し、正本から意味tupleを復元できること。
+6. 空tuple A/B、target不足、targetと表示の不整合、memory外destinationを保存前に拒否し、異なる表示を空tupleで誤dedupeしないこと。
+7. 同じ意味の表記揺れは0件、source／certainty等が違う内容は別件となること。
+8. checkpoint失敗後は`partial`、retryはcommit-only、再retryは変更0・追加commit 0であること。
+9. 固定baseの各版候補で17/17 surfaceの本文、entry digest、entry marker、tracked性、protected bytes、版固有copy／routing、Sprint 038/010、安全境界がPASSすること。
 
 ## 起動・評価handoff
 
@@ -53,7 +59,7 @@ Retry 2開始HEADは`ccd9b262cd7c42198968a003e353d9b551618493`。candidateの元
 - 製品caseだけ: `node scripts/sprint-040-test.mjs`
 - candidate構築: `node scripts/sprint-040-candidate-build.mjs --output <new-dir> --yasashii-source <read-only-source> --private-source <read-only-source>`
 - inventory: `node scripts/sprint-040-inventory-test.mjs --candidate-report <candidate-report.json>`
-- Evaluatorは同一commitのclean checkoutでwrapperを再実行し、上記7 scenario、candidate ID、実下流HEAD／status／protected digest不変を独立確認する。
+- Evaluatorは同一commitのclean checkoutでwrapperを再実行し、上記9 scenario、candidate ID、実下流HEAD／status／protected digest不変を独立確認する。
 
 ## Known issues／not-run
 

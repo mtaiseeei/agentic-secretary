@@ -1,6 +1,7 @@
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { executeConversation } from "../../plugins/secretary/scripts/lib/conversation-contract.mjs";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -43,8 +44,8 @@ function understand(input, precondition) {
   if (/API token.*保存/.test(input)) return { intent: "external", response: "question", text: "Secretは保存しません。Repository Secretへの安全な登録方法を確認しますか？", meaning: meaning("user", null, "save", "Secret", "prohibited", "Repository Secret") };
   if (/担当者へ通知/.test(input)) return { intent: "external", response: "question", text: "通知の送信先と内容を確認してよいですか？", meaning: meaning("user", null, "notify", "staff", null, "Chat") };
   if (/この変更をoriginへpush/.test(input)) return { intent: "external", response: "question", text: "originへpushする対象と公開範囲を確認してよいですか？", meaning: meaning("user", null, "push", "current branch", null, "origin") };
-  if (/メモを保存してからoriginへpush/.test(input)) return { intent: "explicit", response: "partial", text: "メモは保存しました。originへのpushは未実行です。対象と影響を確認します。", meaning: meaning("user", null, "save then push", "memo", null, "docs then origin"), mutate: (state) => ({ ...state, fileCount: 1 }), operation: { id: "save-1", type: "save", target: "memo", destination: "docs" } };
-  if (/保存とpushを一括/.test(input)) return { intent: "explicit", response: "question", text: "一括操作にはpushが含まれます。最初の保存前に対象と影響を確認してよいですか？", meaning: meaning("user", null, "atomic save and push", "memo", null, "docs and origin") };
+  if (/メモを保存してからoriginへpush/.test(input)) return { intent: "explicit", response: "partial", text: "メモは保存しました。originへのpushは未実行です。対象と影響を確認します。", meaning: meaning("user", null, "save then push", "memo", null, "docs then origin"), mutate: (state) => ({ ...state, fileCount: 1 }), operation: { id: "save-1", type: "save", target: "memo", destination: "docs" }, operations: [{ id: "save-1", operation: "save", target: "memo", destination: "docs" }, { id: "push-1", operation: "push", target: "current branch", destination: "origin", external: true }] };
+  if (/保存とpushを一括/.test(input)) return { intent: "explicit", response: "question", text: "一括操作にはpushが含まれます。最初の保存前に対象と影響を確認してよいですか？", meaning: meaning("user", null, "atomic save and push", "memo", null, "docs and origin"), operations: [{ id: "save-1", operation: "save", target: "memo", destination: "docs" }, { id: "push-1", operation: "push", target: "current branch", destination: "origin", external: true }], options: { atomic: true } };
   if (/7月31日の決定として/.test(input)) return { intent: "explicit", response: "saved", text: "会議は対面開催、という決定をmemory/decisionsへ保存しました。", meaning: meaning("user", "2026-07-31", "save", "会議は対面開催", null, "memory/decisions"), mutate: (state) => ({ ...state, decisionCount: state.decisionCount + 1 }), operation: { id: "decision-2026-07-31-meeting", type: "save", target: "会議は対面開催", destination: "memory/decisions" } };
   if (input === "会議は対面にしよう") return { intent: "inferred", response: "question", text: "会議は対面、という決定を記録しますか？", meaning: meaning("user", null, "decide", "会議は対面", null, null) };
   if (/口調をフランク/.test(input)) return { intent: "explicit", response: "saved", text: "口調をフランクに変更しました。", meaning: meaning("user", null, "update", "口調=フランク", null, "preferences.md"), mutate: (state) => ({ ...state, tone: "フランク" }), operation: { id: "setting-tone-frank", type: "update", target: "tone", destination: "preferences.md" } };
@@ -78,26 +79,53 @@ export function createScenarioWorkspace(input, precondition, root = null) {
   return workspace;
 }
 
-export function runConversationScenario({ input, precondition, workspace = null }) {
+function runtimeDecision(classifierInput, execution, understood) {
+  if (!classifierInput) {
+    return {
+      intent: understood.intent,
+      response: understood.response,
+      sideEffectCount: understood.response === "partial" ? "partial" : understood.mutate ? 1 : 0,
+    };
+  }
+  const observed = executeConversation({
+    classifierInput,
+    readOnly: execution?.readOnly,
+    nonOperative: execution?.nonOperative,
+    simulateError: execution?.simulateError,
+    operations: understood.operations,
+    options: understood.options,
+    beforeSnapshot: { writes: 0 },
+    changes: [{ key: "writes", delta: 1 }],
+  });
+  return { intent: observed.intent, response: observed.response, sideEffectCount: observed.sideEffectCount };
+}
+
+export function runConversationScenario({ input, precondition, classifierInput = null, execution = {}, workspace = null }) {
   if (typeof input !== "string" || typeof precondition !== "string") throw new Error("natural-language-input-and-precondition-required");
   const root = createScenarioWorkspace(input, precondition, workspace);
   const statePath = join(root, "state.json");
   const logPath = join(root, "operations.jsonl");
   const beforeSnapshot = JSON.parse(readFileSync(statePath, "utf8"));
   const understood = understand(input, precondition);
+  const decision = runtimeDecision(classifierInput, execution, understood);
   let afterSnapshot = clone(beforeSnapshot);
   const existing = readFileSync(logPath, "utf8").split("\n").filter(Boolean).map((line) => JSON.parse(line));
   const duplicate = understood.operation && existing.some((entry) => entry.id === understood.operation.id);
-  if (understood.mutate && !duplicate) {
+  const executableResponse = decision.sideEffectCount === 1 || decision.sideEffectCount === "partial";
+  if (understood.mutate && executableResponse && !duplicate) {
     afterSnapshot = understood.mutate(clone(beforeSnapshot));
     writeFileSync(statePath, `${JSON.stringify(afterSnapshot, null, 2)}\n`);
     appendFileSync(logPath, `${JSON.stringify({ ...understood.operation, status: "completed" })}\n`);
   }
-  const response = duplicate ? "answered" : understood.response;
-  const responseText = duplicate ? "同じoperation idの重複のため追加しません。" : understood.text;
-  const sideEffectCount = response === "partial" ? "partial" : understood.mutate && !duplicate ? 1 : 0;
+  const response = duplicate ? "answered" : decision.response;
+  const responseText = duplicate
+    ? "同じoperation idの重複のため追加しません。"
+    : response === understood.response
+      ? understood.text
+      : "対象と影響を確認してもよいですか？";
+  const sideEffectCount = duplicate ? 0 : decision.sideEffectCount;
   return {
-    intent: understood.intent,
+    intent: decision.intent,
     response,
     responseText,
     sideEffectCount,

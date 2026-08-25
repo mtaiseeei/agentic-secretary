@@ -15,6 +15,7 @@ import {
   isMemoryDestination,
   resolvePendingMemory,
 } from "../plugins/secretary/scripts/lib/conversation-contract.mjs";
+import { runConversationScenario } from "./lib/sprint-038-conversation-runner.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const memoryTool = join(root, "plugins/secretary/skills/memory-care/scripts/memory-tools.mjs");
@@ -98,20 +99,69 @@ check("memory authorizationはmemory内routeだけrun-once、scope変更は質�
 
 check("旧互換explicit分類もdestination allowlistでmemory scopeを守る", () => {
   for (const destination of ["TODO", "Notion TaskDB", "project"]) {
-    const observed = executeConversation({
-      classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange: true },
-      beforeSnapshot: { writes: 0 },
-      changes: [{ key: "writes", delta: 1 }],
-    });
-    assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "question", 0, 0], destination);
+    for (const scopeChange of [undefined, false, true]) {
+      const observed = executeConversation({
+        classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange },
+        beforeSnapshot: { writes: 0 },
+        changes: [{ key: "writes", delta: 1 }],
+      });
+      assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "question", 0, 0], `${destination}:${scopeChange}`);
+    }
   }
   for (const destination of ["memory", "decision", "topic"]) {
+    for (const scopeChange of [undefined, false, true]) {
+      const observed = executeConversation({
+        classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange },
+        beforeSnapshot: { writes: 0 },
+        changes: [{ key: "writes", delta: 1 }],
+      });
+      assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "saved", 1, 1], `${destination}:${scopeChange}`);
+    }
+  }
+});
+
+check("Sprint 038既存6操作はmemory allowlistと独立してrun-once", () => {
+  const cases = [
+    { operation: "save", target: "会議は対面開催", destination: "memory/decisions" },
+    { operation: "pref-set", target: "口調=フランク", destination: "preferences.md" },
+    { operation: "create-task", target: "見積を送る", destination: "Notion TaskDB" },
+    { operation: "complete", target: "見積TODO", destination: "inbox/todo.md" },
+    { operation: "carry", target: "見積TODO", destination: "inbox/todo.md" },
+    { operation: "create", target: "見積", destination: "docs" },
+  ];
+  for (const classifierInput of cases) {
     const observed = executeConversation({
-      classifierInput: { explicit: true, operation: "save-memory", target: "開始は9月", destination, scopeChange: true },
+      classifierInput: { explicit: true, ...classifierInput },
       beforeSnapshot: { writes: 0 },
       changes: [{ key: "writes", delta: 1 }],
     });
-    assert.deepEqual([observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes], ["explicit", "saved", 1, 1], destination);
+    assert.deepEqual(
+      [observed.intent, observed.response, observed.sideEffectCount, observed.afterSnapshot.writes],
+      ["explicit", "saved", 1, 1],
+      classifierInput.operation,
+    );
+  }
+});
+
+check("Sprint 038 runnerはgolden classifierInputの実runtime判定で副作用を制御", () => {
+  const request = "7月31日の決定として、会議は対面開催と記憶に保存して";
+  const precondition = "destinationと内容が一意";
+  const negative = runConversationScenario({
+    input: request,
+    precondition,
+    classifierInput: { operation: "save", target: "会議は対面開催", destination: "memory/decisions" },
+  });
+  const positive = runConversationScenario({
+    input: request,
+    precondition,
+    classifierInput: { explicit: true, operation: "save", target: "会議は対面開催", destination: "memory/decisions" },
+  });
+  try {
+    assert.deepEqual([negative.intent, negative.response, negative.sideEffectCount, negative.afterSnapshot.decisionCount], ["inferred", "question", 0, 0]);
+    assert.deepEqual([positive.intent, positive.response, positive.sideEffectCount, positive.afterSnapshot.decisionCount], ["explicit", "saved", 1, 1]);
+  } finally {
+    rmSync(negative.workspace, { recursive: true, force: true });
+    rmSync(positive.workspace, { recursive: true, force: true });
   }
 });
 

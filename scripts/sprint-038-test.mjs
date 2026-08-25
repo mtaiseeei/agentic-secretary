@@ -20,15 +20,20 @@ function sameMeaning(left, right) { return JSON.stringify(meaningTuple(left)) ==
 
 check("golden schema and required evidence fields", () => {
   assert.equal(fixture.schemaVersion, 2);
-  for (const item of fixture.cases) for (const key of ["caseId", "edition", "input", "precondition", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]) assert.ok(Object.hasOwn(item, key), `${item.caseId}:${key}`);
+  for (const item of fixture.cases) for (const key of ["caseId", "edition", "input", "precondition", "classifierInput", "expected", "requiredResponseElements", "forbiddenPhrases", "meaning", "beforeSnapshot", "afterSnapshot"]) assert.ok(Object.hasOwn(item, key), `${item.caseId}:${key}`);
 });
 
 for (const item of fixture.cases) {
   check(`${item.caseId}: natural-language runner intent, response, side effect, snapshots and meaning`, () => {
-    // The runner receives only the natural-language request and its natural-language
-    // precondition. Expected values, labels, response fragments and snapshots stay
-    // exclusively on this oracle side of the comparison.
-    const observed = runConversationScenario({ input: item.input, precondition: item.precondition });
+    // The runner receives the natural-language request plus the classifier input that
+    // production runtime consumes. Expected values and response fragments stay only
+    // on this oracle side and never drive the runtime decision.
+    const observed = runConversationScenario({
+      input: item.input,
+      precondition: item.precondition,
+      classifierInput: item.classifierInput,
+      execution: item.execution,
+    });
     try {
       assert.equal(observed.intent, item.expected.intent);
       assert.equal(observed.response, item.expected.response);
