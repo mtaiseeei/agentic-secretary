@@ -6,7 +6,7 @@
 - Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 2
-- Model Tier: strong
+- Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
 
@@ -76,7 +76,7 @@
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
-| sprint-040-patch-001 | awaiting-eval | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
+| sprint-040-patch-001 | done | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -84,6 +84,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-26: ユーザー承認Aの限定再試行はcandidate `9acea13477cd7730bf064a32c170b752586fa116` でfresh独立Evaluator PASS。前FAILのstale／nonexistent anchor、複数anchor、実変換点ではないanchor、transformer不一致、stale root、空exclusionsを含むhandoff 12/12、通常root／Git-freeの3版full、inventory 8/8、ID再現3/3、下流read-only 2/2が0 FAIL。AC1〜15全PASS、C2／C5／C6／C13／C18全5/5、product／verification-infra finding 0。accepted IDはAgentic `36a5c5f5482fcd510e5b361bdf9e24620be696046e248fb29b3b557800cc083d`、Yasashii `4bc87169d87baf90f9681f7ba07d3154c71df34eac78bad15b435732e876faf2`、private `5c22b283b0f7c55a30c9b8c581d5ad182035b543e3369b421fe131e2741b5043`。会話／memory／golden変更0、下流実repo／external write 0。Status done、Retry／Spec-Issue 0、Lineage Dispatches 2、Model Tier standard、Rotate noneとし、下流各repoの独立Harnessへ引き渡す。
 - 2026-08-26: ユーザー承認Aの限定再試行Generatorがcandidate commit `9acea13477cd7730bf064a32c170b752586fa116` を作成。manifest whole-tree root／exclusionsを実walkへ接続し、adapted anchorの入力出現数と実適用回数を測定、copy→adapt pathを実copy traceへ収載した。正常／schema2観測／既存4負例／stale anchor／複数anchor／stale root／空exclusions／transformer不一致／非変換点anchorの12/12、inventory 8/8、最終staged treeのGit-free full regression、3版suite、ID再現3/3、下流before/after 2/2が0 FAIL。新IDはAgentic `36a5c5f5482fcd510e5b361bdf9e24620be696046e248fb29b3b557800cc083d`、Yasashii `4bc87169d87baf90f9681f7ba07d3154c71df34eac78bad15b435732e876faf2`、private `5c22b283b0f7c55a30c9b8c581d5ad182035b543e3369b421fe131e2741b5043`。会話／memory／golden変更0、下流write 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-26: Lineage Dispatches 10停止後、ユーザーが推奨Aの限定再試行を明示承認。過去のFAILとfeedbackは保持し、新しい承認済みcycleとしてRetry Countを0、Lineage Dispatchesをfresh Generator予約の1へリセットする。修正範囲はP-01／V-01の3根本原因だけ: manifest `publicWholeTree.root`／`exclusions`を実walkの正本にする、adapted anchor存在と適用回数を実測して不正anchorを拒否する、copy後adaptするpathを完全な`trace.copy`へ記録する。対応する独立負fixtureを回帰へ追加し、会話／memory製品挙動、下流実repo、release、cache、workspace、external stateは変更しない。Status active、Model Tier strong、Rotate noneでfresh Generatorへ渡す。
 - 2026-08-26: `sprint-040-patch-001`のLineage Dispatches 10最終fresh独立Evaluatorはcandidate `d6f2cdd`をFAIL／`implementation-issue`と判定。通常root／Git-free全回帰、3版ID再現、下流before/afterはgreenだが、存在しないadapted anchorでもexit 0・applicationCount 1・同IDとなり、`publicWholeTree.root`／`exclusions`不正でもhardcode walkによりexit 0・同ID、Yasashii adaptedの直接copy 2件がtrace.copyから欠落した。manifestが実行正本になっておらずAC2／3／5／15、C2／C5／C13が未達。専用suiteがこれを見逃すverification-infra findingも分離記録。Retry Count 1、Status active、Model Tier strong、Lineage Dispatches 10を保持し、自動修正と下流実適用を停止してユーザー判断を待つ。
