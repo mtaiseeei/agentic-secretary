@@ -199,10 +199,12 @@ Application type `Desktop app` のOAuth clientを準備します。管理者ま�
 更新は、対象と復元方法を示して了承を得た後だけ開始します。変更内容の正本は
 [CHANGELOG](plugins/secretary/CHANGELOG.md)です。
 
-現在のmanifest candidateは **0.10.1** です。`0.10.0`で追加した英語の秘書名とstable identityを、
-既存workspaceにも安全に揃える後方互換patchです。plugin更新後の新しいsessionでread-only診断を行い、
-名前確認、migration preview、別の適用確認の順に進みます。identity、AGENTS／CLAUDEの製品所有節、最小台帳だけを
-local checkpointへ記録し、user-scope連携は別確認の任意操作として維持します。
+現在のmanifest candidateは **0.10.2** です。明示した低リスクの「覚えて」を、その依頼自体の承認として
+同じturnで一度だけ保存します。削除、外部送信、公開、Secret、権限変更、一括処理は従来どおり確認します。
+`0.10.1`で追加した既存workspaceのidentity migrationは変更せず、完了済みなら再実行しません。
+read-only診断で移行が残っている場合だけ、名前確認、migration preview、別の適用確認の順に進みます。
+identity、AGENTS／CLAUDEの製品所有節、最小台帳だけをlocal checkpointへ記録し、
+user-scope連携は別確認の任意操作として維持します。
 旧 `0.7.0` updaterには既知の停止要因があるため、
 `0.7.0 → 0.8.0` のlive updateは保証していません。該当する場合は、新規導入を含む安全な移行方法を確認してください。
 

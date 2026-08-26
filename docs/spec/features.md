@@ -377,7 +377,8 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 ### F54 危険に応じたauthorizationと確認
 
 - `explicit` は、ユーザーが操作、対象、行き先を明示し、残る危険が小さい状態である。その発話自体をauthorizationとして同じターンで実行し、同じ内容を再承認させない。
-- 「覚えて」「記録して」等を含んでも、引用、第三者からの伝聞、仮定・条件、直前内容の訂正、取消、過去依頼への照会は、現在の`explicit`依頼とみなさない。引用・伝聞・過去照会はread-onlyで答え、仮定・条件は条件が現在成立し実行依頼であると明確な場合だけ分類し直す。訂正は訂正後の内容だけを候補にし、取消は未保存なら副作用0件、保存済みなら削除2段階へ接続する。
+- 保存依頼の確かさと、保存する内容の確かさを分ける。「覚えといたほうがいいかも」のように操作自体をぼかす依頼は`inferred`として確認前0件だが、「Rokunabeだと思う。覚えて」のように内容へ推量を残しつつ保存を明示した低リスク依頼は`explicit`である。伝聞・推量・訂正は内容の属性として意味を保ち、現在利用者の明示した保存依頼を取り消さない。
+- 「『覚えて』と言われた」のような依頼語の引用、現在依頼ではない仮定・条件、保存の取消、過去依頼への照会は、現在の`explicit`依頼とみなさない。read-only照会は副作用0件で答え、取消は未保存なら副作用0件、保存済みなら削除2段階へ接続する。
 - `inferred` は、秘書が保存、設定変更、プロジェクト化等を自発提案する状態である。何を行うかが分かる質問を出し、回答前の副作用は0件にする。
 - `ambiguous` は、対象、日付、行き先、参照先に複数候補が残る状態である。不足する一点だけを質問し、質問でない宣言文を残して停止しない。
 - `destructive` な上書きは、利用者が作成・編集した内容を置換・喪失させる、または容易にrollbackできない変更である。単一設定値の可逆更新は除外する。`大量操作` は10件以上、件数未確定の「全部／一括」、複数repo・複数外部宛先にまたがる操作のいずれかとする。
@@ -399,8 +400,8 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - 会話回帰は自然文のbyte一致や固定prefixではなく、`intent × side effect × response state` の期待遷移を検査する。
 - 保存では、主体、日付、行動、対象、否定・条件が入力と一致する。入力にない担当、期限、顧客名、因果、依頼語、不要な会話全文を保存内容へ追加しない。
 - golden setは `explicit / inferred / ambiguous / destructive / external`、副作用 `0 / 1 / partial`、応答 `answered / question / saved / error / partial` を網羅する。
-- 各caseは、必須応答要素、禁止表現、期待する意味tuple（主体、日付・期限、行動、対象、否定・条件、行き先）、副作用の前後snapshotを持つ。意味要素の欠落・反転・入力にない追加を注入したnegative fixtureを必須にし、機械判定不能な項目は判定根拠を記録する。
-- 境界例として、引用、伝聞、仮定・条件、訂正、取消、過去依頼照会、重複作成、Secretを含む入力、通知を伴う即時実行、複合依頼の一部失敗、closed projectの軽量read-only照合、明示TODO完了・持越し、決定0件の自然な締めを含める。
+- 各caseは、必須応答要素、禁止表現、期待する意味tuple（主体、日付・期限、行動、対象、否定・条件、情報源・確実性・訂正関係、行き先）、副作用の前後snapshotを持つ。意味要素の欠落・反転・入力にない追加を注入したnegative fixtureを必須にし、機械判定不能な項目は判定根拠を記録する。
+- 境界例として、依頼自体のhedge、内容だけのhedge、依頼語の引用、伝聞内容の明示保存、仮定・条件、訂正、取消、過去依頼照会、重複作成、Secretを含む入力、通知を伴う即時実行、複合依頼の一部失敗、closed projectの軽量read-only照合、明示TODO完了・持越し、決定0件の自然な締めを含める。
 - 旧exact copy、質問禁止、固定3項目の回帰は、現在の意味契約と衝突するassertだけを置換する。`scripts/lib/sprint-032-patch-001-conversation.mjs` と、それを使うreadability／smoke judge、`scripts/check-report-schema.py`、固定報告shapeを要求するSprint 010／011／012／029／032系assertを置換対象に含める。履歴記録自体は改変せず、同じsuiteのpath guard、timeline決定性、Secret、Git所有範囲等の非衝突assertは保持する。
 
 ### F57 3配布系統の同期と限定Notion修正
@@ -457,6 +458,18 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - user-scope registry／routingは完全移行の必須条件にせず、ローカル移行完了後も別の任意操作とする。名前の変更や既存コンテンツのgrep置換はF61のrename導線へ送り、初回移行の確認をrename authorizationへ流用しない。
 - `0.10.1`は公開済み`0.10.0`の既存workspace移行欠陥を直す後方互換patch candidateとする。Agenticの独立PASS後だけ完全SHA、共通digest、宣言済み共通pathをYasashii／private my-vaultへ固定handoffし、両下流の別Sprint・独立PASS後だけ3版releaseとMac mini同期を行う。受講者向け更新文はrelease後に作成する。
 
+### F63 明示memory依頼の一度きりauthorizationと内容冪等性
+
+- 利用者が「これ覚えて」「Rokunabeだと思う。覚えて」のように低リスクの保存を明示した場合、利用者から見た行き先 `memory` は十分に一意である。decision／topic等の内部分類、具体的な保存ファイル、要約案を理由に再確認せず、同じturnで1回だけ保存する。
+- authorizationはrouterからmemory-care、正規の保存シーム、journal、checkpointへ一方向に引き継ぐ。内部段階が変わっても`explicit`を`proposed`へ戻さない。ただしSecret、削除・破壊的変更、外部送信・公開・push、10件以上または件数不明の一括操作、利用者が示したmemory以外へのscope変更は、既存の安全分類により停止・確認できる。
+- request hedge（保存するかの曖昧さ）とcontent hedge（保存内容の推量・伝聞・留保）を別に扱う。content hedgeがあっても現在の保存依頼が明示されていれば`explicit`であり、推量・情報源・留保を要約から消したり、確定事実へ反転したりしない。会話全文や完全なverbatim copyは保存要件にしない。
+- 確認が必要な保存候補は、一度に1件のcontentとuser-visible scopeを固定する。未回答の間に別話題が介在したらpendingを失効し、古い「はい」で保存しない。「はい、ただしX」は修正後contentへの`explicit` authorizationとして同じturnで実行し、修正版をもう一度確認しない。
+- topicの訂正は旧内容を上書きせず、`訂正: 旧→新（理由）`と同等の意味を持つappend-only記録を追加する。訂正前の内容、訂正後の内容、理由または不確実性を追跡できるようにし、同じ訂正のretryでは追記を重複させない。
+- memoryの冪等性はoperation idだけでなく内容に基づく。同じmemory種別、正本scope、正規化した意味内容、訂正関係が既に保存済みなら、別turn・別operation id・再起動後のretryでもtopic／decision／journal／commitを追加しない。利用者には保存済みであることを副作用0件の結果として伝える。
+- memory本体と必要なjournalが成功し、local checkpoint commitだけが失敗した場合は`partial`である。保存済みcontentとjournalを保持し、retryは未完了のcommitだけを行う。保存・journalを再実行せず、commit成功後の再retryも差分・追加commit 0件とする。
+- 会話coreの対象surfaceを追跡する機械可読なinventoryを製品正本として保つ。rules、copy、skills、templates、runtime分類、memory保存シーム、golden fixture、旧Sprint回帰を実内容まで検査し、`memory-care`／`secretary`に加えて`settings`／`daily`／`projects`等の関連surfaceを含める。Agentic、Yasashii、private my-vaultの各sourceで新契約markerの存在と、topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧markerの不在を検証する。
+- 3版のsourceとオフライン回帰を同じ契約へ揃える。push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、release後の新session確認は別phaseとし、sourceのオフラインPASSだけでloaded versionへ反映済みと表示しない。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -477,3 +490,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G14 | F05 F06 F07 F08 F17 F20 F28 F31 F53 F54 F55 F58 |
 | G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
 | G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
+| G17 | F05 F07 F17 F19 F52 F54 F55 F56 F57 F63 |

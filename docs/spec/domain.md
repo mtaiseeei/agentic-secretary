@@ -394,13 +394,16 @@ version解決入力が一致しない、または変更分類からminor更新�
 「覚えて」「記録して」「設定して」等を含んでも、次は現在の操作依頼ではない。
 
 - 引用: 「『覚えておいて』と言われた」のように発話を引用している。
-- 伝聞: 第三者が依頼したと報告しているだけで、現在の利用者が実行を命じていない。
 - 仮定・条件: 「もし覚えてと言ったら」のように条件の説明をしている。
-- 訂正: 「覚えて、ではなく確認だけ」のように直前の依頼を取り消し、別の意味へ訂正している。
+- 依頼の訂正: 「覚えて、ではなく確認だけ」のように直前の保存依頼を取り消し、別の操作へ訂正している。
 - 取消: 未保存なら副作用0件。保存済みなら即時削除せず、対象提示と明示確認を分ける削除2段階へ進む。
 - 過去依頼への照会: 「昨日、覚えてと頼んだ内容は？」のようなread-only照会。
 
 これらは`explicit=false`として副作用0件を守り、照会へ答える、訂正後の内容を扱う、または必要な一点を質問する。
+
+一方、「田中さんからXと聞いた。覚えて」「Xだと思う。覚えて」「XではなくYだった。覚えて」のように、
+現在利用者が保存操作を明示している場合、伝聞・推量・内容訂正はcontentの属性である。
+requestのauthorizationを取り消さず、情報源・確実性・訂正関係を意味tupleへ残す。
 
 ### IntentClass
 
@@ -415,6 +418,8 @@ version解決入力が一致しない、または変更分類からminor更新�
 Secretを含む保存依頼は `explicit` でも即時保存へ進めず、Secretを表示・永続化しない安全境界へ送る。
 複数分類に当たる場合は、より強い確認を必要とする `destructive` または `external` を優先する。
 単一設定値の可逆更新はdestructiveな上書きに含めない。
+「覚えて」によるuser-visible destinationは `memory` であり、decision／topic等の内部分類はrouteの結果である。
+memory保存の明示依頼に内部分類の選択を要求せず、routeが変わってもauthorizationを引き継ぐ。
 
 「同じターン」は、1つのユーザー発話を受け、必要なtool実行を含み、最終応答で終わる1 assistant turnである。
 retryやresumeは同じoperation idを引き継ぎ、実行済み副作用を再実行しない。
@@ -449,6 +454,7 @@ idempotency（同じ処理を再実行しても重複しない性質）または
 - 日付・期限: 明示された日付、相対日付を解決した基準日。
 - 行動・対象: 何をする／何を残すか。
 - 否定・条件: 「しない」「〜なら」「保留」等。
+- 情報源・確実性・訂正関係: 伝聞元、「と思う」等の推量、留保、旧内容から新内容への訂正と理由。
 - 行き先: decision、topic、settings、TODO、Notion TaskDB、project等の正本。
 
 入力にない担当、期限、顧客名、因果、確定状態を補わない。「覚えて」「メモして」等の依頼語や、
@@ -457,9 +463,64 @@ idempotency（同じ処理を再実行しても重複しない性質）または
 ### golden caseの判定単位
 
 各caseは、case ID、edition、入力、前提、期待IntentClass、SideEffectState、ResponseState、必須応答要素、禁止表現、
-意味tuple、変更前snapshot、変更後snapshotを持つ。意味tupleは主体、日付・期限、行動、対象、否定・条件、行き先の順で比較する。
+意味tuple、変更前snapshot、変更後snapshotを持つ。意味tupleは主体、日付・期限、行動、対象、否定・条件、
+情報源・確実性・訂正関係、行き先の順で比較する。
 各要素について欠落、反転、入力にない追加を起こすnegative fixtureを持ち、validatorが拒否できることを確認する。
 決定的に機械判定できない自然さ等は、Evaluatorが観測文と判定根拠を記録し、未記録の主観判定をPASSにしない。
+
+## memory authorizationの実行モデル
+
+### RequestAuthorization
+
+- `proposed`: 保存操作自体が「したほうがいいかも」等で未確定。副作用0件で、保存するかを尋ねる。
+- `explicit`: 現在利用者が低リスクのmemory保存を明示。contentが推量・伝聞・訂正を含んでも同じturnで実行する。
+- `safety-held`: Secret、destructive、external、一括、scope変更等の独立境界により停止。低リスクexplicitの一般規則で上書きしない。
+
+### PendingMemoryConfirmation
+
+pendingは同時に1件だけ存在し、次を持つ。
+
+- `content`: 保存予定の意味内容。完全verbatimではなく、意味tupleを保つ要点でよい。
+- `userScope`: 利用者に見える行き先。通常は `memory`。
+- `conversationAnchor`: 提案を行った会話位置。別話題が介在したかの判定に使う。
+
+同じ話題での「はい」はpendingへのauthorizationとなる。「はい、ただしX」はcontentをXで修正したうえで
+`explicit`として同じturnに実行する。別話題が介在したpendingは`expired`とし、後の短い了承では復活させない。
+
+### MemoryContentKey
+
+内容冪等性の比較単位は、edition内のcanonical memory root、memory種別、正規化した意味tuple、訂正関係である。
+時刻、operation id、応答再送、自然文の表記揺れだけは同一性を壊さない。否定、条件、情報源、確実性、
+訂正前後の違いは意味差として保持する。同じkeyが既に完了済みならmemory／journal／checkpointを追加せず、
+`SideEffectState: 0`で既保存を報告する。
+
+topic訂正は旧topicを変更せず、旧→新と理由または不確実性を示す新しいappend-only eventとして扱う。
+訂正event自身もMemoryContentKeyでdedupeする。
+
+### MemoryOperationState
+
+| 状態 | memory／journal | checkpoint | retry |
+|---|---|---|---|
+| `not-started` | 未実行 | 未実行 | 通常の保存を1回実行 |
+| `stored` | 各1回完了 | 未実行 | checkpointだけを実行 |
+| `partial-checkpoint` | 各1回完了 | 失敗 | `partial`を返し、checkpointだけを再試行 |
+| `complete` | 各1回完了 | 完了または不要 | 副作用0件で既完了を報告 |
+
+checkpoint失敗を理由にmemory／journalを再実行しない。retry時は現在の実file内容を確認し、保存済み内容を
+重複させずに未完了段階だけを進める。
+
+### ConversationCoreInventory
+
+conversation-core inventoryは、surface ID、edition、実path、役割、content digest、現行契約marker、
+禁止旧markerを持つtrackedな正本である。最低対象はrules／copy、memory-care、secretary、settings、daily、projects、
+templates、runtime classifier、memory保存シーム、golden fixture、旧Sprint回帰とする。
+
+markerは実内容から判定し、少なくとも次の意味を区別する。
+
+- 現行: `explicit-memory-request=run-once`、`content-uncertainty=preserve`、`retry-after-checkpoint-failure=commit-only`。
+- 禁止旧契約: `topic-save=confirm-first`、`save-copy=exact-copy`、`explicit-memory-request=next-turn-confirmation`。
+
+Agentic、Yasashii、private my-vaultを別々に集計し、対象漏れ、marker欠落、禁止marker残存、実内容とinventoryのdigest不一致をFAILにする。
 
 ## my-vaultのタスク正本
 

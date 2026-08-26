@@ -231,6 +231,16 @@ Plugin更新は新しいSkillと処理を読み込む段階であり、既存wor
 変更予定をpreviewする。別確認後だけidentity、製品所有のAGENTS／CLAUDE identity管理節、最小台帳を
 一体移行し、利用者自由記述を保持する。移行後もuser-scope routingは別確認の任意操作である。
 
+### G17 「覚えて」を一度で安全に完了する
+
+利用者が低リスクの内容を「覚えて」と明示したら、`memory`への保存許可として一度で受け取り、
+decision／topic等の内部分類、保存先file、要約案のために聞き返さない。保存するか自体が曖昧な提案と、
+「と思う」「と聞いた」等の内容上の不確実性は分け、後者は意味を保ったまま同じturnで保存する。
+
+同じ内容のretryではmemory、journal、checkpointを重複させず、topic訂正は旧内容を残して追記する。
+保存とjournalが済んだ後にlocal commitだけ失敗した場合は部分成功を正直に示し、retryはcommitだけを行う。
+この契約をAgentic、Yasashii、private my-vaultの3版へ揃え、旧確認契約が再流入しないinventoryで守る。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -257,6 +267,7 @@ Plugin更新は新しいSkillと処理を読み込む段階であり、既存wor
 22. Windowsの通常workspace pathでproject／memory／TODO／settings／文書保存が完了し、中途失敗で利用者データとjournalの片方だけを残さない。同時にmacOS／Linuxの既存回帰と安全境界を維持する。
 23. 秘書自身の英語名、stable identity、AI authorが初回と既存利用者で一貫し、別repo routingは任意の明示確認、renameは分類previewから安全に行える。
 24. 公開済み`0.10.0`へplugin更新済みでもローカルidentity面が未導入または部分適用のworkspaceを、新sessionのread-only診断、preview、別確認、atomic migration、local checkpoint、rollbackで新規導入相当へ揃えられる。
+25. 明示memory依頼は内部分類の確認なしに同じturnで1回保存され、content hedge、訂正、retry、checkpoint失敗でも意味と副作用件数が正しく保たれる。3版のsourceは同じoffline契約へ揃い、live cache／新session反映とは別状態で確認できる。
 
 ## 成功状態
 
@@ -305,6 +316,7 @@ Plugin更新は新しいSkillと処理を読み込む段階であり、既存wor
 - 「覚えて」「設定して」「TODO 3を完了にして」等の明示依頼は、操作・対象・行き先が一意で低リスクなら同じターンに副作用1件と成功報告まで進む。自発提案と曖昧入力は副作用0件で質問し、高リスク操作は対象・影響の確認前に進まない。
 - 成功、質問、失敗、部分成功の返答が実状態と一致し、単純成功に不要な固定帳票や次行動を付けない。保存内容は入力の主体・日付・行動を保ち、入力にない事実、依頼語、不要な全文を加えない。
 - `agentic-secretary`、`agentic-secretary-my-vault`、`yasashii-secretary` は、行き先・正本ルールが同じ共通caseで同じ意味と安全境界を持つ。Notion routing等は版固有caseとして、その版の正本に従う保存先とresponse stateを評価し、共通比較は安全境界に限定する。
+- 明示memory依頼、content hedge、pending修正、topic訂正、同内容retry、checkpoint failureの各caseで、memory／journal／commitの実件数がF63どおりとなり、3版のconversation-core inventoryに禁止旧契約が0件である。
 
 ## 非ゴール
 
@@ -345,6 +357,7 @@ Plugin更新は新しいSkillと処理を読み込む段階であり、既存wor
 - Windowsネットワーク共有path、すべてのUNC変種、WSL／Windows間の任意path相互変換は本Patchの保証範囲に含めない。
 - 既存workspaceの名前オンボーディング確認を、user-scope registry／routingの有効化、rename、既存文書のgrep置換、push、release、Mac mini同期の許可へ拡張しない。
 - Sprint 039 Patch 002では実HOME、installed cache、実下流repo、実利用者workspace、remote、GitHub Releaseを変更しない。3版PASS後のrelease／Mac mini同期と、release後の受講者向け文面は別の運用phaseとする。
+- Sprint 040のsource／offline regression完了を、push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、Mac mini、release後の新sessionへ反映済みという意味に拡張しない。
 
 ## 承認済みの条件付き判断
 

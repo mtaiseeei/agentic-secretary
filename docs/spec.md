@@ -60,6 +60,10 @@ PASSした完全SHAからYasashii overlayを別評価する。private my-vault�
 後方互換な修正candidateを `0.10.1` とし、plugin更新後の新sessionから既存workspaceをread-only診断、preview、
 別確認、所有範囲だけのatomic migration、local checkpoint、rollbackへ案内する。Agenticの独立PASS後だけ
 固定handoffをYasashii／private my-vaultへ渡し、3版すべての独立PASS後だけreleaseとMac mini同期へ進む。
+2026-08-25に、明示された低リスクmemory依頼を内部分類のために再確認する残存契約を解消する方針を承認した。
+「覚えて」はuser-visible scope `memory`への一度きりauthorizationとして扱い、request hedgeとcontent hedge、
+pending一件束縛、append-only訂正、内容冪等性、checkpoint partialを共通契約にする。Agentic、Yasashii、
+private my-vaultのsourceとoffline回帰をSprint 040で揃え、push／Release／cache／新session確認は別phaseとする。
 
 ## ひとことで
 
@@ -90,13 +94,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G14 | Windowsでも記録・保存できる | Windows形式pathでproject／memory／TODO／settings／文書保存を完了でき、path guard・rollback・journal整合をmacOS／Linuxと同じ強さで守る |
 | G15 | 秘書名をworkspace全体で一貫させる | 初回と既存利用者の双方で英語名、stable identity、AI authorを持ち、別repo呼び出しと安全なrenameを選べる |
 | G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
+| G17 | 「覚えて」を一度で安全に完了する | memory scope、hedge分離、append-only訂正、内容冪等性、checkpoint partial、3版inventory |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G16、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F62 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F63 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -151,6 +156,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-039](sprints/sprint-039.md) | 秘書identity: 英語名、stable ID／AI author、name Skill、user-scope managed block、canonical resolver、安全なrename、下流handoff | sprint-038-patch-002 |
 | [sprint-039-patch-001](sprints/sprint-039-patch-001.md) | renameの所有path限定local Git checkpointと、commit失敗を含むworkspace／user-scope／Git rollback | sprint-039 |
 | [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
+| [sprint-040](sprints/sprint-040.md) | 明示memory依頼のrun-once、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版conversation-core inventory | sprint-039-patch-002 |
+| [sprint-040-patch-001](sprints/sprint-040-patch-001.md) | 3版handoff manifestのpath役割完全化、機械算出した集合照合、candidate再現と下流pre-write gate | sprint-040 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -201,3 +208,4 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 42. 既存利用者の名前導入はplugin更新だけで完了扱いにしない。新sessionでcanonical workspaceをread-only診断し、`identity.json`、製品所有のAGENTS／CLAUDE identity管理節、最小台帳の不足・既存・衝突をpreviewする。
 43. 既存workspace migrationは、英語名または既存identityを確定した後も別確認までwrite 0件とする。適用は利用者自由記述をbyte保持し、所有pathだけを一transactionで更新してlocal checkpointを作る。失敗時はworkspaceとGitを開始前へ戻し、再実行は0差分とする。
 44. user-scope registry／routingは既存workspace migrationに含めず、従来どおり効果と対象を示した別確認を必要とする。Agenticの固定handoff後にYasashii／privateを別Sprint・独立評価し、3版PASS前に`0.10.1` release、installed cache更新、Mac mini同期、受講者向け配布文作成を完了扱いにしない。
+45. 明示された低リスクmemory依頼はuser-visible scope `memory`だけで一度実行し、decision／topic等の内部分類を再確認させない。request hedgeとcontent hedgeを分け、topic訂正をappend-only、同内容retryを副作用0件、checkpoint commitだけの失敗を`partial`＋commit-only retryとする。3版の実内容inventoryで現行marker存在・旧確認marker不在を確認し、offline PASSをrelease／cache／新session反映済みへ昇格させない。

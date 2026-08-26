@@ -89,6 +89,8 @@ node ${SECRETARY_PLUGIN_ROOT}/scripts/project-tools.mjs create-light <secretary>
 - 恒久的な事実は、ライトのメモまたはフルの `MEMORY.md`。
 - 実行タスクは `secretary/inbox/todo.md` または接続済みサービス。PJ内に生きた `TODO.md` を作らない。
 - PJ固有の本文を一般 `memory/decisions/` や `memory/topics/` へ複製しない。
+- 一般memoryへの明示保存を内部分類の確認へ戻さない。ただしPJ固有であることが明示済みの判断はこのPJ正本へ1回だけ保存し、
+  一般memoryへ重複させない。秘書からPJメモ保存を提案する場合だけ内容を示して確認する。
 
 判断は原文を示して確認した後だけ、現在状況と次の入口も同じ操作で更新する。
 
