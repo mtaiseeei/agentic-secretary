@@ -57,6 +57,11 @@ check("tracked source inventory and report schema are fixed", () => {
   assert.equal(report.sourceInventorySha256, sha(readFileSync(join(root, handoff.inventory))));
   assert.deepEqual(report.candidates.map((item) => item.id), ["agentic", "yasashii", "private-my-vault"]);
   assert.equal(new Set(inventory.surfaces.map((item) => item.id)).size, 17);
+  assert.equal(report.publicWholeTree.root, handoff.publicWholeTree.root);
+  assert.deepEqual(report.publicWholeTree.exclusions, handoff.publicWholeTree.exclusions);
+  assert.equal(report.publicWholeTree.pathCount, report.publicWholeTree.paths.length);
+  const agentic = report.candidates.find((item) => item.id === "agentic");
+  assert.deepEqual(agentic.roles.parity.map((item) => item.path), report.publicWholeTree.paths);
 });
 
 check("handoff roles are exclusive and execution-derived", () => {
@@ -75,9 +80,19 @@ check("handoff roles are exclusive and execution-derived", () => {
         assert.equal(item.applicationCount, 1, `${edition.id}:${item.path}:application-count`);
         assert.ok(item.transformer, `${edition.id}:${item.path}:transformer`);
         assert.ok(item.anchors.length > 0, `${edition.id}:${item.path}:anchors`);
+        assert.equal(item.anchorEvidence.length, item.anchors.length, `${edition.id}:${item.path}:anchor-evidence-count`);
+        for (const evidence of item.anchorEvidence) {
+          assert.equal(evidence.occurrenceCount, 1, `${edition.id}:${item.path}:anchor-occurrence`);
+          assert.equal(evidence.applicationCount, 1, `${edition.id}:${item.path}:anchor-application`);
+        }
+        if (item.input === "public-source") assert.ok(edition.trace.copy.includes(item.path), `${edition.id}:${item.path}:copy-trace`);
       }
     }
     for (const action of ["read", "copy", "write", "execute", "protect"]) assert.ok(Array.isArray(edition.trace[action]), `${edition.id}:trace:${action}`);
+    for (const item of Object.values(edition.roles).flat()) {
+      const actualActions = Object.entries(edition.trace).filter(([, paths]) => paths.includes(item.path)).map(([action]) => action);
+      assert.deepEqual(item.actions, actualActions, `${edition.id}:${item.path}:direct-action-trace`);
+    }
   }
 });
 

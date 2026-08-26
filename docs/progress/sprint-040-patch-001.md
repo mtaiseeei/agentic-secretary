@@ -114,3 +114,74 @@ full regressionの開始前後に `scripts/sprint-040-source-snapshot.mjs` を�
 - push、tag、Release、marketplace、installed cache、利用者workspace、Mac mini、new session、external serviceは未実行／write 0。
 - source／offline PASSをrelease済み、cache反映済み、新session確認済みへ昇格していない。
 - UI変更なし。既知のproduct finding、verification-infra findingは0件。
+
+## 限定再試行cycle（ユーザー承認A）
+
+前EvaluatorのP-01／V-01だけを修正した。会話contract、memory実装、Sprint 038 golden期待値、
+下流実repoの製品bytesは変更していない。
+
+### 3根本原因の修正
+
+- `publicWholeTree.root` と `exclusions` をAgentic tree列挙、copy、role、trace、candidate identityの実行入力へ接続した。
+  不存在root、空または不正なexclusion、state／progress／feedback／`.git` のcontrol path混入はbuild前に非0終了する。
+- edition／pathごとに宣言transformerと実transformerを照合し、宣言anchorの入力内出現回数と変換適用回数を実測する。
+  anchorの0回／複数回、transformer不一致、変換結果0 byte差分は非0終了する。reportの `applicationCount` と
+  `anchorEvidence` は変換実行recordから生成し、固定値を代入しない。
+- copy後にadaptするYasashiiの `plugins/secretary/skills/secretary/SKILL.md` と
+  `scripts/sprint-010-regression.sh` を実copy recordから `trace.copy` へ追加した。adapted role recordのactionsも
+  traceを逆引きして生成するため、`read/copy/write` が一致する。
+
+変更fileはhandoff manifest、candidate builder、handoff test、inventory testと本progressだけである。
+
+### 正負fixtureと実測trace
+
+`node scripts/sprint-040-handoff-test.mjs ...` は12/12 PASSだった。
+
+- 正例1件、schema 2欠陥観測1件。
+- 既存4負例: 未宣言mutation、role overlap、unused declaration、stale path。
+- 追加6負例: stale anchor、複数一致anchor、stale public root、空exclusions、transformer不一致、
+  入力に1回存在するが実変換点ではないanchor。
+- すべての負例は期待どおり非0終了し、正常manifestだけが0終了した。
+
+default buildのtrace countはAgentic `read/copy/write/execute/protect=628/628/628/1/0`、
+Yasashii `37/31/32/1/5`、private `38/26/32/1/6`。Yasashiiのcopyは前候補の29から実動作どおり31になった。
+全9 adapted pathの変換適用回数は各1、宣言anchorは全件 `occurrenceCount=1`／`applicationCount=1` である。
+
+### 再固定したcandidate identity
+
+manifest digest: `e515842b147393ac77dddfb94d000188916d4aa837fda17d7e8fb4015f844982`
+
+| Edition | 前FAIL候補のID | 限定再試行ID | Files |
+|---|---|---|---:|
+| Agentic | `cb1cbf70ff37bc20184d7114e96ddcda6eede65243519245344217b013bb4e4c` | `36a5c5f5482fcd510e5b361bdf9e24620be696046e248fb29b3b557800cc083d` | 628 |
+| Yasashii | `73b10b501aea2019e8689e573c56fa5d761783c619c166288585ddc74e3fd7e9` | `4bc87169d87baf90f9681f7ba07d3154c71df34eac78bad15b435732e876faf2` | 604 |
+| private my-vault | `bdb9587aa7be8fb22087c80205ab49260516acdc9b70027b94fa1d93d45dfe5d` | `5c22b283b0f7c55a30c9b8c581d5ad182035b543e3369b421fe131e2741b5043` | 714 |
+
+別の空directoryへの2回目buildでも3 IDが一致した。candidate rootは相対pathだけである。
+
+### 限定再試行の実行証拠
+
+| Command | Exit | 結果 |
+|---|---:|---|
+| `node --check scripts/sprint-040-{candidate-build,handoff-test,inventory-test}.mjs` | 0 | Node構文3件PASS |
+| `node scripts/sprint-040-handoff-test.mjs --yasashii-source ... --private-source ...` | 0 | 正常／観測／負例を合わせ12 PASS / 0 FAIL |
+| `node scripts/sprint-040-candidate-build.mjs ... --skip-execute` | 0 | 3 candidateと実測anchor／action traceを生成 |
+| `node scripts/sprint-040-inventory-test.mjs --candidate-report ...` | 0 | whole-tree正本、role、anchor実測、copy trace、inventory、protected、identityを8/8 PASS |
+| `SPRINT040_YASASHII_SOURCE=... SPRINT040_PRIVATE_SOURCE=... bash scripts/sprint-040-regression.sh` | 0 | 3版suite、inventory、2回目ID再現、下流before/after不変、総合0 FAIL |
+| 最終staged実装treeのGit archiveで同じfull regression | 0 | `.git`なしで12/12正負、3版suite、inventory 8/8、ID再現3/3、下流read-only 2/2、総合0 FAIL |
+| `git diff --check` | 0 | whitespace error 0 |
+
+3版candidate suiteはSprint 040 15/15、Sprint 038 67/67、historical 14/14＋3/3、Sprint 010 56/56、
+Git／Secret 71/71を各版で再実行し、Yasashii／privateのprivate相当9/9もPASSした。
+
+### 下流不変と未実行境界
+
+- Yasashii実repoはHEAD `4af185daa45290bdfcf4993db841c512cf319e2c`、branch
+  `codex/sprint-040-memory-authorization`、status／staged空、remote／protected digestが前後一致した。
+- private実repoはHEAD `8e0796c9aba49d9a3dccb020912b0e1cf3989abf`、branch `main`、status／staged空、
+  remote／protected digestが前後一致した。
+- 下流実repoへのwrite／checkout／stage／commit／branch／remote変更は0件。
+- 会話contract、memory実装、golden期待値の変更は0件。既存会話／memory full regressionは0 FAIL。
+- push、tag、Release、marketplace、installed cache、利用者workspace、Mac mini、new session、external serviceは未実行／write 0。
+
+限定再試行cycleに既知のproduct finding／verification-infra findingはない。独立Evaluatorの再評価待ちである。

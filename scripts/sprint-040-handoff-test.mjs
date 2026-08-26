@@ -74,6 +74,36 @@ check("stale path fails", () => {
   fixture.sharedParity.push("scripts/fixtures/sprint-040/stale-does-not-exist.txt");
   runBuild("stale-path", fixture, /stale-path:parity/u);
 });
+check("stale adapted anchor fails", () => {
+  const fixture = clone();
+  fixture.editions.find((item) => item.id === "yasashii").transformations["plugins/secretary/skills/secretary/SKILL.md"].anchors = ["THIS-ANCHOR-DOES-NOT-EXIST"];
+  runBuild("stale-anchor", fixture, /transformation-anchor-count:plugins\/secretary\/skills\/secretary\/SKILL\.md/u);
+});
+check("multiple adapted anchor occurrences fail", () => {
+  const fixture = clone();
+  fixture.editions.find((item) => item.id === "private-my-vault").transformations["plugins/secretary/skills/daily/SKILL.md"].anchors = ["確認"];
+  runBuild("multiple-anchor", fixture, /transformation-anchor-count:plugins\/secretary\/skills\/daily\/SKILL\.md/u);
+});
+check("stale public whole-tree root fails", () => {
+  const fixture = clone();
+  fixture.publicWholeTree.root = "THIS-ROOT-DOES-NOT-EXIST";
+  runBuild("stale-public-root", fixture, /public-whole-tree-root-not-found/u);
+});
+check("empty public whole-tree exclusions fail", () => {
+  const fixture = clone();
+  fixture.publicWholeTree.exclusions = [];
+  runBuild("empty-public-exclusions", fixture, /invalid-public-whole-tree-exclusions:empty/u);
+});
+check("declared transformer mismatch fails", () => {
+  const fixture = clone();
+  fixture.editions.find((item) => item.id === "yasashii").transformations["scripts/sprint-010-regression.sh"].transformer = "wrong-transformer";
+  runBuild("transformer-mismatch", fixture, /transformation-mismatch:scripts\/sprint-010-regression\.sh/u);
+});
+check("unrelated existing anchor cannot replace actual transform anchors", () => {
+  const fixture = clone();
+  fixture.editions.find((item) => item.id === "private-my-vault").transformations["plugins/secretary/skills/daily/SKILL.md"].anchors = ["## 参照"];
+  runBuild("anchor-transform-mismatch", fixture, /transformation-anchor-mismatch:plugins\/secretary\/skills\/daily\/SKILL\.md/u);
+});
 
 rmSync(temp, { recursive: true, force: true });
 console.log(`SPRINT040_HANDOFF_PASS=${pass} SPRINT040_HANDOFF_FAIL=${fail}`);

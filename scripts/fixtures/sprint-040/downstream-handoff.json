@@ -71,7 +71,7 @@
       "transformations": {
         "plugins/secretary/skills/secretary/SKILL.md": {"input":"public-source","transformer":"yasashii-secretary-identity","anchors":["# agentic-secretary —", "開発の入口（Agentic Harness）"]},
         "scripts/sprint-010-regression.sh": {"input":"public-source","transformer":"yasashii-style-and-copy","anchors":["styles/agentic.md", "copy/agentic.json"]},
-        "scripts/sprint-038-test.mjs": {"input":"fixed-base","transformer":"schema2-runtime-input","anchors":["assert.equal(fixture.schemaVersion, 1);", "const observed = runConversationScenario({ input: item.input, precondition: item.precondition });"]}
+        "scripts/sprint-038-test.mjs": {"input":"fixed-base","transformer":"schema2-runtime-input","anchors":["assert.equal(fixture.schemaVersion, 1);", "\"quote\", \"hearsay\", \"hypothetical\", \"correction\"", "[\"caseId\", \"edition\", \"input\", \"precondition\", \"expected\", \"requiredResponseElements\", \"forbiddenPhrases\", \"meaning\", \"beforeSnapshot\", \"afterSnapshot\"]", "// exclusively on this oracle side of the comparison.\n    const observed = runConversationScenario({ input: item.input, precondition: item.precondition });"]}
       },
       "protected": [
         {"path":"README.md","sha256":"35361391ad9a74c9403f8a2cc20616b5e3aa0635d76a067c1022fb35b794b527"},
@@ -99,12 +99,12 @@
         "supporting": ["README.md", "AGENTS.md", "docs/spec.md", "plugins/secretary/edition.json", "plugins/secretary/skills/notion-tasks/SKILL.md", "plugins/secretary/skills/vault-search/SKILL.md"]
       },
       "transformations": {
-        "plugins/secretary/skills/daily/SKILL.md": {"input":"fixed-base","transformer":"private-daily-memory-boundary","anchors":["3. 当日のdecisionが0件なら"]},
-        "plugins/secretary/skills/memory-care/SKILL.md": {"input":"fixed-base-and-public-source","transformer":"private-memory-sections","anchors":["## 1. 記憶の追加・更新", "## 3. 節目プロトコル"]},
+        "plugins/secretary/skills/daily/SKILL.md": {"input":"fixed-base","transformer":"private-daily-memory-boundary","anchors":["3. 当日のdecisionが0件なら", "この内容を決定として残しますね:", "次の別ターンで明示的な了承を得た後だけ記録する。"]},
+        "plugins/secretary/skills/memory-care/SKILL.md": {"input":"fixed-base-and-public-source","transformer":"private-memory-sections","anchors":["## 1. 記憶の追加・更新", "## 3. 節目プロトコル", "確認済みの相談要点を案件メモへ追加"]},
         "plugins/secretary/skills/projects/SKILL.md": {"input":"fixed-base","transformer":"private-project-memory-boundary","anchors":["判断は原文を示して確認した後だけ"]},
         "plugins/secretary/skills/secretary/SKILL.md": {"input":"fixed-base-and-public-source","transformer":"private-secretary-checkpoint-section","anchors":["## 会話中の節目（全モード共通）", "## 成果物を保存するとき（出力規約）"]},
         "plugins/secretary/skills/settings/SKILL.md": {"input":"fixed-base","transformer":"private-settings-memory-boundary","anchors":["`pref-note-add` は末尾追記だけに使い"]},
-        "scripts/sprint-038-test.mjs": {"input":"fixed-base","transformer":"schema2-runtime-input","anchors":["assert.equal(fixture.schemaVersion, 1);", "const observed = runConversationScenario({ input: item.input, precondition: item.precondition });"]}
+        "scripts/sprint-038-test.mjs": {"input":"fixed-base","transformer":"schema2-runtime-input","anchors":["assert.equal(fixture.schemaVersion, 1);", "\"quote\", \"hearsay\", \"hypothetical\", \"correction\"", "[\"caseId\", \"edition\", \"input\", \"precondition\", \"expected\", \"requiredResponseElements\", \"forbiddenPhrases\", \"meaning\", \"beforeSnapshot\", \"afterSnapshot\"]", "// exclusively on this oracle side of the comparison.\n    const observed = runConversationScenario({ input: item.input, precondition: item.precondition });"]}
       },
       "protected": [
         {"path":"README.md","sha256":"08046efc3648633b0e80f182c254755bb4e1a5e086607e1674abef22783ff293"},
