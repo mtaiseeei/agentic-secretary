@@ -159,16 +159,16 @@ function completePassRecord(loaded, hostId) {
   };
 }
 
-check("distribution identity and candidate version are agentic-secretary 0.10.1", () => {
+check("distribution identity and candidate version are agentic-secretary 0.10.2", () => {
   const marketplace = json(join(root, ".claude-plugin/marketplace.json"));
   const manifest = json(join(pluginRoot, ".claude-plugin/plugin.json"));
   const edition = json(join(pluginRoot, "edition.json"));
   assert.equal(marketplace.name, "agentic-secretary");
   assert.equal(marketplace.plugins.length, 1);
   assert.equal(marketplace.plugins[0].name, "agentic-secretary");
-  assert.equal(marketplace.plugins[0].version, "0.10.1");
+  assert.equal(marketplace.plugins[0].version, "0.10.2");
   assert.equal(manifest.name, "agentic-secretary");
-  assert.equal(manifest.version, "0.10.1");
+  assert.equal(manifest.version, "0.10.2");
   assert.equal(edition.edition, "agentic-secretary");
   assert.equal(edition.distribution.pluginId, "agentic-secretary@agentic-secretary");
   assert.equal(edition.harness.installId, "harness@agentic-harness");
@@ -227,7 +227,7 @@ check("Codex formal manifest and repository marketplace share the canonical skil
   assert.deepEqual(codexMarketplace.plugins[0].policy, { installation: "AVAILABLE", authentication: "ON_INSTALL" });
   assert.equal(codexMarketplace.plugins[0].category, "Productivity");
   assert.equal(codexManifest.name, "agentic-secretary");
-  assert.equal(codexManifest.version, "0.10.1");
+  assert.equal(codexManifest.version, "0.10.2");
   assert.equal(codexManifest.skills, "./skills/");
   assert.equal(walk(join(pluginRoot, "skills")).filter((path) => path.endsWith("/SKILL.md")).length, 16);
   assert(!existsSync(join(root, ".agents/skills")));
@@ -239,7 +239,8 @@ check("technical copy is limited to the four edition surfaces", () => {
   const text = JSON.stringify(copy);
   for (const required of ["command", "path", "error", "evidence", "UNVERIFIED"]) assert(text.includes(required), `missing technical term: ${required}`);
   for (const forbidden of ["wizard", "OAuth scope", "Repository Secretを登録"]) assert(!text.includes(forbidden), `common surface leaked into edition copy: ${forbidden}`);
-  assert.equal(copy.surfaces.conversation.decisionConfirmation, "この内容を決定として残しますね: <そのターンのユーザー入力全文>");
+  assert.equal(copy.surfaces.conversation.explicitMemory, "明示された内容をmemoryへ1回保存し、内部分類と保存先を結果で示す");
+  assert.equal(copy.surfaces.conversation.decisionConfirmation, undefined);
   assert(Object.values(copy.surfaces).flatMap((surface) => Object.values(surface)).flat(Infinity)
     .filter((value) => typeof value === "string").every((value) => /[ぁ-んァ-ヶ一-龠]/.test(value)));
 });
