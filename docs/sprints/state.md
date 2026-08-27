@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-043
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-044
@@ -79,7 +79,7 @@
 | sprint-040-patch-001 | done | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
 | sprint-041 | done | [contract](sprint-041.md) | [progress](../progress/sprint-041.md) | [feedback](../feedback/sprint-041.md) |
 | sprint-042 | done | [contract](sprint-042.md) | [progress](../progress/sprint-042.md) | [feedback](../feedback/sprint-042.md) |
-| sprint-043 | awaiting-eval | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | - |
+| sprint-043 | active | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
 | sprint-044 | planned | [contract](sprint-044.md) | - | - |
 | sprint-045 | planned | [contract](sprint-045.md) | - | - |
 | sprint-046 | planned | [contract](sprint-046.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 043初回fresh独立Evaluator commit `a1448d1fa200cf0b2e7e2cfc01886adf0d2bded7`はFAIL／implementation-issue。Evaluator最終28 PASS／1 FAIL（XV-003）／1 conditional NOT-RUN（XM-007）。Major product F-01として、target Aのpreview digestがtarget pathを束縛せず、同内容の未承認target Bへ流用して`local-selected-after-approval`で新規writeできた。Minor verification-infra V-01として公式XV-003が同一targetだけを検査しF-01を見逃した。実Xmind／network／credit／実利用者path writeは0。Retry Count 1、fresh Generator `gpt-5.6-sol`／`high`を予約しLineage Dispatches 3、Status active、Model Tier strong、Rotate none。修正はapproval digestのtarget／operation／impact束縛とcross-target負回帰に限定する。
 - 2026-08-28: Sprint 043 Generator candidate `d29a549cb49894edf26b0f067d7caac93f5bec15`を固定。primary 26＋XV 4は29 PASS／0 FAIL／`XM-007`実Xmind MCP external-liveだけconditional NOT-RUN、registry差分0。Markdown／Mermaid固定4象限、MCP-first resolver、fake adapter `verified:false`、local preview／拒否／取消／無回答write 0、approval digest後のtemp fixture write、known XMind Zen ZIP内部構造、既存Sheet／深いbranch保持、retry byte同一を実装。実Xmind App openabilityと実MCPは未承認のため未検証、実利用者path write／network／credit 0。fresh独立Evaluatorを予約し、Lineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 042 Retry 1はfresh独立Evaluator commit `4cbafa5e15dd393b11efe4c73c9c7850df68737a`でPASS。初回F-01 productとV-01 verification-infraはRESOLVED、新規finding 0。expired-only cleanup、開始時空runtime、user／unowned／live保持、ownership／directory race、symlink、root外、非再帰削除を独立確認し、Target 35/35、Sprint 041 43/43、関連回帰を再確認した。Sprint 042をdone、Retry／Spec-Issue 0へ戻し、high-risk Sprint 043へ進む。resolverはfresh Generator `gpt-5.6-sol`／`high`、Model Tier strong、Rotate none。Generator予約としてLineage Dispatches 1、Status active。実Xmind MCP external-liveと実local fallbackは未承認のため実行せず、adapter／isolated fixtureと承認gateを先に実装する。
 - 2026-08-28: Sprint 042 Retry 1 Generator candidate `6c251e5ec13fada873f81bc0bebdcadc09711aaf`を固定。F-01のexpired-only cleanupを、owned file実削除結果に基づく`changed`、safe root／通常directory／非symlink／空の再検証後の`rmdirSync`、retry時`unchanged`へ限定修正した。Evaluator再現相当をIM-014へ追加し、apply成功・実状態一致・runtime消滅・retry収束、開始時空runtimeとuser／live保持を確認。Sprint 042 35/35、Sprint 041 43/43、関連回帰とrelease integrityがPASS。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。外部副作用0。
