@@ -1,6 +1,6 @@
 # Sprint 043: Markdown／Mermaid投影とXmind provider
 
-**ステータス:** Generator実装完了、Evaluator待ち
+**ステータス:** Retry 1 Generator実装完了、Evaluator再評価待ち
 
 ## 実装したこと
 
@@ -99,3 +99,49 @@ node plugins/secretary/scripts/clarity.mjs xmind-setting <repo-root> --enabled o
 - auth／credit消費: **0回／0 credit**
 - push／release／cache／downstream write: **0件**
 - `.xmind` approval writeを含む製品fixture writeは、すべてテストが作成したOS temp directory内だけ。repoへ置いたのは匿名・展開済みJSON fixtureで、実顧客/PDF/提供Xmindは含めていない。
+
+## Retry 1 — approval target binding
+
+### 対応したEvaluator finding
+
+- F-01 productを修正した。従来の`approvalDigest`は生成archive bytesだけのdigestだったため、target Aのpreviewを同じ内容になるtarget Bへ流用できた。Retry 1では`agentic-secretary.local-xmind-approval.v1` artifactを作り、SHA-256 digestを次へ束縛した。
+  - 正規化済みworking-root相対target、working root digest、実path digest
+  - `create`／`update` operation
+  - Clarity State digest、生成`content.json` digest、archive digest／bytes
+  - 既存targetの存在、file digest／bytesと、保持・置換するSheet／entry impact
+  - `local-xmind` provider、requested provider、明示preview承認gate、MCP不使用理由
+  - auth／credit見込み
+- apply時はpreviewを再生成してartifact digestを比較し、直前にも既存target identityを再読込する。target、operation、既存map、impact、State／content、provider条件のいずれかが変わった場合は`staleApproval: true`、`repreviewRequired: true`、`changed: false`で停止する。
+- path解決または外向きsymlinkがpreview後に変わった場合も、境界外へ書かずstale approvalとして停止する。root外／symlink／atomic writeの既存guardは維持した。
+- `sha256`は承認artifact digestではなく、実際に生成したarchive digestを返すよう分離した。
+
+### V-01 回帰拡張
+
+XV-003を製品CLIで次の実挙動まで検査するよう拡張した。
+
+1. `maps/../maps/approved-a.xmind`と`maps/approved-a.xmind`が同じcanonical target／approval digestになり、同じtargetへのapplyだけ成功する。
+2. target Aのdigestをtarget Bへ渡すcross-target applyは、A／Bともwrite 0で再preview要求になる。
+3. create preview後にtargetが既存fileとなるcreate→update変更は、既存fileをbyte保持してwrite 0になる。
+4. update preview後の既存archive mutationは、mutated archiveをbyte保持してwrite 0になる。
+5. preview後のClarity State mutationは、未作成targetを作らずwrite 0になる。
+6. preview後にtargetをroot外sentinelへのsymlinkへ差し替えても、sentinel digest不変・write 0になる。
+7. 正当な同一preview approvalだけOS temp targetへwriteし、新しいupdate previewによるretryは`changed: false`、archive bytes同一になる。
+8. rejected／canceled／unanswered／missing／stale approvalはwrite 0を維持する。
+
+### Retry 1 検証結果
+
+- `bash scripts/sprint-043-regression.sh` → `SPRINT043_CASE_PASS=29 FAIL=0 NOT_RUN=1 TOTAL=30`、registry missing／duplicate／extra 0、wrapper 6/6。conditional NOT-RUNは未承認の実Xmind MCP external-live `XM-007`だけ。
+- 同wrapper内Sprint 042 → 35/35、Sprint 041 → 43/43、いずれも0 FAIL。
+- `bash scripts/sprint-015-regression.sh` → 68/68。
+- `node scripts/sprint-021-git-safety-test.mjs` → 71/71。
+- `node scripts/sprint-022-safety-test.mjs` → 69/69。
+- `python3 scripts/check-release-integrity.py` → PASS。
+- `node --check plugins/secretary/scripts/lib/clarity-projection.mjs`、`git diff --check` → exit 0。
+- Retry 1 diffは製品codeと回帰testの両方を変更しており、検証codeだけのroundではない。
+
+### Retry 1 Evaluator引き渡し
+
+- Candidate commit before this SHA-record amend: `9f6d5f68d66bcbe2240f782492509714d8186b19`
+- 重点導線: XV-003の実CLI cross-target、alias normalization、create→update、existing archive／State mutation、symlink差替え、正当apply／retry。
+- 回帰チェック: `bash scripts/sprint-043-regression.sh`
+- 実Xmind MCP／App／CLI、network、credit、実利用者path、external connector、push、release、cache、downstream writeは引き続き0件。`XM-007`だけをconditional NOT-RUNとし、fake／内部validatorをreal verifiedへ昇格していない。

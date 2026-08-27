@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { ClarityError, appendEvent, attention, history, rebuildState, status } from "./clarity-core.mjs";
-import { safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { FilesystemBoundaryError, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
 
 export const QUADRANT_VISUALS = Object.freeze({
   stabilize: Object.freeze({ quadrant: "q2", position: "左上", emoji: "🟢", label: "定着・検証", meaning: "安定している", color: "#16A34A" }),
@@ -26,6 +26,28 @@ function relativeTarget(root, value) {
   const rel = relative(root, absolute);
   if (!rel || rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) throw new ClarityError("path-outside-root", "working root外へは書込みません。");
   return rel.split(sep).join("/");
+}
+function localTarget(root, value) {
+  const requested = relativeTarget(root, value);
+  const path = safeWritePath(root, requested);
+  return { requested, target: relativeTarget(root, path), path };
+}
+function readTarget(path) {
+  if (!existsSync(path)) return { bytes: null, identity: { exists: false, kind: "missing", sha256: null, bytes: 0 } };
+  const bytes = readFileSync(path);
+  return { bytes, identity: { exists: true, kind: "file", sha256: sha(bytes), bytes: bytes.length } };
+}
+function localApprovalDigest(artifact) { return sha(stableJson(artifact)); }
+function staleLocalApproval(preview, reason) {
+  return {
+    ...preview,
+    archive: undefined,
+    status: "fallback-approval-required",
+    changed: false,
+    staleApproval: true,
+    repreviewRequired: true,
+    reason,
+  };
 }
 function esc(value) { return String(value).replace(/[\r\n]+/gu, " ").replace(/["<>]/gu, "").trim(); }
 function stableNumber(id, salt) { return Number.parseInt(sha(`${id}:${salt}`).slice(0, 8), 16) / 0xffffffff; }
@@ -188,21 +210,58 @@ export function validateXmindStructure(buffer) {
   return { format: "xmind-zen-json-zip", structurallyValid: missing.length === 0 && Array.isArray(sheets) && managed.length === 2 && visualComplete, verified: false, openability: "not-verified-with-xmind-app", missing, entryNames: Object.keys(entries).sort(), sheetIds: Array.isArray(sheets) ? sheets.map((s) => s.id) : [], managedSheetCount: managed.length, itemIds: [...new Set(itemIds)].sort(), visualComplete };
 }
 export function previewLocalXmind(rootValue, targetValue, { mcpReason = "Xmind MCPを利用できません", requestedProvider = "auto" } = {}) {
-  const data = snapshot(rootValue); const root = data.root; const target = relativeTarget(root, targetValue); if (!target.toLowerCase().endsWith(".xmind")) throw new ClarityError("xmind-target-invalid", "local Xmindのtargetは.xmind fileを指定してください。"); const exists = existsSync(safeWritePath(root, target)); let priorSheets = [];
-  if (exists) { const entries = unpackXmindArchive(readFileSync(safeWritePath(root, target))); priorSheets = JSON.parse(entries["content.json"]?.toString("utf8") || "[]"); if (!Array.isArray(priorSheets)) throw new ClarityError("xmind-content-invalid", "既存Xmindのcontent.jsonがSheet配列ではありません。"); }
+  const data = snapshot(rootValue); const root = data.root; const targetInfo = localTarget(root, targetValue); const { target, path } = targetInfo; if (!target.toLowerCase().endsWith(".xmind")) throw new ClarityError("xmind-target-invalid", "local Xmindのtargetは.xmind fileを指定してください。");
+  const existing = readTarget(path); const existingTarget = existing.identity; const existingBytes = existing.bytes; let priorSheets = [];
+  if (existingBytes) { const entries = unpackXmindArchive(existingBytes); priorSheets = JSON.parse(entries["content.json"]?.toString("utf8") || "[]"); if (!Array.isArray(priorSheets)) throw new ClarityError("xmind-content-invalid", "既存Xmindのcontent.jsonがSheet配列ではありません。"); }
   const unrelatedSheets = priorSheets.filter((s) => !Object.values(MANAGED_SHEETS).includes(s.id)); const managed = managedSheets(data, priorSheets); const content = [...unrelatedSheets, ...managed];
-  const oldEntries = exists ? unpackXmindArchive(readFileSync(safeWritePath(root, target))) : {}; let oldMetadata = {}; let oldManifest = {}; try { oldMetadata = JSON.parse(oldEntries["metadata.json"]?.toString("utf8") || "{}"); } catch { /* 内部検査で不正を報告する。 */ } try { oldManifest = JSON.parse(oldEntries["manifest.json"]?.toString("utf8") || "{}"); } catch { /* 内部検査で不正を報告する。 */ }
+  const oldEntries = existingBytes ? unpackXmindArchive(existingBytes) : {}; let oldMetadata = {}; let oldManifest = {}; try { oldMetadata = JSON.parse(oldEntries["metadata.json"]?.toString("utf8") || "{}"); } catch { /* 内部検査で不正を報告する。 */ } try { oldManifest = JSON.parse(oldEntries["manifest.json"]?.toString("utf8") || "{}"); } catch { /* 内部検査で不正を報告する。 */ }
   const metadata = { ...oldMetadata, creator: oldMetadata.creator || { name: "agentic-secretary", version: "clarity-v1" }, activeSheetId: oldMetadata.activeSheetId || MANAGED_SHEETS.matrix };
   const manifest = { ...oldManifest, "file-entries": { ...(oldManifest["file-entries"] || {}), "content.json": {}, "metadata.json": {} } };
   const entries = { ...oldEntries, "content.json": Buffer.from(stableJson(content)), "metadata.json": Buffer.from(stableJson(metadata)), "manifest.json": Buffer.from(stableJson(manifest)) };
-  const archive = packXmindArchive(entries); const digest = sha(archive);
-  return { status: "fallback-approval-required", changed: false, requestedProvider, mcpReason, target, operation: exists ? "update" : "create", existingImpact: exists ? { unrelatedSheetsPreserved: unrelatedSheets.map((s) => s.id), managedSheetsReplaced: managed.map((s) => s.id), unknownEntriesPreserved: Object.keys(oldEntries).filter((n) => !["content.json", "metadata.json", "manifest.json"].includes(n)).sort() } : { unrelatedSheetsPreserved: [], managedSheetsReplaced: [] }, refreshWarning: exists ? "Xmindでmapを開いている場合は、承認・保存後にfileを再読込してください" : null, authExpected: false, creditExpected: false, approvalRequired: true, approvalDigest: digest, bytes: archive.length, internalValidation: validateXmindStructure(archive), archive };
+  const archive = packXmindArchive(entries); const archiveDigest = sha(archive); const operation = existingTarget.exists ? "update" : "create";
+  const existingImpact = existingTarget.exists
+    ? { unrelatedSheetsPreserved: unrelatedSheets.map((s) => s.id), managedSheetsReplaced: managed.map((s) => s.id), unknownEntriesPreserved: Object.keys(oldEntries).filter((n) => !["content.json", "metadata.json", "manifest.json"].includes(n)).sort() }
+    : { unrelatedSheetsPreserved: [], managedSheetsReplaced: [], unknownEntriesPreserved: [] };
+  const authExpected = false; const creditExpected = false; const stateDigest = sha(stableJson(data.state));
+  const approvalArtifact = {
+    schema: "agentic-secretary.local-xmind-approval.v1",
+    target: {
+      canonicalRootRelativePath: target,
+      workingRootDigest: sha(root),
+      resolvedPathDigest: sha(path),
+    },
+    operation,
+    providerGate: { provider: "local-xmind", requestedProvider, gate: "explicit-preview-approval", mcpReason },
+    projection: { stateDigest, contentDigest: sha(entries["content.json"]), archiveDigest, bytes: archive.length },
+    existingTarget,
+    existingImpact,
+    authExpected,
+    creditExpected,
+  };
+  return { status: "fallback-approval-required", changed: false, requestedProvider, mcpReason, target, requestedTarget: targetInfo.requested, operation, existingTarget, existingImpact, refreshWarning: existingTarget.exists ? "Xmindでmapを開いている場合は、承認・保存後にfileを再読込してください" : null, authExpected, creditExpected, approvalRequired: true, approvalArtifact, approvalDigest: localApprovalDigest(approvalArtifact), archiveDigest, stateDigest, bytes: archive.length, internalValidation: validateXmindStructure(archive), archive };
 }
 export function writeLocalXmind(rootValue, targetValue, { approval, approvalDigest, mcpReason, requestedProvider } = {}) {
-  const root = safeRoot(rootValue); const preview = previewLocalXmind(root, targetValue, { mcpReason, requestedProvider });
-  if (approval !== "approved" || approvalDigest !== preview.approvalDigest) return { ...preview, status: approval === "rejected" || approval === "canceled" ? "stopped" : "fallback-approval-required", archive: undefined, reason: approvalDigest && approvalDigest !== preview.approvalDigest ? "previewが変わったため再確認が必要です" : "local .xmind書込みの明示承認がありません" };
-  const path = safeWritePath(root, preview.target); const current = existsSync(path) ? readFileSync(path) : null; const changed = !current || !current.equals(preview.archive); if (changed) writeFileAtomicSafe(root, preview.target, preview.archive);
-  return { ...preview, archive: undefined, status: "local-selected-after-approval", provider: "local-xmind", changed, verified: false, reason: changed ? "承認済みpreviewを書き込みました。実Xmindでのopen確認は未検証です" : "同一bytesのため書込み不要でした", sha256: preview.approvalDigest };
+  const root = safeRoot(rootValue); let preview;
+  try { preview = previewLocalXmind(root, targetValue, { mcpReason, requestedProvider }); }
+  catch (error) {
+    if (approval === "approved" && error instanceof FilesystemBoundaryError) return { status: "fallback-approval-required", changed: false, staleApproval: true, repreviewRequired: true, reason: "targetのpath解決またはsymlink状態が変わったため、書き込まずに再previewが必要です" };
+    throw error;
+  }
+  if (approval !== "approved") return { ...preview, status: approval === "rejected" || approval === "canceled" ? "stopped" : "fallback-approval-required", archive: undefined, reason: "local .xmind書込みの明示承認がありません" };
+  if (!approvalDigest || approvalDigest !== preview.approvalDigest) return staleLocalApproval(preview, "target、operation、既存map、影響、projection、provider条件のいずれかがpreviewから変わったため、書き込まずに再previewが必要です");
+
+  let currentPreview;
+  try { currentPreview = previewLocalXmind(root, targetValue, { mcpReason, requestedProvider }); }
+  catch (error) {
+    if (error instanceof FilesystemBoundaryError) return staleLocalApproval(preview, "targetのpath解決またはsymlink状態が変わったため、書き込まずに再previewが必要です");
+    throw error;
+  }
+  if (currentPreview.approvalDigest !== approvalDigest) return staleLocalApproval(currentPreview, "apply直前にtarget、operation、既存map、影響、projection、provider条件が変わったため、書き込まずに再previewが必要です");
+
+  const path = safeWritePath(root, currentPreview.target); const currentTarget = readTarget(path); const currentIdentity = currentTarget.identity;
+  if (stableJson(currentIdentity) !== stableJson(currentPreview.approvalArtifact.existingTarget)) return staleLocalApproval(currentPreview, "apply直前に既存targetが変わったため、書き込まずに再previewが必要です");
+  const current = currentTarget.bytes; const changed = !current || !current.equals(currentPreview.archive); if (changed) writeFileAtomicSafe(root, currentPreview.target, currentPreview.archive);
+  return { ...currentPreview, archive: undefined, status: "local-selected-after-approval", provider: "local-xmind", changed, verified: false, reason: changed ? "承認対象とapply直前状態の一致を確認して書き込みました。実Xmindでのopen確認は未検証です" : "承認対象は一致し、archiveが同一bytesのため書込み不要でした", sha256: currentPreview.archiveDigest };
 }
 
 export function proposeXmindEdit(rootValue, { itemId, section, value } = {}) {

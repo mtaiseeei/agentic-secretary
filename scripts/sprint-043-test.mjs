@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,8 @@ function write(path, value) { mkdirSync(dirname(path), { recursive: true }); wri
 function json(path) { return JSON.parse(readFileSync(path, "utf8")); }
 function fixture(name, files = {}) { const root = join(work, name); write(join(root, "README.md"), `# ${name}\n`); for (const [path, value] of Object.entries(files)) write(join(root, path), value); applyInit(root); return root; }
 function run(args) { return spawnSync(process.execPath, [cli, ...args], { cwd: repo, encoding: "utf8", env: process.env }); }
+function runJson(args) { const result = run(args); assert.equal(result.status, 0, result.stderr); return JSON.parse(result.stdout); }
+function assertStale(result) { assert.equal(result.status, "fallback-approval-required"); assert.equal(result.changed, false); assert.equal(result.staleApproval, true); assert.equal(result.repreviewRequired, true); }
 function stateBytes(root) { return readFileSync(join(root, ".clarity/state.json")); }
 function existingArchive() { return packXmindArchive(Object.fromEntries(readdirSync(fixtureDir).sort().map((name) => [name, readFileSync(join(fixtureDir, name))]))); }
 function putExisting(root, name = "map.xmind") { write(join(root, name), existingArchive()); return name; }
@@ -64,7 +66,53 @@ try {
 
   await test("XV-001", "resolver全stateと正直なcapability表示", () => { const root = fixture("xv001"); assert.equal(getXmindSettings(root).xmindEnabled, false); assert.equal(run(["xmind-setting", root, "--enabled", "on", "--json"]).status, 0); assert.equal(getXmindSettings(root).xmindEnabled, true); assert.equal(run(["xmind-setting", root, "--enabled", "off", "--json"]).status, 0); assert.equal(getXmindSettings(root).xmindEnabled, false); const off = resolveXmindProvider(); const capable = { connected: true, capabilities: { create: true, read: true, update: true, stylePlacement: true } }; const mcp = resolveXmindProvider({ settings: { xmindEnabled: true }, mcp: capable, requestedProvider: "local", localDecision: "approved" }); const wait = resolveXmindProvider({ settings: { xmindEnabled: true }, mcp: { connected: false } }); const local = resolveXmindProvider({ settings: { xmindEnabled: true }, mcp: { connected: false }, localDecision: "approved" }); const stop = resolveXmindProvider({ settings: { xmindEnabled: true }, mcp: { connected: false }, localDecision: "rejected" }); assert.deepEqual([off.state, mcp.state, wait.state, local.state, stop.state], ["stopped", "mcp-selected", "fallback-approval-required", "local-selected-after-approval", "stopped"]); assert.equal(mcp.providers[0].priority, 1); assert.equal(mcp.providers[0].selected, true); assert.equal(mcp.providers[0].verified, false); });
   await test("XV-002", "isolated fake MCPのcreate/read/update境界と固定visual", async () => { const calls = []; const adapter = createXmindMcpAdapter({ request: async (request) => { calls.push(request); return { ok: true, fakeId: `fake-${request.operation}` }; } }); const payload = { sheets: ["決定×実行", "Project構造"], visuals: QUADRANT_VISUALS }; for (const op of ["create", "read", "update"]) { const result = await adapter[op](payload); assert.equal(result.verified, false); assert.equal(result.verification, "isolated-fake-boundary"); } assert.deepEqual(calls.map((c) => c.operation), ["create", "read", "update"]); checkVisualText(JSON.stringify(calls)); });
-  await test("XV-003", "local承認・固定visual・既存map保持・内部検査", () => { const root = fixture("xv003"); putExisting(root); const p = previewLocalXmind(root, "map.xmind"); assert.equal(p.internalValidation.structurallyValid, true); assert.equal(p.internalValidation.verified, false); assert.equal(existsSync(join(root, "map.xmind")), true); const before = readFileSync(join(root, "map.xmind")); assert.equal(writeLocalXmind(root, "map.xmind", { approval: "rejected", approvalDigest: p.approvalDigest }).changed, false); assert.deepEqual(readFileSync(join(root, "map.xmind")), before); const done = writeLocalXmind(root, "map.xmind", { approval: "approved", approvalDigest: p.approvalDigest }); assert.equal(done.status, "local-selected-after-approval"); const content = unpackXmindArchive(readFileSync(join(root, "map.xmind")))["content.json"].toString(); checkVisualText(content); assert(content.includes("customer-notes-sheet")); });
+  await test("XV-003", "local承認binding・固定visual・既存map保持・stale write 0", () => {
+    const root = fixture("xv003"); putExisting(root); const p = previewLocalXmind(root, "map.xmind");
+    assert.equal(p.internalValidation.structurallyValid, true); assert.equal(p.internalValidation.verified, false);
+    assert.equal(p.approvalArtifact.target.canonicalRootRelativePath, "map.xmind"); assert.equal(p.approvalArtifact.operation, "update");
+    assert.equal(p.approvalArtifact.projection.archiveDigest, p.archiveDigest); assert.equal(p.approvalArtifact.existingTarget.sha256, sha(readFileSync(join(root, "map.xmind"))));
+    assert.equal(p.approvalArtifact.providerGate.provider, "local-xmind"); assert.equal(p.approvalArtifact.authExpected, false); assert.equal(p.approvalArtifact.creditExpected, false);
+    const before = readFileSync(join(root, "map.xmind"));
+    for (const approval of ["rejected", "canceled", "unanswered"]) {
+      assert.equal(writeLocalXmind(root, "map.xmind", { approval, approvalDigest: p.approvalDigest }).changed, false);
+      assert.deepEqual(readFileSync(join(root, "map.xmind")), before);
+    }
+    const done = writeLocalXmind(root, "map.xmind", { approval: "approved", approvalDigest: p.approvalDigest });
+    assert.equal(done.status, "local-selected-after-approval"); const content = unpackXmindArchive(readFileSync(join(root, "map.xmind")))["content.json"].toString(); checkVisualText(content); assert(content.includes("customer-notes-sheet"));
+
+    const cliRoot = fixture("xv003-cli"); setXmindEnabled(cliRoot, true); mkdirSync(join(cliRoot, "maps"), { recursive: true });
+    const alias = runJson(["xmind-local", cliRoot, "--target", "maps/../maps/approved-a.xmind", "--json"]);
+    const canonical = runJson(["xmind-local", cliRoot, "--target", "maps/approved-a.xmind", "--json"]);
+    assert.equal(alias.target, "maps/approved-a.xmind"); assert.equal(alias.approvalDigest, canonical.approvalDigest);
+
+    const crossTarget = runJson(["xmind-local", cliRoot, "--target", "maps/unapproved-b.xmind", "--apply", "--approval-digest", alias.approvalDigest, "--json"]);
+    assertStale(crossTarget); assert.equal(existsSync(join(cliRoot, "maps/approved-a.xmind")), false); assert.equal(existsSync(join(cliRoot, "maps/unapproved-b.xmind")), false);
+    const normalizedAliasApply = runJson(["xmind-local", cliRoot, "--target", "maps/approved-a.xmind", "--apply", "--approval-digest", alias.approvalDigest, "--json"]);
+    assert.equal(normalizedAliasApply.status, "local-selected-after-approval"); assert.equal(normalizedAliasApply.changed, true); assert.equal(existsSync(join(cliRoot, "maps/approved-a.xmind")), true);
+
+    const createPreview = runJson(["xmind-local", cliRoot, "--target", "maps/create-update.xmind", "--json"]); putExisting(cliRoot, "maps/create-update.xmind");
+    const createToUpdate = runJson(["xmind-local", cliRoot, "--target", "maps/create-update.xmind", "--apply", "--approval-digest", createPreview.approvalDigest, "--json"]);
+    assertStale(createToUpdate); assert.deepEqual(readFileSync(join(cliRoot, "maps/create-update.xmind")), existingArchive());
+
+    putExisting(cliRoot, "maps/mutated.xmind"); const mutationPreview = runJson(["xmind-local", cliRoot, "--target", "maps/mutated.xmind", "--json"]);
+    const mutatedEntries = unpackXmindArchive(readFileSync(join(cliRoot, "maps/mutated.xmind"))); const mutatedArchive = packXmindArchive({ ...mutatedEntries, "mutation.bin": Buffer.from("changed-after-preview") });
+    writeFileSync(join(cliRoot, "maps/mutated.xmind"), mutatedArchive); const existingMutation = runJson(["xmind-local", cliRoot, "--target", "maps/mutated.xmind", "--apply", "--approval-digest", mutationPreview.approvalDigest, "--json"]);
+    assertStale(existingMutation); assert.deepEqual(readFileSync(join(cliRoot, "maps/mutated.xmind")), mutatedArchive);
+
+    const statePreview = runJson(["xmind-local", cliRoot, "--target", "maps/state-change.xmind", "--json"]); const itemId = json(join(cliRoot, ".clarity/state.json")).items[0].itemId;
+    appendEvent(cliRoot, { type: "execution.changed", itemId, actor: "human-user", payload: { status: "in_progress" } });
+    const stateMutation = runJson(["xmind-local", cliRoot, "--target", "maps/state-change.xmind", "--apply", "--approval-digest", statePreview.approvalDigest, "--json"]);
+    assertStale(stateMutation); assert.equal(existsSync(join(cliRoot, "maps/state-change.xmind")), false);
+
+    const symlinkPreview = runJson(["xmind-local", cliRoot, "--target", "maps/symlink-change.xmind", "--json"]); const outside = join(work, "xv003-outside.xmind"); writeFileSync(outside, existingArchive()); const outsideBefore = sha(readFileSync(outside));
+    symlinkSync(outside, join(cliRoot, "maps/symlink-change.xmind")); const symlinkMutation = runJson(["xmind-local", cliRoot, "--target", "maps/symlink-change.xmind", "--apply", "--approval-digest", symlinkPreview.approvalDigest, "--json"]);
+    assertStale(symlinkMutation); assert.equal(sha(readFileSync(outside)), outsideBefore);
+
+    const approved = runJson(["xmind-local", cliRoot, "--target", "maps/approved.xmind", "--json"]); const applied = runJson(["xmind-local", cliRoot, "--target", "maps/approved.xmind", "--apply", "--approval-digest", approved.approvalDigest, "--json"]);
+    assert.equal(applied.status, "local-selected-after-approval"); assert.equal(applied.changed, true); const approvedBytes = readFileSync(join(cliRoot, "maps/approved.xmind"));
+    const retryPreview = runJson(["xmind-local", cliRoot, "--target", "maps/approved.xmind", "--json"]); const retry = runJson(["xmind-local", cliRoot, "--target", "maps/approved.xmind", "--apply", "--approval-digest", retryPreview.approvalDigest, "--json"]);
+    assert.equal(retry.status, "local-selected-after-approval"); assert.equal(retry.changed, false); assert.deepEqual(readFileSync(join(cliRoot, "maps/approved.xmind")), approvedBytes);
+  });
   await test("XV-004", "Mermaid style可否どちらでも意味文保持", () => { const root = fixture("xv004"); const capable = buildProjectionBundle(root); const fallback = buildProjectionBundle(root, { mindmapSyntaxAccepted: false }); checkVisualText(capable.files["quadrant.mmd"]); checkVisualText(fallback.files["quadrant.mmd"]); assert.equal(fallback.renderer.verified, false); });
 } finally { delete process.env.CLARITY_NOW; rmSync(work, { recursive: true, force: true }); }
 
