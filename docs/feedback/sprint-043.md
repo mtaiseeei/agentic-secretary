@@ -204,3 +204,129 @@ full masterはloopback bind禁止によるverification environment制約で完�
 - full masterのloopback制約とSprint 019既知debtをgreenへ昇格していない: yes
 - external Xmind、network、credit、connector、実利用者path、push／release／cache／downstream writeを行っていない: yes
 - Evaluator所有外のcode／test／spec／state／progressを変更していない: yes
+
+---
+
+# Retry 1 再評価
+
+## 最終判定
+
+**合格**
+
+- 修正candidate: `5a63740e447faf588a09af8ce256529f1936e230`
+- 評価開始HEAD: `59a4aba8adec55dfeadd7b76c065f6735e918842`
+- 初回Evaluator commit: `a1448d1fa200cf0b2e7e2cfc01886adf0d2bded7`
+- 評価開始branch: `codex/sprint-041-project-clarity`
+- 評価開始時worktree: clean
+- Generator起動model／effort: host metadataを取得できないため**未検証**。dispatch指定、commit名、自己申告から実起動値を推定しない。
+- Escalation Recommendation: none
+
+初回F-01のtarget非束縛は、製品CLIを使う独立temporary fixtureで再現不能になった。target Aのpreview digestを同内容のtarget Bへ渡すと、`fallback-approval-required`、`staleApproval: true`、`repreviewRequired: true`、`changed: false`で停止し、A／Bとも作成されない。正規化後に同じcanonical targetを指すrelative aliasだけは同じdigestとなり、同一targetへの正当なapplyだけが成功する。
+
+create→update、既存archive mutation、canonical State mutation、provider reason／requested provider変更、外向きsymlink差替えもすべてstale approvalとなりwrite 0だった。正当な同一preview approvalだけがOS temporary fixtureへwriteし、2 managed Sheetを持つ。新しいupdate previewによるretryは`changed: false`かつarchive bytes同一である。
+
+初回F-01は**RESOLVED**、初回V-01もXV-003の実CLI cross-target／mutation／symlink負回帰で**RESOLVED**とする。新規product finding 0件、新規verification-infra finding 0件。最終case結果は29 PASS／0 FAIL／`XM-007`だけconditional NOT-RUNである。
+
+## Retry 1 スコア
+
+| 観点 | 得点 | 閾値 | 判定 | Retry 1根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 4/5 | 4 | PASS | 必須30 caseを実行し、29 PASS／0 FAIL。未承認real external-liveだけを正直にNOT-RUN |
+| C2 構文・整合 | 5/5 | 5 | PASS | Node構文、registry、参照path、release integrity、diff checkが0 FAIL |
+| C3 機能の実証 | 4/5 | 4 | PASS | 公式wrapperに加え、独立CLIで承認artifactとstale境界を実操作 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | stale時に変更なしと再preview必要性を日本語で明示 |
+| C5 安全・規律 | 5/5 | 5 | PASS | target／operation／fingerprint／State／provider変更、symlink差替えでwrite 0。実外部操作0 |
+| C6 無回帰 | 5/5 | 5 | PASS | Sprint 043、042、041、015、021、022、release integrityの関連回帰が0 FAIL |
+| C7 やさしさ | 4/5 | 4 | PASS | 既定OFF、選択権、未検証表示、stale時の再確認を維持 |
+| C19 Clarity正本・状態モデル | 5/5 | 5 | PASS | 初回のState由来projection／proposal境界証拠を引継ぎ、State mutationでold approvalがstaleとなることを再確認 |
+| C20 Attention・Clarity UX | 5/5 | 4 | PASS | 未変更面。Sprint 042 35/35とSprint 043 visual回帰greenを前提に初回証拠を引継ぎ |
+| C23 projection・Xmind | 4/5 | 4 | PASS | deterministic projection、MCP-first、承認付きlocal、fixed visualが成立。real MCP external-liveだけ未承認NOT-RUN |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | approval binding、path／symlink／State／dirty近傍、安全回帰、public境界が成立。下流／release write 0 |
+
+全適用閾値を満たすため、Sprint 043 Retry 1を合格と判定する。
+
+## F-01／V-01 closure
+
+| ID | 対象区分 | 初回 | Retry 1 | 判定根拠 |
+|---|---|---|---|---|
+| F-01 | product | Major OPEN | **RESOLVED** | A preview→B applyでA／Bともwrite 0。approval artifactがcanonical target、root／resolved path、operation、State／content／archive digest、既存target fingerprint／impact、provider gate、auth／credit見込みを束縛 |
+| V-01 | verification-infra | Minor OPEN | **RESOLVED** | XV-003が製品CLIのcross-target、relative alias、create→update、既存archive／State mutation、symlink差替え、正当apply／retryを直接検査 |
+
+## 独立CLI edge matrix
+
+独立script `node /private/tmp/s043-retry1-evaluator.mjs`を実行した。fixture rootは`/var/folders/k1/582ptqfx73l_t0glc9q1hck40000gn/T/s043-r1-evaluator-noAnHw`で、終了時に削除済み。製品CLIの`init`、`xmind-setting`、`xmind-local`、`event`を使い、provider条件変更だけは製品exported moduleの公開関数を使った。
+
+| シナリオ | before | 操作 | after／結果 |
+|---|---|---|---|
+| A preview→B apply | A=false、B=false | A digest=`426ba99d578bfebec140d678e1c078982d90de71b6ea49f061bcae4ab654554c`をBへ渡す | A=false、B=false、stale／repreview |
+| relative alias | `maps/../maps/a.xmind`と`maps/a.xmind` | 両previewを比較 | canonical target=`maps/a.xmind`、digest同一。Aへのapplyだけ成功 |
+| create→update | target missingでpreview | apply前に既存native fixtureを配置 | stale。既存SHA-256=`bff9e88e128eba9d98b98a73a3953dc41861c10b46f6e0db6cb4c8c68ea379cb`をbyte保持 |
+| 既存map mutation | update preview | unknown entryを追加した別archiveへ差替え | stale。mutated SHA-256=`90165f09a597f78b3bfb7e49f85353aee4fd1c99f60ba78aa5d3458c9f85f391`をbyte保持 |
+| State mutation | target missingでpreview | `execution.changed` Eventを追加 | stale。target未作成。old State digest=`4074a7ca26e94a1e66558c6448e023e455bcadb9acc9e4981986ad46bac2db78` |
+| provider条件 mutation | `requestedProvider=auto`、reason A | apply時に`local`、reason B | stale。target未作成 |
+| symlink／path race | target missingでpreview | outside sentinelへのsymlinkへ差替え | stale。sentinel SHA-256 before／after=`bff9e88e128eba9d98b98a73a3953dc41861c10b46f6e0db6cb4c8c68ea379cb` |
+| 正当apply／retry | 同じcanonical targetと同じpreview | temp targetへapproval simulation | 初回write、2 managed Sheet。retry `changed=false`、SHA-256 before／after=`65d5f9e0560a2cd13f05f138450682339193f52e35b2efe67b6f957b66078994` |
+
+approval artifactで`authExpected=false`、`creditExpected=false`がdigest対象に含まれることも確認した。実auth、sign-in、credit、networkを動かしてalternate値を作ることは契約上禁止されているため、外部状態は変更していない。
+
+apply処理はapproval照合後にもcurrent previewと既存target identityを再計算し、atomic write境界でもpath／symlinkを再確認する。独立fixtureでは通常file差替えとsymlink差替えの双方がapply前に検出され、既存bytes／outside sentinelを保持した。
+
+## Target Case／Acceptance Criteria
+
+| Case群 | PASS | FAIL | conditional NOT-RUN |
+|---|---:|---:|---:|
+| MM-001〜010 | 10 | 0 | 0 |
+| XM-001〜015 | 14 | 0 | 1 |
+| IM-005 | 1 | 0 | 0 |
+| XV-001〜004 | 4 | 0 | 0 |
+| 合計 | **29** | **0** | **1** |
+
+- registry: missing 0／duplicate 0／extra 0。
+- Acceptance Criteria 1〜8: 全PASS。未実行Acceptance Criteria 0件。
+- `XM-007`: 実Xmind MCP connected create／read／update external-liveだけconditional NOT-RUN。ユーザーの外部操作承認、実接続、network／credit許可がないため、実MCP／App／CLI／network／creditを実行していない。isolated fakeは`verified: false`であり、real live PASSへ昇格していない。
+- local `.xmind` writeは、製品gate検査のためのOS temporary fixture内approval simulationだけ。実利用者path、実fallback、実Xmind App／CLIは操作していない。
+
+## コマンド証跡
+
+| command | exit／結果 |
+|---|---|
+| `bash scripts/sprint-043-regression.sh` | exit 0。043=29 PASS／0 FAIL／1 NOT-RUN、wrapper 6/6。042=35/35、041=43/43 |
+| `node /private/tmp/s043-retry1-evaluator.mjs` | exit 0、独立edge matrix全PASS、fixture cleanup済み |
+| `bash scripts/sprint-015-regression.sh` | exit 0、68/68 |
+| `node scripts/sprint-021-git-safety-test.mjs` | exit 0、71/71 |
+| `node scripts/sprint-022-safety-test.mjs` | exit 0、69/69 |
+| `python3 scripts/check-release-integrity.py` | exit 0、manifest／CHANGELOG整合PASS |
+| `node --check plugins/secretary/scripts/lib/clarity-projection.mjs` | exit 0 |
+| `node --check scripts/sprint-043-test.mjs` | exit 0 |
+| `git diff --check a1448d1..5a63740` | exit 0 |
+| `bash scripts/agentic-regression.sh` | exit 1。release integrity後、sandboxの`listen EPERM 127.0.0.1`で停止。full masterをgreenとは扱わない |
+
+## 既知debtとscope分離
+
+- loopback `listen EPERM`: **verification environment limitation**。candidateの製品FAILではなく、初回と同じsandbox制約。許可外のsandbox昇格は行っていない。
+- Sprint 019 P-01／V-02: **既存debtのままOPEN**。README blob `c714beeaa71d9d99be0b14af4c2fb8b4329ef68c`、Sprint 019 test blob `817e502ed3541691837e39d61d1b4ca3e64eb6eb`は初回Evaluator commit `a1448d1`とRetry 1 HEADで同一。Retry 1差分と因果関係がなく、F-01／V-01へ混ぜない。
+- `a1448d1..5a63740`の製品／test差分は`plugins/secretary/scripts/lib/clarity-projection.mjs`と`scripts/sprint-043-test.mjs`だけ。その他はGenerator所有progressとOrchestrator所有state。Hook、router、projects、daily／weekly、memory、Notion、link／sync、release／manifest、downstream実装の先行変更0件。
+- 実Xmind MCP／App／CLI、network、auth、credit、connector、実利用者path、push、release、cache、downstream writeは0件。
+
+## Retry 1 findings
+
+新規findingはない。初回F-01／V-01は上記のとおりRESOLVED。verification-infraだけの新規blockerもない。
+
+## Retry 1 Evaluator自己レビュー
+
+- 初回FAIL証拠を削除・書換えず保持した: yes
+- Generator自己評価を判定へ流用せず、製品CLIの独立temporary fixtureを操作した: yes
+- A／B両targetのbefore／after、digest、statusを記録した: yes
+- relative aliasと別canonical targetを区別した: yes
+- create→update、既存map、State、provider条件、symlink差替えをstale approvalとして実確認した: yes
+- 正当な同一previewだけがtemp fixtureへwriteし、2 managed Sheet／retry byte同一を確認した: yes
+- 実利用者pathの未承認writeを行っていない: yes
+- 29 PASS／0 FAIL／XM-007だけconditional NOT-RUN、registry差分0を確認した: yes
+- fake／内部validatorをreal Xmind verifiedへ昇格していない: yes
+- C19／C20の未変更証拠引継ぎは専用回帰greenを前提にした: yes
+- C23／C24の変更面を独立再操作した: yes
+- Sprint 019 debtとloopback環境制約を今回の製品findingから分離した: yes
+- 各findingをproduct／verification-infraへ分類した: yes
+- 閾値と最終PASSが一致している: yes
+- 要求した証拠はcontract／rubricのsafe harbor内である: yes
+- 実装、test、spec、state、progressを変更していない: yes
