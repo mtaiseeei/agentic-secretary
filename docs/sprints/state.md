@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-044
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-045
@@ -80,7 +80,7 @@
 | sprint-041 | done | [contract](sprint-041.md) | [progress](../progress/sprint-041.md) | [feedback](../feedback/sprint-041.md) |
 | sprint-042 | done | [contract](sprint-042.md) | [progress](../progress/sprint-042.md) | [feedback](../feedback/sprint-042.md) |
 | sprint-043 | done | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
-| sprint-044 | awaiting-eval | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | - |
+| sprint-044 | active | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
 | sprint-045 | planned | [contract](sprint-045.md) | - | - |
 | sprint-046 | planned | [contract](sprint-046.md) | - | - |
 | sprint-047 | planned | [contract](sprint-047.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 044初回fresh独立Evaluator commit `53f4fa7`はFAIL／implementation-issue。公式Target 40/40、並行128/128、禁止処理instrumentation 0、041〜043直接回帰はgreenだが、`.clarity/runtime`途中componentをproject外symlinkへ差し替えるとHookが外部へevent file 1件を書いた。Major product F-01としてAC3／C5／C21／C24違反、公式runnerに中間symlink負例がないMinor verification-infra V-01を分離。live 0/4 surface未承認は別境界。Retry Count 1、fresh Generator `gpt-5.6-sol`／`high`を予約してLineage Dispatches 3、Status active、Model Tier strong、Rotate none。修正は全runtime path componentの非symlink／root containment再検証と独立負回帰に限定する。
 - 2026-08-28: Sprint 044 Generator candidate `890d64f392d7b633f4900b20677e8665a939b561`を固定。共通`hooks/hooks.json`＋Clarity専用router、Claude/Codex normalizer、SessionStart／PostToolUse／PreCompact／Stop／SessionEnd、1 event 1 file、bounded Attention、Stop one-shot、trust/disabled manual fallbackを実装。Target 40/40、registry差分0、並行100/100 parse、041〜043直接回帰、Claude strict validator、release integrityがPASS。他Skill Hook、memory意味判定、network／LLM／Xmind／connector／update 0。実AI live、plugin install/cache、trust UIは未実施で全surface `verified:false`。fresh独立Evaluatorを予約しLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate none。liveに追加権限／creditが必要ならverification-scopeとしてユーザーへ切り出す。
 - 2026-08-28: Sprint 043 Retry 1はfresh独立Evaluator commit `f112b186098121a79f4bdc8743db5eb1d4c6beac`でPASS。F-01 product／V-01 verification-infraはRESOLVED、新規finding 0。A→B、relative alias、create→update、既存map／State／provider変化、symlink、正当apply／retryを独立CLIで確認し、最終29 PASS／0 FAIL／`XM-007`実external-liveだけconditional NOT-RUN。Sprint 043をdone、Retry／Spec-Issue 0へ戻し、high-risk Sprint 044へ進む。resolverはfresh Generator `gpt-5.6-sol`／`high`、Model Tier strong、Rotate none。Generator予約としてLineage Dispatches 1、Status active。実Xmind／network／credit／実利用者path write 0を維持。
 - 2026-08-28: Sprint 043 Retry 1 Generator candidate `5a63740e447faf588a09af8ce256529f1936e230`を固定。approval artifactをcanonical target／root・resolved path、create/update、State/content/archive digest、既存target fingerprintとimpact、provider gate、auth/credit previewへ束縛し、apply直前に再計算する。A→B、relative alias、create→update、既存archive、State、symlink差替えのstale approvalをwrite 0で拒否し、正当な同一previewだけwrite、retry byte同一をXV-003実CLI回帰へ追加。Sprint 043 29 PASS／0 FAIL／XM-007だけNOT-RUN、041／042と安全回帰がPASS。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。実Xmind／network／credit／実利用者path write 0。
