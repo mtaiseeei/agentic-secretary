@@ -1194,7 +1194,57 @@ function readStoredState(root) {
   }
 }
 
-export function doctor(rootValue) {
+function hookDiagnostic(root, { host = null, hookState = null } = {}) {
+  const normalizedHost = host === "claude" ? "claudeCode" : host;
+  const normalizedState = String(hookState || "").toLowerCase();
+  const validStates = new Set(["supported", "verified", "degraded", "unverified", "untrusted", "disabled", "failure"]);
+  if (normalizedState && !validStates.has(normalizedState)) throw new ClarityError("hook-state-invalid", "Hook状態はsupported／verified／degraded／unverified／untrusted／disabled／failureで指定してください。");
+  if (normalizedState === "untrusted") {
+    return {
+      status: "degraded",
+      host: normalizedHost || "codex",
+      supported: true,
+      verified: false,
+      reason: "Hookの定義は認識されていますが、trust未承認のため実行されません",
+      nextAction: "Codexの /hooks を開き、現在のHook定義をreviewしてtrustしてください。trust前もmanual Skillは利用できます",
+    };
+  }
+  if (["disabled", "failure", "degraded"].includes(normalizedState)) {
+    return {
+      status: "degraded",
+      host: normalizedHost,
+      supported: true,
+      verified: false,
+      reason: normalizedState === "disabled" ? "Hookが無効です" : normalizedState === "failure" ? "Hook commandが失敗しています" : "Hookはdegraded状態です",
+      nextAction: "manualのclarity status／attention／checkpointを使い、doctorで原因を確認してください",
+    };
+  }
+  if (normalizedState === "verified") return { status: "verified", host: normalizedHost, supported: true, verified: true, reason: "指定hostの実event証拠があります", nextAction: "追加操作は不要です" };
+  if (normalizedState === "supported") return { status: "supported", host: normalizedHost, supported: true, verified: false, reason: "manifest／fixtureで対応していますが実eventは未検証です", nextAction: "対象hostの実eventを別々に確認してください" };
+  const eventsRoot = safeWritePath(root, ".clarity/runtime/hooks/events");
+  const hosts = new Set();
+  if (existsSync(eventsRoot) && lstatSync(eventsRoot).isDirectory() && !lstatSync(eventsRoot).isSymbolicLink()) {
+    for (const session of readdirSync(eventsRoot).slice(0, 80)) {
+      const directory = join(eventsRoot, session);
+      if (!existsSync(directory) || !lstatSync(directory).isDirectory() || lstatSync(directory).isSymbolicLink()) continue;
+      for (const name of readdirSync(directory).filter((value) => /^he_[a-f0-9]{24}\.json$/u.test(value)).slice(-80)) {
+        try { const event = JSON.parse(readFileSync(join(directory, name), "utf8")); if (["codex", "claudeCode"].includes(event.host)) hosts.add(event.host); } catch { /* invalid runtime evidence never becomes verified */ }
+      }
+    }
+  }
+  const selectedSeen = normalizedHost ? hosts.has(normalizedHost) : hosts.size > 0;
+  return {
+    status: selectedSeen ? "supported" : "unverified",
+    host: normalizedHost,
+    supported: true,
+    verified: false,
+    observedHosts: [...hosts].sort(),
+    reason: selectedSeen ? "runtime eventはありますが、実host live評価のverified判定は別管理です" : "Hook live eventは未検証です",
+    nextAction: normalizedHost === "codex" ? "Codexの /hooks でtrust／disabled状態を確認し、実eventを検証してください" : "対象hostのplugin load／disable／実eventを検証してください",
+  };
+}
+
+export function doctor(rootValue, options = {}) {
   const canonical = readCanonical(rootValue);
   const expected = buildState(canonical.project, canonical.events, canonical.evidence);
   const expectedBytes = stableJson(expected);
@@ -1207,8 +1257,9 @@ export function doctor(rootValue) {
   const cleanup = previewRuntimeCleanup(canonical.root);
   const schemaStatus = canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION ? "current" : "migration-available";
   const projectionOk = !stored.error && storedBytes === expectedBytes;
+  const hook = hookDiagnostic(canonical.root, options);
   return {
-    ok: projectionOk && cleanup.candidates.length === 0,
+    ok: projectionOk && cleanup.candidates.length === 0 && !["degraded", "untrusted", "failure"].includes(hook.status),
     mode: canonical.project.mode,
     schemaVersion: canonical.project.schemaVersion,
     currentSchemaVersion: CLARITY_SCHEMA_VERSION,
@@ -1224,13 +1275,13 @@ export function doctor(rootValue) {
     itemCount: expected.items.length,
     rootEntry: canonical.project.rootEntry,
     capabilities: {
-      hook: { status: "未検証", reason: "Hook liveはこのSprintの対象外です" },
+      hook,
       link: { status: canonical.project.secretaryLink ? "設定あり・未検証" : "未設定", reason: "link healthの実検証は後続Sprintです" },
       projection: { status: projectionOk ? "正常" : "要再構築", verified: projectionOk },
       lock: { status: cleanup.candidates.length ? "残骸あり" : "残骸なし", verified: true },
     },
     runtimeCleanup: cleanup,
-    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
+    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : !["supported", "verified"].includes(hook.status) ? hook.nextAction : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
   };
 }
 

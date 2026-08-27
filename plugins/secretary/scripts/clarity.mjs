@@ -41,11 +41,12 @@ function usage(message = "") {
   clarity init <repo> [--apply|--cancel] [--json]
   clarity status <repo> [--json]
   clarity attention <repo> [--limit 3] [--json]
+  clarity review <repo> [--limit 3] [--json]
   clarity attention-override <repo> --item-id <id> --level <level> --reason <text> [--rank <number>] [--operation-id <id>] [--json]
   clarity history <repo> [--json]
   clarity checkpoint <repo> [--operation-id <id>] [--summary <text>] [--json]
   clarity rebuild <repo> [--json]
-  clarity doctor <repo> [--json]
+  clarity doctor <repo> [--host <codex|claudeCode>] [--hook-state <state>] [--json]
   clarity migrate <repo> [--apply] [--json]
   clarity cleanup <repo> [--apply] [--json]
   clarity project <repo> [--apply] [--mindmap-failure] [--json]
@@ -104,8 +105,8 @@ function render(command, result, json) {
     }
     return;
   }
-  if (command === "attention" || command === "status") {
-    const report = command === "attention" ? result : { conclusion: result.conclusion, ...(result.attention || {}), items: result.attention?.top || [] };
+  if (["attention", "review", "status"].includes(command)) {
+    const report = ["attention", "review"].includes(command) ? result : { conclusion: result.conclusion, ...(result.attention || {}), items: result.attention?.top || [] };
     process.stdout.write(`${report.conclusion}\n`);
     const items = report.items || report.top || [];
     for (const [index, item] of items.entries()) {
@@ -180,7 +181,7 @@ try {
     else if (options.get("--apply")) result = applyInit(root);
     else result = { status: "preview", preview: previewInit(root) };
   } else if (command === "status") result = status(root);
-  else if (command === "attention") {
+  else if (command === "attention" || command === "review") {
     const limit = options.get("--limit") === undefined ? 3 : Number(options.get("--limit"));
     result = attentionReport(root, { limit });
   }
@@ -190,7 +191,7 @@ try {
   else if (command === "history") result = history(root);
   else if (command === "checkpoint") result = checkpoint(root, { operationId: options.get("--operation-id"), summary: options.get("--summary") });
   else if (command === "rebuild") result = rebuildState(root, { write: true });
-  else if (command === "doctor") result = doctor(root);
+  else if (command === "doctor") result = doctor(root, { host: options.get("--host"), hookState: options.get("--hook-state") });
   else if (command === "migrate") result = options.get("--apply") ? applyMigration(root) : previewMigration(root);
   else if (command === "cleanup") result = options.get("--apply") ? applyRuntimeCleanup(root) : previewRuntimeCleanup(root);
   else if (command === "project") result = options.get("--apply") ? writeProjectionBundle(root, { mindmapSyntaxAccepted: !options.get("--mindmap-failure") }) : buildProjectionBundle(root, { mindmapSyntaxAccepted: !options.get("--mindmap-failure") });

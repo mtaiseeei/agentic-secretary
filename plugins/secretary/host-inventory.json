@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "pluginRoot": {
     "strategy": "skill-file-realpath-v1",
     "resolver": "scripts/resolve-plugin-root.mjs",
@@ -24,6 +24,25 @@
       "explicitInvocation": "$skill-name",
       "updateSurface": "Plugins Directory or Codex CLI plugin marketplace"
     }
+  },
+  "clarityHook": {
+    "commonManifest": "hooks/hooks.json",
+    "commonRouter": "scripts/clarity-hook.mjs",
+    "manualFallback": ["status", "attention", "review", "checkpoint", "doctor"],
+    "hosts": {
+      "claudeCode": {
+        "desktop": { "status": "supported", "verified": false },
+        "cli": { "status": "supported", "verified": false },
+        "disabled": { "status": "degraded", "canonicalWrite": false }
+      },
+      "codex": {
+        "app": { "status": "supported", "verified": false },
+        "cli": { "status": "supported", "verified": false },
+        "untrusted": { "status": "degraded", "canonicalWrite": false, "reviewSurface": "/hooks" },
+        "disabled": { "status": "degraded", "canonicalWrite": false }
+      }
+    },
+    "promotionRule": "A verified result belongs only to its exact host and surface. supported, verified, degraded, and unverified are never promoted across hosts."
   },
   "skills": [
     { "name": "build", "hostSpecific": ["Harness marketplace and install ID", "explicit Harness entry"] },

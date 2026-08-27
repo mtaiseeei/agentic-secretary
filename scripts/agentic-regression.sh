@@ -24,6 +24,6 @@ run node scripts/sprint-032-patch-001-readability-test.mjs
 run node scripts/agentic-readability-test.mjs
 run node scripts/agentic-host-gate.mjs --mode offline
 run bash scripts/sprint-039-regression.sh
-run bash scripts/sprint-043-regression.sh
+run bash scripts/sprint-044-regression.sh
 
 printf 'AGENTIC_REGRESSION_PASS=%s FAIL=0\n' "$passed"
