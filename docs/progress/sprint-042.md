@@ -93,3 +93,39 @@ node plugins/secretary/scripts/clarity.mjs cleanup <repo-root> --apply --json
 - network／external connector／Xmind live: **0回**
 - push／release／cache／downstream write: **0件**
 - migration／cleanup／checkpointの製品fixture writeはOS temp directory内だけ。安全回帰のpush確認はtemporary local bare remoteだけで、外部remoteへ送信していない。
+
+## Retry 1 — F-01／V-01限定修正
+
+### 修正内容
+
+- EvaluatorのF-01を再現し、expired Clarity-owned lockだけを削除した後の空`.clarity/runtime`へfile向け`rmSync`を実行していたことを根本原因と確認した。
+- owned runtime fileの実削除結果から`removed`と`changed`を算出するようにした。空runtime directoryは、owned fileを実際に削除した場合だけ、working root内の削除path、通常directory、symlinkではないこと、空であることを再検証し、空directory専用の`rmdirSync`で削除する。
+- 再検証後にentryが増えた場合は再帰削除せず保持する。directory後処理が失敗しても、既に削除したowned fileを「変更なし」と誤案内せず、`runtimeDirectory`へ保持理由を返す。
+- 開始時から空のruntimeは削除せず`unchanged`とする。user file、unowned file、期限内owned operationを削除する条件は追加していない。既存のpreview、所有者／期限再確認、safe path／symlink境界も維持した。
+
+### V-01回帰追加
+
+- 35 case registryは変更せず、Critical `IM-014`へEvaluator独立再現と同じ「expired owned lockだけ」のCLI fixtureを追加した。
+- previewはexit 0、write 0、candidate 1、`changed:false`。applyはexit 0、`status: cleaned`、`changed:true`、実際のremoved path一致、lockと空runtime directoryの消滅をassertした。
+- 同じapplyのretryはexit 0、`status: unchanged`、`changed:false`、removed 0件へ収束することをassertした。
+- 開始時から空runtimeのapplyがexit 0、`unchanged`、write 0でruntimeを保持する負ケースも追加した。既存のuser file／期限内operation保持caseも同じ`IM-014`内で継続している。
+
+### Retry 1検証結果
+
+- `bash scripts/sprint-042-regression.sh` → `SPRINT042_CASE_PASS=35 FAIL=0 TOTAL=35`、`SPRINT042_REGISTRY_MISSING=0 DUPLICATE=0 EXTRA=0`、wrapper 4/4。
+- `bash scripts/sprint-041-regression.sh` → `SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43`、wrapper 4/4。
+- `bash scripts/sprint-015-regression.sh` → `PASS=68 FAIL=0`。
+- `node scripts/sprint-021-git-safety-test.mjs` → `PASS=71 FAIL=0`。
+- `node scripts/sprint-022-safety-test.mjs` → `SPRINT022_PASS=69 SPRINT022_FAIL=0`。
+- `node scripts/sprint-023-security-test.mjs` → sandbox内は127.0.0.1 bindが`EPERM`。外部通信なしのlocal-only実行面で再実行し、`SPRINT023_PASS=21 SPRINT023_FAIL=0`。
+- `python3 scripts/check-release-integrity.py` → `PASS release integrity: manifests and CHANGELOG are consistent`。
+- Clarity schema JSON 5件parse → `SCHEMA_JSON_PASS=5`。
+- `git diff --check` → exit 0。
+
+### Retry 1自己評価と引き渡し
+
+- C1／C4／C24: F-01の正常applyとretry非収束を解消し、CLI resultを実状態へ一致させた。
+- C19／C20およびAttention、checkpoint、migration、doctorは変更していない。Sprint 042 35/35とSprint 041 43/43で無回帰を確認した。
+- 起動方法、テスト対象、回帰command、Evaluator確認手順は上記初回handoffから変更なし。再評価では`IM-014`のexpired-only CLI fixture、開始時空runtime、user／live file保持を優先確認する。
+- 既知のSprint 019 P-01／V-02、Attention、migration、後続Xmind／Hook／Secretary／sync／Driftへ変更を広げていない。
+- external write、network、connector、Xmind live、push、release、cache、downstream writeはRetry 1でも0件。

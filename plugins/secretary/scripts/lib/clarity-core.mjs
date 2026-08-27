@@ -6,6 +6,7 @@ import {
   readdirSync,
   realpathSync,
   renameSync,
+  rmdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -13,7 +14,7 @@ import {
 import { createHash } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { copyTreeNoFollow, removeSafe, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { copyTreeNoFollow, removeSafe, safeDeletePath, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
 import { runExternalSync } from "./external-ops.mjs";
 
 export const CLARITY_SCHEMA_VERSION = 2;
@@ -1146,10 +1147,39 @@ export function applyRuntimeCleanup(rootValue, options = {}) {
     fail(record?.owner === "agentic-secretary:clarity" && (record.expiresAt || record.staleAfter) === candidate.expiresAt,
       "runtime-changed", "cleanup対象の所有情報がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
   }
-  for (const candidate of preview.candidates) removeSafe(root, candidate.path);
-  const runtime = safeWritePath(root, ".clarity/runtime");
-  if (existsSync(runtime) && readdirSync(runtime).length === 0) rmSync(runtime);
-  return { ...preview, status: preview.candidates.length ? "cleaned" : "unchanged", changed: preview.candidates.length > 0, removed: preview.candidates.map((row) => row.path), nextAction: preview.candidates.length ? "doctorでruntime状態を再確認してください" : "追加操作は不要です" };
+  const removed = [];
+  for (const candidate of preview.candidates) {
+    if (removeSafe(root, candidate.path).removed) removed.push(candidate.path);
+  }
+
+  let runtimeDirectory = { status: "preserved", removed: false, reason: removed.length ? "not-empty" : "no-owned-runtime-removed" };
+  if (removed.length) {
+    try {
+      const runtime = safeDeletePath(root, ".clarity/runtime");
+      if (!existsSync(runtime)) runtimeDirectory = { status: "missing", removed: false, reason: "already-missing" };
+      else {
+        const stat = lstatSync(runtime);
+        if (!stat.isDirectory() || stat.isSymbolicLink()) runtimeDirectory = { status: "preserved", removed: false, reason: "unsafe-or-changed" };
+        else if (readdirSync(runtime).length > 0) runtimeDirectory = { status: "preserved", removed: false, reason: "not-empty" };
+        else {
+          try {
+            // rmdirSyncは空directoryだけを削除する。直前確認後にentryが増えても再帰削除せず保持する。
+            rmdirSync(runtime);
+            runtimeDirectory = { status: "removed", removed: true, reason: "empty-owned-runtime" };
+          } catch (error) {
+            if (error?.code === "ENOENT") runtimeDirectory = { status: "missing", removed: false, reason: "already-missing" };
+            else if (["ENOTEMPTY", "EEXIST"].includes(error?.code)) runtimeDirectory = { status: "preserved", removed: false, reason: "not-empty" };
+            else runtimeDirectory = { status: "preserved", removed: false, reason: "directory-cleanup-failed", errorCode: error?.code || "unknown" };
+          }
+        }
+      }
+    } catch (error) {
+      runtimeDirectory = { status: "preserved", removed: false, reason: "unsafe-or-changed", errorCode: error?.code || "unknown" };
+    }
+  }
+
+  const changed = removed.length > 0 || runtimeDirectory.removed;
+  return { ...preview, status: changed ? "cleaned" : "unchanged", changed, removed, runtimeDirectory, nextAction: changed ? "doctorでruntime状態を再確認してください" : "追加操作は不要です" };
 }
 
 function readStoredState(root) {
