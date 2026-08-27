@@ -4,13 +4,13 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import {
-  cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync,
+  cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyInit, doctor } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
-import { findClarityRoot, normalizeHookInput, resolvePluginRoot, serializeHookResult } from "../plugins/secretary/scripts/lib/clarity-hook.mjs";
+import { findClarityRoot, normalizeHookInput, resolvePluginRoot, serializeHookResult, writeRuntimeEvent } from "../plugins/secretary/scripts/lib/clarity-hook.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const plugin = join(repo, "plugins/secretary");
@@ -37,6 +37,19 @@ function initialized(name, count = 6) {
 function canonicalDigest(root) {
   return sha(["project.json", "events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(root, ".clarity", name))).join("|"));
 }
+function treeSnapshot(root) {
+  const rows = [];
+  function visit(directory, prefix = "") {
+    for (const name of readdirSync(directory).sort()) {
+      const path = join(directory, name); const rel = prefix ? `${prefix}/${name}` : name; const stat = lstatSync(path);
+      if (stat.isSymbolicLink()) rows.push([rel, "symlink"]);
+      else if (stat.isDirectory()) { rows.push([rel, "directory"]); visit(path, rel); }
+      else if (stat.isFile()) rows.push([rel, "file", sha(readFileSync(path))]);
+      else rows.push([rel, "other"]);
+    }
+  }
+  visit(root); return JSON.stringify(rows);
+}
 function runtimeFiles(root) {
   const base = join(root, ".clarity/runtime/hooks/events"); if (!existsSync(base)) return [];
   const rows = []; for (const session of readdirSync(base)) { const dir = join(base, session); if (!lstatSync(dir).isDirectory()) continue; for (const name of readdirSync(dir)) rows.push(join(dir, name)); } return rows;
@@ -58,6 +71,22 @@ function runMany(inputs) {
     child.stdin.end(JSON.stringify(input));
   })));
 }
+function observationSemantic(root, host = "codex", sessionId = `${host}-path-guard`, toolUseId = `${host}-write`) {
+  const normalized = normalizeHookInput(payload(host, "PostToolUse", root, { session_id: sessionId, tool_name: "Write", tool_use_id: toolUseId, tool_input: { file_path: join(root, "src/feature-0.mjs") } }));
+  return { normalized, semantic: { kind: "observation", tool: "Write", touchedPaths: ["src/feature-0.mjs"], testCandidate: false, material: true, resultSummary: "unknown" } };
+}
+function assertRouterRejectsExternalSymlink(label, relativeComponent, { eventFileName = null } = {}) {
+  const target = initialized(label, 1); const outside = join(work, `${label}-outside`); mkdirSync(outside);
+  writeFileSync(join(outside, "sentinel.txt"), `outside-${label}\n`);
+  const beforeOutside = treeSnapshot(outside); const beforeCanonical = canonicalDigest(target);
+  const component = join(target, relativeComponent, ...(eventFileName ? [eventFileName] : []));
+  mkdirSync(dirname(component), { recursive: true });
+  symlinkSync(eventFileName ? join(outside, "sentinel.txt") : outside, component, eventFileName ? "file" : "dir");
+  const output = runHook(payload("codex", "PostToolUse", target, { session_id: "symlink-session", turn_id: "symlink-turn", tool_name: "Write", tool_use_id: "symlink-write", tool_input: { file_path: join(target, "src/feature-0.mjs") } }));
+  assert(output === null || /degraded/u.test(output.systemMessage || ""), `${label}: unsafe path must no-op or degrade`);
+  assert.equal(canonicalDigest(target), beforeCanonical, `${label}: canonical data changed`);
+  assert.equal(treeSnapshot(outside), beforeOutside, `${label}: outside target changed`);
+}
 async function test(id, title, fn) {
   assert(expected.includes(id), `unknown case ${id}`); assert(!results.some((row) => row.id === id), `duplicate ${id}`);
   try { await fn(); results.push({ id, ok: true }); process.stdout.write(`PASS ${id} ${title}\n`); }
@@ -74,7 +103,15 @@ try {
   await test("HC-002", "Claude SessionStart bounded brief", () => { const out = runHook(payload("claudeCode", "SessionStart", root, { source: "startup" }), { CLAUDE_PLUGIN_ROOT: plugin, PLUGIN_ROOT: "" }); assert.equal(out.hookSpecificOutput.hookEventName, "SessionStart"); assert.match(out.hookSpecificOutput.additionalContext, /Project Clarity Session Brief/u); });
   await test("HC-003", "Claude resume reloads current projection", () => { const out = runHook(payload("claudeCode", "SessionStart", root, { source: "resume" })); assert.match(out.hookSpecificOutput.additionalContext, /理由:/u); });
   await test("HC-004", "Claude compact SessionStart reinjection", () => { const out = runHook(payload("claudeCode", "SessionStart", root, { source: "compact" })); assert.match(out.hookSpecificOutput.additionalContext, /手動/u); assert(runtimeFiles(root).some((path) => JSON.parse(readFileSync(path)).kind === "compact-resume")); });
-  await test("HC-005", "Claude concurrent PostToolUse parse 100%", async () => { const target = initialized("claude-concurrent", 1); const inputs = Array.from({ length: 50 }, (_, index) => payload("claudeCode", "PostToolUse", target, { session_id: "claude-concurrent", tool_name: "Write", tool_use_id: `write-${index}`, tool_input: { file_path: join(target, "src", `p-${index}.mjs`) } })); await runMany(inputs); const files = runtimeFiles(target); assert.equal(files.length, 50); for (const path of files) JSON.parse(readFileSync(path, "utf8")); });
+  await test("HC-005", "Claude concurrent PostToolUse parse 100% and retry collision safety", async () => {
+    const target = initialized("claude-concurrent", 1); const inputs = Array.from({ length: 50 }, (_, index) => payload("claudeCode", "PostToolUse", target, { session_id: "claude-concurrent", tool_name: "Write", tool_use_id: `write-${index}`, tool_input: { file_path: join(target, "src", `p-${index}.mjs`) } }));
+    await runMany(inputs); const files = runtimeFiles(target); assert.equal(files.length, 50); for (const path of files) JSON.parse(readFileSync(path, "utf8"));
+    const retryRoot = initialized("hook-retry-collision", 1); const { normalized, semantic } = observationSemantic(retryRoot, "claudeCode", "retry-session", "retry-write");
+    const first = writeRuntimeEvent(retryRoot, normalized, semantic); const retry = writeRuntimeEvent(retryRoot, normalized, semantic);
+    assert.equal(first.changed, true); assert.equal(retry.changed, false); assert.equal(first.target, retry.target); assert.deepEqual(retry.record, first.record);
+    writeFileSync(first.target, "{partial"); assert.throws(() => writeRuntimeEvent(retryRoot, normalized, semantic)); assert.equal(readFileSync(first.target, "utf8"), "{partial");
+    writeFileSync(first.target, `${JSON.stringify({ ...first.record, owner: "unowned-fixture" })}\n`); assert.throws(() => writeRuntimeEvent(retryRoot, normalized, semantic)); assert.match(readFileSync(first.target, "utf8"), /unowned-fixture/u);
+  });
   await test("HC-006", "Claude Edit observes touched path only", () => { const target = initialized("claude-edit", 1); runHook(payload("claudeCode", "PostToolUse", target, { tool_name: "Edit", tool_use_id: "edit-1", tool_input: { file_path: join(target, "src/feature-0.mjs"), new_string: "SECRET_BODY_NOT_STORED" } })); const row = JSON.parse(readFileSync(runtimeFiles(target)[0])); assert.deepEqual(row.touchedPaths, ["src/feature-0.mjs"]); assert(!JSON.stringify(row).includes("SECRET_BODY")); });
   await test("HC-007", "Claude Bash test candidate observation", () => { const target = initialized("claude-test", 1); runHook(payload("claudeCode", "PostToolUse", target, { tool_name: "Bash", tool_use_id: "bash-1", tool_input: { command: "npm run test" } })); assert.equal(JSON.parse(readFileSync(runtimeFiles(target)[0])).testCandidate, true); });
   await test("HC-008", "Claude Stop requests one checkpoint", () => { const target = initialized("claude-stop", 1); runHook(payload("claudeCode", "PostToolUse", target, { session_id: "stop-session", tool_name: "Write", tool_use_id: "write-1", tool_input: { file_path: join(target, "src/feature-0.mjs") } })); const out = runHook(payload("claudeCode", "Stop", target, { session_id: "stop-session", stop_hook_active: false })); assert.equal(out.decision, "block"); assert.match(out.reason, /checkpoint/u); });
@@ -93,7 +130,35 @@ try {
   await test("HX-003", "Codex trusted-equivalent SessionStart context", () => { const out = runHook(payload("codex", "SessionStart", root, { source: "startup" }), { PLUGIN_ROOT: plugin }); assert(out.hookSpecificOutput.additionalContext); });
   await test("HX-004", "Codex source compact immediate context", () => { const out = runHook(payload("codex", "SessionStart", root, { source: "compact" })); assert.match(out.hookSpecificOutput.additionalContext, /Session Brief/u); });
   await test("HX-005", "Codex command-only manifest", () => { for (const groups of Object.values(hooks.hooks)) for (const group of groups) for (const hook of group.hooks) assert.equal(hook.type, "command"); assert(!/"type"\s*:\s*"(?:prompt|agent|mcp_tool)"/u.test(manifestText)); });
-  await test("HX-006", "Codex concurrent PostToolUse parse 100%", async () => { const target = initialized("codex-concurrent", 1); const inputs = Array.from({ length: 50 }, (_, index) => payload("codex", "PostToolUse", target, { session_id: "codex-concurrent", turn_id: `turn-${index}`, tool_name: "apply_patch", tool_use_id: `patch-${index}`, tool_input: { command: `*** Begin Patch\n*** Update File: src/f-${index}.mjs\n*** End Patch` } })); await runMany(inputs); const files = runtimeFiles(target); assert.equal(files.length, 50); for (const path of files) JSON.parse(readFileSync(path)); });
+  await test("HX-006", "Codex concurrent PostToolUse and runtime path guard", async () => {
+    const target = initialized("codex-concurrent", 1); const inputs = Array.from({ length: 50 }, (_, index) => payload("codex", "PostToolUse", target, { session_id: "codex-concurrent", turn_id: `turn-${index}`, tool_name: "apply_patch", tool_use_id: `patch-${index}`, tool_input: { command: `*** Begin Patch\n*** Update File: src/f-${index}.mjs\n*** End Patch` } }));
+    await runMany(inputs); const files = runtimeFiles(target); assert.equal(files.length, 50); for (const path of files) JSON.parse(readFileSync(path));
+    const stress = initialized("codex-concurrent-128", 1); const stressInputs = Array.from({ length: 128 }, (_, index) => payload("codex", "PostToolUse", stress, { session_id: "codex-concurrent-128", turn_id: `turn-${index}`, tool_name: "Write", tool_use_id: `write-${index}`, tool_input: { file_path: join(stress, "src", `p-${index}.mjs`) } }));
+    await runMany(stressInputs); const stressFiles = runtimeFiles(stress); assert.equal(stressFiles.length, 128); for (const path of stressFiles) JSON.parse(readFileSync(path));
+
+    for (const [label, component] of [
+      ["runtime-symlink", ".clarity/runtime"],
+      ["hooks-symlink", ".clarity/runtime/hooks"],
+      ["events-symlink", ".clarity/runtime/hooks/events"],
+      ["session-symlink", ".clarity/runtime/hooks/events/symlink-session"],
+    ]) assertRouterRejectsExternalSymlink(label, component);
+
+    const nonDirectory = initialized("runtime-nondirectory", 1); const nonDirectoryCanonical = canonicalDigest(nonDirectory); writeFileSync(join(nonDirectory, ".clarity/runtime"), "not-a-directory\n");
+    const nonDirectoryOutput = runHook(payload("codex", "PostToolUse", nonDirectory, { session_id: "nondirectory-session", tool_name: "Write", tool_use_id: "nondirectory-write", tool_input: { file_path: join(nonDirectory, "src/feature-0.mjs") } }));
+    assert.match(nonDirectoryOutput.systemMessage, /degraded/u); assert.equal(canonicalDigest(nonDirectory), nonDirectoryCanonical);
+
+    const canonicalRoot = initialized("canonical-root", 1); const rootAlias = join(work, "canonical-root-alias"); symlinkSync(canonicalRoot, rootAlias, "dir"); const rootCanonicalBefore = canonicalDigest(canonicalRoot); const aliasObservation = observationSemantic(canonicalRoot, "codex", "root-alias-session", "root-alias-write");
+    assert.throws(() => writeRuntimeEvent(rootAlias, aliasObservation.normalized, aliasObservation.semantic)); assert.equal(canonicalDigest(canonicalRoot), rootCanonicalBefore); assert.equal(runtimeFiles(canonicalRoot).length, 0);
+
+    const probe = initialized("event-symlink-probe", 1);
+    runHook(payload("codex", "PostToolUse", probe, { session_id: "symlink-session", turn_id: "symlink-turn", tool_name: "Write", tool_use_id: "symlink-write", tool_input: { file_path: join(probe, "src/feature-0.mjs") } }));
+    assertRouterRejectsExternalSymlink("event-file-symlink", ".clarity/runtime/hooks/events/symlink-session", { eventFileName: basename(runtimeFiles(probe)[0]) });
+
+    const raceRoot = initialized("runtime-path-race", 1); const outside = join(work, "runtime-path-race-outside"); mkdirSync(outside); writeFileSync(join(outside, "sentinel.txt"), "outside-race\n");
+    const outsideBefore = treeSnapshot(outside); const canonicalBefore = canonicalDigest(raceRoot); const race = observationSemantic(raceRoot, "codex", "race-session", "race-write"); let raced = false;
+    assert.throws(() => writeRuntimeEvent(raceRoot, race.normalized, race.semantic, { beforeFileOpen({ eventsDirectory }) { raced = true; rmSync(eventsDirectory, { recursive: true }); symlinkSync(outside, eventsDirectory, "dir"); } }));
+    assert.equal(raced, true); assert.equal(treeSnapshot(outside), outsideBefore); assert.equal(canonicalDigest(raceRoot), canonicalBefore);
+  });
   await test("HX-007", "Codex Stop creates continuation", () => { const target = initialized("codex-stop", 1); runHook(payload("codex", "PostToolUse", target, { session_id: "codex-stop", tool_name: "apply_patch", tool_use_id: "p1", tool_input: { command: "*** Begin Patch\n*** Update File: src/feature-0.mjs\n*** End Patch" } })); const out = runHook(payload("codex", "Stop", target, { session_id: "codex-stop" })); assert.equal(out.decision, "block"); });
   await test("HX-008", "Codex stop_hook_active prevents second continuation", () => { assert.deepEqual(runHook(payload("codex", "Stop", root, { stop_hook_active: true })), {}); });
   await test("HX-009", "Codex SessionEnd within 3 seconds", () => { const target = initialized("codex-end", 1); const start = performance.now(); runHook(payload("codex", "SessionEnd", target)); assert(performance.now() - start < 3000); });

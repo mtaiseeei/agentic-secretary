@@ -1,15 +1,21 @@
 import {
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   readdirSync,
   realpathSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { attention, history } from "./clarity-core.mjs";
+import { FilesystemBoundaryError, safeWritePath, workingRoot } from "./safe-fs.mjs";
 
 const MAX_INPUT_BYTES = 1024 * 1024;
 const MAX_CONTEXT_CHARS = 3600;
@@ -17,6 +23,7 @@ const MAX_RUNTIME_FILES = 240;
 const MAX_PATHS = 12;
 const TEST_COMMAND = /(?:^|[;&|]\s*)(?:npm|pnpm|yarn|bun|node|python\d*|pytest|cargo|go|bash|sh)\s+(?:run\s+)?(?:test|check|lint|build|verify|.*regression)|\b(?:vitest|jest|playwright|pytest)\b/iu;
 const MATERIAL_TOOLS = /^(?:Edit|Write|MultiEdit|NotebookEdit|apply_patch|Bash)$/u;
+const RUNTIME_OWNER = "agentic-secretary:clarity-hook";
 
 function sha256(value) {
   return createHash("sha256").update(String(value)).digest("hex");
@@ -79,6 +86,60 @@ function isNormalFile(path) {
   } catch {
     return false;
   }
+}
+
+function lstatOptional(path) {
+  try { return lstatSync(path); } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return null;
+    throw error;
+  }
+}
+
+function runtimeBoundary(message, code = "hook-runtime-unsafe") {
+  throw new FilesystemBoundaryError(message, code);
+}
+
+function samePath(root, target) {
+  const rel = relative(root, target);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function canonicalRuntimeRoot(rootValue) {
+  const root = workingRoot(rootValue);
+  const clarity = join(root, ".clarity");
+  let guarded;
+  try { guarded = safeWritePath(root, ".clarity"); } catch {
+    return runtimeBoundary("Clarity rootの実体境界を安全に確認できませんでした。");
+  }
+  if (guarded !== clarity || !isNormalDirectory(clarity)) runtimeBoundary("Clarity rootが通常directoryではないためHook runtimeを書き込みません。");
+  let real;
+  try { real = realpathSync(clarity); } catch { return runtimeBoundary("Clarity rootの実体を確認できませんでした。"); }
+  if (real !== clarity || !samePath(root, real)) runtimeBoundary("Clarity rootがworking root外を指すためHook runtimeを書き込みません。");
+  return root;
+}
+
+function assertRuntimeDirectoryChain(rootValue, relativeDirectory, { allowMissing = false } = {}) {
+  const root = canonicalRuntimeRoot(rootValue);
+  const components = String(relativeDirectory).split(/[\\/]+/u).filter(Boolean);
+  let current = root;
+  for (const component of components) {
+    current = join(current, component);
+    let guarded;
+    try { guarded = safeWritePath(root, relative(root, current)); } catch {
+      return runtimeBoundary("Hook runtime pathの実体境界を安全に確認できませんでした。");
+    }
+    if (guarded !== current || !samePath(root, guarded)) runtimeBoundary("Hook runtime pathがworking root外へ解決されるため書き込みません。");
+    const stat = lstatOptional(current);
+    if (!stat) {
+      if (allowMissing) return { root, directory: null, missing: current };
+      runtimeBoundary("Hook runtime directoryが途中で欠落したため書き込みません。", "hook-runtime-changed");
+    }
+    if (!stat.isDirectory() || stat.isSymbolicLink()) runtimeBoundary("Hook runtime pathに通常directory以外があるため書き込みません。");
+    let real;
+    try { real = realpathSync(current); } catch { return runtimeBoundary("Hook runtime directoryの実体を確認できませんでした。"); }
+    if (real !== current || !samePath(root, real)) runtimeBoundary("Hook runtime directoryがworking root外へ解決されるため書き込みません。");
+  }
+  return { root, directory: current, missing: null };
 }
 
 export function findClarityRoot(cwdValue) {
@@ -146,9 +207,89 @@ function runtimeBase(root, sessionId) {
   return join(root, ".clarity", "runtime", "hooks", "events", cleanId(sessionId, "unknown-session"));
 }
 
-function ensureRuntimeDirectory(path) {
-  mkdirSync(path, { recursive: true, mode: 0o700 });
-  if (!isNormalDirectory(path)) throw new Error("Hook runtime directoryを安全に作成できませんでした。");
+function ensureRuntimeDirectory(rootValue, sessionId) {
+  const root = canonicalRuntimeRoot(rootValue);
+  const relativeDirectories = [
+    ".clarity/runtime",
+    ".clarity/runtime/hooks",
+    ".clarity/runtime/hooks/events",
+    `.clarity/runtime/hooks/events/${cleanId(sessionId, "unknown-session")}`,
+  ];
+  assertRuntimeDirectoryChain(root, ".clarity");
+  for (const relativeDirectory of relativeDirectories) {
+    const parentRelative = relativeDirectory.split("/").slice(0, -1).join("/");
+    assertRuntimeDirectoryChain(root, parentRelative);
+    const target = join(root, ...relativeDirectory.split("/"));
+    let guarded;
+    try { guarded = safeWritePath(root, relativeDirectory); } catch {
+      return runtimeBoundary("Hook runtime directoryを作成する前に安全境界を確認できませんでした。");
+    }
+    if (guarded !== target || !samePath(root, guarded)) runtimeBoundary("Hook runtime directoryがworking root外へ解決されるため作成しません。");
+    const before = lstatOptional(target);
+    if (!before) {
+      // recursive mkdirは中間symlinkを先に辿るため使わず、検査済みの親から1階層だけ作る。
+      assertRuntimeDirectoryChain(root, parentRelative);
+      try { mkdirSync(target, { recursive: false, mode: 0o700 }); }
+      catch (error) { if (error?.code !== "EEXIST") throw error; }
+    } else if (!before.isDirectory() || before.isSymbolicLink()) {
+      runtimeBoundary("Hook runtime pathに通常directory以外があるため作成しません。");
+    }
+    // 同時作成またはpath差替えを検出するため、各mkdirの直後にもrootから再検証する。
+    assertRuntimeDirectoryChain(root, relativeDirectory);
+  }
+  return { root, directory: runtimeBase(root, sessionId), eventsDirectory: join(root, ".clarity", "runtime", "hooks", "events") };
+}
+
+function existingRuntimeDirectory(rootValue, sessionId) {
+  const root = canonicalRuntimeRoot(rootValue);
+  const relativeDirectories = [
+    ".clarity/runtime",
+    ".clarity/runtime/hooks",
+    ".clarity/runtime/hooks/events",
+    `.clarity/runtime/hooks/events/${cleanId(sessionId, "unknown-session")}`,
+  ];
+  for (const relativeDirectory of relativeDirectories) {
+    const target = join(root, ...relativeDirectory.split("/"));
+    const stat = lstatOptional(target);
+    if (!stat) return null;
+    assertRuntimeDirectoryChain(root, relativeDirectory);
+  }
+  return { root, directory: runtimeBase(root, sessionId), eventsDirectory: join(root, ".clarity", "runtime", "hooks", "events") };
+}
+
+function assertEventTarget(root, directory, eventId, { allowMissing = true } = {}) {
+  const relativeTarget = `${relative(root, directory).split(sep).join("/")}/${eventId}.json`;
+  const target = join(directory, `${eventId}.json`);
+  assertRuntimeDirectoryChain(root, relative(root, directory).split(sep).join("/"));
+  let guarded;
+  try { guarded = safeWritePath(root, relativeTarget); } catch {
+    return runtimeBoundary("Hook runtime eventの実体境界を安全に確認できませんでした。");
+  }
+  if (guarded !== target || !samePath(root, guarded)) runtimeBoundary("Hook runtime eventがworking root外へ解決されるため書き込みません。");
+  const stat = lstatOptional(target);
+  if (!stat) {
+    if (allowMissing) return { target, stat: null };
+    runtimeBoundary("Hook runtime eventが途中で欠落しました。", "hook-runtime-changed");
+  }
+  if (!stat.isFile() || stat.isSymbolicLink()) runtimeBoundary("Hook runtime eventが通常fileではないため読み書きしません。");
+  let real;
+  try { real = realpathSync(target); } catch { return runtimeBoundary("Hook runtime eventの実体を確認できませんでした。"); }
+  if (real !== target || !samePath(root, real)) runtimeBoundary("Hook runtime eventがworking root外へ解決されるため読み書きしません。");
+  return { target, stat };
+}
+
+function ownedRuntimeRecord(target, eventId) {
+  const record = JSON.parse(readFileSync(target, "utf8"));
+  if (record?.owner !== RUNTIME_OWNER || record?.eventId !== eventId) runtimeBoundary("既存Hook runtime eventの所有情報が一致しないため上書きしません。", "hook-runtime-collision");
+  return record;
+}
+
+function removeCreatedEvent(root, target, eventId, descriptorStat) {
+  try {
+    const checked = assertEventTarget(root, dirname(target), eventId, { allowMissing: true });
+    const stat = checked.stat;
+    if (stat && stat.dev === descriptorStat.dev && stat.ino === descriptorStat.ino && stat.isFile() && !stat.isSymbolicLink()) unlinkSync(target);
+  } catch { /* 元の境界errorを置き換えない。 */ }
 }
 
 function stableEventId(normalized, semantic) {
@@ -156,13 +297,13 @@ function stableEventId(normalized, semantic) {
   return `he_${sha256(`${normalized.host}:${normalized.sessionId}:${normalized.event}:${discriminator}:${JSON.stringify(semantic)}`).slice(0, 24)}`;
 }
 
-export function writeRuntimeEvent(root, normalized, semantic) {
-  const directory = runtimeBase(root, normalized.sessionId);
-  ensureRuntimeDirectory(directory);
+export function writeRuntimeEvent(rootValue, normalized, semantic, options = {}) {
+  const prepared = ensureRuntimeDirectory(rootValue, normalized.sessionId);
+  const { root, directory, eventsDirectory } = prepared;
   const eventId = stableEventId(normalized, semantic);
-  const target = join(directory, `${eventId}.json`);
   const record = {
     schemaVersion: 1,
+    owner: RUNTIME_OWNER,
     eventId,
     host: normalized.host,
     sessionId: normalized.sessionId,
@@ -179,24 +320,53 @@ export function writeRuntimeEvent(root, normalized, semantic) {
     source: normalized.source || normalized.trigger || null,
     observedAt: process.env.CLARITY_NOW || new Date().toISOString(),
   };
+  options.beforeFileOpen?.({ root, directory, eventsDirectory, eventId, target: join(directory, `${eventId}.json`) });
+  // file open直前にcanonical root、全directory component、最終fileを再検証する。
+  const currentRoot = canonicalRuntimeRoot(root);
+  if (currentRoot !== root) runtimeBoundary("Hook runtime rootが途中で変わったため書き込みません。", "hook-runtime-changed");
+  const checked = assertEventTarget(root, directory, eventId);
+  const target = checked.target;
+  if (checked.stat) return { changed: false, target, record: ownedRuntimeRecord(target, eventId) };
+
+  const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+  let descriptor = null;
+  let descriptorStat = null;
   try {
-    writeFileSync(target, `${JSON.stringify(record)}\n`, { flag: "wx", mode: 0o600 });
+    descriptor = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+    descriptorStat = fstatSync(descriptor);
+    if (!descriptorStat.isFile()) runtimeBoundary("Hook runtime eventを通常fileとして作成できませんでした。");
+    const afterOpen = assertEventTarget(root, directory, eventId, { allowMissing: false });
+    if (afterOpen.stat.dev !== descriptorStat.dev || afterOpen.stat.ino !== descriptorStat.ino) runtimeBoundary("Hook runtime eventがopen直後に差し替えられたため書き込みません。", "hook-runtime-changed");
+    writeFileSync(descriptor, `${JSON.stringify(record)}\n`, { encoding: "utf8" });
     return { changed: true, target, record };
   } catch (error) {
-    if (error?.code === "EEXIST") return { changed: false, target, record: JSON.parse(readFileSync(target, "utf8")) };
+    if (error?.code === "EEXIST") {
+      const collision = assertEventTarget(root, directory, eventId, { allowMissing: false });
+      return { changed: false, target: collision.target, record: ownedRuntimeRecord(collision.target, eventId) };
+    }
+    if (descriptor !== null) { closeSync(descriptor); descriptor = null; }
+    if (descriptorStat) removeCreatedEvent(root, target, eventId, descriptorStat);
     throw error;
+  } finally {
+    if (descriptor !== null) closeSync(descriptor);
   }
 }
 
-function listRuntimeEvents(root, sessionId) {
-  const directory = runtimeBase(root, sessionId);
-  if (!isNormalDirectory(directory)) return [];
+function listRuntimeEvents(rootValue, sessionId) {
+  const prepared = existingRuntimeDirectory(rootValue, sessionId);
+  if (!prepared) return [];
+  const { root, directory } = prepared;
   const names = readdirSync(directory).filter((name) => /^he_[a-f0-9]{24}\.json$/u.test(name)).sort().slice(-MAX_RUNTIME_FILES);
   const events = [];
   for (const name of names) {
-    const path = join(directory, name);
-    if (!isNormalFile(path)) continue;
-    try { events.push(JSON.parse(readFileSync(path, "utf8"))); } catch { /* doctor reports parse through tests; hook stays usable */ }
+    const eventId = name.slice(0, -5);
+    try {
+      const checked = assertEventTarget(root, directory, eventId, { allowMissing: false });
+      events.push(ownedRuntimeRecord(checked.target, eventId));
+    } catch (error) {
+      if (error instanceof SyntaxError) continue;
+      throw error;
+    }
   }
   return events;
 }
