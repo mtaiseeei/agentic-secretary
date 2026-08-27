@@ -19,6 +19,21 @@ import {
   setAttentionOverride,
   status,
 } from "./lib/clarity-core.mjs";
+import {
+  applyXmindProposal,
+  buildProjectionBundle,
+  getXmindSettings,
+  previewLocalXmind,
+  proposeXmindEdit,
+  resolveXmindProvider,
+  setXmindEnabled,
+  validateXmindStructure,
+  writeLocalXmind,
+  writeProjectionBundle,
+} from "./lib/clarity-projection.mjs";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { safeWritePath } from "./lib/safe-fs.mjs";
 
 function usage(message = "") {
   const prefix = message ? `${message}\n\n` : "";
@@ -33,6 +48,13 @@ function usage(message = "") {
   clarity doctor <repo> [--json]
   clarity migrate <repo> [--apply] [--json]
   clarity cleanup <repo> [--apply] [--json]
+  clarity project <repo> [--apply] [--mindmap-failure] [--json]
+  clarity xmind-setting <repo> --enabled <on|off> [--json]
+  clarity xmind-resolve <repo> [--capabilities-json '<JSON>'] [--local-decision <value>] [--provider <auto|local>] [--json]
+  clarity xmind-local <repo> --target <relative.xmind> [--apply --approval-digest <sha256>] [--json]
+  clarity xmind-validate <repo> --target <relative.xmind> [--json]
+  clarity xmind-propose <repo> --item-id <id> --section <decision|execution|validation> --value <status> [--json]
+  clarity xmind-proposal-apply <repo> --proposal-json '<JSON>' --decision <approved|rejected|canceled> [--json]
   clarity event <repo> --event-json '<JSON>' [--json]
   clarity evidence <repo> --evidence-json '<JSON>' [--json]
   clarity decide-project <project-root> --secretary-root <secretary> --project <name> --decision <text> --current <text> --next <text> [--item-id <id>] [--operation-id <id>] [--json]`, 2);
@@ -43,7 +65,7 @@ function parse(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (!value.startsWith("--")) { positional.push(value); continue; }
-    if (["--apply", "--cancel", "--json"].includes(value)) { options.set(value, true); continue; }
+    if (["--apply", "--cancel", "--json", "--mindmap-failure"].includes(value)) { options.set(value, true); continue; }
     if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) usage(`${value} の値がありません。`);
     options.set(value, argv[index + 1]);
     index += 1;
@@ -116,6 +138,18 @@ function render(command, result, json) {
     process.stdout.write(`次の一手: ${result.nextAction}\n`);
     return;
   }
+  if (command === "project") {
+    process.stdout.write(`Clarity projection: ${result.status}\n- digest: ${result.digest}\n- Mermaid renderer: ${result.renderer.reason}\n`);
+    if (result.paths) process.stdout.write(`- 出力: ${result.paths.join("、")}\n`);
+    return;
+  }
+  if (command.startsWith("xmind")) {
+    process.stdout.write(`${command}: ${result.status || result.state}\n`);
+    process.stdout.write(`- 変更: ${result.changed ? "あり" : "なし"}\n`);
+    if (result.reason) process.stdout.write(`- 理由: ${result.reason}\n`);
+    if (result.target) process.stdout.write(`- 対象: ${result.target}\n`);
+    return;
+  }
   if (command === "attention-override") {
     process.stdout.write(`Attention優先度: ${result.status}\n- Item: ${result.itemId}\n- level: ${result.level}\n- 理由: ${result.reason}\n`);
     return;
@@ -159,6 +193,27 @@ try {
   else if (command === "doctor") result = doctor(root);
   else if (command === "migrate") result = options.get("--apply") ? applyMigration(root) : previewMigration(root);
   else if (command === "cleanup") result = options.get("--apply") ? applyRuntimeCleanup(root) : previewRuntimeCleanup(root);
+  else if (command === "project") result = options.get("--apply") ? writeProjectionBundle(root, { mindmapSyntaxAccepted: !options.get("--mindmap-failure") }) : buildProjectionBundle(root, { mindmapSyntaxAccepted: !options.get("--mindmap-failure") });
+  else if (command === "xmind-setting") {
+    const enabled = options.get("--enabled");
+    if (!["on", "off"].includes(enabled)) usage("--enabled は on または off を指定してください。");
+    result = setXmindEnabled(root, enabled === "on");
+  }
+  else if (command === "xmind-resolve") {
+    const capabilities = options.get("--capabilities-json") ? parseJson(options.get("--capabilities-json"), "--capabilities-json") : {};
+    result = resolveXmindProvider({ settings: getXmindSettings(root), mcp: capabilities.mcp || {}, local: capabilities.local || {}, localDecision: options.get("--local-decision") || "unanswered", requestedProvider: options.get("--provider") || "auto" });
+  }
+  else if (command === "xmind-local") {
+    const settings = getXmindSettings(root); if (!settings.xmindEnabled) throw new ClarityError("xmind-disabled", "Xmind設定はOFFです。先に明示的にONへ変更してください。", 3, { changed: false });
+    const target = options.get("--target"); if (!target) usage("--target を指定してください。");
+    if (options.get("--apply")) result = writeLocalXmind(root, target, { approval: "approved", approvalDigest: options.get("--approval-digest"), requestedProvider: "local" });
+    else { const { archive: _archive, ...preview } = previewLocalXmind(root, target, { requestedProvider: "local" }); result = preview; }
+  }
+  else if (command === "xmind-validate") {
+    const target = options.get("--target"); if (!target) usage("--target を指定してください。"); result = { status: "inspected", changed: false, ...validateXmindStructure(readFileSync(safeWritePath(root, resolve(root, target)))) };
+  }
+  else if (command === "xmind-propose") result = proposeXmindEdit(root, { itemId: options.get("--item-id"), section: options.get("--section"), value: options.get("--value") });
+  else if (command === "xmind-proposal-apply") result = applyXmindProposal(root, parseJson(options.get("--proposal-json"), "--proposal-json"), { decision: options.get("--decision") || "unanswered" });
   else if (command === "event") result = appendEvent(root, parseJson(options.get("--event-json"), "--event-json"));
   else if (command === "evidence") result = appendEvidence(root, parseJson(options.get("--evidence-json"), "--evidence-json"));
   else if (command === "decide-project") {

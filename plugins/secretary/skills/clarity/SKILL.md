@@ -1,6 +1,6 @@
 ---
 name: clarity
-description: Project Clarityを安全に初期化し、人間が考える必要のあるAttention、決定×実行の現在状態、履歴、checkpoint、診断、schema移行を扱う。「クラリティを初期化」「今のClarity状態」「今考えること」「決定を確定」「Clarity履歴」「Clarityを診断」で使う。
+description: Project Clarityを安全に初期化し、人間が考える必要のあるAttention、決定×実行の現在状態、Markdown／Mermaid／Xmind投影、履歴、checkpoint、診断、schema移行を扱う。「クラリティを初期化」「今のClarity状態」「今考えること」「Clarity map」「決定を確定」「Clarity履歴」「Clarityを診断」で使う。
 ---
 
 # Project Clarity
@@ -55,8 +55,36 @@ previewの対象path、保持する履歴、削除候補を利用者が確認し
 - partial時は成功済みと未完了を分け、同じoperationのretryでDecisionやEventを重複させません。
 - AI推定、draft、superseded sourceは`confirmed`にしません。
 
+## Markdown／Mermaid投影
+
+同じcanonical Stateから、概要・Attention・マトリクスのMarkdownと、象限・Project構造・依存関係・状態遷移のraw Mermaidを生成する。
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" project "<repo-root>" --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" project "<repo-root>" --apply --json
+```
+
+previewはwrite 0件。Mermaid rendererが使えなくても`.mmd`とMarkdownを保持し、構造図のmindmap構文を使えない場合は`--mindmap-failure`でflowchartへfallbackする。
+
+## Xmind provider
+
+- Xmind設定は既定OFF。利用者が明示した場合だけ`xmind-setting --enabled on`とし、`off`で再停止できる。
+- ON時にcreate/read/updateと色・配置を扱えるconnected Xmind MCPがあれば、必ず第1優先にする。設定値とruntime capabilityは別に表示する。
+- MCPを使えない場合のlocal `.xmind`は第2優先。最初からlocalを指定された場合も、まずpreviewで対象path、create/update、既存mapへの影響、auth／credit見込み、再読込注意を示す。
+- local writeはpreviewの`approvalDigest`に対する利用者の明示承認後だけ行う。拒否、取消、無回答、digest不一致ではwrite 0件。
+- local archiveは既知のXMind Zen JSON ZIP内部構造として検査する。内部構造検査と「実Xmind Appで開けたか」を分け、App未確認時は`verified: false`のままにする。
+- Xmind側の状態変更はproposalとして返す。承認前／拒否時はcanonical Stateを変更せず、明示承認後だけClarity Eventへ反映する。
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-setting "<repo-root>" --enabled on --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-resolve "<repo-root>" --capabilities-json '<JSON>' --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --json
+# previewのapprovalDigestと表示内容を人間が確認した後だけ:
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --apply --approval-digest "<sha256>" --json
+```
+
 ## 安全境界
 
 - preview／cancelではClarity canonical、Git、journal、runtimeを変更しない。
-- root外write、network、connector、push、remote／branch変更、Xmind／Mermaid、Hook、task自動作成を行わない。
+- root外write、network、未承認のXmind MCP／local `.xmind` write、connector、push、remote／branch変更、Hook、task自動作成を行わない。
 - Evidenceは相対path／ID／日付／SHA等の最小locator、短いsummary、digestだけを保存し、本文やSecretを保存しない。

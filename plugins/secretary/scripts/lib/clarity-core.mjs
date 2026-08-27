@@ -74,10 +74,10 @@ const secretValuePatterns = [
 ];
 
 const quadrantMeta = Object.freeze({
-  stabilize: { label: "定着・検証", meaning: "安定している" },
-  execute: { label: "実行待ち", meaning: "あとは進めるだけ" },
-  validate: { label: "暫定実装・要再確認", meaning: "注意して確認する" },
-  decide: { label: "設計・意思決定", meaning: "人間の判断が必要" },
+  stabilize: { label: "定着・検証", meaning: "安定している", emoji: "🟢", color: "#16A34A", position: "左上" },
+  execute: { label: "実行待ち", meaning: "あとは進めるだけ", emoji: "🔵", color: "#2563EB", position: "右上" },
+  validate: { label: "暫定実装・要再確認", meaning: "注意して確認する", emoji: "🟡", color: "#D97706", position: "左下" },
+  decide: { label: "設計・意思決定", meaning: "人間の判断が必要", emoji: "🔴", color: "#DC2626", position: "右下" },
 });
 
 export const ATTENTION_STALENESS_DAYS = Object.freeze({ validationPending: 14, undecided: 30 });
@@ -1241,6 +1241,7 @@ export function status(rootValue) {
   return {
     conclusion: attentionResult.conclusion,
     clarityProjectId: canonical.project.clarityProjectId,
+    name: canonical.project.name,
     mode: canonical.project.mode,
     repoIdentity: canonical.project.repoIdentity,
     itemCount: state.items.length,
