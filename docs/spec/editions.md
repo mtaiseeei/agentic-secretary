@@ -269,3 +269,37 @@ Chatwork／Google Chatの共有wizard assetを同期した場合は、DOM、copy
 秘書の英語名、stable ID／AI種別、aliases、name Skill、managed block契約、canonical resolver、rename分類、安全境界、既存workspaceのidentity migrationはAgentic共通コアが所有する。Agenticの独立PASS後、固定完全SHA、共通digest、宣言済み共通pathからだけ下流へ渡す。
 
 Yasashiiはedition copyとoverlayを保護し、private my-vaultはNotion／vault固有Skill、private値、root AGENTSを保護する。各repoのspec、Sprint、progress、feedback、README、release判断は同期しない。Agentic Sprint 039 Patch 002のPASSだけで下流反映、release、installed cache、Mac mini同期を完了扱いにしない。
+
+## Project Clarityの下流境界
+
+Project Clarityはpublic `agentic-secretary`を共通coreの正本とする。publicで完成させる範囲はStandalone、generic
+Secretary-local、Linked External Repo、daily／weekly／Portfolio、Decision／Execution／Validation／Attention／Drift、
+共通command-only Hook、Markdown／Mermaid／Xmind provider、Skill／CLI、host adapter、packaging／inventoryである。
+
+public sourceへ次を混ぜない。
+
+- private my-vault固有の`05/02` resolver、`vault/10_sources`、Notion TaskDB property／relation、private root guidance
+- Yasashii固有の表現、説明量、overlay管理file
+- 実downstream repoのHarness state、spec、progress、feedback、release判断
+
+publicのfresh独立Evaluator PASS後だけ、完全SHA、common digest、common path、adapter seam、除外・保護path、
+Clarity-aware surface inventory、rollbackをhandoff正本として固定する。適用順はprivate my-vault、次にYasashiiとし、
+それぞれ別Harness、別contract、別Generator／Evaluatorで扱う。実装順は下流の価値優先順であり、1版のPASSを他版の
+PASSへ昇格する意味ではない。
+
+Xmind integrationのdefaultはedition設定で変わる。
+
+| edition | integration default | provider priority when ON | write gate |
+|---|---|---|---|
+| Agentic public | OFF | 1. capable Xmind MCP, 2. approved local native | cloud／localともpreviewと明示承認 |
+| private my-vault | ON | 1. capable Xmind MCP, 2. approved local native | cloud／localともpreviewと明示承認 |
+| Yasashii public | OFF | 1. capable Xmind MCP, 2. approved local native | cloud／localともpreviewと明示承認 |
+
+default、ON／OFF設定、provider capability／priority／selected／reason／verifiedは別fieldとし、CLI未導入／sign-in待ち、MCP未接続／無効／capability不足／失敗、credit確認待ちをdefault変更で隠さない。MCP不可時はlocalへ自動writeせず、理由、対象file／path、create／update、既存file影響、auth／credit見込みのpreview後に明示承認を待つ。未承認／cancelはwrite 0件である。
+downstream adaptationはintegration defaultとedition copyだけを変え、MCP-firstのpriority、local fallbackの承認境界、固定4象限visualをeditionごとに変えない。Xmindを正本化したり、勝手な接続・network・課金・cloud／local writeを有効化しない。
+
+3 editionはいずれも、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`、上軸「決まっている」／下軸「まだ決まっていない」を共通contractとし、色だけでなくemoji／ラベル／意味文を併記する。
+
+Project Clarity以外のSkillへHookを追加しない。projects、daily、weekly、memory-care、update等は既存router／Skill入口の
+ままClarity-awareになる。memory-careの自然会話選択はconversation contractで扱い、Hookへ意味分類を移さない。
+private／Yasashii adaptationでもClarity専用routerの責務を広げない。

@@ -92,7 +92,7 @@
 1. 配布物は改名後の `plugins/yasashii-secretary/` 配下に置き、manifest・marketplace・README・インストールコマンドの名前を一致させる。
 2. 配布SKILLは同梱されない開発docsを参照しない。必要な規律は配布 `rules/` やテンプレに含める。
 3. 同梱スクリプトの実行権限と案内する実行方法を一致させる。
-4. 薄いルーターと段階ロードを維持し、部署制・自動case生成・patterns自動統合・hooksを追加しない。
+4. 薄いルーターと段階ロードを維持し、部署制・自動case生成・patterns自動統合・generic／Harness hooksを追加しない。Project Clarityに必須なcommand-only lifecycle hookだけは§25の狭い例外とする。
 5. `yasashii-secretary` から同梱ハーネス、agents、ハーネスベースラインを撤去し、section 12 は参照導線の健全性を検査する。
 
 ## 8. Chatwork設定wizard
@@ -411,3 +411,34 @@
 9. inventoryは少なくとも会話rule／copy、`memory-care`、`secretary`、`settings`、`daily`、`projects`、workspace templates、runtime classifier、memory保存シーム、golden fixture、Sprint 010を含む現役回帰を対象とする。topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧契約を、言い換え・別surfaceを含めて負検査する。
 10. Agentic、Yasashii、private my-vaultのsourceは、各版固有の文体・Notion／vault routing・repo-owned docsを保ちながら同じauthorization、安全分類、内容冪等性を持つ。共通caseは実内容markerとoffline file fixtureで3版を別々に検査し、1版のPASSを他版へ昇格しない。
 11. Sprint 040ではsourceとoffline regressionまでを完了範囲とする。push、tag、GitHub Release、marketplace、installed cache、利用者workspace、Mac mini、release後の新session／loaded version確認は別phaseであり、offline PASSをlive反映済みと表示しない。
+
+## 25. Project Clarityの正本・Hook・連携境界
+
+1. Project Clarityは生きた実行タスクの新しい正本を作らない。PJ内の生きた`TODO.md`、Notion TaskDB複製、自動タスク起票、会議録・チャット本文の恒久コピー、進捗率だけの健康判定を禁止する。
+2. `PROJECT.md`、確認済みDecision、memory、既存TODO／Notion、外部Repoのspec・Sprint・実装・成果物は従来の正本を維持する。Clarityが所有するのはimmutable ID、状態、Evidence参照、Attention、link、Event、projectionである。
+3. `decision.status`と`execution.status`を正本とし、quadrantは決定的に派生する。AI推定、draft、古いproposal、superseded情報だけでDecisionを`confirmed`へ進めない。
+4. Eventは純追加を原則とし、state、Markdown、Mermaid、Xmindは再構築可能なprojectionとする。projectionを直接編集してDecision／Execution／authorityを確定しない。
+5. 初期化、sync、migration、cleanup、Xmind proposal applyはpreviewとapplyを分ける。取消・拒否・競合・確認不足ではClarity canonical、Git、journal、runtimeを含む副作用0件とする。
+6. working rootは実体path、Git top-level、edition／Clarity identityで確認する。root外symlink／junction、path traversal、absolute path injection、別Repoへのwrite、禁止pathへのwriteを拒否する。
+7. linked Repo連携は双方が相手exportをread-only取得し、自Repoのimport projectionだけを更新するpull方式とする。cross-root write、暗黙fetch／pull／push、branch／remote／visibility変更、last-write-winsを禁止する。
+8. authorityはfieldごとにPrimary／Reference／Shared derivedを一意に持つ。同一fieldにPrimaryが複数ある、Repo identity／link ID／digestが不一致、schemaが非互換の場合はconflictとして停止し、利用者へ選択を返す。
+9. Secret、OAuth token、private key、`.env`値、connector／Xmind／GitHub credential、transcript全文、顧客本文、local absolute pathをtracked Clarity dataへ保存しない。Evidenceは最小locator、短いsummary、digestへ限定する。
+10. 既存dirty、staged、unstaged、untracked、HEAD、branch、remoteを利用者の状態として保持する。Clarityのwrite、rollback、commitは所有pathだけを対象にし、pushは別の明示許可なしに行わない。
+11. Hookはplugin rootの共通`hooks/hooks.json`と軽量command routerを1組だけ持つ。Claude CodeとCodexのevent payload差はadapterで正規化し、common coreをhost別に複製しない。
+12. HookはClarity未初期化・未linked Repoで高速no-opする。Clarity利用中でもnetwork、LLM、Xmind生成、Git全履歴、全Repo scan、外部connector、plugin更新を実行しない。
+13. PostToolUse等の並行発火は共有JSONのread-modify-writeへ依存せず、atomic write、競合安全なlockまたは同等手段、一意eventで破損と重複を防ぐ。lock残骸はdoctorとcleanup previewから回復できる。
+14. Stopはmaterial changeと未checkpointを確認した場合に同一turnで1回だけ継続を促す。`stop_hook_active`または同等marker、turn／checkpoint identityにより2回目をblockせず、Hook failureでsession終了を妨げない。
+15. SessionStart／compact後の再開contextはAttention最大3件程度、件数summary、詳細path、last checkpointに制限する。全state、transcript、顧客本文をcontextへ注入しない。
+16. Codexはplugin rootの`hooks/hooks.json`を読み、互換用`CLAUDE_PLUGIN_ROOT`／`CLAUDE_PLUGIN_DATA`も提供する前提で共通routerを使える。ただし環境変数名だけでhostを推定せず、実payloadを正規化してClaude Code／Codexを別々に実機検証する。
+17. Codexの非managed plugin hookは内容hashのtrust前にskipされること、Codex trust未承認／無効、Claude plugin無効を正常なdegraded状態とする。manual Skill fallbackを常に利用可能にし、未実行Hookを故障またはverifiedと表示しない。
+18. 複数sourceまたは複数matching command hookが並行実行され得るため、同一観測、checkpoint、flush、Eventは内容とsession／turn identityで冪等にし、追加Eventや共有state破損を起こさない。
+19. Xmind integrationは明示ON／OFFとprovider capability／priority／selected／reasonを別に持つ。public Agentic／Yasashiiは既定OFF、private my-vaultは既定ONとするが、ONだけでprovider接続、必要能力、verified、課金承認を推定しない。integration ONかつXmind MCPがconnected／availableで必要capabilityを満たす場合はMCPを第1優先、local native `.xmind`を明示承認後の第2優先とする。MCP未接続／無効／capability不足／失敗／外部操作不承認は、理由・local代替・対象file／path・create/update／既存file影響／auth／credit見込みをpreviewし、利用者の明示承認前はlocal write 0件とする。拒否／cancel／無回答は`stopped`、write 0件。最初からlocal指定でもpreview／confirmを省略しない。
+20. Xmind MCPのcloud map create／update、external write、network、credit／課金消費は、provider、対象、予想影響を示した明示確認後だけ実行する。provider側のWrite Toolsが`Always allow`でも製品の事前確認を省略しない。実external-live gateで新しい権限・auth／creditが必要になった場合はその時点で停止し、対象と影響を示して利用者に確認する。local Skill／CLIもsign-inやcreditが必要な場合があるため「完全offline／無料」と断定しない。external-live未承認ではadapter contract／isolated fakeで確認境界を評価できるが、fakeでreal providerをverifiedにしない。Hook内ではXmind生成、MCP／CLI呼出し、networkを禁止する。
+21. Xmind MCP、local `.xmind`、表現可能なMermaidの4象限は、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」。「赤=判断、黄=確認、青=実行、緑=安定」とemoji／ラベル／意味文を併記し、色だけに依存しない。MCPの実tool schemaでこの色／配置を保証できない場合はcapability不足と表示し、要件を弱めない。
+22. public版のSecretary-local統合はgeneric `secretary/projects/open/`と既存project seamを使う。private my-vault固有の`05/02` resolver、`vault/10_sources`、Notion property／relation、root private guidanceをpublic sourceへ持ち込まない。
+23. public `agentic-secretary`を先に完全実装・独立評価し、PASSした完全SHA／digest、共通path、除外・保護path、rollbackだけをhandoff正本とする。private my-vault、次にYasashiiは別Harness、別state、別Evaluatorで適用・評価し、1版PASSを他版へ昇格しない。
+24. planningとpublic実装Sprintではpush、tag、GitHub Release、marketplace公開、installed cache更新、Mac mini同期、実downstream writeを行わない。source PASS、release、snapshot、installed cache、loaded version、downstream外部liveを別状態で報告する。
+25. HookはProject Clarity専用である。projects、daily、weekly、memory-care、updateその他のSkillへ独立Hookを追加せず、Hookから一般memoryの保存候補を意味判定しない。memory自然会話はSkill description、secretary router、conversation contract、回帰で扱う。connector live取得、自動更新、他の外部／確認系Skillの暗黙実行を禁止する。
+26. projectsはproject lifecycle（作成、open／closed、complete／reopen、`canonicalRepo`）を、ClarityはDecision／Execution／Validation／Attention／Driftを所有する。関連Skillのinput／output／routingはClarity-awareにするが、正本と確認境界を交換しない。タスク化は明示依頼時だけ既存TODO／notion-tasksへ委譲する。
+27. secretary、projects、daily、weekly、notion-tasks、memory-care、build、update／release inventory、onboarding、templates、rules、host inventory、edition handoffを実内容まで棚卸しする。外部connectorはClarityから自動実行しない。inventory対象漏れ、stale digest、Clarity正本の二重化、private値のpublic混入を不合格とする。
+28. primary 250 acceptance IDは`sprint-041`〜`sprint-048`のtarget集合で各1回だけ割り当て、ID／意味／割当を変更しない。CLX-001〜020は`sprint-049`割当のまま保持する。最新user decision用のXV-001〜004は`sprint-043`に初回割当し、`sprint-050`でprimary 250、CLX 20、XV 4、4 E2E、既存master回帰を再実行する。個別Sprintで他Sprintの全caseを合格条件に追加しない。

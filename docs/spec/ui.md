@@ -451,3 +451,87 @@ Chatwork／Google Chat wizardは両editionで同じ画面、copy、DOM、focus�
 - migration previewは、追加・更新・維持・衝突をpath単位で示し、「利用者が書いた内容は変更しない」「user-scope連携はこの確認に含まれない」「pushしない」「失敗時は開始前へ戻す」を短く明示する。本文やhashの羅列を主表示にしない。
 - 名前の保存確認とローカルmigrationの確認を一つにまとめない。migrationの別確認では、identity、AGENTS／CLAUDEの製品所有identity管理節、最小台帳、local checkpointを対象として示す。拒否、取消、無回答はwrite 0件で終える。
 - 完了時は、Plugin版、ローカルidentity移行、local checkpointの結果を分けて示す。user-scope routingは「別repoでも名前で呼ぶ場合だけ」の任意設定として、効果と対象fileを改めて示し、別確認前に有効化しない。
+
+## Project Clarityの対話体験
+
+### 中核表示
+
+Project Clarityの最初の問いは「今、人間が考える必要があるのは何か」である。通常表示は次の順にする。
+
+1. **結論**: 判断または確認が必要な件数と最優先項目。
+2. **理由**: なぜ今Attentionなのか。
+3. **根拠**: Decision／実装／test／sync等の短い参照。
+4. **選択**: 承認、修正、保留、追加調査等の実行可能な選択肢。
+
+重要項目は最大3件程度へ絞り、その他のAttention、idea、正常項目は件数と詳細pathへ畳む。全Item、Event、
+Evidence本文を起動時やdailyへ展開しない。Attentionが無い場合は「現在、判断が必要な項目はありません」と短く示す。
+
+### 状態の日本語
+
+- `stabilize`: 定着・検証
+- `execute`: 実行待ち
+- `validate`: 暫定実装・要再確認
+- `decide`: 設計・意思決定
+
+AI推定には「推定」、未検証には「未検証」、Evidence不足には「根拠不足」を明示する。internal enum、score、host payload、
+hook stageを通常表示の主語にしない。`in_progress`は象限とは別に進行中badgeまたは短い補足で示す。
+
+### 初期化
+
+initはread-only previewから始め、Project名、Repo identity、推定構造、Item／Decision／実装候補数、確信度が低い件数、
+除外・未確認範囲、作成予定path、既存file競合、Git変更予定、projection capabilityを示す。明示確認前にfile、runtime、
+journal、commitを作らない。巨大Repoでは読んだ範囲と読まなかった範囲を先に示す。
+
+### DecisionとDrift
+
+Decision確定では、現在有効なDecision正本へ記録すること、PROJECT／Clarity projectionへの影響、partial時の残作業を示す。
+AI推定だけなら確認候補として保存し、確定扱いにしない。
+
+Driftは対象、Decision、実装、双方の根拠、確信度を示し、次の選択を「実装を合わせる／Decisionを変える／例外を承認／
+追加調査」から必要なものだけ提示する。根拠不足は`possible_drift`とし、Critical Driftの断定表現を使わない。
+
+### Hookとmanual fallback
+
+Hookが動く場合もユーザーを毎回interruptしない。SessionStartは最大3件の短いbrief、Stopはmaterial change後の未checkpoint時に
+1回だけ継続を促す。Codex trust未承認／無効、Claude plugin無効、command failureは正常なdegraded状態として、
+「Hookは動いていません。`clarity status`／`review`／`checkpoint`は手動で使えます」と変更有無を明示する。
+Hookがmemory保存候補を意味判定したり、projects／daily／update等の別Skillを自動実行したりしない。
+
+### Secretaryとの協働
+
+projects表示はproject lifecycleを主表示のまま保ち、Clarity mode、Attention件数、最重要項目、link healthを短く添える。
+作成、完了、再開、canonicalRepo設定はprojectsの確認境界へ従い、Clarityが代行したように表示しない。
+
+daily morningは予定、TODO、中断点、PJ状態の後に「今日の要確認」を独立sectionで示す。eveningはDecision、実装観測、
+候補、Drift、持越しAttentionを分け、weeklyは増減とlagを示す。Clarity ItemをTODOと同じ一覧へ混ぜず、
+「タスク化して」の明示依頼時だけ既存TODO／notion-tasksへ委譲する。
+
+### Link／Sync
+
+linkはprepare／accept／finalizeの現在段階、双方のRepo identity、作成・更新予定path、外部操作の有無を示す。
+sync previewは相手revision、last imported revision、新規／更新候補、conflict、authority violation、write予定pathを示す。
+applyは明示確認後だけ自Repoを更新し、「相手Repoへwriteしていない」「pushしていない」を結果に含める。
+conflictではlast-write-winsを使わず、Secretary側、Repo側、新Decision、Item分割、保留、unlinkのうち適用可能な選択を出す。
+
+### Mermaid／Xmind
+
+Markdown／Mermaid／Xmindは「正本ではない再生成可能な表示」と明示する。Mermaid描画不能時はMarkdown fallbackを示す。
+Xmind integrationには明示ON／OFFを用意し、public Agentic／Yasashiiは既定OFF、private my-vaultは既定ONとする。
+設定状態とprovider capability／priority／selected／reasonを分け、OFF、MCP未接続／無効／能力不足／失敗、local CLI未導入／auth待ち／credit見込みを同じエラーへ潰さない。未検証providerには「未検証」を表示する。
+
+integration ONでMCPがconnected／availableかつ固定色／配置を含む必要capabilityを満たすときは`provider: Xmind MCP`、`selected: mcp-selected`、選択理由を示す。cloud map create／update、network、external write、credit／課金消費の前に、provider、対象map、create／update、予想影響をpreviewし、「実行する／やめる」で明示確認する。integration ONだけで課金に同意済みと表示しない。
+
+MCPを使えない、固定visual capabilityが足りない、操作に失敗した、または外部操作が未承認の場合は自動でlocal fileを書かない。「MCPを使えない理由」、「local `.xmind`で代替する」、対象file／path、create／update、既存Sheet／branchへの影響、sign-in、credit見込みをpreviewし、`selected: fallback-approval-required`と表示する。利用者の明示承認後だけ`local-selected-after-approval`として実行し、拒否／cancel／無回答は`stopped`、write 0件を示す。利用者が最初からlocalを指定しても同じpreview／confirmを行う。localを「完全offline／無料」と断定しない。
+
+4象限は次の位置・色・ラベル・意味を厳密に使う。
+
+| 位置 | 表示 | 意味 | 色 |
+|---|---|---|---|
+| 左上 | 🟢 定着・検証 | 安定している | `#16A34A` |
+| 右上 | 🔵 実行待ち | あとは進めるだけ | `#2563EB` |
+| 左下 | 🟡 暫定実装・要再確認 | 注意して確認する | `#D97706` |
+| 右下 | 🔴 設計・意思決定 | 人間の判断が必要 | `#DC2626` |
+
+上軸は「決まっている」、下軸は「まだ決まっていない」とする。覚え方は「赤=判断、黄=確認、青=実行、緑=安定」。Xmind MCP、local `.xmind`、Mermaidの利用可能なstyleで同じ表現を使い、色だけに依存せずemoji／ラベル／意味文を併記する。Mermaid mappingは`q1=右上実行待ち`、`q2=左上定着・検証`、`q3=左下暫定実装・要再確認`、`q4=右下設計・意思決定`に固定する。
+
+Xmind変更はproposalとして一覧し、承認／拒否前にClarity stateを変えない。Hook内では既存のlocal cached statusを読む以上のprovider probe、MCP／CLI呼出し、Xmind生成、networkを行わない。

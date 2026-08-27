@@ -2,13 +2,13 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-040-patch-001
+- Current ID: sprint-041
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 0
 - Model Tier: standard
 - Rotate: none
-- Next Planned: TBD
+- Next Planned: sprint-042
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
      ユーザー確認で単段クレジットに正本改訂、回帰assert強化のうえ合格）。
@@ -77,6 +77,16 @@
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
 | sprint-040-patch-001 | done | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
+| sprint-041 | planned | [contract](sprint-041.md) | - | - |
+| sprint-042 | planned | [contract](sprint-042.md) | - | - |
+| sprint-043 | planned | [contract](sprint-043.md) | - | - |
+| sprint-044 | planned | [contract](sprint-044.md) | - | - |
+| sprint-045 | planned | [contract](sprint-045.md) | - | - |
+| sprint-046 | planned | [contract](sprint-046.md) | - | - |
+| sprint-047 | planned | [contract](sprint-047.md) | - | - |
+| sprint-048 | planned | [contract](sprint-048.md) | - | - |
+| sprint-049 | planned | [contract](sprint-049.md) | - | - |
+| sprint-050 | planned | [contract](sprint-050.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -84,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Project ClarityのPlanner正本とSprint 041〜050契約を作成。添付Acceptance Matrixの250 IDはrepo内匿名化case正本へ意味を保って収載し、初回割当250／unique 250／missing 0／extra 0／duplicate 0、追加collaboration 20／unique 20、E2E 4を機械確認した。ユーザー決定によりClarity限定command-only Hookだけをplugin同梱し、他Skill Hookとmemory意味判定Hookは0件、Xmind defaultはAgentic／Yasashii OFF・private my-vault ON、projects lifecycleとClarityのDecision／Execution／Validation／Attention／Drift責務を分離する。`claude -p --model fable --effort high`のread-only静的レビュー後、repo内case本文、依存順、匿名fixture、Attention level、Mermaid quadrant、Decision seam、inventory表現をfresh PlannerがPatchし、オーケストレーターが独立再確認した。Fableは製品PASS証拠にしない。その後のユーザー決定でXmind MCPを第1優先、local `.xmind`を明示承認後だけ使う第2優先、固定4色・配置とした。fresh PlannerがXV-001〜004を追加し、MCP不可／失敗時は`fallback-approval-required`、承認なしはlocal write 0、Mermaidも同じvisual semanticとする正本へ更新。オーケストレーターがprimary 250／CLX 20／XV 4の割当、旧local-first表現0、4色と配置、匿名化境界を独立再確認した。Generatorはまだ作成せず、Lineage Dispatches 0、Status planned、Model Tier standard、Rotate none。push、release、cache、downstream write、external connector／Xmind cloud操作は0件。
 - 2026-08-26: ユーザー承認Aの限定再試行はcandidate `9acea13477cd7730bf064a32c170b752586fa116` でfresh独立Evaluator PASS。前FAILのstale／nonexistent anchor、複数anchor、実変換点ではないanchor、transformer不一致、stale root、空exclusionsを含むhandoff 12/12、通常root／Git-freeの3版full、inventory 8/8、ID再現3/3、下流read-only 2/2が0 FAIL。AC1〜15全PASS、C2／C5／C6／C13／C18全5/5、product／verification-infra finding 0。accepted IDはAgentic `36a5c5f5482fcd510e5b361bdf9e24620be696046e248fb29b3b557800cc083d`、Yasashii `4bc87169d87baf90f9681f7ba07d3154c71df34eac78bad15b435732e876faf2`、private `5c22b283b0f7c55a30c9b8c581d5ad182035b543e3369b421fe131e2741b5043`。会話／memory／golden変更0、下流実repo／external write 0。Status done、Retry／Spec-Issue 0、Lineage Dispatches 2、Model Tier standard、Rotate noneとし、下流各repoの独立Harnessへ引き渡す。
 - 2026-08-26: ユーザー承認Aの限定再試行Generatorがcandidate commit `9acea13477cd7730bf064a32c170b752586fa116` を作成。manifest whole-tree root／exclusionsを実walkへ接続し、adapted anchorの入力出現数と実適用回数を測定、copy→adapt pathを実copy traceへ収載した。正常／schema2観測／既存4負例／stale anchor／複数anchor／stale root／空exclusions／transformer不一致／非変換点anchorの12/12、inventory 8/8、最終staged treeのGit-free full regression、3版suite、ID再現3/3、下流before/after 2/2が0 FAIL。新IDはAgentic `36a5c5f5482fcd510e5b361bdf9e24620be696046e248fb29b3b557800cc083d`、Yasashii `4bc87169d87baf90f9681f7ba07d3154c71df34eac78bad15b435732e876faf2`、private `5c22b283b0f7c55a30c9b8c581d5ad182035b543e3369b421fe131e2741b5043`。会話／memory／golden変更0、下流write 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate noneへ更新する。
 - 2026-08-26: Lineage Dispatches 10停止後、ユーザーが推奨Aの限定再試行を明示承認。過去のFAILとfeedbackは保持し、新しい承認済みcycleとしてRetry Countを0、Lineage Dispatchesをfresh Generator予約の1へリセットする。修正範囲はP-01／V-01の3根本原因だけ: manifest `publicWholeTree.root`／`exclusions`を実walkの正本にする、adapted anchor存在と適用回数を実測して不正anchorを拒否する、copy後adaptするpathを完全な`trace.copy`へ記録する。対応する独立負fixtureを回帰へ追加し、会話／memory製品挙動、下流実repo、release、cache、workspace、external stateは変更しない。Status active、Model Tier strong、Rotate noneでfresh Generatorへ渡す。

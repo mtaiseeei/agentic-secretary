@@ -138,6 +138,12 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C16 | 秘書identity・名前routing・rename | 英語名、stable ID、AI author、managed block、canonical resolver、同名誤routing 0件、分類preview、rollback | **5** |
 | C17 | 既存workspace identity migration | plugin更新との状態分離、read-only診断、製品所有節、台帳、自由記述保持、local checkpoint、完全rollback、冪等性 | **5** |
 | C18 | 明示memory authorization・内容冪等性 | memory scope、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版inventory | **5** |
+| C19 | Clarity正本・状態モデル | Event／Evidence／State、Decision×Execution、AI推定非確定、4モード | **5** |
+| C20 | Attention・Clarity UX | bounded output、結論→理由→根拠→選択、Drift、未検証表示 | ≥4 |
+| C21 | Clarity Hook・host parity | 共通command router、trust／disabled、manual fallback、競合安全、host別live | **5** |
+| C22 | federated link・sync・Drift | reciprocal identity、authority、pull、conflict、cross-root write 0 | **5** |
+| C23 | projection・Xmind | deterministic Markdown／Mermaid、MCP-first provider、承認付きlocal fallback、fixed visual、proposal | ≥4 |
+| C24 | Clarity安全・統合・public-first | path／Secret／dirty、既存Skill協働、inventory、回帰、固定handoff | **5** |
 
 ## スコアアンカー
 
@@ -236,6 +242,49 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - 5: 明示された低リスクmemory依頼はuser-visible scope `memory`だけで同じturnに1回保存され、decision／topic、file、要約案の再確認0件。request hedgeとcontent hedgeが分離され、伝聞・推量・留保・訂正の意味を反転しない。pendingは一件束縛・別話題失効・修正付き了承の同turn実行を満たす。topic訂正はappend-only。同じ内容は別operation id／再起動後もmemory／journal／commit重複0件。checkpointだけの失敗は`partial`で、retryはcommitだけを完了する。3版それぞれの実内容inventoryに現行markerがあり、旧topic一律確認・exact copy・別turn確認markerが0件。source／offlineとrelease／cache／loaded versionが分離される。
 - 4以下: 明示memory依頼の内部分類確認、content hedgeを理由にした再確認・非保存、推量／伝聞の確定化、pendingの複数候補保持・別話題後実行・修正版再確認、topic上書き、同内容のtopic／decision／journal／commit重複、commit失敗retryでの保存再実行、`partial`の全失敗／全成功表示、inventory対象漏れ、file存在だけのmarker判定、禁止旧marker残存、1版PASSの他版昇格、offline PASSのlive反映済み表示のいずれかが1件でもある。→不合格。
 
+### C19 Clarity正本・状態モデル【ゼロ許容】
+
+- 5: Event／Evidence／Stateが分離され、Stateを決定的にrebuildできる。Decision／Executionの全組合せ、`rolled_back`、`superseded`、`idea`、期限前後`deferred`が仕様どおりで、AI推定・draft・古いproposalが`confirmed`へ昇格しない。4モードは同じcoreとimmutable Project IDを使い、既存正本を複製しない。
+- 4以下: quadrantが手入力正本、rebuild非決定、AI推定の確定、Event履歴消失、本文複製、Modeごとの意味分岐、Project ID変化、既存Decision／task／Repo正本の置換が1件でもある。→不合格。
+
+### C20 Attention・Clarity UX
+
+- 5: 「今、人間が考える必要があるのは何か」へ最大3件程度で結論→理由→根拠→選択を返し、Drift、無承認実装、決定済み未実行を正しく優先する。idea／正常項目は畳み、推定・未検証・根拠不足・source unreachableを断定しない。
+- 4: 主要Attentionと選択は成立し、軽微な順序・copy改善だけが残る。
+- 3以下: 全件羅列、task一覧化、理由／根拠なし、Drift誤断定、idea優先、Attentionなし時の不安を煽る表示、またはbounded output違反。→不合格。
+
+### C21 Clarity Hook・host parity【ゼロ許容】
+
+- 5: plugin rootの共通`hooks/hooks.json`とClarity専用command router 1組でClaude Code／Codex payloadを正規化し、未初期化no-op、短時間処理、manual fallback、同時発火の破損0、Stop一度限り、compact再開、SessionEnd軽量flushが成立する。Codex trust前skip／disabledとClaude plugin disabledをdegradedとして扱い、両hostを別々にlive検証する。
+- 4以下: 他Skill Hook、Hook内LLM／network／重いscan／Xmind／connector／update、memory候補の意味判定、共有JSON競合、Stop loop、trust前実行、manual fallback欠落、1host結果の他host昇格、未検証のverified表示が1件でもある。→不合格。
+
+### C22 federated link・sync・Drift【ゼロ許容】
+
+- 5: prepare／accept／finalizeが双方のID／Repo identity／digestを照合し、pull syncはpreview後に自Repoだけを更新する。authorityが一意で、conflict、stale、schema不一致、deleteを隠さず、last-write-wins／cross-root write／暗黙pushが0件。Driftは双方のEvidenceを示し、根拠不足はpossibleに留める。
+- 4以下: 相手Repoへの直接write、absolute pathのtracked保存、identity改ざん受理、Primary重複、conflict消去、暗黙network／push、根拠なしDrift確定、履歴消去が1件でもある。→不合格。
+
+### C23 projection・Xmind
+
+- 5: Markdown／Mermaid／選択Xmind providerが同じStateから決定的に生成され、projectionであることが明示される。Xmind integrationのON／OFFとprovider capability／priority／selected／reason／verifiedが分離し、Agentic／Yasashii既定OFF、private既定ON。integration ONでcapable MCPは`mcp-selected`となり、MCP不可／失敗は理由とlocal対象／影響／auth／credit見込みをpreviewした`fallback-approval-required`で止まる。明示承認後だけ`local-selected-after-approval`、拒否／cancelは`stopped`・write 0。MCP／localの2必須Sheet／同等map、stable ID、既存branch保持、edit proposalが成立する。
+- 5のfixed visual: MCP、local `.xmind`、利用可能なMermaid styleで、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`、上軸「決まっている」／下軸「まだ決まっていない」を守り、色だけでなくemoji／ラベル／意味文を併記する。Mermaidはq1右上青、q2左上緑、q3左下黄、q4右下赤と一致する。
+- 4: 必須projection、provider resolver、承認付きlocal fallback、fixed visualは成立し、明示承認がないreal MCP external-liveだけがtruthful NOT-RUNである。adapter contract／isolated fakeは成立するがreal providerをverifiedにしない。
+- 3以下: projectionの正本化、非決定出力、Xmind OFF無視、ONから接続／verified／課金承認を推定、capable MCPよりlocalを優先、MCP不可時の自動local write、preview／confirmの欠落、承認なしexternal／local write、fakeのverified昇格、fixed visualの位置／4色／軸／文字情報不一致、Xmind変更の直接確定、Hook内Xmind／network、localのoffline／無料断定のいずれか1件。→不合格。
+
+### C24 Clarity安全・統合・public-first【ゼロ許容】
+
+- 5: path／symlink／Secret／dirty／stage／schema／lock／retry境界が全て成立し、secretary、projects、daily、weekly、notion-tasks、memory-care、build、update、onboarding、templates、rules、host／release inventory、edition handoffの実内容inventoryと回帰が0 FAIL。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public PASS前のdownstream／release／cache／external write 0件。
+- 4以下: private値のpublic混入、対象surface漏れ、file存在だけのinventory、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、下流先行反映、release stage混同が1件でもある。→不合格。
+
+## Project Clarityの検証方法（safe harbor）
+
+- case本文とE2E手順のrepo内実行正本は`docs/spec/clarity-acceptance-cases.md`、単一割当の正本は`docs/spec/clarity-acceptance.md`と各Sprint契約である。Sprint 041〜048はprimary対象IDだけとし、例外としてSprint 043は最新user decision用XV-001〜004も初回評価する。Sprint 049はCLX 20、Sprint 050はprimary 250／CLX 20／XV 4を全再実行する。
+- 隔離temporary Repo／合成HOME、Git checkoutと同一bytesのGit-free archive、固定時刻、failure injection、before／after tree・Git snapshot、JSON parse、content digestを使う。
+- HookはClaude Code／Codexの実eventごとにcommand、exit、payload normalization、timing、runtime event、additional context、trust／disabled状態を記録する。1hostの証拠を他へ流用しない。
+- UI／projectionは生成Markdown、raw Mermaid／render画像またはSVG／DOM style、Xmind MCP adapter request／response、承認済みnative `.xmind`のvalidation／Sheet／stable ID／styleとスクリーンショットを証拠にする。Xmindはpublic既定OFFを維持し、隔離fixtureでONにしてMCP-first resolverとlocal approval gateを行う。
+- Xmind MCP caseはadapter／capability／priority／selected／reason／確認境界を必須実装とする。未接続・無効・能力不足・許可なしのreal external-liveは正直なconditional NOT-RUNでよいが、fallbackは自動writeせずpreview／confirmを評価する。外部write、local write、network、credit消費を合格のために自動実行しない。isolated fakeをreal providerのverified証拠にしない。
+- private固有case IDはpublic stageではadapter seam、private literal非混入、固定handoffを評価する。実`05/02/10_sources/Notion`と実顧客fixture／提供PDF／提供Xmindはprivate版の別Harnessで再実行し、public PASSへ偽装しない。`XM-012`／`E2E-002`のpublic評価は同構造の匿名fixtureを使う。
+- 実行command、exit code、case ID、期待／観測、fixture root、前後digest、PASS／FAIL／NOT-RUN理由、host／provider状態があれば十分とする。新しいcollector、統一attestation、実顧客data、無許可network／release／downstream writeを追加条件にしない。
+
 ## Sprint 039の検証方法（safe harbor）
 
 1. 合成HOMEでCodex AGENTS通常／override／両方、Claude CLAUDE、空file、既存内容、既存・重複managed block、利用者編集、permission失敗を操作し、対象選択、前後digest、rollback、再実行差分0件を記録する。
@@ -305,6 +354,16 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 039-patch-001 | renameの所有path限定local Git checkpoint、commit failure injection、workspace／user-scope／Git完全rollback、push 0件、formal inventory維持、PASS後だけの固定下流handoff |
 | 039-patch-002 | v0.10.0既存workspace fixture、更新後new-session handoff、identity／AGENTS／CLAUDE／台帳の完全移行、自由記述保持、所有checkpoint、全failure rollback、rerun 0、0.10.1固定下流handoff |
 | 040 | 明示memory依頼のrun-once、request／content hedge分離、memory scopeの内部分類非確認、pending一件束縛、topic append-only訂正、content dedupe、checkpoint partial／commit-only retry、3版conversation-core inventory、offline-only検証 |
+| 041 | 43件。ST／QM／DE: Standalone init、Event／Evidence／State、4象限、generic Decision seam fixtureの確定とpartial retry |
+| 042 | 35件。AT 17／IM 8／UX 10: 合成State／EvidenceによるAttention、migration、bounded Japanese UX、core idempotency |
+| 043 | primary 26件＋XV 4件。MM 10／XM 15／IM 1／XV 4: deterministic Markdown／Mermaid、MCP-first resolver、承認付きlocal fallback、fixed visual、map retry |
+| 044 | 40件。HC 17／HX 14／HP 7／AT 1／IM 1: 共通Clarity Hook、bounded SessionStart、trust doctor、host parity |
+| 045 | 35件。SL 12／PF 11／RG 12: generic Secretary-local、Decision seam再評価、daily／weekly／Portfolio、既存Skill正本回帰 |
+| 046 | 34件。LK 16／SY 13／IM 4／PF 1: reciprocal link、pull sync、authority、retry／doctor／stale Portfolio、AT-008／009再評価 |
+| 047 | 25件。DR 10／GS 15: Drift Detection、AT-003／004再評価、Git／filesystem／Secret／concurrency hardening |
+| 048 | 12件。PK: public packaging、manifest／inventory、clean／archive、host status、固定handoff準備 |
+| 049 | CLX追加case: 全関連Skill／router／template／rule／inventoryのClarity-aware協働と責務分離 |
+| 050 | primary 250、CLX 20、XV 4、E2E-001〜004、既存master回帰、public fixed handoffの最終判定 |
 
 ## 差し戻し分類
 
@@ -313,6 +372,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - rubric変更はEvaluatorが提案できるが、適用はPlannerだけが行う。
 
 ## 更新履歴
+
+- 2026-08-28: Project ClarityのC19〜C24、primary 250 case単一割当、CLX 20、最終E2E／全回帰safe harborを追加。その後の最新user decisionとしてXV 4をprimaryと分けて追加し、Xmind MCP-first、自動local fallback禁止、external／localのpreview／confirm、4象限のfixed visualをC23／Sprint 043／050に反映した。Clarity専用command-only Hook、projects lifecycleとの責務分離、public-first固定handoffは維持する。
 
 - 2026-08-25: Sprint 040としてC18と検証方法46を追加。明示低リスクmemory依頼をuser-visible scope `memory`だけで一度実行し、request hedgeとcontent hedge、pending一件束縛、append-only訂正、内容冪等性、checkpoint partial、3版の実内容inventoryをゼロ許容で評価する。source／offline regressionとrelease／cache／新session確認は別phaseとする。
 - 2026-08-14: Sprint 039 Patch 002としてC17とsafe harborを追加。公開済み0.10.0のplugin更新だけでは既存workspaceが新規導入相当にならない欠陥を、read-only診断、preview、別確認、製品所有identity面のatomic migration、所有path限定local checkpoint、workspace／Git rollback、rerun 0で評価する。0.10.1はAgentic→Yasashii／private固定handoff→3版PASS→release／Mac mini同期の順とする。

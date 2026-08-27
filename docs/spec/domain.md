@@ -851,3 +851,160 @@ current-configはtransaction対象、user-contentは個別opt-in、historical-au
 Identity managed sectionはAGENTS／CLAUDE内の製品所有範囲であり、利用者自由記述やuser-scope guidanceとは別概念である。
 Migration ledger recordは管理対象pathと版・基準の判定metadataであり、display name、stable ID、author本文を正本として持たない。
 Plugin更新完了、ローカルmigration完了、user-scope routing有効化は別の状態として報告する。
+
+## Project Clarity
+
+### ClarityProjectとMode
+
+`ClarityProject`はschema version、immutable `clarityProjectId`、名称、mode、作成時刻、Repo identity、
+任意のSecretary link、reader／writer互換範囲を持つ。modeは次の4値である。
+
+| Mode | 正本の位置 | 主な責務 |
+|---|---|---|
+| `standalone` | 対象Repo | Repo自身のDecision／実装Evidence、Attention、projection |
+| `secretary-local` | generic Secretary open PJ | PROJECT／Decision／memoryを参照したPJ内Clarity |
+| `linked-external` | Secretary PJと外部Repoの両方 | 各Repoが自分のauthorityとimport／exportを所有 |
+| `portfolio` | Secretary workspace | open PJの最小rollupと横断Attention |
+
+public版のSecretary-local正本は`secretary/projects/open/<project>/clarity/`を基本とする。private my-vault版での
+`05/02`等へのadaptationはdownstream責務であり、public canonical schemaへprivate pathを埋め込まない。
+
+### ClarityItem
+
+`ClarityItem`は少なくとも次を持つ。
+
+- immutable Item ID、title、area path、kind
+- disposition: `required / candidate / idea / deferred / rejected`
+- Decision: status、source、human confirmation、authority、Evidence refs、updated at
+- Execution: status、authority、Evidence refs、updated at
+- Validation、Alignment、Attention level／reasons
+- owner、decision owner、dependencies、external refs、confidence、timestamps
+
+Decision statusは`unknown / exploring / proposed / confirmed / rejected / superseded`、Execution statusは
+`unknown / not_started / in_progress / implemented / verified / operational / rolled_back`とする。
+Validationは`unknown / pending / passed / failed / waived`、Alignmentは
+`unknown / aligned / possible_drift / drift / not_applicable`とする。
+
+### Quadrantの派生
+
+| Decision | Execution | enum | 日本語表示 |
+|---|---|---|---|
+| confirmed | implemented以上 | `stabilize` | 定着・検証 |
+| confirmed | implemented未満 | `execute` | 実行待ち |
+| confirmed未満 | implemented以上 | `validate` | 暫定実装・要再確認 |
+| confirmed未満 | implemented未満 | `decide` | 設計・意思決定 |
+
+`in_progress`は未実行側だが、表示では進行中を示す。`rolled_back`は実行済み扱いにしない。
+`rejected`／`superseded`はActive Matrixから外して履歴を保持する。`idea`と期限前`deferred`は既定Attentionから外し、
+期限到来後に再評価する。保存されたquadrantが改ざんされてもrebuildで正しい派生値へ戻る。
+
+### Event／Evidence／State
+
+- `ClarityEvent`: event ID、type、Item ID、actor、時刻、最小payloadを持つ純追加の状態遷移。
+- `ClarityEvidence`: Evidence ID、type、source、最小locator、短いsummary、observed at、content digest、sensitivity。
+- `ClarityState`: Eventと現在有効な参照正本から決定的に再構築するprojection。
+
+主なEvidence typeはuser confirmation、project decision、ADR、spec section、meeting reference、git commit／diff、
+pull request、test run、deployment、file reference、task reference、Xmind proposal、agent observationである。
+本文やSecretを複製せず、同じ根拠はdigestとidentityでdedupeする。
+
+### Attention
+
+Attention reasonと既定levelは次をproduct normative、つまり実装と評価が従う製品規則とする。
+
+| reason | 表示例 | 既定level |
+|---|---|---|
+| `implemented_without_confirmed_decision` | 実装済みですが、確認済みの決定がありません | `high` |
+| `confirmed_but_not_executed` | 決定済みですが、実行が開始されていません | `medium` |
+| `decision_implementation_drift` | 決定内容と現在の実装が一致しません | `critical` |
+| `possible_drift` | 決定と実装に差がある可能性があります | `high` |
+| `validation_failed` | 検証に失敗しています | `critical` |
+| `validation_pending_too_long` | 実装後の確認が長期間行われていません | `high` |
+| `undecided_stale` | 未決定のまま長期間滞留しています | `medium` |
+| `authority_conflict` | 2つの正本が異なる内容を主張しています | `critical` |
+| `sync_conflict` | 接続先Repoとの同期結果が競合しています | `high` |
+| `missing_evidence` | 状態を裏付ける根拠が不足しています | `medium` |
+| `dependency_blocked` | 依存項目が未解決です | `medium` |
+| `decision_owner_missing` | 誰が決めるか未設定です | `medium` |
+| `source_unreachable` | 参照先を確認できません | `low` |
+
+priorityはseverity、disposition、impact、urgency、age、dependency、conflict、validation、human overrideから決定的に
+導き、stable tie-breakを持つ。利用者向け表示はscoreより理由を先にする。主要指標はHuman Attention Count、
+Unconfirmed Implementation Count、Decision-to-Execution Lag、Validation Lag、Drift Count、Stale Undecided Count、
+Evidence Freshness、Attention Resolution Timeである。
+
+### Link／Authority／Sync
+
+Linkは`prepared → accepted → active → disabled`のhandshake状態を持ち、link ID、双方のClarity Project ID、
+Repo identity、challenge／content digest、schema compatibilityを照合する。Link Requestは非機密だが、資格情報、
+absolute path、顧客本文を含めない。
+
+authorityはfieldごとに`primary / reference / shared-derived`を持つ。顧客合意、事業方針、scope、goal、priorityは
+Secretary側がprimary、実装、test、technical architecture、deployment evidenceは外部Repo側がprimary、alignment、
+Drift、Attentionはshared-derivedを既定とする。同一fieldのprimary重複はinvalidである。
+
+syncは`previewed → awaiting-confirmation → applied`または`conflict / stale / incompatible / failed`へ遷移する。
+applyは自Repoのimport projectionだけを更新し、source revisionとlast imported revisionを記録する。同じinputのretryは
+import、Event、projection差分0件へ収束する。削除は黙って消さずtombstoneまたはconflictとして扱う。
+
+### Drift
+
+Drift comparisonはDecision／spec／ADR／顧客合意のEvidenceと、current code／commit／test／成果物Evidenceを対にする。
+根拠不足は`unknown`または`possible_drift`、両根拠が揃う不一致は`drift`、整合確認は`aligned`とする。
+AIの意味比較だけで`drift`を確定する場合も、両locatorと比較要約を必須とし、確信できなければ`possible_drift`へ留める。
+Decision変更、実装修正、waiverの解決Eventは過去Evidenceを消さない。
+
+### ProjectionとXmind proposal
+
+Markdown、Mermaid、Xmindは同じStateから生成する。matrix座標の微小jitterはItem ID hashから決定し、project structureは
+area hierarchyを安定させる。Xmindの2必須Sheetはクラリティマトリクスとプロジェクト構造である。
+Xmind上のtopic追加、title／area／disposition／status変更は`XmindProposal`として取り込み、承認／拒否EventまでStateを変えない。
+
+4象限visualはproviderによらず次に固定する。配置順とhex colorを入れ替えない。
+
+| 位置 | enum | emoji／ラベル | 意味文 | 色 |
+|---|---|---|---|---|
+| 左上 | `stabilize` | 🟢 定着・検証 | 安定している | `#16A34A` |
+| 右上 | `execute` | 🔵 実行待ち | あとは進めるだけ | `#2563EB` |
+| 左下 | `validate` | 🟡 暫定実装・要再確認 | 注意して確認する | `#D97706` |
+| 右下 | `decide` | 🔴 設計・意思決定 | 人間の判断が必要 | `#DC2626` |
+
+上軸は「決まっている」、下軸は「まだ決まっていない」である。意味のmnemonicは「赤=判断、黄=確認、青=実行、緑=安定」とし、色だけでなくemoji、ラベル、意味文を常に併記する。Xmind MCP、local `.xmind`、利用可能なstyle表現を持つMermaidはこの同一表に従う。
+
+Mermaid Quadrant Chartの軸と象限は次の配置に固定し、実装都合で反転・入替しない。
+
+```mermaid
+quadrantChart
+    title 決定×実行クラリティマトリクス
+    x-axis もうできている --> これからやる
+    y-axis まだ決まっていない --> 決まっている
+    quadrant-1 🔵 実行待ち
+    quadrant-2 🟢 定着・検証
+    quadrant-3 🟡 暫定実装・要再確認
+    quadrant-4 🔴 設計・意思決定
+```
+
+Point座標はStateから決定的に生成する。重なり回避の微小jitterはItem ID hashから導き、同じ入力では位置を変えない。
+
+Xmind integration stateは`enabled`とprovider capabilityを別fieldにする。edition defaultはAgentic／YasashiiがOFF、
+private my-vaultがONである。providerは少なくとも`xmind-mcp`と`local-native`を区別し、`available`、`connected`、`stylePlacementCapable`、`authRequired`、`creditExpected`、`priority`、`selected`、`reason`、`verified`を持つ。ON設定、provider接続、capability、confirmation／credit待ちを同じ状態へ潰さない。OFFからON、ONからOFFは明示設定変更であり、Clarity canonicalと既存Xmind fileを削除しない。
+
+provider resolverは次の状態を正本とする。
+
+| selected state | 条件 | write |
+|---|---|---|
+| `mcp-selected` | integration ON、MCP connected／available、固定配置／色を含む必要capabilityあり | external preview後の明示承認まで0件 |
+| `fallback-approval-required` | MCP未接続／無効／capability不足／失敗／外部操作不承認、またはlocal明示指定 | local理由・対象file／path・create/update／既存影響／auth／credit見込みをpreview中のため0件 |
+| `local-selected-after-approval` | 上記previewに対する利用者の明示承認済み | 承認された対象・影響の範囲だけ |
+| `stopped` | integration OFF、承認拒否／cancel／無回答、provider利用不能、安全に満たせない | 0件 |
+
+MCPはON時の第1優先、local nativeは承認付き第2優先である。fallbackは自動writeしない。cloud map create／update、外部write、network、credit／課金消費はprovider／対象／予想影響を示した別authorizationを必須とする。local Skill／CLIもsign-inおよびrich optionのcreditが必要な場合があるため、offline／無料を未検証のまま表示しない。isolated fakeはadapter contractの評価に使えるが、real external-liveの`verified=true`を代替しない。
+
+capabilityの基礎はXmind公式の[Xmind MCP guide](https://xmind.com/user-guide/xmind-mcp/)と[Xmind CLI guide](https://xmind.com/user-guide/xmind-cli/)とする。MCPのcloud map create／read／edit、color theme／topic styleの説明、Write Toolsの`Always allow / Need approval / Blocked`、CLIのlocal `.xmind` create／read／edit／check、sign-in／credit可能性を設計入力にする。ただし実行時の実tool schemaとprovider statusを優先し、公式説明だけから固定配置／4色のcapabilityやverified状態を推定しない。
+
+### Hook observationとCheckpoint
+
+Hook observationはsession ID、turn ID、event ID、host event、tool、touched path、testらしいcommand、result summaryを持つ
+一時eventであり、runtime領域へ競合安全に記録する。重い意味分類はreview／checkpointのSkill側で行う。
+Checkpointはmaterial change、last checkpoint、same-turn markerから必要性を決め、同一turnに1回だけ生成する。
+trust前skip、disabled、failureは`degraded`であり、canonical Clarityを失敗状態へ変更しない。

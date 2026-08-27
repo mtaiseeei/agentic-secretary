@@ -64,6 +64,14 @@ PASSした完全SHAからYasashii overlayを別評価する。private my-vault�
 「覚えて」はuser-visible scope `memory`への一度きりauthorizationとして扱い、request hedgeとcontent hedge、
 pending一件束縛、append-only訂正、内容冪等性、checkpoint partialを共通契約にする。Agentic、Yasashii、
 private my-vaultのsourceとoffline回帰をSprint 040で揃え、push／Release／cache／新session確認は別phaseとする。
+2026-08-28にProject Clarityをpublic `agentic-secretary`へ先行実装する方針を承認した。Project ClarityはClarity ItemをTODO一覧と同一視せず、
+Decision／Execution／Validation／Attention／Driftを扱い、「今、人間が考える必要があるのは何か」を理由と根拠つきで示す。
+Standalone、generic Secretary-local、Linked External Repo、Portfolioを共通coreで扱い、既存projects lifecycle、Decision、
+memory、TODO／Notion、外部Repoの正本を置き換えない。Claude Code／Codex共通のcommand-only HookはClarity専用の狭い例外で、
+未初期化Repoではno-op、manual fallback必須、network／LLM／重い処理禁止とする。他SkillへHookを追加しない。
+Xmind integrationは明示ON／OFFとprovider能力を分け、Agentic／Yasashiiは既定OFF、private my-vaultは既定ON、
+ON時は、Xmind MCPが接続済みで必要能力を満たすときに第1優先とし、local native `.xmind`は理由・対象path・影響のpreviewと明示承認後だけ使う第2優先のfallbackとする。ON設定とprovider capability／priority／selected stateは分離し、network、sign-in、credit／課金、cloud map／local fileのcreate／updateは対象と予想影響を示した別確認なしに実行しない。publicの独立PASS後だけ固定SHA／digestを
+private my-vault、次にYasashiiの別Harnessへ渡す。Planning、push、tag、Release、marketplace、cache、downstream反映は別phaseである。
 
 ## ひとことで
 
@@ -95,18 +103,21 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G15 | 秘書名をworkspace全体で一貫させる | 初回と既存利用者の双方で英語名、stable identity、AI authorを持ち、別repo呼び出しと安全なrenameを選べる |
 | G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
 | G17 | 「覚えて」を一度で安全に完了する | memory scope、hedge分離、append-only訂正、内容冪等性、checkpoint partial、3版inventory |
+| G18 | Project Clarity | 決定×実行、Attention、Drift、4モード、Clarity専用Hook、projection、public-first固定handoff |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F63 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G18、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F80 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
 | [rubric.md](spec/rubric.md) | ゼロ許容基準、browser・OAuth・secret・実API、やさしさを含む評価方法 |
 | [editions.md](spec/editions.md) | agentic／private my-vault／yasashiiの3配布系統、共通面、限定差分、互換・同期・公開gate |
+| [clarity-acceptance.md](spec/clarity-acceptance.md) | Project Clarityのprimary 250、CLX 20、XV 4の単一割当、最終E2E／全回帰 |
+| [clarity-acceptance-cases.md](spec/clarity-acceptance-cases.md) | Project Clarityのprimary 250 case、visual provider追加case、E2E 4本を収載したrepo内の実行正本 |
 
 ## スプリント
 
@@ -158,6 +169,16 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
 | [sprint-040](sprints/sprint-040.md) | 明示memory依頼のrun-once、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版conversation-core inventory | sprint-039-patch-002 |
 | [sprint-040-patch-001](sprints/sprint-040-patch-001.md) | 3版handoff manifestのpath役割完全化、機械算出した集合照合、candidate再現と下流pre-write gate | sprint-040 |
+| [sprint-041](sprints/sprint-041.md) | Clarity core、Standalone init、Decision／Evidence、4象限 | sprint-040-patch-001 |
+| [sprint-042](sprints/sprint-042.md) | Attention、doctor／migration、bounded UX | sprint-041 |
+| [sprint-043](sprints/sprint-043.md) | Markdown／Mermaid、Xmind ON／OFF、MCP-first provider選択、承認付きlocal fallback、固定4象限visual | sprint-042 |
+| [sprint-044](sprints/sprint-044.md) | Claude Code／Codex共通のClarity専用command-only Hookとmanual fallback | sprint-043 |
+| [sprint-045](sprints/sprint-045.md) | generic Secretary-local、daily／weekly／Portfolio、既存正本回帰 | sprint-044 |
+| [sprint-046](sprints/sprint-046.md) | reciprocal link、pull sync、authority、conflict | sprint-045 |
+| [sprint-047](sprints/sprint-047.md) | Drift DetectionとGit／filesystem／Secret hardening | sprint-046 |
+| [sprint-048](sprints/sprint-048.md) | public packaging、host inventory、clean／archive gate、固定handoff準備 | sprint-047 |
+| [sprint-049](sprints/sprint-049.md) | secretary関連全surfaceのClarity-aware協働inventoryと追加回帰 | sprint-048 |
+| [sprint-050](sprints/sprint-050.md) | 250 case全件、追加collaboration case、4 E2E、既存master全回帰の最終判定 | sprint-049 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -209,3 +230,10 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 43. 既存workspace migrationは、英語名または既存identityを確定した後も別確認までwrite 0件とする。適用は利用者自由記述をbyte保持し、所有pathだけを一transactionで更新してlocal checkpointを作る。失敗時はworkspaceとGitを開始前へ戻し、再実行は0差分とする。
 44. user-scope registry／routingは既存workspace migrationに含めず、従来どおり効果と対象を示した別確認を必要とする。Agenticの固定handoff後にYasashii／privateを別Sprint・独立評価し、3版PASS前に`0.10.1` release、installed cache更新、Mac mini同期、受講者向け配布文作成を完了扱いにしない。
 45. 明示された低リスクmemory依頼はuser-visible scope `memory`だけで一度実行し、decision／topic等の内部分類を再確認させない。request hedgeとcontent hedgeを分け、topic訂正をappend-only、同内容retryを副作用0件、checkpoint commitだけの失敗を`partial`＋commit-only retryとする。3版の実内容inventoryで現行marker存在・旧確認marker不在を確認し、offline PASSをrelease／cache／新session反映済みへ昇格させない。
+46. Project Clarityは生きた実行タスクの新しい正本を作らず、既存project lifecycle、Decision、memory、TODO／Notion、外部Repo正本の上に状態・Evidence・Attention・Driftの派生レイヤーとして動く。
+47. Clarity専用Hookは共通`hooks/hooks.json`＋command routerの1組だけとし、他SkillのHook、意味的memory候補判定、network／LLM／重い処理を行わない。trust未承認／無効／失敗はmanual fallback可能なdegraded状態である。
+48. linked Repoは相互pullとauthorityで連携し、cross-root write、last-write-wins、暗黙pushを行わない。同期・migration・初期化・Xmind proposalはpreviewとapplyを分ける。
+49. Attentionは結論→理由→根拠→選択、最大3件程度のbounded outputとし、正常項目とideaを全件表示しない。AI推定、未検証、Evidence不足を確定表現にしない。
+50. Markdown／Mermaid／Xmindは正本ではない。Xmindは明示ON／OFFとprovider capability／priority／selected／reasonを分け、Agentic／Yasashii既定OFF、private既定ON。ONかつMCP接続済み・必要能力ありならMCP-first、それ以外は理由とlocal対象／影響をpreviewしたうえで承認待ちとし、承認後だけlocal native `.xmind`へ切り替える。未承認／cancelはwrite 0件とする。
+51. 4象限は左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」とし、色だけでなくemoji／ラベル／意味文をXmind MCP、local `.xmind`、表現可能なMermaidで一致させる。
+51. public版を先に独立PASSし、固定SHA／digestからprivate、次にYasashiiを別Harnessで適用・評価する。publicへprivate固有path／Notionを混ぜず、release／cache／downstream liveを別stageとして報告する。
