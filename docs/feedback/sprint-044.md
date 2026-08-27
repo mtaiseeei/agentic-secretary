@@ -176,3 +176,164 @@ F-01修正後もliveだけが残る場合、Orchestratorは自動でfixture PASS
 - UI／browserを採点していないためscreenshot非該当としたか: yes
 - 実装、test、spec、state、progressへ越境していないか: yes
 - 判定根拠: 新規Major product F-01がC5／C21／C24を閾値未達にし、AC1／4／7のliveも未完了。したがってSprint 044は`implementation-issue`として不合格。
+
+---
+
+## Retry 1 独立再評価
+
+**判定:** 不合格
+**分類:** `verification-scope-issue`
+**Generator candidate:** `53f327b7de3df0343122fae5692a4c5fbf8ee2e3`
+**評価開始HEAD:** `fdde678a8a84ed6730f7aa03fdeae551a4ba32de`
+**評価開始branch:** `codex/sprint-041-project-clarity`
+**評価開始時worktree:** clean
+**Evaluator model／effort metadata:** host metadataを取得できないため`unverified`。dispatch指定から実起動値を推定しない。
+**Escalation Recommendation:** none
+
+### Retry 1 結論
+
+初回F-01の修正面をcandidate差分と通常回帰で再評価した。Hook writerはcanonical rootを再固定し、`.clarity`から
+`runtime／hooks／events／session`までを1階層ずつ作成前後に再検査する。event fileはopen前の全component再検査、
+`O_EXCL`、利用可能hostでの`O_NOFOLLOW`、open後のdescriptor／path inode照合を行い、owned recordだけをretryとして
+再利用する。partial JSON、未所有collision、最終file symlinkは上書きしない。
+
+公式`HX-006`には、`.clarity/runtime`、`runtime/hooks`、`runtime/hooks/events`、session directoryの各外向きsymlink、
+最終event file symlink、非directory、working root symlink alias、open前path差替え、Codex 128並行が追加された。
+全負例はdegraded停止し、canonical digestとProject外sentinel／treeのbefore／after一致をassertしている。
+通常suiteはTarget 40/40、registry差分0、Claude 50＋Codex 50の100/100 JSON parse、追加Codex 128/128 parseでgreenだった。
+
+したがって、初回のMajor product F-01とMinor verification-infra V-01は、今回の固定candidateと契約済み通常証拠の範囲で
+**RESOLVED**。新規product finding、verification-infra findingとも0件である。
+
+ただし、Claude Code Desktop／CLI、Codex App／CLIのcandidate plugin liveは4 surfaceとも未実行である。実行にはcandidateの
+installまたはcache差替え、fresh AI session、Codex trust UI変更、plugin enable／disable、場合によりnetwork／AI creditが必要になる。
+これらはユーザー未承認の外部・利用環境変更なので実行せず、全surfaceを`verified: false`のまま維持した。
+契約AC1、AC4、AC7とC21は両hostのCritical liveを必須にしているため、offline 40/40をliveへ昇格せず、通常のEvaluator
+PASSにはしない。残件の主因は製品実装ではなく、未承認の実host検証scopeであるため、最終分類は
+`verification-scope-issue`とする。ユーザー判断後のfresh再評価が必要である。
+
+### Retry 1 スコア
+
+| 基準 | スコア | 閾値 | 判定 | Retry 1根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 3/5 | 4 | FAIL | offline必須面は成立したが、AC1の両host Critical live未実行0を満たさない |
+| C2 構文・整合 | 5/5 | 5 | PASS | Node／JSON、registry、Claude strict validator、release integrity、diff checkが成立 |
+| C3 機能の実証 | 4/5 | 4 | PASS | 製品router／CLI、failure、collision、100＋128並行、large Stateをfixtureで実行。実hostだけ未実行 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | bounded brief、degraded説明、manual fallback、`/hooks`案内が通常fixtureで成立 |
+| C5 安全・規律 | 5/5 | 5 | PASS | 中間／最終symlink、非directory、root alias、path差替え、collisionでProject外／canonical変更0を通常suiteが検査 |
+| C6 無回帰 | 5/5 | 5 | PASS | Sprint 044、041〜043、015、021、022、strict validator、release integrityの実行対象は0 FAIL |
+| C7 やさしさ | 4/5 | 4 | PASS | failureを完了扱いせず、短い日本語でmanual fallbackと変更なしを示す |
+| C20 Attention・Clarity UX | 5/5 | 4 | PASS | SessionStartは最大3件、3,600文字以内。large Stateでもbounded |
+| C21 Clarity Hook・host parity | 4/5 | 5 | FAIL | 共通router、競合安全、Stop one-shot、compact、truthful inventoryは成立。両host liveだけ未実行 |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | F-01負回帰、041〜043と安全関連回帰、public／release／cache分離が成立 |
+
+C8〜C19とC22〜C23は今回の新規採点対象外。C21の閾値未達は製品欠陥ではなく、実host検証の未承認境界による。
+
+### Target Case／registry
+
+| 区分 | fixture PASS | fixture FAIL | live verified |
+|---|---:|---:|---:|
+| HC-001〜017 | 17 | 0 | 0 surface |
+| HX-001〜014 | 14 | 0 | 0 surface |
+| HP-001〜007 | 7 | 0 | HP-007 live conversation未実行 |
+| AT-015／IM-012 | 2 | 0 | 実SessionStart／実`/hooks`未実行 |
+| 合計 | **40** | **0** | **0/4 surface** |
+
+- registry: missing 0／duplicate 0／extra 0。
+- Claude Code並行: 50 event／50 file／50 JSON parse。
+- Codex並行: 50 event／50 file／50 JSON parse。
+- Retry 1追加stress: Codex 128 event／128 file／128 JSON parse。
+- fixture結果をClaude Code／Codexのcandidate plugin liveへ流用していない。
+
+### コマンド証跡
+
+| command | exit／結果 |
+|---|---|
+| `bash scripts/sprint-044-regression.sh` | exit 0。Sprint 044 40/40、registry 0/0/0、100/100 parse、追加128/128 parse。Sprint 043 29/29＋XM-007既存NOT-RUN、042 35/35、041 43/43 |
+| `claude plugin validate plugins/secretary --strict` | exit 0、`Validation passed` |
+| `python3 scripts/check-release-integrity.py` | exit 0、manifest／CHANGELOG整合PASS |
+| `git diff --check 53f4fa7..53f327b` | exit 0 |
+| `bash scripts/sprint-015-regression.sh` | exit 0、68/68 PASS |
+| `bash scripts/sprint-021-regression.sh` | exit 0、動的71/71、wrapper 8/8 PASS |
+| `bash scripts/sprint-022-regression.sh` | exit 0、動的69/69、wrapper 8/8 PASS |
+
+### F-01／V-01の再評価
+
+| ID | 対象区分 | Retry 1結果 | 証拠 |
+|---|---|---|---|
+| F-01 | product | **RESOLVED** | runtime各中間component、session、最終fileのsymlinkとroot aliasを通常runnerで拒否し、Project外tree／sentinelとcanonical digestがbefore／after一致 |
+| V-01 | verification-infra | **RESOLVED** | 公式40-caseのCritical `HX-006`へ中間／最終symlink、非directory、root alias、path差替えを追加。case数40、registry差分0を維持 |
+
+#### 通常fixtureで確認した境界
+
+- `.clarity/runtime`、`runtime/hooks`、`runtime/hooks/events`、session directoryを個別にProject外symlinkへ変更。
+- 最終event fileをProject外fileへのsymlinkへ変更。
+- `.clarity/runtime`を通常directory以外へ変更。
+- working rootをsymlink aliasから渡す。
+- file open前にevents directoryをProject外symlinkへ差し替えるcontrolled race。
+- owned同一event retryは1 fileへ収束。partial JSONと未所有collisionは上書き0。
+- `O_EXCL`、利用可能時`O_NOFOLLOW`、descriptor／pathのdevice・inode一致をcandidate差分で確認。
+- Project外fixtureはsentinel／tree snapshotのbefore／after一致をassertした。runnerはraw SHA-256値をstdoutへ出さないため、
+  feedbackでは未出力のdigest値を作らず「一致」として記録する。
+- SessionEndは契約上限3秒未満をassertした。runnerは実測msをstdoutへ出さないため、未出力の時間を推定しない。
+
+### Acceptance Criteria
+
+| AC | Retry 1判定 | 根拠 |
+|---|---|---|
+| 1. Target 40、両host Critical live、AC未実行0 | **FAIL** | fixture 40/40だがlive 0/4 surface |
+| 2. 共通manifest／router、同semantic | PASS | 1 hooks JSON、1 router、payload normalization／serializer fixture |
+| 3. no-op、bounded、concurrency、Stop、SessionEnd | PASS | 100＋128並行、各runtime負例、Stop一度限り、compact、3秒上限がgreen |
+| 4. trust前／disabled canonical 0、manual完全動作 | **INCOMPLETE** | fixtureはPASS。実`/hooks` trust前と実plugin disableは未実行 |
+| 5. Hook禁止処理0 | PASS | command-only manifest、source inventory、禁止処理instrumentation 0 |
+| 6. surface別truthful state | PASS | 4 surfaceすべて`verified:false`。1host／fixtureの昇格0 |
+| 7. AT-015／IM-012 live | **INCOMPLETE** | bounded output／doctor copyはfixture PASS。実SessionStart／実`/hooks`未実行 |
+
+### Retry 1 Finding一覧
+
+| # | 重要度 | 対象区分 | 状態 | 内容 |
+|---|---|---|---|---|
+| F-01 | Major | product | RESOLVED | 初回のruntime中間symlinkによるProject外writeは、全component実体境界と公式負回帰で解消 |
+| V-01 | Minor | verification-infra | RESOLVED | 公式runnerへ中間／最終path負例が追加され、初回coverage gapを閉じた |
+| V-LIVE-01 | Major | verification-infra | OPEN | 契約必須のClaude Code／Codex candidate liveが4 surfaceとも未実行。製品欠陥は観測していないが、通常PASSに必要な証拠が不足 |
+
+Retry 1の新規product findingは0件。新規verification-infra defectも0件。`V-LIVE-01`はrunner欠陥ではなく、未承認の
+実host検証scopeを明示するopen gateであり、これだけを理由にGeneratorへ自動差し戻ししない。
+
+### Live verification boundaryとユーザー選択肢
+
+未実行surfaceと必要操作は次のとおり。
+
+- Claude Code CLI: candidate plugin load、fresh sessionのstartup／resume／compact、並行PostToolUse、PreCompact、Stop初回／再入、SessionEnd、failure、plugin disabled。
+- Claude Code Desktop: candidate plugin loadと同じlifecycle／disabledをDesktop sessionで別確認。
+- Codex CLI: candidate plugin load、`/hooks` trust前表示、trust後各event、disable、subdirectory、`stop_hook_active`。
+- Codex App: candidate plugin load、trust前後、各event、disableをApp sessionで別確認。
+
+必要になり得る副作用は、candidate install／cache差替え、host設定のenable／disable、Codex trust UI変更、fresh AI session、
+network、AI creditである。今回の実行件数はすべて0。push、release、downstream write、Xmind、connectorも0件。
+
+ユーザーへ次の3案を提示し、判断後に再評価する必要がある。
+
+1. **実host評価を承認する（推奨）**: candidateを隔離installし、4 surfaceを個別に実行する。変更するcache／trust／設定、
+   credit見込み、終了後の復元手順を実行前に示す。全必須liveがPASSした場合だけ通常のEvaluator PASSへ進める。
+2. **offline証拠で受理する**: live証拠水準を下げ、残余リスクを明示的に引き受けて`done-by-user-decision`とする。
+   host integration、trust、Stop continuation、Desktop／App差の実機リスクが残る。
+3. **liveを別phaseへ送る**: 実host確認をNon-scope化し、明示承認済みの運用phaseで実行する。Sprint 044は現時点で
+   通常のEvaluator PASSにせず、未完了surfaceを引き継ぐ。
+
+### Retry 1 Evaluator 自己レビュー
+
+- 初回FAILを保持してRetry 1だけ追記したか: yes
+- fixed candidateと評価開始HEADを分けたか: yes
+- 閾値と`verification-scope-issue`判定は一致しているか: yes
+- F-01 productとV-01 verification-infraの解消を通常runnerの具体的負例で確認したか: yes
+- Target 40 ID、registry 0/0/0、100＋128 parseを確認したか: yes
+- fixture 40/40をlive verifiedへ昇格していないか: yes
+- live未実行をproduct defectまたはGenerator修正対象へ誤分類していないか: yes
+- 未出力のdigest値、timing、model metadataを推定していないか: yes
+- 要求した証拠はcontract／rubricのsafe harbor内か: yes
+- UI／browserを採点していないためscreenshot非該当としたか: yes
+- 実plugin install、cache、trust、fresh AI session、network、credit、push、release、downstream writeを0件に保ったか: yes
+- 実装、test、spec、state、progressへ越境していないか: yes
+- 最終分類根拠: product defectは0件。未達は、ユーザー未承認で実行できない4 surfaceのCritical live証拠だけである。
+  Harness契約に従い`verification-scope-issue`としてユーザー判断へ返す。
