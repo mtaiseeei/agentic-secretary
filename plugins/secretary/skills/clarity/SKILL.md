@@ -1,6 +1,6 @@
 ---
 name: clarity
-description: Project Clarityを安全に初期化し、決定×実行の現在状態、履歴、再構築、Decision確定を扱う。「クラリティを初期化」「今のClarity状態」「決定を確定」「Clarity履歴」「Clarityを再構築」で使う。
+description: Project Clarityを安全に初期化し、人間が考える必要のあるAttention、決定×実行の現在状態、履歴、checkpoint、診断、schema移行を扱う。「クラリティを初期化」「今のClarity状態」「今考えること」「決定を確定」「Clarity履歴」「Clarityを診断」で使う。
 ---
 
 # Project Clarity
@@ -25,12 +25,28 @@ Hookが無効・未信頼・失敗でも、次は完全に手動で使える。
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" status "<repo-root>" --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" attention "<repo-root>" --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" attention-override "<repo-root>" --item-id "<item-id>" --level "<level>" --reason "<reason>" --json
 node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" history "<repo-root>" --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" checkpoint "<repo-root>" --operation-id "<stable-operation-id>" --json
 node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" rebuild "<repo-root>" --json
 node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" doctor "<repo-root>" --json
 ```
 
 `rebuild`はEvent／EvidenceからStateを再生成します。Stateやquadrantの手編集をDecision確定として扱いません。
+
+## Attentionと診断
+
+- 通常表示は「結論→理由→根拠→選択」の順で、重要な3件までを先に示す。残りは件数と`.clarity/state.json`へのpathへ畳む。
+- AI推定は「推定」、確認していない状態は「未検証」、根拠が足りない状態は「根拠不足」と明示する。不透明なscoreを利用者向けの理由にしない。
+- `doctor`のHook／link等が未検証なら成功扱いしない。schema移行や古いruntime lockが必要な場合は、まずread-only previewを案内する。
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" migrate "<repo-root>" --json
+node "${CLAUDE_PLUGIN_ROOT:-$CODEX_PLUGIN_ROOT}/scripts/clarity.mjs" cleanup "<repo-root>" --json
+```
+
+previewの対象path、保持する履歴、削除候補を利用者が確認した後だけ、それぞれ`--apply`を付ける。migration失敗は旧schemaを利用可能な状態へ戻し、cleanupは所有確認済みの期限切れruntimeだけを削除する。
 
 ## generic projectのDecision確定
 

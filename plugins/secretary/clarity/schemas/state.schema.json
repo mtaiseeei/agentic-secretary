@@ -3,10 +3,10 @@
   "$id": "agentic-secretary://clarity/state.schema.json",
   "title": "ClarityState",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["schemaVersion", "clarityProjectId", "generatedAt", "source", "quadrants", "items"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
     "clarityProjectId": { "type": "string", "pattern": "^cp_[a-f0-9]{20}$" },
     "generatedAt": { "type": "string", "format": "date-time" },
     "source": {

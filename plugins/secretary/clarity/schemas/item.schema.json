@@ -3,10 +3,10 @@
   "$id": "agentic-secretary://clarity/item.schema.json",
   "title": "ClarityItem",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["schemaVersion", "itemId", "title", "areaPath", "kind", "disposition", "deferredUntil", "owner", "decisionOwner", "dependencies", "externalRefs", "confidence", "timestamps", "attention", "decision", "execution", "validation", "alignment"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
     "itemId": { "type": "string", "pattern": "^ci_[a-f0-9]{20}$" },
     "title": { "type": "string", "minLength": 1, "maxLength": 120 },
     "areaPath": { "type": "string", "minLength": 1 },
@@ -32,8 +32,21 @@
       "additionalProperties": false,
       "required": ["level", "reasons"],
       "properties": {
-        "level": { "const": "not_evaluated" },
+        "level": { "enum": ["not_evaluated", "critical", "high", "medium", "low", "none"] },
         "reasons": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    },
+    "attentionContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "impact": { "type": "number" },
+        "urgency": { "type": "number" },
+        "signals": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "humanOverride": {
+          "type": ["object", "null"],
+          "properties": { "level": { "enum": ["critical", "high", "medium", "low", "none"] }, "reason": { "type": "string" }, "rank": { "type": "number" } }
+        }
       }
     },
     "decision": { "$ref": "#/$defs/decision" },

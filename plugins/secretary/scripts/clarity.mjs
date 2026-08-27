@@ -2,14 +2,21 @@
 
 import {
   ClarityError,
+  applyMigration,
+  applyRuntimeCleanup,
   appendEvidence,
   appendEvent,
   applyInit,
+  attention as attentionReport,
+  checkpoint,
   decideGenericProject,
   doctor,
   history,
+  previewMigration,
+  previewRuntimeCleanup,
   previewInit,
   rebuildState,
+  setAttentionOverride,
   status,
 } from "./lib/clarity-core.mjs";
 
@@ -18,9 +25,14 @@ function usage(message = "") {
   throw new ClarityError("usage", `${prefix}使い方:
   clarity init <repo> [--apply|--cancel] [--json]
   clarity status <repo> [--json]
+  clarity attention <repo> [--limit 3] [--json]
+  clarity attention-override <repo> --item-id <id> --level <level> --reason <text> [--rank <number>] [--operation-id <id>] [--json]
   clarity history <repo> [--json]
+  clarity checkpoint <repo> [--operation-id <id>] [--summary <text>] [--json]
   clarity rebuild <repo> [--json]
   clarity doctor <repo> [--json]
+  clarity migrate <repo> [--apply] [--json]
+  clarity cleanup <repo> [--apply] [--json]
   clarity event <repo> --event-json '<JSON>' [--json]
   clarity evidence <repo> --evidence-json '<JSON>' [--json]
   clarity decide-project <project-root> --secretary-root <secretary> --project <name> --decision <text> --current <text> --next <text> [--item-id <id>] [--operation-id <id>] [--json]`, 2);
@@ -70,6 +82,54 @@ function render(command, result, json) {
     }
     return;
   }
+  if (command === "attention" || command === "status") {
+    const report = command === "attention" ? result : { conclusion: result.conclusion, ...(result.attention || {}), items: result.attention?.top || [] };
+    process.stdout.write(`${report.conclusion}\n`);
+    const items = report.items || report.top || [];
+    for (const [index, item] of items.entries()) {
+      process.stdout.write(`\n${index + 1}. ${item.conclusion}\n`);
+      process.stdout.write(`   理由: ${item.reasonLabels.join("／")}\n`);
+      process.stdout.write(`   根拠: ${item.evidence.map((row) => row.summary).join("／")}\n`);
+      if (item.inference) process.stdout.write("   状態: 推定を含みます\n");
+      if (item.unverified) process.stdout.write("   状態: 未検証です\n");
+      process.stdout.write(`   選択: ${item.choices.join("／")}\n`);
+    }
+    if (report.otherCount > 0) process.stdout.write(`\nその他 ${report.otherCount}件。詳細: ${report.detailPath}\n`);
+    if (command === "status") {
+      process.stdout.write(`\n${result.matrixLabel}\n`);
+      for (const row of Object.values(result.quadrants)) process.stdout.write(`- ${row.label}: ${row.count}件\n`);
+    }
+    return;
+  }
+  if (command === "doctor") {
+    process.stdout.write(`クラリティ診断: ${result.ok ? "正常" : "確認が必要"}\n`);
+    process.stdout.write(`- mode: ${result.mode}\n- schema: ${result.schemaVersion}（${result.schemaStatus}）\n`);
+    process.stdout.write(`- projection: ${result.capabilities.projection.status}\n- Hook: ${result.capabilities.hook.status}\n- link: ${result.capabilities.link.status}\n- lock: ${result.capabilities.lock.status}\n`);
+    process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (["migrate", "cleanup"].includes(command)) {
+    process.stdout.write(`${command === "migrate" ? "schema migration" : "runtime cleanup"}: ${result.status}\n`);
+    process.stdout.write(`- 変更: ${result.changed ? "あり" : "なし"}\n`);
+    if (result.writes?.length) process.stdout.write(`- 対象path: ${result.writes.join("、")}\n`);
+    if (result.candidates?.length) process.stdout.write(`- 削除候補: ${result.candidates.map((row) => row.path).join("、")}\n`);
+    process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (command === "attention-override") {
+    process.stdout.write(`Attention優先度: ${result.status}\n- Item: ${result.itemId}\n- level: ${result.level}\n- 理由: ${result.reason}\n`);
+    return;
+  }
+  if (command === "checkpoint") {
+    process.stdout.write(`checkpoint: ${result.status}\n- operation: ${result.operationId}\n- 解消履歴: ${result.resolvedCount || 0}件\n`);
+    return;
+  }
+  if (command === "history") {
+    process.stdout.write(`履歴: Event ${result.events.length}件、Evidence ${result.evidence.length}件\n`);
+    process.stdout.write(`解消済みAttention: ${result.resolvedAttention.length}件\n`);
+    for (const row of result.events.slice(-10)) process.stdout.write(`- ${row.occurredAt} ${row.type} ${row.itemId || "project"}\n`);
+    return;
+  }
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }
 
@@ -86,9 +146,19 @@ try {
     else if (options.get("--apply")) result = applyInit(root);
     else result = { status: "preview", preview: previewInit(root) };
   } else if (command === "status") result = status(root);
+  else if (command === "attention") {
+    const limit = options.get("--limit") === undefined ? 3 : Number(options.get("--limit"));
+    result = attentionReport(root, { limit });
+  }
+  else if (command === "attention-override") result = setAttentionOverride(root, {
+    itemId: options.get("--item-id"), level: options.get("--level"), reason: options.get("--reason"), rank: Number(options.get("--rank") || 0), operationId: options.get("--operation-id"),
+  });
   else if (command === "history") result = history(root);
+  else if (command === "checkpoint") result = checkpoint(root, { operationId: options.get("--operation-id"), summary: options.get("--summary") });
   else if (command === "rebuild") result = rebuildState(root, { write: true });
   else if (command === "doctor") result = doctor(root);
+  else if (command === "migrate") result = options.get("--apply") ? applyMigration(root) : previewMigration(root);
+  else if (command === "cleanup") result = options.get("--apply") ? applyRuntimeCleanup(root) : previewRuntimeCleanup(root);
   else if (command === "event") result = appendEvent(root, parseJson(options.get("--event-json"), "--event-json"));
   else if (command === "evidence") result = appendEvidence(root, parseJson(options.get("--evidence-json"), "--evidence-json"));
   else if (command === "decide-project") {
@@ -109,6 +179,8 @@ try {
     ok: false,
     code: known ? error.code : "unexpected-error",
     message: error instanceof Error ? error.message : String(error),
+    changed: error?.details?.changed ?? false,
+    nextAction: error?.details?.nextAction || "原因を確認し、変更前の状態を保ったまま再実行してください",
     ...(known && Object.keys(error.details || {}).length ? { details: error.details } : {}),
   };
   process.stderr.write(`${JSON.stringify(output, null, 2)}\n`);

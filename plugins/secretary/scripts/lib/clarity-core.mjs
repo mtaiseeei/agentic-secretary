@@ -13,10 +13,11 @@ import {
 import { createHash } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { copyTreeNoFollow, removeSafe, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
 import { runExternalSync } from "./external-ops.mjs";
 
-export const CLARITY_SCHEMA_VERSION = 1;
+export const CLARITY_SCHEMA_VERSION = 2;
+export const CLARITY_MIN_SCHEMA_VERSION = 1;
 export const CLARITY_LIMITS = Object.freeze({
   maxEntries: 500,
   maxFiles: 200,
@@ -44,6 +45,9 @@ const eventTypes = new Set([
   "alignment.changed",
   "disposition.changed",
   "evidence.linked",
+  "checkpoint.recorded",
+  "attention.resolved",
+  "attention.override",
 ]);
 const evidenceTypes = new Set([
   "user-confirmation", "project-decision", "adr", "spec-section", "meeting-reference",
@@ -73,6 +77,24 @@ const quadrantMeta = Object.freeze({
   execute: { label: "実行待ち", meaning: "あとは進めるだけ" },
   validate: { label: "暫定実装・要再確認", meaning: "注意して確認する" },
   decide: { label: "設計・意思決定", meaning: "人間の判断が必要" },
+});
+
+export const ATTENTION_STALENESS_DAYS = Object.freeze({ validationPending: 14, undecided: 30 });
+export const ATTENTION_LEVELS = Object.freeze({ critical: 4, high: 3, medium: 2, low: 1, none: 0 });
+export const ATTENTION_REASONS = Object.freeze({
+  implemented_without_confirmed_decision: { level: "high", label: "実装済みですが、確認済みの決定がありません" },
+  confirmed_but_not_executed: { level: "medium", label: "決定済みですが、実行が開始されていません" },
+  decision_implementation_drift: { level: "critical", label: "決定内容と現在の実装が一致しません" },
+  possible_drift: { level: "high", label: "決定と実装に差がある可能性があります" },
+  validation_failed: { level: "critical", label: "検証に失敗しています" },
+  validation_pending_too_long: { level: "high", label: "実装後の確認が長期間行われていません" },
+  undecided_stale: { level: "medium", label: "未決定のまま長期間滞留しています" },
+  authority_conflict: { level: "critical", label: "2つの正本が異なる内容を主張しています" },
+  sync_conflict: { level: "high", label: "接続先Repoとの同期結果が競合しています" },
+  missing_evidence: { level: "medium", label: "状態を裏付ける根拠が不足しています" },
+  dependency_blocked: { level: "medium", label: "依存項目が未解決です" },
+  decision_owner_missing: { level: "medium", label: "誰が決めるか未設定です" },
+  source_unreachable: { level: "low", label: "参照先を確認できません" },
 });
 
 export class ClarityError extends Error {
@@ -307,6 +329,7 @@ function initialItem(projectId, candidate, timestamp) {
     confidence: "unknown",
     timestamps: { createdAt: timestamp, updatedAt: timestamp },
     attention: { level: "not_evaluated", reasons: [] },
+    attentionContext: { impact: 0, urgency: 0, humanOverride: null, signals: [] },
     decision: {
       status: candidate.decisionStatus,
       source: candidate.decisionSource || candidate.source,
@@ -355,19 +378,25 @@ function eventFor(projectId, type, itemId, actor, occurredAt, payload) {
 }
 
 export function validateProject(project) {
-  fail(project && project.schemaVersion === 1, "project-schema-invalid", "Clarity Project schemaVersionが不正です。");
+  fail(project && Number.isInteger(project.schemaVersion)
+    && project.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION
+    && project.schemaVersion <= CLARITY_SCHEMA_VERSION,
+  "project-schema-invalid", "Clarity Project schemaVersionが未対応です。");
   fail(/^cp_[a-f0-9]{20}$/u.test(project.clarityProjectId || ""), "project-schema-invalid", "Clarity Project IDが不正です。");
   fail(modes.has(project.mode), "project-schema-invalid", "Clarity modeが不正です。");
   fail(project.repoIdentity && ["git", "non-git"].includes(project.repoIdentity.kind), "project-schema-invalid", "Repo identityが不正です。");
-  fail(project.compatibility?.reader?.min === 1 && project.compatibility?.reader?.max === 1
-    && project.compatibility?.writer?.min === 1 && project.compatibility?.writer?.max === 1,
+  fail(project.compatibility?.reader?.min === 1 && project.compatibility?.reader?.max >= project.schemaVersion
+    && project.compatibility?.writer?.min === 1 && project.compatibility?.writer?.max >= project.schemaVersion,
   "project-schema-invalid", "reader／writer互換範囲が不正です。");
   fail(!containsSecret(project), "secret-detected", "Project metadataにSecretらしき値があるため拒否します。");
   return project;
 }
 
 export function validateItem(item) {
-  fail(item && item.schemaVersion === 1 && /^ci_[a-f0-9]{20}$/u.test(item.itemId || ""), "item-schema-invalid", "Clarity Item schemaが不正です。");
+  fail(item && Number.isInteger(item.schemaVersion)
+    && item.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION
+    && item.schemaVersion <= CLARITY_SCHEMA_VERSION
+    && /^ci_[a-f0-9]{20}$/u.test(item.itemId || ""), "item-schema-invalid", "Clarity Item schemaが不正です。");
   oneLine(item.title, "Item title", 120);
   safeRelative(item.areaPath, "Item area path");
   fail(dispositions.has(item.disposition), "item-schema-invalid", "Item dispositionが不正です。");
@@ -381,7 +410,15 @@ export function validateItem(item) {
   fail(Array.isArray(item.externalRefs) && item.externalRefs.every((value) => typeof value === "string"), "item-schema-invalid", "Item external refsが不正です。");
   fail(["unknown", "observed", "verified"].includes(item.confidence), "item-schema-invalid", "Item confidenceが不正です。");
   fail(item.timestamps && !Number.isNaN(new Date(item.timestamps.createdAt).valueOf()) && !Number.isNaN(new Date(item.timestamps.updatedAt).valueOf()), "item-schema-invalid", "Item timestampsが不正です。");
-  fail(item.attention && ["not_evaluated"].includes(item.attention.level) && Array.isArray(item.attention.reasons), "item-schema-invalid", "Item attention placeholderが不正です。");
+  fail(item.attention && ["not_evaluated", "critical", "high", "medium", "low", "none"].includes(item.attention.level)
+    && Array.isArray(item.attention.reasons), "item-schema-invalid", "Item attentionが不正です。");
+  if (item.attentionContext !== undefined) {
+    fail(item.attentionContext && typeof item.attentionContext === "object" && !Array.isArray(item.attentionContext), "item-schema-invalid", "Attention contextが不正です。");
+    fail(Number.isFinite(item.attentionContext.impact ?? 0) && Number.isFinite(item.attentionContext.urgency ?? 0), "item-schema-invalid", "Attention impact／urgencyが不正です。");
+    fail(Array.isArray(item.attentionContext.signals ?? []), "item-schema-invalid", "Attention signalsが不正です。");
+    const override = item.attentionContext.humanOverride;
+    fail(override == null || (typeof override === "object" && ["critical", "high", "medium", "low", "none"].includes(override.level)), "item-schema-invalid", "人間指定のAttention levelが不正です。");
+  }
   if (item.decision.status === "confirmed") {
     fail(item.decision.humanConfirmed === true || item.decision.source === "accepted-canonical", "human-confirmation-invalid", "confirmed Decisionには人間確認または現在有効な明示正本が必要です。");
   }
@@ -390,7 +427,10 @@ export function validateItem(item) {
 }
 
 export function validateEvent(event) {
-  fail(event && event.schemaVersion === 1 && /^cv_[a-f0-9]{20}$/u.test(event.eventId || ""), "event-schema-invalid", "Clarity Event schemaが不正です。");
+  fail(event && Number.isInteger(event.schemaVersion)
+    && event.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION
+    && event.schemaVersion <= CLARITY_SCHEMA_VERSION
+    && /^cv_[a-f0-9]{20}$/u.test(event.eventId || ""), "event-schema-invalid", "Clarity Event schemaが不正です。");
   fail(eventTypes.has(event.type), "event-schema-invalid", `未対応のEvent typeです: ${event.type}`);
   fail(!event.itemId || /^ci_[a-f0-9]{20}$/u.test(event.itemId), "event-schema-invalid", "EventのItem IDが不正です。");
   oneLine(event.actor, "Event actor", 80);
@@ -398,6 +438,11 @@ export function validateEvent(event) {
   fail(!containsSecret(event), "secret-detected", "EventにSecretらしき値があるため拒否します。");
   if (event.type === "item.discovered") validateItem(event.payload?.item);
   if (event.type === "decision.confirmed") fail(event.payload?.humanConfirmed === true || event.payload?.source === "accepted-canonical", "human-confirmation-invalid", "confirmed Eventには人間確認または明示正本が必要です。");
+  if (event.type === "attention.override") {
+    fail(["critical", "high", "medium", "low", "none"].includes(event.payload?.level), "event-schema-invalid", "Attention override levelが不正です。");
+    oneLine(event.payload?.reason, "Attention override reason", 160);
+    fail(Number.isFinite(Number(event.payload?.rank || 0)), "event-schema-invalid", "Attention override rankが不正です。");
+  }
   return event;
 }
 
@@ -411,7 +456,10 @@ function validateLocator(locator) {
 }
 
 export function validateEvidence(evidence) {
-  fail(evidence && evidence.schemaVersion === 1 && /^ce_[a-f0-9]{20}$/u.test(evidence.evidenceId || ""), "evidence-schema-invalid", "Clarity Evidence schemaが不正です。");
+  fail(evidence && Number.isInteger(evidence.schemaVersion)
+    && evidence.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION
+    && evidence.schemaVersion <= CLARITY_SCHEMA_VERSION
+    && /^ce_[a-f0-9]{20}$/u.test(evidence.evidenceId || ""), "evidence-schema-invalid", "Clarity Evidence schemaが不正です。");
   fail(evidenceTypes.has(evidence.type), "evidence-schema-invalid", `未対応のEvidence typeです: ${evidence.type}`);
   oneLine(evidence.source, "Evidence source", 120);
   validateLocator(evidence.locator);
@@ -466,7 +514,14 @@ export function deriveQuadrant(decisionStatus, executionStatus) {
 
 function applyEvent(item, event) {
   const payload = event.payload || {};
-  if (event.type === "decision.pending" || event.type === "decision.proposed") {
+  if (["checkpoint.recorded", "attention.resolved"].includes(event.type)) return;
+  if (event.type === "attention.override") {
+    fail(["critical", "high", "medium", "low", "none"].includes(payload.level), "event-schema-invalid", "Attention override levelが不正です。");
+    item.attentionContext = {
+      ...(item.attentionContext || { impact: 0, urgency: 0, signals: [] }),
+      humanOverride: { level: payload.level, reason: payload.reason || null, rank: Number(payload.rank || 0) },
+    };
+  } else if (event.type === "decision.pending" || event.type === "decision.proposed") {
     item.decision = { ...item.decision, status: "proposed", source: payload.source || "agent-inference", humanConfirmed: false, updatedAt: event.occurredAt };
   } else if (event.type === "decision.confirmed") {
     item.decision = { ...item.decision, status: "confirmed", source: payload.source, humanConfirmed: Boolean(payload.humanConfirmed), authority: payload.authority || item.decision.authority, updatedAt: event.occurredAt };
@@ -497,16 +552,143 @@ function applyEvent(item, event) {
   item.timestamps = { ...item.timestamps, updatedAt: event.occurredAt };
 }
 
-function attentionState(item, evidenceById, clock) {
+function ageDays(value, clock) {
+  const then = new Date(value).valueOf();
+  const now = new Date(clock).valueOf();
+  return Number.isNaN(then) || Number.isNaN(now) ? 0 : Math.max(0, Math.floor((now - then) / 86_400_000));
+}
+
+function evidenceRefs(item) {
+  return [...new Set([
+    ...(item.decision?.evidenceRefs || []),
+    ...(item.execution?.evidenceRefs || []),
+    ...(item.validation?.evidenceRefs || []),
+    ...(item.alignment?.evidenceRefs || []),
+  ])].sort();
+}
+
+function attentionForItem(item, itemsById, evidenceById, clock) {
   const reasons = [];
-  if (item.disposition === "idea" || item.disposition === "rejected") return { eligible: false, reasons };
-  if (item.disposition === "deferred" && item.deferredUntil && item.deferredUntil > clock.slice(0, 10)) return { eligible: false, reasons };
+  const excluded = item.disposition === "idea" || item.disposition === "rejected"
+    || ["rejected", "superseded"].includes(item.decision.status)
+    || (item.disposition === "deferred" && item.deferredUntil && item.deferredUntil > clock.slice(0, 10));
+  if (excluded) return { eligible: false, level: "none", reasons: [], ageDays: 0 };
   if (item.disposition === "deferred" && item.deferredUntil && item.deferredUntil <= clock.slice(0, 10)) reasons.push("deferred_due");
   if (item.decision.status !== "confirmed" && implemented(item.execution.status)) reasons.push("implemented_without_confirmed_decision");
   if (item.decision.status === "confirmed" && !implemented(item.execution.status) && item.execution.status !== "in_progress") reasons.push("confirmed_but_not_executed");
-  if ([...item.decision.evidenceRefs, ...item.execution.evidenceRefs, ...item.validation.evidenceRefs, ...item.alignment.evidenceRefs]
-    .some((id) => evidenceById.get(id)?.availability === "source_unreachable")) reasons.push("source_unreachable");
-  return { eligible: reasons.length > 0, reasons: [...new Set(reasons)].sort() };
+  if (item.alignment.status === "drift") reasons.push("decision_implementation_drift");
+  if (item.alignment.status === "possible_drift") reasons.push("possible_drift");
+  if (item.validation.status === "failed") reasons.push("validation_failed");
+  if (item.validation.status === "pending" && implemented(item.execution.status)
+    && ageDays(item.validation.updatedAt, clock) >= ATTENTION_STALENESS_DAYS.validationPending) reasons.push("validation_pending_too_long");
+  const undecidedAge = ageDays(item.decision.updatedAt || item.timestamps.createdAt, clock);
+  if (!["confirmed", "rejected", "superseded"].includes(item.decision.status)
+    && undecidedAge >= ATTENTION_STALENESS_DAYS.undecided) reasons.push("undecided_stale");
+  const signals = new Set(item.attentionContext?.signals || []);
+  if (item.authorityConflict === true || signals.has("authority_conflict")) reasons.push("authority_conflict");
+  if (item.syncConflict === true || signals.has("sync_conflict")) reasons.push("sync_conflict");
+  const refs = evidenceRefs(item);
+  const evidenceMissing = item.attentionContext?.missingEvidence === true
+    || (item.decision.status === "confirmed" && !(item.decision.evidenceRefs || []).length)
+    || (implemented(item.execution.status) && !(item.execution.evidenceRefs || []).length)
+    || (["pending", "failed", "passed"].includes(item.validation.status) && !(item.validation.evidenceRefs || []).length);
+  if (evidenceMissing) reasons.push("missing_evidence");
+  const blocked = (item.dependencies || []).filter((id) => {
+    const dependency = itemsById.get(id);
+    return !dependency || !implemented(dependency.execution?.status) || dependency.validation?.status === "failed";
+  });
+  if (blocked.length || signals.has("dependency_blocked")) reasons.push("dependency_blocked");
+  if (item.decision.status !== "confirmed" && !item.decisionOwner) reasons.push("decision_owner_missing");
+  if (refs.some((id) => evidenceById.get(id)?.availability === "source_unreachable")) reasons.push("source_unreachable");
+  for (const signal of signals) if (ATTENTION_REASONS[signal]) reasons.push(signal);
+  const unique = [...new Set(reasons)].sort((a, b) => {
+    const severity = (ATTENTION_LEVELS[ATTENTION_REASONS[b]?.level] || 0) - (ATTENTION_LEVELS[ATTENTION_REASONS[a]?.level] || 0);
+    return severity || a.localeCompare(b, "en");
+  });
+  const override = item.attentionContext?.humanOverride || null;
+  const derivedLevel = unique.reduce((level, reason) => {
+    const next = ATTENTION_REASONS[reason]?.level || (reason === "deferred_due" ? "medium" : "none");
+    return ATTENTION_LEVELS[next] > ATTENTION_LEVELS[level] ? next : level;
+  }, "none");
+  const level = override?.level || derivedLevel;
+  return { eligible: level !== "none" && unique.length > 0, level, reasons: unique, ageDays: undecidedAge, blocked, override };
+}
+
+function attentionChoice(reason) {
+  if (["decision_implementation_drift", "possible_drift"].includes(reason)) return ["根拠を確認する", "決定か実装を見直す", "今回は保留する"];
+  if (["authority_conflict", "sync_conflict"].includes(reason)) return ["正本を確認する", "競合を保留する", "詳細を開く"];
+  if (["validation_failed", "validation_pending_too_long"].includes(reason)) return ["検証結果を確認する", "再検証する", "今回は保留する"];
+  return ["今確認する", "担当・期限を決める", "今回は保留する"];
+}
+
+export function evaluateAttention(state, evidence = [], { clock = nowIso(), limit = 3 } = {}) {
+  fail(state && Array.isArray(state.items), "state-schema-invalid", "Attention評価にはcanonical State itemsが必要です。");
+  fail(Array.isArray(evidence), "evidence-schema-invalid", "Attention評価のEvidenceが配列ではありません。");
+  fail(Number.isInteger(limit) && limit >= 1 && limit <= 20, "attention-limit-invalid", "Attention表示件数は1〜20で指定してください。");
+  state.items.forEach(validateItem);
+  evidence.forEach(validateEvidence);
+  fail(new Set(state.items.map((item) => item.itemId)).size === state.items.length, "duplicate-id", "Attention評価Stateに重複Item IDがあります。");
+  fail(new Set(evidence.map((row) => row.evidenceId)).size === evidence.length, "duplicate-id", "Attention評価Evidenceに重複IDがあります。");
+  const evidenceById = new Map(evidence.map((row) => [row.evidenceId, row]));
+  const itemsById = new Map(state.items.map((item) => [item.itemId, item]));
+  const dispositionRank = { required: 3, candidate: 2, deferred: 1, idea: 0, rejected: 0 };
+  const entries = state.items.map((item) => {
+    const result = attentionForItem(item, itemsById, evidenceById, clock);
+    if (!result.eligible) return null;
+    const primaryReason = result.reasons[0];
+    const refs = evidenceRefs(item).map((id) => evidenceById.get(id)).filter(Boolean);
+    const proof = refs.slice(0, 3).map((row) => ({ evidenceId: row.evidenceId, summary: row.summary, availability: row.availability }));
+    const inference = item.decision.source === "agent-inference" || item.confidence === "unknown";
+    const unverified = item.validation.status === "unknown" || item.validation.status === "pending" || item.confidence !== "verified";
+    return {
+      itemId: item.itemId,
+      title: item.title,
+      level: result.level,
+      reasons: result.reasons,
+      reasonLabels: result.reasons.map((reason) => ATTENTION_REASONS[reason]?.label || "期限が到来したため再確認が必要です"),
+      conclusion: `${item.title}は${result.level === "critical" ? "至急" : "人間の"}確認が必要です`,
+      evidence: proof.length ? proof : [{ evidenceId: null, summary: "根拠不足（未検証）", availability: "source_unreachable" }],
+      choices: attentionChoice(primaryReason),
+      inference,
+      unverified,
+      humanOverride: result.override ? { level: result.override.level, reason: result.override.reason || null } : null,
+      detailPath: ".clarity/state.json",
+      _rank: {
+        severity: ATTENTION_LEVELS[result.level],
+        disposition: dispositionRank[item.disposition] || 0,
+        impact: Number(item.attentionContext?.impact || 0),
+        urgency: Number(item.attentionContext?.urgency || 0),
+        age: result.ageDays,
+        dependency: result.blocked.length,
+        conflict: result.reasons.some((reason) => reason.includes("conflict")) ? 1 : 0,
+        validation: result.reasons.some((reason) => reason.startsWith("validation_")) ? 1 : 0,
+        human: Number(item.attentionContext?.humanOverride?.rank || 0),
+      },
+    };
+  }).filter(Boolean).sort((a, b) => {
+    for (const key of ["severity", "disposition", "impact", "urgency", "age", "dependency", "conflict", "validation", "human"]) {
+      if (a._rank[key] !== b._rank[key]) return b._rank[key] - a._rank[key];
+    }
+    return a.itemId.localeCompare(b.itemId, "en");
+  });
+  const visible = entries.slice(0, limit).map(({ _rank, ...entry }) => entry);
+  const counts = Object.fromEntries(["critical", "high", "medium", "low"].map((level) => [level, entries.filter((row) => row.level === level).length]));
+  const otherCount = Math.max(0, entries.length - visible.length);
+  return {
+    conclusion: entries.length ? `今、人間が考える必要がある項目は${entries.length}件です` : "現在、判断が必要な項目はありません",
+    activeCount: entries.length,
+    counts,
+    items: visible,
+    otherCount,
+    detailPath: ".clarity/state.json",
+    technicalHandoff: {
+      command: "clarity attention <repo-root> --json",
+      path: ".clarity/state.json",
+      error: null,
+      evidenceIds: visible.flatMap((item) => item.evidence.map((row) => row.evidenceId).filter(Boolean)),
+      remainingCount: otherCount,
+    },
+  };
 }
 
 export function buildState(project, events, evidence, clock = nowIso()) {
@@ -521,14 +703,14 @@ export function buildState(project, events, evidence, clock = nowIso()) {
       if (!itemMap.has(item.itemId)) itemMap.set(item.itemId, item);
       continue;
     }
+    if (event.type === "checkpoint.recorded") continue;
     const item = itemMap.get(event.itemId);
     fail(item, "event-item-missing", `Eventが存在しないItemを参照しています: ${event.itemId}`);
     applyEvent(item, event);
   }
-  const items = [...itemMap.values()].map((item) => {
+  const baseItems = [...itemMap.values()].map((item) => {
     validateItem(item);
     const quadrant = deriveQuadrant(item.decision.status, item.execution.status);
-    const attention = attentionState(item, evidenceById, clock);
     return {
       ...item,
       quadrant,
@@ -536,14 +718,24 @@ export function buildState(project, events, evidence, clock = nowIso()) {
       quadrantMeaning: quadrantMeta[quadrant].meaning,
       inProgress: item.execution.status === "in_progress",
       activeMatrix: !["rejected", "superseded"].includes(item.decision.status) && item.disposition !== "rejected",
-      attentionEligible: attention.eligible,
-      attentionReasons: attention.reasons,
-      attention: { level: "not_evaluated", reasons: attention.reasons },
+      attentionEligible: false,
+      attentionReasons: [],
+      attention: { level: "not_evaluated", reasons: [] },
     };
   }).sort((a, b) => a.itemId.localeCompare(b.itemId, "en"));
+  const itemsById = new Map(baseItems.map((candidate) => [candidate.itemId, candidate]));
+  const items = baseItems.map((item) => {
+    const raw = attentionForItem(item, itemsById, evidenceById, clock);
+    return {
+      ...item,
+      attentionEligible: raw.eligible,
+      attentionReasons: raw.reasons,
+      attention: { level: raw.level, reasons: raw.reasons },
+    };
+  });
   const generatedAt = events.map((event) => event.occurredAt).sort().at(-1) || project.createdAt;
   return {
-    schemaVersion: CLARITY_SCHEMA_VERSION,
+    schemaVersion: project.schemaVersion,
     clarityProjectId: project.clarityProjectId,
     generatedAt,
     source: { eventCount: events.length, evidenceCount: evidence.length },
@@ -553,7 +745,10 @@ export function buildState(project, events, evidence, clock = nowIso()) {
 }
 
 export function validateState(state) {
-  fail(state && state.schemaVersion === 1 && /^cp_[a-f0-9]{20}$/u.test(state.clarityProjectId || ""), "state-schema-invalid", "Clarity State schemaが不正です。");
+  fail(state && Number.isInteger(state.schemaVersion)
+    && state.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION
+    && state.schemaVersion <= CLARITY_SCHEMA_VERSION
+    && /^cp_[a-f0-9]{20}$/u.test(state.clarityProjectId || ""), "state-schema-invalid", "Clarity State schemaが不正です。");
   fail(Array.isArray(state.items), "state-schema-invalid", "State itemsが配列ではありません。");
   for (const item of state.items) {
     validateItem(item);
@@ -628,7 +823,7 @@ function createCanonicalFromPreview(root, preview) {
     createdAt: timestamp,
     repoIdentity: preview.project.repoIdentity,
     secretaryLink: null,
-    compatibility: { reader: { min: 1, max: 1 }, writer: { min: 1, max: 1 } },
+    compatibility: { reader: { min: 1, max: CLARITY_SCHEMA_VERSION }, writer: { min: 1, max: CLARITY_SCHEMA_VERSION } },
     rootEntry: { path: "CLARITY.md", status: preview.conflicts.length ? "external-conflict" : "managed-block" },
   };
   validateProject(project);
@@ -695,10 +890,13 @@ function appendJsonLine(root, rel, row, idKey, validator) {
 
 export function appendEvent(rootValue, input) {
   const canonical = readCanonical(rootValue);
+  if (canonical.project.schemaVersion < CLARITY_SCHEMA_VERSION && ["checkpoint.recorded", "attention.resolved", "attention.override"].includes(input.type)) {
+    throw new ClarityError("migration-required", "この操作の前にschema migrationが必要です。変更していません。", 3, { changed: false, nextAction: "clarity migrate previewを確認してください" });
+  }
   const payload = structuredClone(input.payload || {});
   const occurredAt = input.occurredAt || nowIso();
   const event = {
-    schemaVersion: 1,
+    schemaVersion: canonical.project.schemaVersion,
     eventId: input.eventId || stableId("cv", `${canonical.project.clarityProjectId}:${input.type}:${input.itemId}:${JSON.stringify(payload)}`),
     type: input.type,
     itemId: input.itemId,
@@ -714,7 +912,7 @@ export function appendEvent(rootValue, input) {
 export function appendEvidence(rootValue, input) {
   const canonical = readCanonical(rootValue);
   const normalized = {
-    schemaVersion: 1,
+    schemaVersion: canonical.project.schemaVersion,
     evidenceId: input.evidenceId || stableId("ce", `${canonical.project.clarityProjectId}:${input.type}:${input.source}:${JSON.stringify(input.locator)}:${input.contentDigest || sha256(input.summary || "")}`),
     type: input.type,
     source: input.source,
@@ -727,6 +925,231 @@ export function appendEvidence(rootValue, input) {
   };
   const changed = appendJsonLine(canonical.root, ".clarity/evidence.jsonl", normalized, "evidenceId", validateEvidence);
   return { evidence: normalized, changed };
+}
+
+export function attention(rootValue, { limit = 3, clock = nowIso() } = {}) {
+  const canonical = readCanonical(rootValue);
+  const state = buildState(canonical.project, canonical.events, canonical.evidence, clock);
+  return evaluateAttention(state, canonical.evidence, { clock, limit });
+}
+
+export function setAttentionOverride(rootValue, { itemId, level, reason = "利用者が優先度を指定", rank = 0, operationId } = {}) {
+  const canonical = readCanonical(rootValue);
+  fail(canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION, "migration-required", "Attention overrideの前にschema migrationが必要です。", { changed: false, nextAction: "clarity migrate previewを確認してください" });
+  const state = buildState(canonical.project, canonical.events, canonical.evidence);
+  fail(state.items.some((item) => item.itemId === itemId), "item-missing", "指定したClarity Itemが見つかりません。", { changed: false });
+  fail(["critical", "high", "medium", "low", "none"].includes(level), "attention-level-invalid", "Attention levelはcritical／high／medium／low／noneから選んでください。", { changed: false });
+  const safeReason = oneLine(reason, "Attention override reason", 160);
+  const opId = operationId || stableId("op", `${canonical.project.clarityProjectId}:attention-override:${itemId}:${level}:${safeReason}:${rank}`);
+  const result = appendEvent(canonical.root, {
+    eventId: stableId("cv", `${canonical.project.clarityProjectId}:attention-override:${opId}`),
+    type: "attention.override",
+    itemId,
+    actor: "human-user",
+    occurredAt: nowIso(),
+    payload: { operationId: opId, level, reason: safeReason, rank: Number(rank || 0) },
+  });
+  return { status: result.changed ? "saved" : "unchanged", changed: result.changed, operationId: opId, eventId: result.event.eventId, itemId, level, reason: safeReason };
+}
+
+export function checkpoint(rootValue, {
+  operationId,
+  summary = "現在のClarity状態をcheckpointしました",
+  failAt = process.env.CLARITY_CHECKPOINT_FAIL_AT || "",
+} = {}) {
+  const canonical = readCanonical(rootValue);
+  fail(canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION, "migration-required", "checkpointの前にschema migrationが必要です。", { changed: false, nextAction: "clarity migrate previewを確認してください" });
+  const opId = operationId || stableId("op", `${canonical.project.clarityProjectId}:checkpoint:${nowIso()}`);
+  const priorSame = canonical.events.find((event) => event.type === "checkpoint.recorded" && event.payload?.operationId === opId);
+  if (priorSame) return { status: "unchanged", operationId: opId, eventId: priorSame.eventId, duplicate: false };
+  const state = buildState(canonical.project, canonical.events, canonical.evidence);
+  const active = state.items.filter((item) => item.attentionEligible).map((item) => ({ itemId: item.itemId, reasons: item.attentionReasons }));
+  const proof = appendEvidence(canonical.root, {
+    evidenceId: stableId("ce", `${canonical.project.clarityProjectId}:checkpoint:${opId}`),
+    type: "agent-observation",
+    source: "clarity-checkpoint",
+    locator: { operationId: opId, kind: "checkpoint" },
+    summary: oneLine(summary, "Checkpoint summary", 240),
+    observedAt: nowIso(),
+    contentDigest: sha256(JSON.stringify({ operationId: opId, active })),
+  });
+  if (failAt === "after-evidence") {
+    throw new ClarityError("checkpoint-partial", "checkpointのEvidenceは保存済みですが、Eventが未完了です。再実行で残りだけを完了できます。", 4, {
+      operationId: opId, changed: true, completed: ["checkpoint-evidence"], pending: ["resolution-events", "checkpoint-event"],
+    });
+  }
+  const refreshed = readCanonical(canonical.root);
+  const previous = [...refreshed.events].reverse().find((event) => event.type === "checkpoint.recorded");
+  const currentById = new Map(active.map((row) => [row.itemId, new Set(row.reasons)]));
+  let resolvedCount = 0;
+  for (const old of previous?.payload?.active || []) {
+    for (const reason of old.reasons || []) {
+      if (currentById.get(old.itemId)?.has(reason)) continue;
+      const result = appendEvent(canonical.root, {
+        eventId: stableId("cv", `${canonical.project.clarityProjectId}:attention-resolved:${opId}:${old.itemId}:${reason}`),
+        type: "attention.resolved",
+        itemId: old.itemId,
+        actor: "clarity-checkpoint",
+        occurredAt: nowIso(),
+        payload: { operationId: opId, reason, previousCheckpointId: previous.eventId },
+      });
+      if (result.changed) resolvedCount += 1;
+    }
+  }
+  if (failAt === "before-event") {
+    throw new ClarityError("checkpoint-partial", "解消履歴まで保存済みですが、checkpoint Eventが未完了です。再実行で収束します。", 4, {
+      operationId: opId, changed: true, completed: ["checkpoint-evidence", "resolution-events"], pending: ["checkpoint-event"],
+    });
+  }
+  const recorded = appendEvent(canonical.root, {
+    eventId: stableId("cv", `${canonical.project.clarityProjectId}:checkpoint:${opId}`),
+    type: "checkpoint.recorded",
+    itemId: null,
+    actor: "clarity-checkpoint",
+    occurredAt: nowIso(),
+    payload: { operationId: opId, evidenceId: proof.evidence.evidenceId, active },
+  });
+  return { status: recorded.changed || proof.changed || resolvedCount ? "saved" : "unchanged", operationId: opId, eventId: recorded.event.eventId, evidenceId: proof.evidence.evidenceId, resolvedCount, duplicate: false };
+}
+
+function migratedItem(item) {
+  return {
+    ...item,
+    schemaVersion: CLARITY_SCHEMA_VERSION,
+    attentionContext: item.attentionContext || { impact: 0, urgency: 0, humanOverride: null, signals: [] },
+  };
+}
+
+function migrationData(rootValue) {
+  const root = rootPath(rootValue);
+  const clarity = safeWritePath(root, ".clarity");
+  fail(existsSync(clarity) && lstatSync(clarity).isDirectory() && !lstatSync(clarity).isSymbolicLink(), "clarity-not-initialized", "このRepoにはClarityが初期化されていません。");
+  const projectPath = safeWritePath(root, ".clarity/project.json");
+  let project;
+  try { project = JSON.parse(readFileSync(projectPath, "utf8")); }
+  catch { throw new ClarityError("migration-source-invalid", "旧schemaのproject.jsonがJSONではありません。変更していません。", 3, { changed: false }); }
+  fail(Number.isInteger(project.schemaVersion), "migration-source-invalid", "旧schemaのversionを確認できません。変更していません。", { changed: false });
+  fail(project.schemaVersion >= CLARITY_MIN_SCHEMA_VERSION && project.schemaVersion <= CLARITY_SCHEMA_VERSION,
+    "migration-version-unsupported", "このschema versionは自動migration対象ではありません。変更していません。", { changed: false, schemaVersion: project.schemaVersion });
+  if (project.schemaVersion === CLARITY_SCHEMA_VERSION) {
+    validateProject(project);
+    return { root, clarity, current: true, fromVersion: project.schemaVersion, toVersion: CLARITY_SCHEMA_VERSION, project, events: null, evidence: null, state: null };
+  }
+  const events = jsonLines(safeWritePath(root, ".clarity/events.jsonl"), validateEvent).map((event) => ({
+    ...event,
+    schemaVersion: CLARITY_SCHEMA_VERSION,
+    ...(event.type === "item.discovered" ? { payload: { ...event.payload, item: migratedItem(event.payload.item) } } : {}),
+  }));
+  const evidence = jsonLines(safeWritePath(root, ".clarity/evidence.jsonl"), validateEvidence).map((row) => ({ ...row, schemaVersion: CLARITY_SCHEMA_VERSION }));
+  const migratedProject = {
+    ...project,
+    schemaVersion: CLARITY_SCHEMA_VERSION,
+    compatibility: { reader: { min: 1, max: CLARITY_SCHEMA_VERSION }, writer: { min: 1, max: CLARITY_SCHEMA_VERSION } },
+  };
+  validateProject(migratedProject);
+  events.forEach(validateEvent);
+  evidence.forEach(validateEvidence);
+  let storedState;
+  try { storedState = JSON.parse(readFileSync(safeWritePath(root, ".clarity/state.json"), "utf8")); }
+  catch { throw new ClarityError("migration-source-invalid", "旧schemaのstate.jsonがJSONではありません。変更していません。", 3, { changed: false }); }
+  const rebuiltState = buildState(migratedProject, events, evidence);
+  const state = {
+    ...storedState,
+    ...rebuiltState,
+    source: { ...(storedState.source || {}), ...rebuiltState.source },
+    quadrants: { ...(storedState.quadrants || {}), ...rebuiltState.quadrants },
+  };
+  validateState(state);
+  return { root, clarity, current: false, fromVersion: project.schemaVersion, toVersion: CLARITY_SCHEMA_VERSION, project: migratedProject, events, evidence, state };
+}
+
+export function previewMigration(rootValue) {
+  const data = migrationData(rootValue);
+  return {
+    status: data.current ? "current" : "preview",
+    changed: false,
+    fromVersion: data.fromVersion,
+    toVersion: data.toVersion,
+    writes: data.current ? [] : [".clarity/project.json", ".clarity/events.jsonl", ".clarity/evidence.jsonl", ".clarity/state.json"],
+    preserves: ["Event history", "Evidence identity", "unknown fields", "利用者file", ".clarity/runtime"],
+    eventCount: data.events?.length ?? readCanonical(data.root).events.length,
+    evidenceCount: data.evidence?.length ?? readCanonical(data.root).evidence.length,
+    nextAction: data.current ? "追加操作は不要です" : "内容を確認し、明示的に --apply を付けてください",
+  };
+}
+
+export function applyMigration(rootValue, { failAt = process.env.CLARITY_MIGRATION_FAIL_AT || "" } = {}) {
+  const data = migrationData(rootValue);
+  if (data.current) return { ...previewMigration(data.root), status: "unchanged" };
+  const nonce = `${process.pid}-${Date.now()}`;
+  const stage = safeWritePath(data.root, `.clarity-migrate-${nonce}`);
+  const backup = safeWritePath(data.root, `.clarity-migrate-backup-${nonce}`);
+  let swapped = false;
+  let backedUp = false;
+  try {
+    copyTreeNoFollow(data.clarity, stage);
+    writeFileSync(join(stage, "project.json"), stableJson(data.project), "utf8");
+    writeFileSync(join(stage, "events.jsonl"), `${data.events.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8");
+    writeFileSync(join(stage, "evidence.jsonl"), `${data.evidence.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8");
+    writeFileSync(join(stage, "state.json"), stableJson(data.state), "utf8");
+    if (failAt === "before-swap") throw new Error("migration-before-swap");
+    renameSync(data.clarity, backup); backedUp = true;
+    if (failAt === "after-backup") throw new Error("migration-after-backup");
+    renameSync(stage, data.clarity); swapped = true;
+    if (failAt === "after-swap") throw new Error("migration-after-swap");
+    rmSync(backup, { recursive: true, force: true }); backedUp = false;
+  } catch (error) {
+    if (swapped && existsSync(data.clarity)) rmSync(data.clarity, { recursive: true, force: true });
+    if (backedUp && existsSync(backup)) renameSync(backup, data.clarity);
+    if (existsSync(stage)) rmSync(stage, { recursive: true, force: true });
+    throw new ClarityError("migration-failed", "migrationは完了せず、旧schemaを利用可能な状態へ戻しました。再実行できます。", 4, {
+      changed: false, fromVersion: data.fromVersion, toVersion: data.toVersion, error: error instanceof Error ? error.message : String(error), nextAction: "原因を確認してmigrate --applyを再実行してください",
+    });
+  }
+  return { status: "migrated", changed: true, fromVersion: data.fromVersion, toVersion: data.toVersion, eventCount: data.events.length, evidenceCount: data.evidence.length, preservedHistory: true, nextAction: "doctorで整合を確認してください" };
+}
+
+const ownedRuntimeName = /^(?:lock\.json|checkpoint-[a-f0-9_-]+\.json|operation-[a-f0-9_-]+\.json|\.tmp-[a-f0-9_-]+)$/u;
+
+export function previewRuntimeCleanup(rootValue, { clock = nowIso() } = {}) {
+  const canonical = readCanonical(rootValue);
+  const runtime = safeWritePath(canonical.root, ".clarity/runtime");
+  if (!existsSync(runtime)) return { status: "clean", changed: false, candidates: [], preserved: [], nextAction: "追加操作は不要です" };
+  fail(lstatSync(runtime).isDirectory() && !lstatSync(runtime).isSymbolicLink(), "runtime-unsafe", "runtime pathが安全な通常directoryではないため変更しません。");
+  const candidates = [];
+  const preserved = [];
+  for (const entry of readdirSync(runtime, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
+    const rel = `.clarity/runtime/${entry.name}`;
+    if (!entry.isFile() || entry.isSymbolicLink() || !ownedRuntimeName.test(entry.name)) { preserved.push({ path: rel, reason: "not-owned" }); continue; }
+    let record;
+    try { record = JSON.parse(readFileSync(join(runtime, entry.name), "utf8")); }
+    catch { preserved.push({ path: rel, reason: "ownership-unverified" }); continue; }
+    if (record.owner !== "agentic-secretary:clarity") { preserved.push({ path: rel, reason: "not-owned" }); continue; }
+    const expiresAt = record.expiresAt || record.staleAfter;
+    if (!expiresAt || Number.isNaN(new Date(expiresAt).valueOf()) || new Date(expiresAt).valueOf() > new Date(clock).valueOf()) {
+      preserved.push({ path: rel, reason: "active-or-unverified" }); continue;
+    }
+    candidates.push({ path: rel, reason: "owned-stale-runtime", expiresAt });
+  }
+  return { status: candidates.length ? "cleanup-available" : "clean", changed: false, candidates, preserved, nextAction: candidates.length ? "内容を確認し、明示的に cleanup --apply を付けてください" : "追加操作は不要です" };
+}
+
+export function applyRuntimeCleanup(rootValue, options = {}) {
+  const preview = previewRuntimeCleanup(rootValue, options);
+  const root = rootPath(rootValue);
+  for (const candidate of preview.candidates) {
+    const path = resolve(root, candidate.path);
+    const stat = lstatSync(path);
+    fail(stat.isFile() && !stat.isSymbolicLink(), "runtime-changed", "cleanup対象がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
+    let record;
+    try { record = JSON.parse(readFileSync(path, "utf8")); } catch { record = null; }
+    fail(record?.owner === "agentic-secretary:clarity" && (record.expiresAt || record.staleAfter) === candidate.expiresAt,
+      "runtime-changed", "cleanup対象の所有情報がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
+  }
+  for (const candidate of preview.candidates) removeSafe(root, candidate.path);
+  const runtime = safeWritePath(root, ".clarity/runtime");
+  if (existsSync(runtime) && readdirSync(runtime).length === 0) rmSync(runtime);
+  return { ...preview, status: preview.candidates.length ? "cleaned" : "unchanged", changed: preview.candidates.length > 0, removed: preview.candidates.map((row) => row.path), nextAction: preview.candidates.length ? "doctorでruntime状態を再確認してください" : "追加操作は不要です" };
 }
 
 function readStoredState(root) {
@@ -751,10 +1174,15 @@ export function doctor(rootValue) {
     const rebuilt = expected.items.find((candidate) => candidate.itemId === item.itemId);
     return rebuilt && (item.decision.humanConfirmed !== rebuilt.decision.humanConfirmed || item.decision.status !== rebuilt.decision.status);
   }));
+  const cleanup = previewRuntimeCleanup(canonical.root);
+  const schemaStatus = canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION ? "current" : "migration-available";
+  const projectionOk = !stored.error && storedBytes === expectedBytes;
   return {
-    ok: !stored.error && storedBytes === expectedBytes,
+    ok: projectionOk && cleanup.candidates.length === 0,
     mode: canonical.project.mode,
     schemaVersion: canonical.project.schemaVersion,
+    currentSchemaVersion: CLARITY_SCHEMA_VERSION,
+    schemaStatus,
     clarityProjectId: canonical.project.clarityProjectId,
     repoIdentity: canonical.project.repoIdentity,
     remoteStatus: canonical.project.repoIdentity.remote.status,
@@ -765,19 +1193,31 @@ export function doctor(rootValue) {
     evidenceCount: canonical.evidence.length,
     itemCount: expected.items.length,
     rootEntry: canonical.project.rootEntry,
+    capabilities: {
+      hook: { status: "未検証", reason: "Hook liveはこのSprintの対象外です" },
+      link: { status: canonical.project.secretaryLink ? "設定あり・未検証" : "未設定", reason: "link healthの実検証は後続Sprintです" },
+      projection: { status: projectionOk ? "正常" : "要再構築", verified: projectionOk },
+      lock: { status: cleanup.candidates.length ? "残骸あり" : "残骸なし", verified: true },
+    },
+    runtimeCleanup: cleanup,
+    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
   };
 }
 
 export function status(rootValue) {
   const canonical = readCanonical(rootValue);
   const state = buildState(canonical.project, canonical.events, canonical.evidence);
+  const attentionResult = evaluateAttention(state, canonical.evidence, { limit: 3 });
   return {
+    conclusion: attentionResult.conclusion,
     clarityProjectId: canonical.project.clarityProjectId,
     mode: canonical.project.mode,
     repoIdentity: canonical.project.repoIdentity,
     itemCount: state.items.length,
     quadrants: Object.fromEntries(Object.entries(state.quadrants).map(([key, ids]) => [key, { label: quadrantMeta[key].label, count: ids.length }])),
     partial: doctor(canonical.root).stateMismatch,
+    matrixLabel: "決定×実行クラリティマトリクス",
+    attention: { activeCount: attentionResult.activeCount, counts: attentionResult.counts, top: attentionResult.items, otherCount: attentionResult.otherCount, detailPath: attentionResult.detailPath },
   };
 }
 
@@ -785,8 +1225,9 @@ export function history(rootValue) {
   const canonical = readCanonical(rootValue);
   return {
     clarityProjectId: canonical.project.clarityProjectId,
-    events: canonical.events.map((event) => ({ eventId: event.eventId, type: event.type, itemId: event.itemId, actor: event.actor, occurredAt: event.occurredAt })),
+    events: canonical.events.map((event) => ({ eventId: event.eventId, type: event.type, itemId: event.itemId, actor: event.actor, occurredAt: event.occurredAt, ...(event.type === "attention.resolved" ? { resolution: event.payload } : {}) })),
     evidence: canonical.evidence.map((item) => ({ evidenceId: item.evidenceId, type: item.type, source: item.source, locator: item.locator, observedAt: item.observedAt, availability: item.availability })),
+    resolvedAttention: canonical.events.filter((event) => event.type === "attention.resolved").map((event) => ({ eventId: event.eventId, itemId: event.itemId, reason: event.payload.reason, occurredAt: event.occurredAt })),
   };
 }
 

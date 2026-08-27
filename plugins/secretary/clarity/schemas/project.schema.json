@@ -3,10 +3,10 @@
   "$id": "agentic-secretary://clarity/project.schema.json",
   "title": "ClarityProject",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["schemaVersion", "clarityProjectId", "name", "mode", "createdAt", "repoIdentity", "secretaryLink", "compatibility", "rootEntry"],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "enum": [1, 2] },
     "clarityProjectId": { "type": "string", "pattern": "^cp_[a-f0-9]{20}$" },
     "name": { "type": "string", "minLength": 1, "maxLength": 120 },
     "mode": { "enum": ["standalone", "secretary-local", "linked-external", "portfolio"] },
