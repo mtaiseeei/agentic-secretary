@@ -2,13 +2,13 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-041
+- Current ID: sprint-042
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 1
 - Model Tier: strong
 - Rotate: none
-- Next Planned: sprint-042
+- Next Planned: sprint-043
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
      ユーザー確認で単段クレジットに正本改訂、回帰assert強化のうえ合格）。
@@ -77,8 +77,8 @@
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
 | sprint-040-patch-001 | done | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
-| sprint-041 | awaiting-eval | [contract](sprint-041.md) | [progress](../progress/sprint-041.md) | - |
-| sprint-042 | planned | [contract](sprint-042.md) | - | - |
+| sprint-041 | done | [contract](sprint-041.md) | [progress](../progress/sprint-041.md) | [feedback](../feedback/sprint-041.md) |
+| sprint-042 | active | [contract](sprint-042.md) | - | - |
 | sprint-043 | planned | [contract](sprint-043.md) | - | - |
 | sprint-044 | planned | [contract](sprint-044.md) | - | - |
 | sprint-045 | planned | [contract](sprint-045.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 041はfresh独立Evaluator commit `28ed53be3039213f9ff1e616055f5ece69224257`でPASS。Target 43/43、Acceptance Criteria未実行0、独立Git／non-Git CLI、preview／cancel write 0、apply再実行非増加、partial retry、Decision seam、tamper検知とbyte安定rebuild、安全関連回帰を確認した。全masterのSprint 019 README 1件はbaseline `037d397`でも同じ50/51かつREADME／test blob同一で、既存Minor product debt P-01とverification-infra debt V-01へ分離し、Sprint 041回帰ではない。Sprint 041をdoneとし、high-risk Sprint 042へ進む。resolverはfresh Generator `gpt-5.6-sol`／`high`、Model Tier strong、Rotate noneを選択。新SprintのRetry／Spec-Issue 0、Generator予約としてLineage Dispatches 1、Status active。launch metadataは未検証のためdispatch指定以上を主張しない。
 - 2026-08-28: Sprint 041 Generator candidate `88591aef67069018529e34ae44bc4ab0db4cd7dd`を固定。対象43 caseは43/43、既存Decision seam 68/68、安全関連71/71・69/69・21/21、release integrityがPASS。全masterは今回差分外のSprint 019 README期待文言1件で停止し、baseline `037d397`にも同文言がないため、製品所見とverification-infra所見をfresh独立Evaluatorが分離判定する。Evaluator `gpt-5.6-sol`／`high`を予約し、Lineage Dispatches 2、Status awaiting-eval、Model Tier strong、Rotate none。external write、network、connector、push、release、cache、downstream writeは0件。
 - 2026-08-28: Planner正本baseline commit `9b0b587`を固定。Sprint 041はhigh riskのためHarness resolverがstandardからstrongへのtier変更を選択し、fresh Generator `gpt-5.6-sol`／`high`、Rotate `model-escalation`を予約する。Lineage Dispatches 1、Status active。GeneratorのscopeはSprint 041の43 caseと直接回帰だけで、後続Attention／Xmind／Hook／Secretary link等を先行実装しない。
 - 2026-08-28: Project ClarityのPlanner正本とSprint 041〜050契約を作成。添付Acceptance Matrixの250 IDはrepo内匿名化case正本へ意味を保って収載し、初回割当250／unique 250／missing 0／extra 0／duplicate 0、追加collaboration 20／unique 20、E2E 4を機械確認した。ユーザー決定によりClarity限定command-only Hookだけをplugin同梱し、他Skill Hookとmemory意味判定Hookは0件、Xmind defaultはAgentic／Yasashii OFF・private my-vault ON、projects lifecycleとClarityのDecision／Execution／Validation／Attention／Drift責務を分離する。`claude -p --model fable --effort high`のread-only静的レビュー後、repo内case本文、依存順、匿名fixture、Attention level、Mermaid quadrant、Decision seam、inventory表現をfresh PlannerがPatchし、オーケストレーターが独立再確認した。Fableは製品PASS証拠にしない。その後のユーザー決定でXmind MCPを第1優先、local `.xmind`を明示承認後だけ使う第2優先、固定4色・配置とした。fresh PlannerがXV-001〜004を追加し、MCP不可／失敗時は`fallback-approval-required`、承認なしはlocal write 0、Mermaidも同じvisual semanticとする正本へ更新。オーケストレーターがprimary 250／CLX 20／XV 4の割当、旧local-first表現0、4色と配置、匿名化境界を独立再確認した。Generatorはまだ作成せず、Lineage Dispatches 0、Status planned、Model Tier standard、Rotate none。push、release、cache、downstream write、external connector／Xmind cloud操作は0件。
