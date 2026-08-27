@@ -144,3 +144,150 @@ Critical findingは0件。新規Majorはproduct 1件、新規verification-infra�
 - network／external connector／Xmind live／push／release／cache／downstream writeを行っていないか: yes
 - 実装やコード修正へ越境していないか: yes
 - 判定根拠: Targetと主要独立fixtureはPASSしたが、必須AC5と閾値C1／C4／C24がF-01でFAILしたため、Sprint全体は`implementation-issue`として不合格。
+
+---
+
+## Retry 1 再評価
+
+**Retry 1判定:** 合格
+**不合格分類:** 該当なし
+**Generator candidate:** `6c251e5ec13fada873f81bc0bebdcadc09711aaf`
+**評価開始HEAD:** `8d29d6a88850932b1aa4d54664d218db02ce38c9`（candidateとの差分はOrchestrator所有の`docs/sprints/state.md`だけ）
+**Escalation Recommendation:** none
+**Evaluator model／effort metadata:** host metadataを取得できないため`unverified`。dispatch指定から実起動値を推定していない。
+
+### Retry 1結論
+
+初回Major product finding F-01は解消した。期限切れClarity-owned `lock.json`だけがあるruntimeを独立CLI fixtureで再評価し、previewはexit 0／write 0、applyはexit 0／`cleaned`／`changed:true`、`removed`は実際に消えた`.clarity/runtime/lock.json`と一致し、lockと空runtime directoryが消滅した。同じapplyのretryはexit 0／`unchanged`／`changed:false`／removed 0件へ収束した。
+
+初回Minor verification-infra finding V-01も解消した。35 case registryを増やさずCritical `IM-014`がrunnerから実CLIを起動し、上記のexpired-only空directory経路、retry、開始時から空のruntime保持を検査している。Target 35/35とSprint 041直接回帰43/43はgreenである。
+
+開始時から空のruntime、user file、unowned expired operation、Clarity-owned live operationは保持された。ownership差替え、directory race、runtime symlink、root外pathを独立fixtureで操作し、外部参照先やraceで増えたfileを削除しないことを確認した。cleanup実装はrecursive削除を要求せず、空directory専用の`rmdirSync`を使う。したがってAC1〜7、C1／C4／C24を含む対象閾値は全てPASSし、Sprint 042を合格とする。
+
+### 変更差分の固定
+
+- 初回candidate `6f2c23c42635fb9772243d289c16fd39b29dea8f`からRetry 1 candidate `6c251e5ec13fada873f81bc0bebdcadc09711aaf`までの製品／test変更は次の2 fileだけ。
+  - `plugins/secretary/scripts/lib/clarity-core.mjs`
+  - `scripts/sprint-042-test.mjs`
+- 上記2 fileのdiff SHA-256: `23ae769fe6dffe30da3c66bc0f94d5f2efa262afff6e0d8da8137db65dc19a81`
+- 製品修正は、実際に削除したowned fileから`removed`／`changed`を算出し、safe root内・通常directory・非symlink・空を再検証してから`rmdirSync`する限定変更。再検証後にentryが増えた場合は`ENOTEMPTY`／`EEXIST`を`not-empty`として保持する。
+- `6c251e5..8d29d6a`の差分は`docs/sprints/state.md`だけで、製品／test bytesは同じ。
+- Retry差分にHook、Secretary router、projects、daily、weekly、memory-care、notion-tasks、manifest、README、CHANGELOG、edition／downstream変更は0件。後続Xmind／Hook／Secretary統合／sync／Driftの先行実装も0件。
+
+### F-01／V-01の独立再現
+
+`node /private/tmp/s042-retry1-evaluator.mjs` → exit 0、`status=PASS`。fixture rootは`/var/folders/k1/582ptqfx73l_t0glc9q1hck40000gn/T/s042-retry1-independent-hrPdFE`。
+
+| シナリオ | 観測結果 |
+|---|---|
+| expired owned lockだけ／preview | exit 0、candidate 1、`changed:false`、前後digest `c666d2f122bd4948383725c0b72da1ea0cd65691bd5eff3e4654753a1edb4213`でwrite 0 |
+| 同fixture／apply | exit 0、`status=cleaned`、`changed:true`、`removed=[.clarity/runtime/lock.json]`、lockと空runtime消滅 |
+| 同fixture／retry | exit 0、`status=unchanged`、`changed:false`、removed 0件、runtime不在のまま |
+| 開始時から空runtime | exit 0、`unchanged`、`changed:false`、removed 0件、前後digest一致、runtime保持 |
+| 保持対象とexpired lockの併存 | preview write 0。applyはexpired lockだけを削除し、user file、unowned expired operation、owned live operationをbyte／値保持。runtime reason=`not-empty` |
+| ownership race | preview後2回目readでownerを`user`へ差替え。`runtime-changed`、`changed:false`で停止し、user-owned file保持 |
+| directory race | 空確認後の`rmdirSync`直前にuser fileを注入。owned lock削除は`changed:true`として正直に返し、runtime reason=`not-empty`、race file保持 |
+| runtime symlink | exit 3で安全停止、`changed:false`。外部target digest `e373b06dbe016c700275b75b4acfd1022047704e3dcdf41c6f17f9d77285deed`不変 |
+| root外path／recursive削除 | `safeDeletePath(root, "../outside")`は`filesystem-boundary`。cleanup関数内の`recursive:true`は0件、runtime pathはroot内 |
+
+V-01の実runner閉鎖は`bash scripts/sprint-042-regression.sh`の`IM-014`でも確認した。runnerは`clarity cleanup <root> --json`、`--apply --json`、再applyを実行し、expired-only runtimeの消滅、実removed値、retry収束をassertする。開始時空runtimeのapplyも同じcase内で`unchanged`／write 0／directory保持をassertする。
+
+### Attention／checkpoint／migration／doctorの増分再確認
+
+Retry製品diffはcleanupだけだが、Target suite greenを前提に初回PASS証跡を引き継ぐだけでなく、`node /private/tmp/s042-evaluator.mjs`を同じcandidateで再実行した。exit 0、`status=PASS`、fixture rootは`/var/folders/k1/582ptqfx73l_t0glc9q1hck40000gn/T/s042-independent-4LVD7m`。
+
+- Attention: 13 reason全て、既定level、同点stable tie、人間override、visible 3／other 2を再確認。観測上位順は`ci_bbbbbbbbbbbbbbbbbbbb`、`ci_aaaaaaaaaaaaaaaaaaaa`、`ci_cccccccccccccccccccc`。
+- checkpoint: Evidence後partialと解消Event前partialをretry／再retryし、最終Evidence 3、`checkpoint.recorded` 2、`attention.resolved` 1、active 0。重複増加なし。
+- migration: Project／Event／Item／Evidence／Stateのunknown fieldを持つv1を、`before-swap`／`after-backup`／`after-swap`で失敗させた。各failure後のtree digestは開始前と一致し、v1利用可能、retry後v2、unknown field、Event／Evidence ID、利用者fileを保持、再applyは`unchanged`。
+
+| failure point | before = restored digest | apply後digest | Event ID / Evidence ID | tree rows |
+|---|---|---|---|---:|
+| `before-swap` | `1998273299d17a5c6f7b3b06c24576ce468fa1036a043c69a171ee51d29c7f27` | `ce1164209d63adab42e0cf663ace64e25da0bb19f8bae52b0a50eabd4758b93a` | `cv_10485dee0cf7adf203f6` / `ce_408b0b7442bfdbd2c361` | 8 |
+| `after-backup` | `292411ae861d383f555faafeb1b97fb2107fe5197d474b98ab20be6aee49e3d1` | `9ccc45566a5494a74d499d7c22b01c0328a366500fba06be26bb66732de96b05` | `cv_5489878998ea6251d978` / `ce_5aeed1b71ee779740a2f` | 8 |
+| `after-swap` | `84701e40764aa6731cceda93cbf767a2ad935c9df69a90ad43706ce2307f404c` | `4027e7346f6711320557c920bbe12bb6c78346135d36c9cb1107eabd7a40efff` | `cv_ebd799b6289f47b22bcb` / `ce_4309a4e17e74e577a3d8` | 8 |
+
+- doctor: `mode=standalone`、schema=`current`、projection=`正常/verified`、Hook=`未検証`、link=`未設定`、lock=`残骸あり/verified`、`ok=false`。未検証面を成功へ昇格していない。
+- CLI／Markdown UX: 結論→理由→根拠→選択、推定、未検証、Attentionなし、matrix 4 labelを再確認。rebuild digestは`f783cda96c42938c3cc99c0727c3484efc4948ce189d009589bdbb0c083dd8b1`で再実行`changed=false`。
+
+### Target／関連回帰
+
+| command | 結果 |
+|---|---|
+| `bash scripts/sprint-042-regression.sh` | exit 0、Target 35/35、registry missing 0／duplicate 0／extra 0、wrapper 4/4 |
+| `bash scripts/sprint-041-regression.sh` | exit 0、43/43、wrapper 4/4 |
+| `bash scripts/sprint-015-regression.sh` | exit 0、68/68 |
+| `node scripts/sprint-021-git-safety-test.mjs` | exit 0、71/71 |
+| `node scripts/sprint-022-safety-test.mjs` | exit 0、69/69 |
+| `node scripts/sprint-023-security-test.mjs` | sandboxでは127.0.0.1 bindが`EPERM`。外部通信なしのlocal-only実行面で再実行しexit 0、21/21 |
+| `python3 scripts/check-release-integrity.py` | exit 0、manifest／CHANGELOG整合PASS |
+| Clarity schema JSON 5件parse | `SCHEMA_JSON_PASS=5` |
+| `git diff --check 88591ae..6c251e5` | exit 0 |
+
+初回feedbackで分離したSprint 019のP-01／V-02はREADMEとSprint 019 testの既存baseline debtであり、Retry差分に両fileの変更はない。これをSprint 042で解消済み、またはfull master greenとは報告しない。一方、Sprint 042の製品／test変更に因果のあるTarget、Sprint 041直接回帰、関連安全回帰は全て0 FAILである。
+
+### Retry 1スコア
+
+| 基準 | スコア | 閾値 | 判定 | Retry 1根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 5/5 | 4 | PASS | AC1〜7、Target 35、F-01正常apply／retryを実操作で完了 |
+| C2 構文・整合 | 5/5 | 5 | PASS | registry 0差異、schema 5件、path、diff checkが成立 |
+| C3 機能の実証 | 5/5 | 4 | PASS | cleanup、Attention、checkpoint、migration、doctorを独立fixtureで実行 |
+| C4 非エンジニア体験 | 5/5 | 4 | PASS | cleanup結果が実状態と一致し、retry収束。通常日本語CLIとerror handoffも成立 |
+| C5 安全・規律 | 5/5 | 5 | PASS | user／unowned／live、race、symlink、root外、Secret、外部操作境界を保持 |
+| C6 無回帰 | 5/5 | 5 | PASS | Target、Sprint 041、015／021／022／023、release integrityが0 FAIL。Sprint 019既存debtは非因果分離 |
+| C7 やさしさ | 4/5 | 4 | PASS | bounded日本語と選択権を維持。内部詳細はJSON handoffへ分離 |
+| C19 Clarity正本・状態モデル | 5/5 | 5 | PASS | Event／Evidence／State、byte安定rebuild、履歴／unknown field保持 |
+| C20 Attention・Clarity UX | 5/5 | 4 | PASS | 13 reason、priority、top 3、推定／未検証／根拠不足を正直に表示 |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | cleanup lock／retryを含むpath・symlink・race・所有再確認と関連回帰が成立 |
+
+C8〜C18、C21〜C23は今回の採点対象外。UIは契約どおりCLI／Markdownであり、browser screenshotは非該当。Hook、link／sync、実Drift、Mermaid／Xmind、Secretary統合、Portfolio、packagingをSprint 042のPASSへ代用していない。
+
+### Retry 1 Acceptance Criteria
+
+| AC | 判定 | Retry 1証拠 |
+|---|---|---|
+| 1. Target 35件、Critical、未実行0 | PASS | 35/35、registry差異0、AC未実行0 |
+| 2. 全Attention reasonと正しいlevel | PASS | 専用17 AT case＋独立13 reason |
+| 3. idea／deferred、stable tie／repeat | PASS | 固定時刻、逆順同一、人間override |
+| 4. 上位3件、結論→理由→根拠→選択 | PASS | visible 3／other 2、通常CLI再確認 |
+| 5. migration／cleanup preview、failure、retry | PASS | migration 3 failure point、expired-only cleanup apply／retry、空runtime、race／保持境界 |
+| 6. doctorのmode／schema／canonical／lock／projection | PASS | stale lockで`ok=false`、Hook未検証、link未設定 |
+| 7. technical handoffと通常表示の分離 | PASS | UX-006／010、独立JSON／通常日本語CLI |
+
+### Retry 1 Finding一覧
+
+| # | 最終状態 | 対象区分 | 内容 | Sprint 042最終判定への影響 |
+|---|---|---|---|---|
+| F-01 | **RESOLVED** | product | expired-only cleanupのapply／retryが正常収束し、出力と実状態が一致 | blocker解消 |
+| V-01 | **RESOLVED** | verification-infra | IM-014が実CLIの空runtime経路、retry、開始時空runtimeを検査 | coverage gap解消 |
+| P-01 | OPEN（既存baseline） | product | Sprint 019 README由来。Retry差分外 | Sprint 042 blockerではない。greenへ昇格しない |
+| V-02 | OPEN（既存baseline） | verification-infra | Sprint 019 assert由来。Retry差分外 | Sprint 042 blockerではない。greenへ昇格しない |
+
+Retry 1で新規findingはproduct 0件、verification-infra 0件。Sprint 042に因果のある未解決findingは0件。
+
+### 外部副作用
+
+- network／external connector／Xmind live: 0回
+- 外部remote push／release／cache／downstream／実HOME／利用者workspace write: 0件
+- fixture writeはOS temporary directory内だけ。Sprint 021のpush確認はtemporary local bare remote、Sprint 023は127.0.0.1 local-onlyであり、外部通信は行っていない。
+
+### Retry 1 Evaluator 自己レビュー
+
+- 初回FAIL証拠を削除・改変せずRetry 1を追記したか: yes
+- 閾値と最終合否は一致しているか: yes
+- Target 35 ID、registry差異、Critical、AC未実行を確認したか: yes
+- suite自己申告だけでなくF-01を独立CLI／filesystem fixtureで操作したか: yes
+- V-01がrunner内の実CLI空directory経路で閉じたか: yes
+- preview write 0、実removed、runtime消滅、retry収束、開始時空runtime保持を確認したか: yes
+- user／unowned／live、ownership race、directory race、symlink、root外、非再帰削除を確認したか: yes
+- Attention、checkpoint、migration 3 failure point／unknown field、doctorを増分再確認したか: yes
+- 未検証の実sync／実Drift／Hook／link／XmindをPASS扱いしていないか: yes
+- 既知Sprint 019 debtをfull master greenへ昇格していないか: yes
+- findingへproduct／verification-infra区分を付けたか: yes
+- 証跡は契約／rubricのsafe harbor内か: yes
+- external network／connector／Xmind／push／release／cache／downstream writeを行っていないか: yes
+- 実装、spec、state、progress修正へ越境していないか: yes
+
+## 最終判定（Retry 1を含む）
+
+**合格。** 初回F-01／V-01はcandidate `6c251e5ec13fada873f81bc0bebdcadc09711aaf`で解消し、Sprint 042の全Acceptance Criteriaと対象rubric閾値を満たした。不合格分類は該当なし、Escalation Recommendationは`none`。
