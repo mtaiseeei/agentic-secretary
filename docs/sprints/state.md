@@ -5,7 +5,7 @@
 - Current ID: sprint-050
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -86,7 +86,7 @@
 | sprint-047 | done | [contract](sprint-047.md) | [progress](../progress/sprint-047.md) | [feedback](../feedback/sprint-047.md) |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
-| sprint-050 | active | [contract](sprint-050.md) | - | - |
+| sprint-050 | awaiting-eval | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 050 Generator candidate `5f08d454c05576fcff8ab32c10c00887b4c15a96`を固定。registry JSON由来primary 250／CLX 20／XV 4の合計274を同一candidateで再実行し、273 PASS／0 FAIL／実Xmind MCP `XM-007`のみconditional NOT-RUN、Critical 124/124、High 127/128＋1 NOT-RUN、Medium 22/22。E2E-001〜004は4/4、cross-root write／Hook loop／task自動作成／Decision誤確定0。ACは9件全実行、8 PASS、AC3のClaude Code／Codex実host install／conversation／Hook発火だけblocked。候補tree `1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5`／828 files、common `4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849`／44 filesでsource／detached checkout／Git-free archive一致、archive `.git` 0。handoff acceptedSource null／pending／closed／downstream write0を維持。ユーザーは実機確認を完成後の残余として自ら試す判断を明示済みだが、GeneratorはVerdictへ使わずreleaseReady falseのまま。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 049 Retry 1はfresh独立Evaluator commit `4ffd2a9142be0478be83f5d46c07c7056f6b1236`でPASS。初回8反例8/8、独立routing 25/25、補助正負matrix 38/38、全route side-effect違反0、CLX 20/20、registry差分0、Critical 15/15、AC 6/6、inventory 17/17、C15／C18／C21／C24全5/5、新規product finding 0。最終wrapper 12/12、Sprint 022 69/69＋8/8、Sprint 033 20/20、validator／release integrity／diffがgreen。sandbox loopback EPERMは同一通常環境wrapper exit 0でverification-infraへ分離。Sprint 049をdoneとし、Base Sprint変更でLineage Dispatchesを0へreset。high-risk Sprint 050はresolverがnext generator／strong tier／isolated work unitを選択し、native dispatch面ではrepo規則に従い設定済みSol/highを実roleへ渡す。Generator予約としてLineage Dispatches 1、Status active、Retry／Spec-Issue 0、Rotate none、Next Planned TBDで開始。accepted public SHA／digestはSprint 050独立PASSまで未固定、handoff gate closed、実Xmind／host／private／Yasashii／release／cache未実行を維持。
 - 2026-08-28: Sprint 049 Retry 1 Generator candidate `8a3b9be3836446fd8746769ce76afaeee5a68748`を固定。F-01のrouter precedenceを現在操作優先へ修正し、サービス名だけではconnectorを選ばず、daily／weekly期間集計、Projects lifecycle、Clarityの日英5状態を一意化。Evaluator再現8件を既存CLX fixtureへ追加し、独立25/25、CLX 20/20、Critical 15/15、AC 6/6、side-effect violation 0、inventory 17/17、最終wrapper 12/12、Sprint 022 69/69＋8/8、Sprint 033 20/20、validator／release integrity／diffがgreen。変更はrouter、既存CLX test、inventory digest、progressの4 filesだけ。sandbox listen EPERMは同一通常環境wrapperを2回完走して環境制約に分離し、製品／timeout緩和0。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry 1、Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 049初回評価はfresh独立Evaluator commit `3b7a4af4131ec5b289badeb4767b6e3c150d19d1`でFAIL（`implementation-issue`）。公式handoff wrapper 12/12、inventory／Hook／Xmind／handoff、安全副作用、Sprint 022／033、validator／release integrityはgreenだが、独立natural-language fixture 25件のうち8件で現在操作より名詞一致を優先する誤routeを再現。CLX 16/20、Critical 13/15、AC 3/6、C15／C24が4/5。daily＋Clarityがprojects、weekly＋Clarityがclarity、サービス名を文脈に含むClarity閲覧がconnector、英語Decision／Execution／Validation／Driftがsecretaryへ誤配送されるF-01をRetry 1へ差し戻す。公式fixtureの混合文欠落はverification-infra V-01、Sprint 022単発timeoutは開始HEAD／candidate専用69/69と最終greenにより既存timing debt V-02へ分離。fresh strong Generator予約としてLineage Dispatches 3、Status active、Retry 1、Spec-Issue 0、Rotate none。
