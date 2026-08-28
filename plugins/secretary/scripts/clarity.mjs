@@ -45,6 +45,7 @@ import {
   resolveSyncConflict,
   setLocalLinkMapping,
 } from "./lib/clarity-link.mjs";
+import { applyDrift, commitClarityOwned, recordDriftWaiver } from "./lib/clarity-drift.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { safeWritePath } from "./lib/safe-fs.mjs";
@@ -81,6 +82,9 @@ function usage(message = "") {
   clarity sync-resolve <repo> --link-id <id> --conflict-id <id> --choice <secretary|repo|new-decision|split|defer|unlink> [--note <text>] [--apply] [--json]
   clarity link-doctor <repo> [--link-id <id>] [--json]
   clarity github-read-adapter <repo> [--allow-read] --input-file <bundle.json> [--json]
+  clarity drift <repo> --input-file <comparison.json> [--apply] [--json]
+  clarity drift-waiver <repo> --item-id <id> --reason <text> --scope <text> [--expires-at <ISO-8601>] [--status <active|revoked>] [--operation-id <id>] [--apply] [--json]
+  clarity commit <repo> [--message <text>] [--apply] [--json]
   clarity event <repo> --event-json '<JSON>' [--json]
   clarity evidence <repo> --evidence-json '<JSON>' [--json]
   clarity decide-project <project-root> --secretary-root <secretary> --project <name> --decision <text> --current <text> --next <text> [--item-id <id>] [--operation-id <id>] [--json]`, 2);
@@ -174,6 +178,24 @@ function render(command, result, json) {
     if (result.externalWrites !== undefined) process.stdout.write(`- 外部write: ${result.externalWrites}件\n`);
     if (result.status === "conflict") process.stdout.write(`- conflict: ${result.conflicts.length}件（last-write-winsは行いません）\n`);
     if (result.nextAction) process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (command === "drift") {
+    process.stdout.write(`Drift比較: ${result.status}\n- alignment: ${result.alignment}\n- 理由: ${result.reason}\n- 変更: ${result.changed ? "あり" : "なし"}\n`);
+    if (result.decision && result.implementation) process.stdout.write(`- 根拠: Decision ${result.decision.locator.path}／実装 ${result.implementation.locator?.path || "source authority未確認"}\n`);
+    if (result.attention) process.stdout.write(`- Attention: ${result.attention.reason}／${result.attention.level}／rank ${result.attention.rank}\n`);
+    if (result.nextAction) process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (command === "drift-waiver") {
+    process.stdout.write(`Drift例外: ${result.status}\n- 変更: ${result.changed ? "あり" : "なし"}\n- 状態: ${result.waiver.status}\n- 理由: ${result.waiver.reason}\n- 範囲: ${result.waiver.scope}\n- 期限: ${result.waiver.expiresAt || "期限なし"}\n`);
+    if (result.nextAction && result.status === "preview") process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (command === "commit") {
+    process.stdout.write(`Clarity commit: ${result.status}\n- 変更: ${result.changed ? "あり" : "なし"}\n- 対象: ${(result.paths || []).join("、") || "なし"}\n- push: 0件\n`);
+    if (result.commit) process.stdout.write(`- commit: ${result.commit}\n`);
+    if (result.nextAction && result.status === "preview") process.stdout.write(`次の一手: ${result.nextAction}\n`);
     return;
   }
   if (["migrate", "cleanup"].includes(command)) {
@@ -279,6 +301,16 @@ try {
   else if (command === "sync-resolve") result = resolveSyncConflict(root, { linkId: options.get("--link-id"), conflictId: options.get("--conflict-id"), choice: options.get("--choice"), note: options.get("--note"), apply: Boolean(options.get("--apply")) });
   else if (command === "link-doctor") result = linkDoctor(root, { linkId: options.get("--link-id") || null });
   else if (command === "github-read-adapter") result = readOnlyGitHubAdapter({ allowed: Boolean(options.get("--allow-read")), bundle: inputJson(options, { optional: !options.get("--allow-read") }) });
+  else if (command === "drift") result = applyDrift(root, inputJson(options), { apply: Boolean(options.get("--apply")) });
+  else if (command === "drift-waiver") result = recordDriftWaiver(root, {
+    itemId: options.get("--item-id"),
+    reason: options.get("--reason"),
+    scope: options.get("--scope"),
+    expiresAt: options.get("--expires-at") || null,
+    status: options.get("--status") || "active",
+    operationId: options.get("--operation-id") || null,
+  }, { apply: Boolean(options.get("--apply")) });
+  else if (command === "commit") result = commitClarityOwned(root, { message: options.get("--message") || "Project Clarity checkpoint", apply: Boolean(options.get("--apply")) });
   else if (command === "event") result = appendEvent(root, parseJson(options.get("--event-json"), "--event-json"));
   else if (command === "evidence") result = appendEvidence(root, parseJson(options.get("--evidence-json"), "--evidence-json"));
   else if (command === "decide-project") {

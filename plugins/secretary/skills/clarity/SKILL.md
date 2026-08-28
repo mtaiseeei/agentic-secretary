@@ -59,6 +59,31 @@ previewの対象path、保持する履歴、削除候補を利用者が確認し
 - partial時は成功済みと未完了を分け、同じoperationのretryでDecisionやEventを重複させません。
 - AI推定、draft、superseded sourceは`confirmed`にしません。
 
+## Decisionと実装のDrift確認
+
+Decision／ADR／spec／顧客合意と、現在のcode／commit／test Evidenceを比較するときは、対象fileと行範囲を明示した小さなJSON manifestを使う。最初は必ずpreviewし、`unknown`、`aligned`、`possible_drift`、`drift`、`not_applicable`の結果と双方のlocatorを確認した後だけapplyする。全文検索や意味検索は行わず、各sourceは64KB・240行以内に限定される。
+
+```bash
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --apply --json
+```
+
+manifestは`schemaVersion: 1`、`itemId`、`decision`、`implementation`を持つ。双方にtype、working rootからの相対locator、比較対象の`claim.field`／`claim.value`、source内で確認できる1〜12件の`claim.markers`を指定する。生成物は`authority: "generated"`と`generatedFrom`で生成元を示し、生成元がなければ断定しない。古いcommitは履歴Evidenceとして残し、現在実装の一致とは扱わない。marker不足や同義表現を一意に判断できない場合は`possible_drift`に留める。
+
+waiver、つまり理由付きの一時抑制はDriftを消去しない。理由・範囲・期限をpreviewし、明示applyでEventへ追加する。期限切れまたは`revoked`後はAttentionへ再出現でき、過去の比較・waiver履歴は保持される。
+
+```bash
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --apply --json
+```
+
+Clarity所有fileだけを明示commitする必要がある場合もpreviewを先に行う。`commit --apply`は`.clarity/`と`CLARITY.md`だけを対象にし、既存のdirty／stage／untracked、branch、remoteを変えず、pushしない。
+
+```bash
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --apply --json
+```
+
 ## Markdown／Mermaid投影
 
 同じcanonical Stateから、概要・Attention・マトリクスのMarkdownと、象限・Project構造・依存関係・状態遷移のraw Mermaidを生成する。
@@ -110,3 +135,4 @@ node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clar
 - preview／cancelではClarity canonical、Git、journal、runtimeを変更しない。
 - root外write、network、未承認のXmind MCP／local `.xmind` write、connector、push、remote／branch変更、Hook、task自動作成を行わない。
 - Evidenceは相対path／ID／日付／SHA等の最小locator、短いsummary、digestだけを保存し、本文やSecretを保存しない。
+- Drift comparatorは明示locatorだけを読む。absolute path、traversal、symlink／junction、`.git`、runtime、credential／Secret／transcript候補をcanonical write前に拒否し、source本文をoutputやEvidenceへ含めない。
