@@ -1,6 +1,22 @@
 # Sprint 045: generic Secretary-local、daily／weekly／Portfolio
 
-**ステータス:** Retry 1 Generator修正・自動回帰完了、Evaluator独立再評価待ち
+**ステータス:** Retry 2 Generator修正・自動回帰完了、Evaluator独立再評価待ち
+
+## Retry 2（F-05／V-02）
+
+- 開始HEADは`bb181ba3e2a8b4e4cd88c87799b9599efc00608d`。Retry 1 EvaluatorのF-05だけを製品修正し、同じ既存基準のV-02をPF-012へ回帰化した。
+- Portfolioの横断集約は、各Projectの表示用`attention.top`件数ではなくcanonical `activeCount`を総数へ加算する。横断上位3件の候補と並びは従来どおり各Projectのbounded `top`から決め、`otherCount`はcanonical総数から実際の表示件数を引いて返す。
+- 1つのopen Projectにactive Attention 6件がある場合、Portfolioとmorning dailyのJSONは`activeCount: 6`／表示3件／`otherCount: 3`となる。Portfolio plainは`Attention 6件`と`その他 3件`、daily plainは`今日確認したい項目は6件です`と`その他 3件`を表示する。
+- PF-012は製品CLIの`status`／`portfolio`／`daily`をJSONとplainで直接実行し、canonical 6／3／3、Portfolio 6／3／3、daily 6／3／3をassertする。8 Project × 1件も同じcaseで維持し、横断順序は`案件0`、`案件1`、`案件2`、総数8、残件5、全Item本文0、connector read 0を検査する。
+- Retry 1で解消したF-01〜F-04のDecision両partial、canonical全Item task route、move-safe `projectRef`／link health、Evidence／choicesの直接回帰は変更せず、公式35/35で再実行した。closed／legacy除外、source failure分離、open-only、Sprint 046以降の非先行も維持した。
+- 公式35 ID、registryの順序・件数、report surface 22件は変更していない。
+
+### Retry 2の変更ファイル
+
+- `plugins/secretary/scripts/lib/clarity-secretary.mjs`
+- `plugins/secretary/scripts/clarity-secretary.mjs`
+- `scripts/sprint-045-test.mjs`
+- `docs/progress/sprint-045.md`
 
 ## Retry 1（F-01〜F-04）
 
@@ -31,7 +47,7 @@
 - public adapterはgeneric path pattern、lifecycle／Decision／task authority、downstream fixed handoffだけを定義した。private固有resolver、source path、property／relation、task実装は含めていない。
 - 新しいClarity Skillを正式な利用者向け応答surfaceへ登録し、既存plain-language serializerを参照させた。これに合わせてreport-schema inventoryを21面から22面へ更新した。
 
-## 変更箇所
+## 変更箇所（Sprint 045累積）
 
 - `plugins/secretary/scripts/lib/clarity-secretary.mjs`
 - `plugins/secretary/scripts/clarity-secretary.mjs`
@@ -61,6 +77,8 @@ spec、Sprint契約、state、feedback、release metadata、private downstream�
 
 registryは`docs/spec/clarity-acceptance.md`のJSONを直接parseし、missing 0、duplicate 0、extra 0である。`SL-006`はSprint 041 core fixtureの結果を流用せず、generic Secretary-localの作成・Clarity初期化・Decision・partial retry・complete／reopen責務を同じfixtureで評価した。Retry 1では両partialをlibrary直呼びせず、新しい製品CLIのstderr JSONと実filesystemを比較する。
 
+Retry 2のPF-012はlibrary返値だけに依存せず、製品CLIのJSON／plainを直接parse・assertする。1 Project × active Attention 6件と8 Project × 1件の双方でcanonical総数、表示上限、残件数を検査し、公式case IDは増減していない。
+
 ## 自動検証
 
 ### Sprint 045統合ゲート
@@ -79,6 +97,7 @@ bash scripts/sprint-045-regression.sh
 - `claude plugin validate plugins/secretary --strict`: `Validation passed`。
 - `node --check`、adapter JSON parse、`git diff --check`: exit 0。
 - `python3 scripts/check-report-schema.py --plugin-root plugins/secretary`: `PASS=1 FAIL=0`、22 surface、conflict 0。
+- PF-012実CLI: canonical 6／top 3／other 3、Portfolio JSON・plain 6／3／3、daily JSON・plain 6／3／3。8 Project横断は総数8／表示3／other 5でstable orderingを確認した。
 
 ### 関連Skill直接回帰
 
@@ -137,19 +156,20 @@ node plugins/secretary/scripts/clarity-secretary.mjs decide <secretary-root> <pr
 2. open ProjectへClarityを適用し、`PROJECT.md`のbefore／after bytesが同一、Clarity rootがPJ内だけ、modeが`secretary-local`であることを確認する。
 3. generic Secretary-localでDecisionを確定し、`PROJECT.md`のDecision本文1件、一般memory 0件、Clarity Event本文0件、`decision.confirmed` Event 1件を確認する。製品CLIで同じ操作のretryと、`clarity-finalize`／`decision-write`の両partialを起こし、`changed`、`completed`、`pending`、`nextAction`と実filesystemが一致すること、retryで重複0となることを確認する。
 4. Projectをcompleteしてclosedへ移し、Clarity ID／Event bytesとProject folder基準`projectRef`を比較する。closed statusの実参照が存在してhealthyであること、stale参照はhealthyにならないこと、reopen後も同じID／履歴／参照でClarity directoryを再作成していないことを確認する。
-5. 複数open、closed、legacy、Attention Critical／0件、破損sourceを混ぜ、Portfolioがopenだけ、Critical理由付き最大3件、短いEvidence／choicesあり、全Item本文なし、connector read 0、未確認範囲分離になることをJSON／plainの両方で確認する。
-6. morning出力で`今日の要確認`が独立section、最大3件であること、evening／weeklyが規定区分を分離し、閲覧前後でTODO bytesが同一であることを確認する。
-7. 5件以上のClarity Itemを作り、top外、Attention外、unknown IDを分ける。暗黙task routeは0-write、top外localとAttention外downstreamの明示routeは既存確認境界へのhandoffだけでTODO／外部task write 0であることを製品CLIから確認する。
-8. public Clarity sourceとadapterをscanし、private保護literal／実装が0、fixed handoff markerがあることを確認する。
-9. `bash scripts/sprint-045-regression.sh`で35 targetとSprint 041〜044直接回帰を再実行する。
+5. 1つのopen Projectへactive Attentionを6件作り、製品CLIの`status --json`が6／3／3、`portfolio --json`とplainが総数6／表示3／残件3、`daily --mode morning --json`とplainも6／3／3を返すことを確認する。8 Projectでは総数8、上位`案件0`〜`案件2`、残件5を確認する。
+6. 複数open、closed、legacy、Attention Critical／0件、破損sourceを混ぜ、Portfolioがopenだけ、Critical理由付き最大3件、短いEvidence／choicesあり、全Item本文なし、connector read 0、未確認範囲分離になることをJSON／plainの両方で確認する。
+7. morning出力で`今日の要確認`が独立section、最大3件であること、evening／weeklyが規定区分を分離し、閲覧前後でTODO bytesが同一であることを確認する。
+8. 5件以上のClarity Itemを作り、top外、Attention外、unknown IDを分ける。暗黙task routeは0-write、top外localとAttention外downstreamの明示routeは既存確認境界へのhandoffだけでTODO／外部task write 0であることを製品CLIから確認する。
+9. public Clarity sourceとadapterをscanし、private保護literal／実装が0、fixed handoff markerがあることを確認する。
+10. `bash scripts/sprint-045-regression.sh`で35 targetとSprint 041〜044直接回帰を再実行する。
 
 ## Known issues／正直な未検証
 
 - Sprint 045の自動targetと直接回帰に製品FAILはない。ただしGeneratorの自己評価はEvaluator判定ではない。
 - 実private repo／workspace、private source tree、downstream task adapter、connector live、Xmind live、Mac mini、installed plugin/cache、marketplace、push、tag、releaseは実行・変更していない。public実装のPASSをprivate適用済み、installed version更新済み、external-live verifiedとは表示しない。
 - Sprint 043から継続する`XM-007`実Xmind MCP external-liveは未承認NOT-RUNのまま。本Sprintのfixtureやadapterで置き換えていない。
-- 旧Sprint 014 wrapperのsandbox loopback `EPERM`と既知README assertionは、Evaluatorが開始baselineとcandidateで同一と確認済みのbaseline debtである。Retry 1はREADME／Chatwork runtimeを変更していないため再実行せず、変更面のSprint 010／015直接suiteをgreenで確認した。旧失敗を統合PASSへ数えていない。
-- 旧Sprint 018 runnerの現行update CLI／temp fixtureとの前提不一致も、Evaluatorが開始baselineとcandidateで同一と確認済みのverification-infra debtである。Retry 1はupdate面を変更していないため再実行せず、現行update config／gateと製品script構文を直接実行し、いずれも0 FAILだった。
+- 旧Sprint 014 wrapperのsandbox loopback `EPERM`と既知README assertionは、Evaluatorが開始baselineとcandidateで同一と確認済みのbaseline debtである。Retry 2はREADME／Chatwork runtimeを変更していないため再実行せず、変更面のSprint 010／015直接suiteをgreenで確認した。旧失敗を統合PASSへ数えていない。
+- 旧Sprint 018 runnerの現行update CLI／temp fixtureとの前提不一致も、Evaluatorが開始baselineとcandidateで同一と確認済みのverification-infra debtである。Retry 2はupdate面を変更していないため再実行せず、現行update config／gateと製品script構文を直接実行し、いずれも0 FAILだった。
 - linked sync、reciprocal link、semantic Drift comparator、private adaptation、Yasashii適用、packaging／releaseはSprint 046以降または別Harnessの責務であり、本Sprintでは先行実装していない。
 
 ## 外部副作用

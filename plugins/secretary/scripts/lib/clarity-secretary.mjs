@@ -308,6 +308,7 @@ export function portfolioRollup(secretaryRootValue) {
   const projects = [];
   const unverifiedSources = [];
   const attention = [];
+  let activeCount = 0;
   for (const record of listProjectRecords(root)) {
     if (record.error) { unverifiedSources.push({ project: record.name, reason: record.error }); continue; }
     try {
@@ -318,6 +319,7 @@ export function portfolioRollup(secretaryRootValue) {
       }
       const top = clarity.report.attention.top[0] || null;
       projects.push({ name: record.name, scope: record.scope, clarity: "available", attentionCount: clarity.report.attention.activeCount, top: top ? { itemId: top.itemId, title: top.title, level: top.level, reasons: top.reasonLabels, lagDays: Number(top._rank?.age || 0) } : null });
+      activeCount += clarity.report.attention.activeCount;
       for (const item of clarity.report.attention.top) attention.push({ project: record.name, ...item });
     } catch (error) {
       unverifiedSources.push({ project: record.name, reason: error?.code || "source-unreadable" });
@@ -331,14 +333,14 @@ export function portfolioRollup(secretaryRootValue) {
     projectCount: projects.length,
     projects,
     attention: {
-      activeCount: attention.length,
+      activeCount,
       top: attention.slice(0, DISPLAY_LIMIT).map(({ _rank, ...item }) => ({
         ...item,
         evidence: (item.evidence || []).slice(0, 3).map((row) => ({ evidenceId: row.evidenceId, summary: row.summary, availability: row.availability })),
         choices: (item.choices || []).slice(0, 3),
         lagDays: Number(_rank?.age || 0),
       })),
-      otherCount: Math.max(0, attention.length - DISPLAY_LIMIT),
+      otherCount: Math.max(0, activeCount - Math.min(DISPLAY_LIMIT, attention.length)),
     },
     unverifiedSources,
     closedIncluded: false,

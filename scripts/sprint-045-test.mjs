@@ -290,9 +290,29 @@ try {
   });
 
   await test("PF-012", "dailyは全stateを読み上げずbounded", () => {
-    const root = secretary("pf012"); for (let index = 0; index < 8; index += 1) { const name = `案件${index}`; createProject(root, name); init(root, name); }
-    const result = run(process.execPath, [adapterCli, "daily", root, "--mode", "morning"]); const report = dailyClarityRollup(root);
-    assert.equal(result.status, 0); assert(report.items.length <= 3); assert(result.stdout.length < 3000); assert.equal(report.itemBodiesIncluded, false);
+    const root = secretary("pf012-single"); createProject(root, "単一案件"); const clarity = init(root, "単一案件");
+    for (let index = 1; index < 6; index += 1) appendFixtureItem(clarity.root, 100 + index);
+
+    const canonical = runJson(process.execPath, [adapterCli, "status", root, "単一案件", "--json"]);
+    assert.equal(canonical.attention.activeCount, 6); assert.equal(canonical.attention.top.length, 3); assert.equal(canonical.attention.otherCount, 3);
+
+    const portfolioJson = runJson(process.execPath, [adapterCli, "portfolio", root, "--json"]);
+    assert.equal(portfolioJson.attention.activeCount, 6); assert.equal(portfolioJson.attention.top.length, 3); assert.equal(portfolioJson.attention.otherCount, 3);
+    assert.equal(portfolioJson.itemBodiesIncluded, false); assert.equal(portfolioJson.connectorReads, 0);
+    const portfolioPlain = run(process.execPath, [adapterCli, "portfolio", root]);
+    assert.equal(portfolioPlain.status, 0); assert.match(portfolioPlain.stdout, /Attention 6件/u); assert.match(portfolioPlain.stdout, /その他 3件/u); assert.equal((portfolioPlain.stdout.match(/理由:/gu) || []).length, 3);
+
+    const dailyJson = runJson(process.execPath, [adapterCli, "daily", root, "--mode", "morning", "--json"]);
+    assert.equal(dailyJson.conclusion, "今日確認したい項目は6件です"); assert.equal(dailyJson.items.length, 3); assert.equal(dailyJson.otherCount, 3);
+    assert.equal(dailyJson.itemBodiesIncluded, false); assert.equal(dailyJson.connectorReads, 0);
+    const dailyPlain = run(process.execPath, [adapterCli, "daily", root, "--mode", "morning"]);
+    assert.equal(dailyPlain.status, 0); assert.match(dailyPlain.stdout, /今日確認したい項目は6件です/u); assert.match(dailyPlain.stdout, /その他 3件/u); assert.equal((dailyPlain.stdout.match(/理由:/gu) || []).length, 3); assert(dailyPlain.stdout.length < 3000);
+
+    const multiRoot = secretary("pf012-multi");
+    for (let index = 0; index < 8; index += 1) { const name = `案件${index}`; createProject(multiRoot, name); init(multiRoot, name); }
+    const multiJson = runJson(process.execPath, [adapterCli, "daily", multiRoot, "--mode", "morning", "--json"]);
+    assert.equal(multiJson.conclusion, "今日確認したい項目は8件です"); assert.deepEqual(multiJson.items.map((item) => item.project), ["案件0", "案件1", "案件2"]); assert.equal(multiJson.items.length, 3); assert.equal(multiJson.otherCount, 5);
+    assert.equal(multiJson.itemBodiesIncluded, false); assert.equal(multiJson.connectorReads, 0);
   });
 
   await test("RG-001", "Clarity Item作成で外部task write 0", () => {

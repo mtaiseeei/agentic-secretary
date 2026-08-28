@@ -57,8 +57,9 @@ function render(command, result, asJson) {
     return;
   }
   if (command === "portfolio") {
-    process.stdout.write(`Portfolio: open Project ${result.projectCount}件\n`);
+    process.stdout.write(`Portfolio: open Project ${result.projectCount}件、Attention ${result.attention.activeCount}件\n`);
     for (const item of result.attention.top) process.stdout.write(attentionLines(item));
+    if (result.attention.otherCount) process.stdout.write(`- その他 ${result.attention.otherCount}件\n`);
     if (!result.attention.activeCount) process.stdout.write("- 現在判断不要です\n");
     if (result.unverifiedSources.length) process.stdout.write(`- 未確認: ${result.unverifiedSources.length}件\n`);
     return;
