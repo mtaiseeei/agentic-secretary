@@ -1,5 +1,7 @@
 {
   "schemaVersion": 3,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:host:v1",
+  "collaborationInventory": "collaboration-inventory.json",
   "pluginRoot": {
     "strategy": "skill-file-realpath-v1",
     "resolver": "scripts/resolve-plugin-root.mjs",
@@ -44,6 +46,14 @@
       }
     },
     "promotionRule": "A verified result belongs only to its exact host and surface. supported, verified, degraded, and unverified are never promoted across hosts."
+  },
+  "collaborationRouting": {
+    "router": "scripts/collaboration-router.mjs",
+    "execution": "selection-only",
+    "sideEffect": { "fileWrites": 0, "adapterCalls": 0, "commandCalls": 0, "externalCalls": 0 },
+    "manualFallback": "skills/clarity/SKILL.md",
+    "verified": false,
+    "reason": "Natural-language fixtureはoffline検証対象です。host実会話のverifiedへ昇格しません。"
   },
   "skills": [
     { "name": "build", "hostSpecific": ["Harness marketplace and install ID", "explicit Harness entry"] },

@@ -162,6 +162,8 @@ closed、完了、終了、過去案件の明示指定時だけ `--closed`／`--
 
 ## Project Clarityとの協働
 
+<!-- agentic-secretary:clarity-collaboration:projects:v1 -->
+
 ClarityはProjectの作成・完了・再開・`canonicalRepo`を所有しない。これらは上記のprojects操作を正本のまま使う。
 Clarityを追加するときは、まずgeneric resolverのread-only previewを返し、利用者が対象を確認した後だけapplyする。
 
@@ -173,6 +175,8 @@ node ${SECRETARY_PLUGIN_ROOT}/scripts/clarity-secretary.mjs init <secretary> <pr
 `PROJECT.md`本文へClarity Itemを埋め込まず、`project-tools.mjs show`ではmode、Attention、link health、詳細pointerだけを短く添える。
 通常はopenだけを参照し、legacyは読み取り専用、closedは利用者が明示した場合だけ`status ... --closed`で参照する。
 完了・再開ではProject folder全体が既存の原子的操作で移動するため、Clarity IDとEvent履歴を再作成・複製しない。
+別repo開発PJの`canonicalRepo`は`create-dev-pointer`が作る`PROJECT.md`の「正本repo」をprojects正本として扱う。
+Clarityはread-onlyのlink候補として参照するだけで、相手Repoへのwrite、fetch、pull、push、branch／remote変更を行わない。
 
 Project固有Decisionは次のadapterから既存`add-decision` seamへ一度だけ委譲する。Decision本文を一般memoryやClarity Eventへ複製しない。
 

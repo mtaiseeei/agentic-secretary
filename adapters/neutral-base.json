@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:neutral-base:v1",
   "neutralizationCommit": "52016cf10c1c5587fbd83ff2faf3888e29282d5e",
   "minimumHistoryCommitCount": 129,
   "digests": {
-    "plugins/secretary/rules/safety.md": "565c9006d3ad1b4eda5e5b87cdb7e62096739c0e1eb65abfefbe33a50bdb1e48",
+    "plugins/secretary/rules/safety.md": "6c53847f4ff4a2746c1198901bd2c551e9978a4c0b4a08813d1892ceb38a864a",
     "plugins/secretary/skills/chatwork/assets/wizard/app.js": "e8e31880b67953b0acdb364c74d18728938867c42c69a43b725874b4d5b83d3e",
     "plugins/secretary/skills/chatwork/assets/wizard/index.html": "f12f2c2a24cddc4156360b20b639776d887b89679c4e45045aa43aed04964d61",
     "plugins/secretary/skills/chatwork/assets/wizard/style.css": "37172c51374e94fc92d0c7d0aac48434eaa06a22e2a83bc30f6bc790ea30c207",

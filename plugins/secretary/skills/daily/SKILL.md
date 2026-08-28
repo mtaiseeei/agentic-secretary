@@ -38,6 +38,8 @@ SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/
 
 ## morning: 今日の入口
 
+<!-- agentic-secretary:clarity-collaboration:daily:v1 -->
+
 1. `node "${SECRETARY_PLUGIN_ROOT}/skills/memory-care/scripts/memory-tools.mjs" resume-check <secretary>`を実行する。しおりがあれば`resume-read`で**中断点**を確認するが、自動で消さない。
 2. 同じNode.js helperの`timeline <secretary> --type journal`で直近の`next`（翌日以降への申し送り）を確認する。
 3. `node "${SECRETARY_PLUGIN_ROOT}/scripts/workspace-tools.mjs" todo-list <secretary>`で未完TODOを確認する。

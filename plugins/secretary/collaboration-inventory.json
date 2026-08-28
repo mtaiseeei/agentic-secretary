@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "inventoryId": "agentic-secretary-clarity-collaboration-v1",
+  "marker": "agentic-secretary:clarity-collaboration-inventory:v1",
+  "digestAlgorithm": "sha256(path-NUL-mode-NUL-bytes-NUL)",
+  "editionContract": {
+    "publicSource": "agentic-secretary",
+    "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+    "downstreamImplementationIncluded": false,
+    "privateValuesIncluded": false
+  },
+  "surfaces": [
+    {
+      "id": "secretary-router",
+      "role": "Natural-language intent selection without execution",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/skills/secretary/SKILL.md", "plugins/secretary/scripts/collaboration-router.mjs", "plugins/secretary/scripts/lib/collaboration-router.mjs"],
+      "markers": [{"path": "plugins/secretary/skills/secretary/SKILL.md", "token": "agentic-secretary:clarity-collaboration-router:v1"}],
+      "contentDigest": "04676be814f6c06af48f5e678ec3a996b15ebb5e4e1655df2a0a2652e484e33e",
+      "tests": ["CLX-001", "CLX-018"],
+      "delegation": "Select one existing Skill; the router itself executes nothing",
+      "noTouch": ["current non-Clarity intent", "file", "adapter", "command", "external service"]
+    },
+    {
+      "id": "clarity-skill",
+      "role": "Own Decision, Execution, Validation, Attention, and Drift",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/skills/clarity/SKILL.md"],
+      "markers": [{"path": "plugins/secretary/skills/clarity/SKILL.md", "token": "agentic-secretary:clarity-collaboration:clarity:v1"}],
+      "contentDigest": "ef57661a433e08c9b6a3986754140924519d232f30b81bcd0bdac1e26ab3f284",
+      "tests": ["CLX-001", "CLX-009", "CLX-010", "CLX-018"],
+      "delegation": "Explicit operations only through their existing owner Skill",
+      "noTouch": ["project lifecycle", "task canonical", "general memory", "Harness state", "plugin update", "connector"]
+    },
+    {
+      "id": "projects-lifecycle",
+      "role": "Own create, open, closed, complete, reopen, canonicalRepo and expose bounded Clarity summary",
+      "edition": "common-core-with-downstream-adapter-seam",
+      "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/project-tools.mjs", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json"],
+      "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
+      "contentDigest": "a382c457edf749482a82c0872df2d01c5109b9e303decd8aacbdb4c9963dc289",
+      "tests": ["CLX-002", "CLX-003", "CLX-004", "CLX-005", "CLX-006"],
+      "delegation": "Project Decision to existing add-decision seam; Clarity link preparation remains preview-first",
+      "noTouch": ["general memory duplication", "peer Repo write", "fetch", "pull", "push", "remote"]
+    },
+    {
+      "id": "daily-attention",
+      "role": "Add bounded 今日の要確認 separately from schedule, TODO, and resume state",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/skills/daily/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs"],
+      "markers": [{"path": "plugins/secretary/skills/daily/SKILL.md", "token": "agentic-secretary:clarity-collaboration:daily:v1"}],
+      "contentDigest": "e0ea1460ea7455634a45aaa93694aac9695e7f75eb72af8d2228bc0ef7b33750",
+      "tests": ["CLX-007"],
+      "delegation": "Read open Project minimum projection only",
+      "noTouch": ["schedule canonical", "TODO canonical", "resume canonical", "connector", "closed Project"]
+    },
+    {
+      "id": "weekly-portfolio",
+      "role": "Add Attention change, resolved Drift and lag separately from journal summary",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/skills/weekly/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs"],
+      "markers": [{"path": "plugins/secretary/skills/weekly/SKILL.md", "token": "agentic-secretary:clarity-collaboration:weekly:v1"}],
+      "contentDigest": "0e0cb29bc7a81d72acbfb59e994912ed4101a5e63570d4061e96a087209ecea0",
+      "tests": ["CLX-008"],
+      "delegation": "Read journal and open Project minimum projection through separate seams",
+      "noTouch": ["journal canonical", "closed Project", "full Item body", "connector"]
+    },
+    {
+      "id": "task-seams",
+      "role": "Keep local TODO and downstream Notion task creation behind explicit existing boundaries",
+      "edition": "public-seam-private-implementation-protected",
+      "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json", "adapters/downstream-clarity-handoff.json"],
+      "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
+      "contentDigest": "7bededa73f2a748afaec9690bb2ede7607730aa41b6341ff0a8b42e5c8fa4ad5",
+      "tests": ["CLX-009", "CLX-010"],
+      "delegation": "Explicit local task to project-tools:add-todo; explicit downstream task to fixed adapter",
+      "noTouch": ["automatic task creation", "Notion schema", "downstream protected Skill"]
+    },
+    {
+      "id": "memory-care",
+      "role": "Avoid duplicating Project Decision and Clarity Event in general memory",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/skills/memory-care/SKILL.md", "plugins/secretary/rules/conversation-contract.md"],
+      "markers": [{"path": "plugins/secretary/skills/memory-care/SKILL.md", "token": "agentic-secretary:clarity-collaboration:memory:v1"}, {"path": "plugins/secretary/rules/conversation-contract.md", "token": "agentic-secretary:clarity-collaboration:conversation:v1"}],
+      "contentDigest": "27fe981a5813df7424ed42aeadb5fb288a5c6d06a2d461c3be58a2ac805b76f5",
+      "tests": ["CLX-011"],
+      "delegation": "Reference existing Project Decision or Clarity Event; use memory-care only for explicit non-duplicate memory",
+      "noTouch": ["duplicate memory", "Hook semantic classification", "transcript copy"]
+    },
+    {
+      "id": "build-harness",
+      "role": "Pass Clarity as read-only context without replacing Harness canonical files or roles",
+      "edition": "agentic-host-routing-with-common-safety",
+      "paths": ["plugins/secretary/skills/build/SKILL.md", "plugins/secretary/edition.json"],
+      "markers": [{"path": "plugins/secretary/skills/build/SKILL.md", "token": "agentic-secretary:clarity-collaboration:build:v1"}],
+      "contentDigest": "278e8ddaae96931a7179ecdbc2bb8fb13d206806ddde983ca995b56ef50ea76b",
+      "tests": ["CLX-012"],
+      "delegation": "Explicit development request to installed Agentic Harness only",
+      "noTouch": ["Harness spec", "Harness Sprint", "Harness state", "Harness feedback", "implicit install"]
+    },
+    {
+      "id": "update-release",
+      "role": "Keep update read-only first and release stages separate",
+      "edition": "agentic-host-routing-with-fixed-downstream-handoff",
+      "paths": ["plugins/secretary/skills/update/SKILL.md", "plugins/secretary/release-inventory.json"],
+      "markers": [{"path": "plugins/secretary/skills/update/SKILL.md", "token": "agentic-secretary:clarity-collaboration:update:v1"}],
+      "contentDigest": "5e19ece0560eacb67c4790947184c9eb540447cf8e8f36c0e9e0951fbd7f7b06",
+      "tests": ["CLX-013"],
+      "delegation": "Explicit plugin update request enters existing read-only diagnose and separate confirmation flow",
+      "noTouch": ["Hook-triggered update", "per-session network", "automatic migration", "release promotion"]
+    },
+    {
+      "id": "onboarding-templates",
+      "role": "Copy optional Clarity guidance and Agentic Xmind default OFF without initializing Clarity",
+      "edition": "common-template-with-edition-default-copy",
+      "paths": ["plugins/secretary/skills/onboarding/SKILL.md", "plugins/secretary/templates/AGENTS.md", "plugins/secretary/templates/CLAUDE.md", "plugins/secretary/edition.json"],
+      "markers": [{"path": "plugins/secretary/skills/onboarding/SKILL.md", "token": "agentic-secretary:clarity-collaboration:onboarding:v1"}, {"path": "plugins/secretary/templates/AGENTS.md", "token": "agentic-secretary:clarity-collaboration:workspace-template:v1"}],
+      "contentDigest": "45249a27339b00388e13234b853aabd46e3d63cf419a1da8ba040693a2402543",
+      "tests": ["CLX-014"],
+      "delegation": "Later explicit Clarity request to clarity Skill preview",
+      "noTouch": ["automatic Clarity init", "automatic Xmind write", "private path", "Yasashii style"]
+    },
+    {
+      "id": "rules-serializer",
+      "role": "Render bounded natural Japanese Attention as conclusion, reason, evidence, choice",
+      "edition": "common-contract-plus-agentic-style",
+      "paths": ["plugins/secretary/rules/plain-language.md", "plugins/secretary/rules/common-language.md", "plugins/secretary/rules/conversation-contract.md", "plugins/secretary/rules/safety.md", "plugins/secretary/rules/styles/agentic.md", "plugins/secretary/rules/rule-manifest.json", "adapters/neutral-base.json"],
+      "markers": [{"path": "plugins/secretary/rules/common-language.md", "token": "agentic-secretary:clarity-collaboration:language:v1"}, {"path": "plugins/secretary/rules/styles/agentic.md", "token": "agentic-secretary:clarity-collaboration:serializer:v1"}, {"path": "adapters/neutral-base.json", "token": "agentic-secretary:clarity-collaboration:neutral-base:v1"}],
+      "contentDigest": "cec7e4c650314e395ff703289aba8cc1250baf2aaf8a3c3367d9a6e7ab3e89af",
+      "tests": ["CLX-015"],
+      "delegation": "Apply the single final serializer after all tool calls",
+      "noTouch": ["fixed Clarity report schema", "more than three primary Attention items", "certainty inflation"]
+    },
+    {
+      "id": "host-inventory",
+      "role": "Separate supported, verified, degraded, trust, disabled and manual fallback per host surface",
+      "edition": "public-common-host-contract",
+      "paths": ["plugins/secretary/host-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json"],
+      "markers": [{"path": "plugins/secretary/host-inventory.json", "token": "agentic-secretary:clarity-collaboration:host:v1"}],
+      "contentDigest": "c4204ce552f8283f1088bf13e6a882fff4b679c354d0a863a31290a8ba3a72b2",
+      "tests": ["CLX-016"],
+      "delegation": "Manual fallback remains available when Hook is untrusted, disabled, or failed",
+      "noTouch": ["cross-host verified promotion", "trust inference", "canonical write in degraded state"]
+    },
+    {
+      "id": "edition-handoff",
+      "role": "Fix common, adapter, excluded and protected paths while downstream application remains closed",
+      "edition": "public-first-then-private-then-yasashii",
+      "paths": ["adapters/downstream-clarity-handoff.json", "plugins/secretary/release-inventory.json", "adapters/agentic-overlay.json"],
+      "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}, {"path": "adapters/agentic-overlay.json", "token": "agentic-secretary:clarity-collaboration:agentic-overlay:v1"}],
+      "contentDigest": "ad226154773739a458c8351013abb59e56185cbe23b6c9f7836cd81a44dcac78",
+      "tests": ["CLX-017", "CLX-020"],
+      "delegation": "Apply only in each downstream separate Harness after accepted public source is fixed",
+      "noTouch": ["private protected path", "Yasashii protected path", "downstream state", "release", "cache"]
+    },
+    {
+      "id": "external-connectors",
+      "role": "Keep Chatwork, Google Chat, Google, Microsoft and Notion behind explicit existing entries",
+      "edition": "common-safety-host-specific-execution",
+      "paths": ["plugins/secretary/skills/chatwork/SKILL.md", "plugins/secretary/skills/google-chat/SKILL.md", "plugins/secretary/skills/connections/SKILL.md", "plugins/secretary/skills/setup-google/SKILL.md", "plugins/secretary/skills/setup-microsoft/SKILL.md", "plugins/secretary/skills/setup-notion/SKILL.md"],
+      "markers": [{"path": "plugins/secretary/skills/chatwork/SKILL.md", "token": "agentic-secretary:clarity-collaboration:connector:v1"}, {"path": "plugins/secretary/skills/google-chat/SKILL.md", "token": "agentic-secretary:clarity-collaboration:connector:v1"}],
+      "contentDigest": "43d14fe3b0b2d19d0ff1abbe6e4e3748b965da7f08792ad8fde2b1c0762892a4",
+      "tests": ["CLX-018"],
+      "delegation": "Only an explicit service request selects the existing connector Skill",
+      "noTouch": ["Clarity-triggered connector", "implicit OAuth", "implicit network", "implicit external write"]
+    },
+    {
+      "id": "clarity-hook",
+      "role": "Observe bounded Clarity lifecycle events through the only Hook manifest and router",
+      "edition": "common-core",
+      "paths": ["plugins/secretary/hooks/hooks.json", "plugins/secretary/scripts/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs"],
+      "markers": [{"path": "plugins/secretary/hooks/hooks.json", "token": "agentic-secretary:clarity-collaboration:hook:v1"}],
+      "contentDigest": "5d7d2213c0c10461dddf48d2a6e69d873f51f7e40927d149f6d3a3b16bf9adc9",
+      "tests": ["CLX-019"],
+      "delegation": "Manual clarity Skill fallback only",
+      "noTouch": ["other Skill Hook", "memory semantic classification", "network", "Xmind", "connector", "update"]
+    },
+    {
+      "id": "xmind-editions",
+      "role": "Keep only edition default different while provider priority, approval gate and fixed visual remain common",
+      "edition": "agentic-off-private-on-yasashii-off",
+      "paths": ["plugins/secretary/release-inventory.json", "adapters/downstream-clarity-handoff.json", "plugins/secretary/skills/clarity/SKILL.md"],
+      "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}],
+      "contentDigest": "95409c4e1b85f322092586516984a6111ae7fd1ae92f296af9d2c505c4c07070",
+      "tests": ["CLX-014", "CLX-017", "CLX-020"],
+      "delegation": "ON selects capable MCP first; local native only after explicit preview approval",
+      "noTouch": ["automatic local fallback", "unapproved cloud write", "unapproved local write", "edition-specific visual"]
+    },
+    {
+      "id": "package-release-inventory",
+      "role": "Expose collaboration inventory from both host manifests and keep source, release, cache and loaded state separate",
+      "edition": "public-source-candidate",
+      "paths": ["plugins/secretary/release-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json", ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"],
+      "markers": [{"path": "plugins/secretary/release-inventory.json", "token": "agentic-secretary:clarity-collaboration:release:v1"}],
+      "contentDigest": "4f4fe91f4b86f64a4820bb5d243145dff6ee7036255d96c97630cdbd4c4345c5",
+      "tests": ["CLX-016", "CLX-017", "CLX-020"],
+      "delegation": "Release and downstream stages remain separately gated",
+      "noTouch": ["tag", "GitHub Release", "marketplace publish", "installed cache", "loaded session"]
+    }
+  ]
+}

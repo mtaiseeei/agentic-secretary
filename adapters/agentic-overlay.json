@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:agentic-overlay:v1",
   "neutralizationCommit": "52016cf10c1c5587fbd83ff2faf3888e29282d5e",
   "allowedChangedPaths": [
     ".github/workflows/windows-recording-regression.yml",
@@ -46,6 +47,7 @@
     "plugins/secretary/edition.json",
     "plugins/secretary/host-inventory.json",
     "plugins/secretary/release-inventory.json",
+    "plugins/secretary/collaboration-inventory.json",
     "plugins/secretary/clarity/**",
     "plugins/secretary/hooks/**",
     "plugins/secretary/migrations/**",

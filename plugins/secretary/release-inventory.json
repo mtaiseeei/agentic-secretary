@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:release:v1",
   "edition": "agentic-secretary",
   "candidateVersion": "0.11.0",
   "publicationStatus": "source-candidate-unverified",
@@ -56,6 +57,7 @@
     "manualFallback": ["status", "attention", "review", "checkpoint", "doctor"]
   },
   "hostStatusArtifact": "plugins/secretary/host-inventory.json",
+  "collaborationInventory": "plugins/secretary/collaboration-inventory.json",
   "xmind": {
     "editions": [
       { "id": "agentic-secretary", "defaultEnabled": false, "selected": null, "reason": "runtime capabilityと利用者設定を確認するまでproviderを選択しません。", "verified": false },

@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:handoff:v1",
   "kind": "agentic-secretary-clarity-fixed-handoff",
   "sourceEdition": "agentic-secretary",
   "candidateVersion": "0.11.0",
@@ -12,25 +13,51 @@
     "plugins/secretary/clarity/schemas/project.schema.json",
     "plugins/secretary/clarity/schemas/state.schema.json",
     "plugins/secretary/clarity/secretary-adapter.json",
+    "plugins/secretary/collaboration-inventory.json",
     "plugins/secretary/hooks/hooks.json",
     "plugins/secretary/host-inventory.json",
     "plugins/secretary/release-inventory.json",
     "plugins/secretary/scripts/clarity-hook.mjs",
     "plugins/secretary/scripts/clarity-secretary.mjs",
     "plugins/secretary/scripts/clarity.mjs",
+    "plugins/secretary/scripts/collaboration-router.mjs",
     "plugins/secretary/scripts/lib/clarity-core.mjs",
     "plugins/secretary/scripts/lib/clarity-drift.mjs",
     "plugins/secretary/scripts/lib/clarity-hook.mjs",
     "plugins/secretary/scripts/lib/clarity-link.mjs",
     "plugins/secretary/scripts/lib/clarity-projection.mjs",
     "plugins/secretary/scripts/lib/clarity-secretary.mjs",
-    "plugins/secretary/skills/clarity/SKILL.md"
+    "plugins/secretary/scripts/lib/collaboration-router.mjs",
+    "plugins/secretary/scripts/project-tools.mjs",
+    "plugins/secretary/skills/clarity/SKILL.md",
+    "plugins/secretary/skills/secretary/SKILL.md",
+    "plugins/secretary/skills/projects/SKILL.md",
+    "plugins/secretary/skills/daily/SKILL.md",
+    "plugins/secretary/skills/weekly/SKILL.md",
+    "plugins/secretary/skills/memory-care/SKILL.md",
+    "plugins/secretary/skills/build/SKILL.md",
+    "plugins/secretary/skills/update/SKILL.md",
+    "plugins/secretary/skills/onboarding/SKILL.md",
+    "plugins/secretary/skills/chatwork/SKILL.md",
+    "plugins/secretary/skills/google-chat/SKILL.md",
+    "plugins/secretary/skills/connections/SKILL.md",
+    "plugins/secretary/skills/setup-google/SKILL.md",
+    "plugins/secretary/skills/setup-microsoft/SKILL.md",
+    "plugins/secretary/skills/setup-notion/SKILL.md",
+    "plugins/secretary/templates/AGENTS.md",
+    "plugins/secretary/templates/CLAUDE.md",
+    "plugins/secretary/rules/plain-language.md",
+    "plugins/secretary/rules/common-language.md",
+    "plugins/secretary/rules/conversation-contract.md",
+    "plugins/secretary/rules/rule-manifest.json",
+    "plugins/secretary/rules/safety.md"
   ],
   "adapterSeams": [
     { "id": "secretary-local", "path": "plugins/secretary/clarity/secretary-adapter.json", "owner": "public-common" },
     { "id": "host-status", "path": "plugins/secretary/host-inventory.json", "owner": "public-common" },
     { "id": "release-status", "path": "plugins/secretary/release-inventory.json", "owner": "public-common" },
-    { "id": "xmind-edition-default", "path": "plugins/secretary/release-inventory.json", "owner": "downstream-adaptation", "allowedFields": ["xmind.editions[].defaultEnabled", "xmind.editions[].reason"] }
+    { "id": "xmind-edition-default", "path": "plugins/secretary/release-inventory.json", "owner": "downstream-adaptation", "allowedFields": ["xmind.editions[].defaultEnabled", "xmind.editions[].reason"] },
+    { "id": "collaboration-surface", "path": "plugins/secretary/collaboration-inventory.json", "owner": "public-common" }
   ],
   "excludedPaths": [
     ".git/**",
@@ -61,6 +88,25 @@
     ]
   },
   "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+  "xmindContract": {
+    "editionDefaults": {
+      "agentic-secretary": false,
+      "agentic-secretary-my-vault": true,
+      "yasashii-secretary": false
+    },
+    "providerPriorityWhenEnabled": ["xmind-mcp", "local-native-after-explicit-approval"],
+    "writeWithoutApproval": false,
+    "visual": {
+      "topAxis": "決まっている",
+      "bottomAxis": "まだ決まっていない",
+      "quadrants": [
+        { "position": "top-left", "emoji": "🟢", "label": "定着・検証", "meaning": "安定している", "color": "#16A34A" },
+        { "position": "top-right", "emoji": "🔵", "label": "実行待ち", "meaning": "あとは進めるだけ", "color": "#2563EB" },
+        { "position": "bottom-left", "emoji": "🟡", "label": "暫定実装・要再確認", "meaning": "注意して確認する", "color": "#D97706" },
+        { "position": "bottom-right", "emoji": "🔴", "label": "設計・意思決定", "meaning": "人間の判断が必要", "color": "#DC2626" }
+      ]
+    }
+  },
   "rollback": {
     "strategy": "file-scoped-pre-sync-commit",
     "instruction": "各downstreamの同期前commitへcommon pathだけを戻し、protected／excluded pathとrepo正本を変更しません。"

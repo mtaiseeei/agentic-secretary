@@ -20,6 +20,13 @@ SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/
 
 Project ClarityはTODO一覧ではありません。Decision、Execution、Validationと根拠を分け、「何が決まり、何が実行され、どこに人間の判断が要るか」を扱います。
 
+<!-- agentic-secretary:clarity-collaboration:clarity:v1 -->
+
+Project作成・open／closed・完了・再開・`canonicalRepo`はprojects、予定／TODO／journalは既存Skill、
+一般memoryはmemory-care、開発はbuild、plugin更新はupdate、外部サービスは各connectorが所有する。
+Clarityのstatus、Item作成、Attention、projection、Hookだけからこれらを自動実行しない。タスク化、memory、開発、更新、
+connectorが現在の依頼で明示された場合だけ、secretaryのcollaboration routerを通して既存入口へ委譲する。
+
 通常の利用者向け応答は`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md`を参照する。Secretary workspaceを扱う場合は既存の
 `secretary/memory/preferences.md`を読み、最終応答serializerだけを正本にする。Clarity Skill独自の固定帳票へ包み直さない。
 

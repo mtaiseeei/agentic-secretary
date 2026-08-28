@@ -1,5 +1,6 @@
 {
   "description": "Project Clarity only: bounded lifecycle observations and manual-fallback guidance.",
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:hook:v1",
   "hooks": {
     "SessionStart": [
       {
