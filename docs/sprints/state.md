@@ -2,13 +2,13 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-045
-- Retry Count: 2
+- Current ID: sprint-046
+- Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
+- Lineage Dispatches: 1
 - Model Tier: strong
 - Rotate: none
-- Next Planned: sprint-046
+- Next Planned: sprint-047
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
      ユーザー確認で単段クレジットに正本改訂、回帰assert強化のうえ合格）。
@@ -81,8 +81,8 @@
 | sprint-042 | done | [contract](sprint-042.md) | [progress](../progress/sprint-042.md) | [feedback](../feedback/sprint-042.md) |
 | sprint-043 | done | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
 | sprint-044 | done-by-user-decision | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
-| sprint-045 | awaiting-eval | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
-| sprint-046 | planned | [contract](sprint-046.md) | - | - |
+| sprint-045 | done | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
+| sprint-046 | active | [contract](sprint-046.md) | - | - |
 | sprint-047 | planned | [contract](sprint-047.md) | - | - |
 | sprint-048 | planned | [contract](sprint-048.md) | - | - |
 | sprint-049 | planned | [contract](sprint-049.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 045 Retry 2はfresh独立Evaluator commit `d5679f1cec35c12ac8cf68db76da373efae66b74`でPASS。F-01〜F-05／V-01〜V-02はすべてRESOLVED、新規finding 0。1 Project×Attention 6件はcanonical／Portfolio／dailyで総数6／表示3／残件3、8 Project×各1件は総数8／表示3／残件5、plain、Evidence／choices、Decision両partial、全Item route、complete／closed／reopen、link healthを独立CLI／filesystemで確認。Target 35/35、registry差分0、AC 8/8、C1〜C7／C19／C20／C24全5/5、041〜044と関連回帰がgreen。Sprint 045をdone、Retry／Spec-Issue 0とし、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 046はresolverがstrong tier／fresh isolated Generatorを選択したため、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。Sprint 043 real Xmind MCP、Sprint 044 host残件、旧014／018 debtはSprint外残余として維持する。
 - 2026-08-28: Sprint 045 Retry 2 Generator candidate `ec6eed919152e47a661de49b7bd19794ac51eb89`を固定。F-05／V-02に限定し、Portfolioの総数を表示用`attention.top`件数ではなく各Projectのcanonical `activeCount`から集計し、bounded上位3件を維持したまま`otherCount`を総数との差として算出。Portfolio plainにも総件数と残件数を明示した。PF-012へ製品CLI JSON／plainによる1 Project×active Attention 6件＝総数6／表示3／残件3と、8 Project×各1件＝総数8／表示3／残件5の回帰を追加し、公式35 ID／registryを不変にした。F-01〜F-04の直接回帰も維持。Target 35/35、registry差分0、統合9/9、041〜044、関連Skill、report schema、Claude strict validator、release integrityがgreen。private／cache／marketplace／connector／Xmind／後続Sprint／push／release 0。fresh独立Evaluator予約としてLineage Dispatches 6、Status awaiting-eval、Retry Count 2、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 045 Retry 1 fresh独立Evaluator commit `24380ee4a781d267b973e160fd32ec3d44370d83`はFAIL／`implementation-issue`。前回F-01〜F-04とV-01はすべてRESOLVED、公式35/35、registry差分0、041〜044と関連直接回帰はgreen。新規Major product F-05として、canonical Stateが同一Projectのactive Attention 6件／top 3／other 3を保持する一方、Portfolio／morning dailyがtop 3だけを足してactive 3／other 0と誤表示する集約不整合を実CLIで再現。Minor verification-infra V-02として公式PF-012が8 Project×各1件だけで1 Project×6件を検知しない点を分離。Retry Count 2、fresh Generator予約としてLineage Dispatches 5、Status active、Model Tier strong、Rotate none。修正はcanonical activeCount／残件数を保つPortfolio／daily集約と同一Project多件CLI回帰だけに限定し、解消済みF-01〜F-04を回帰維持する。
 - 2026-08-28: Sprint 045 Retry 1 Generator candidate `e5b1225d416f1fcd8c1bc236dfafd4ee08586f58`を固定。F-01〜F-04に限定し、Decision両partialの実副作用に一致する`changed`／`completed`／`pending`／`nextAction`、canonical State全Itemからの明示task route、Project folder基準のmove-safe `projectRef`とclosed／reopen link health、bounded Evidence／choicesを含むdaily／Portfolio JSON・plainを修正。公式35 IDの件数・registryを維持したまま、両partialの製品CLI、top外／Attention外Item、complete／reopen、Evidence／choicesの直接回帰を追加した。Target 35/35、registry差分0、統合9/9、Sprint 041〜044、projects／daily／weekly／memory／chat／identity／update／Harness関連回帰、report schema 22 surface、Claude strict validator、release integrityがgreen。旧Sprint 014／018 debtは初回評価のcandidate／baseline同一記録を保持し、今回変更面の直接suiteで確認。private／cache／marketplace／connector／Xmind／後続Sprint／push／release 0。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。
