@@ -5,7 +5,7 @@
 - Current ID: sprint-049
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-050
@@ -85,7 +85,7 @@
 | sprint-046 | done | [contract](sprint-046.md) | [progress](../progress/sprint-046.md) | [feedback](../feedback/sprint-046.md) |
 | sprint-047 | done | [contract](sprint-047.md) | [progress](../progress/sprint-047.md) | [feedback](../feedback/sprint-047.md) |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
-| sprint-049 | active | [contract](sprint-049.md) | - | - |
+| sprint-049 | awaiting-eval | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | - |
 | sprint-050 | planned | [contract](sprint-050.md) | - | - |
 
 ## Deferred / Superseded
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 049 Generator candidate `0a1ce5d24963dc8284c8748c29b49be49aa9eeb9`を固定。natural-language selection-only router、Projects lifecycle／Clarity state所有境界、daily／weeklyのbounded Attention、task／memory／build／update／connectorの明示委譲、Clarity専用Hook、17面collaboration inventory、edition別Xmind defaultと共通MCP-first／承認付きlocal／固定4象限を統合。CLX 20/20、registry差分0、Critical 15/15、AC 6/6、side-effect violation 0、inventory 17/17、Sprint 045 35/35、Sprint 048 12/12、Sprint 022 69/69、Sprint 033 20/20、strict validator／release integrity／diffがgreen。長い統合実行でSprint 022 timeout fixtureが1回だけ失敗したが、candidateと開始HEADの専用suiteはいずれも69/69、変更対象外、最終単一Sprint 049 wrapperは12/12 greenのため、既存timing依存のverification debtとしてprogressに分離。外部live Xmind、実host、private／Yasashii適用、publish／cacheは未実行。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 048はfresh独立Evaluator commit `e239a19db93caa243d5b654f6b787d1d31824813`でPASS。Target 12/12、registry差分0、Critical 7/7、AC 6/6、新規repo内finding 0、C12／C13／C21／C24全5/5。candidate `86875828c8730e928aaefda47555a6e35441fee1`のsource／clean checkout／Git-free archiveは814 files、tree digest `47c44a8c706e1186938045fc408ac7014505e5ac6837283cd3d62b35f761bce6`で一致し、archive `.git` 0、Clarity／master／validator／release integrityがgreen。manifest／17 Skill／5 Hook／Host 4面 verified false、Xmind edition default／MCP-first／承認付きlocal／4色配置、closed handoff／7負例、Yasashii CHANGELOG-only境界を独立確認。sandbox listen EPERMは同一checkoutの通常環境再実行greenで環境制約に分離。Sprint 048をdone、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 049はresolverがstrong tier／fresh isolated Generatorを選択したため、Retry／Spec-Issue 0、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。accepted SHA未固定、実host／Xmind／private／Yasashii／publish／cacheは未実行を維持。
 - 2026-08-28: Sprint 048 Generator candidate `86875828c8730e928aaefda47555a6e35441fee1`を固定。public `0.11.0` source candidateとしてClaude／Codex manifest、17 Skill、共通Hook、marketplace／release／host inventory、README／guide／CHANGELOG、fixed handoff schema／closed pre-write gateを整合。Host 4面はsupported true／verified false、XmindはAgentic／Yasashii OFF・private default ON、MCP-first／承認付きlocal第2優先、固定4色配置を保持。Target 12/12、registry差分0、Critical 7/7、AC 6/6、validator 23/23、master 15/15。実HEADのclean checkout／Git-free archiveはtree digest `47c44a8c706e1186938045fc408ac7014505e5ac6837283cd3d62b35f761bce6`、814 files、same bytes、archive `.git` 0、両tree validator／Clarity回帰、clean masterがPASS。handoff negativeはprotected／excluded／private・Yasashii path／stale SHA／tree／closed gateを拒否し、acceptedSource null／downstream write 0。Yasashii差分はAgentic先行・機能未展開・別Harness待ちを明記したlegacy CHANGELOGだけ。publish／install／cache／tag／Release 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 047はfresh独立Evaluator commit `5a4a904`でPASS。Target 25/25、registry差分0、Critical 16/16、AC 7/7、新規finding 0。独立Drift正負、同義／old commit／generated authority、transition／waiver／expiry／revoke、partial retry、CLI 17＋Hook 23 stress、parse／unique 100%、State rebuild 61/61、lock回復／unowned保持、path／Secret非露出、Event／State corruption safe stop、Clarity-owned commitとGit利用者状態不変を確認。actual AT-003／004とC1〜C7／C19／C20／C22／C24は全閾値通過。Sprint 047をdone、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 048はresolverがstrong tier／fresh isolated Generatorを選択したため、Retry／Spec-Issue 0、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。Windows junction、実顧客／private／Yasashii／Xmind live／releaseは未検証を維持。
