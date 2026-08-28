@@ -87,6 +87,10 @@
       "plugins/secretary/rules/styles/yasashii.md"
     ]
   },
+  "downstreamRepositories": {
+    "agentic-secretary-my-vault": "mtaiseeei/agentic-secretary-my-vault",
+    "yasashii-secretary": "mtaiseeei/yasashii-secretary"
+  },
   "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
   "xmindContract": {
     "editionDefaults": {
@@ -117,5 +121,95 @@
     "requiredPublicationStatus": "public-evaluator-pass",
     "requires": ["accepted full SHA", "full tree digest", "common path digest", "file count", "protected path digests", "excluded path coverage", "clean candidate tree"],
     "writesDownstream": false
+  },
+  "userDecisionPreWriteGate": {
+    "status": "closed",
+    "requiredPublicationStatus": "public-user-decision-risk-accepted",
+    "requiredAcceptanceBasisType": "user-risk-acceptance",
+    "evaluatorPass": false,
+    "writesDownstream": false,
+    "fixedBindings": {
+      "acceptedProductSource": {
+        "fullSha": "5f08d454c05576fcff8ab32c10c00887b4c15a96",
+        "treeSha256": "1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5",
+        "fileCount": 828,
+        "commonTreeSha256": "4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849",
+        "commonFileCount": 44
+      },
+      "originEvaluation": {
+        "feedbackCommit": "8483d86390b6c105163e64d24dcafe498ed2fe8b",
+        "feedbackPath": "docs/feedback/sprint-050.md",
+        "feedbackSha256": "fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd",
+        "verdict": "verification-scope-issue",
+        "productFindingCount": 0,
+        "blockingResidualIds": ["AC3", "C21"],
+        "conditionalNotRunIds": ["XM-007"],
+        "otherPhaseResidualIds": [
+          "claude-code-desktop",
+          "codex-app",
+          "windows-native",
+          "mac-mini",
+          "private-my-vault-application",
+          "yasashii-application",
+          "release",
+          "tag",
+          "push",
+          "marketplace",
+          "installed-cache",
+          "new-session-loaded-version"
+        ],
+        "registry": { "pass": 273, "fail": 0, "conditionalNotRun": 1 },
+        "e2e": { "pass": 4, "total": 4 }
+      },
+      "authorizationRecord": {
+        "authorizationId": "sprint-050-downstream-user-decision-2026-08-28",
+        "decisionDate": "2026-08-28",
+        "exactQuote": "よいです",
+        "recordedBy": "user-explicit-decision",
+        "revoked": false,
+        "context": "Sprint 050のexact candidateについて、Claude CodeとCodexの実install後live conversation・Hook発火未実施を後日自ら確認するリスクとして引き受け、元feedbackと未達を保持したままprivate my-vault、次にYasashiiの別Harnessへ展開してよい。",
+        "scope": {
+          "authorized": ["private-my-vault-separate-harness", "yasashii-separate-harness-after-private"],
+          "notAuthorized": ["release", "tag", "push", "marketplace", "installed-cache", "new-session", "xmind-mcp-write", "host-live-write", "downstream-write-by-public-patch"]
+        },
+        "targetAcceptedFullSha": "5f08d454c05576fcff8ab32c10c00887b4c15a96",
+        "targetOriginFeedbackCommit": "8483d86390b6c105163e64d24dcafe498ed2fe8b",
+        "targetOriginFeedbackSha256": "fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd",
+        "acceptedResidualIds": ["AC3", "C21"],
+        "notAcceptedResidualIds": [
+          "XM-007",
+          "claude-code-desktop",
+          "codex-app",
+          "windows-native",
+          "mac-mini",
+          "private-my-vault-application",
+          "yasashii-application",
+          "release",
+          "tag",
+          "push",
+          "marketplace",
+          "installed-cache",
+          "new-session-loaded-version"
+        ],
+        "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+        "invalidatedBy": [
+          "accepted-source-change",
+          "origin-feedback-change",
+          "residual-reduction-or-replacement",
+          "scope-change",
+          "downstream-order-or-identity-change",
+          "common-excluded-protected-path-change",
+          "protected-digest-change",
+          "rollback-change",
+          "authorization-revocation",
+          "governance-non-pass-or-commit-change"
+        ]
+      }
+    },
+    "requiredGovernance": {
+      "feedbackPath": "docs/feedback/sprint-050-patch-001.md",
+      "verdict": "PASS",
+      "evaluatedCommitLabel": "Evaluated commit"
+    }
   }
 }

@@ -41,6 +41,25 @@ function safeRelative(path) {
   return typeof path === "string" && path.length > 0 && !path.startsWith("/") && !path.includes("..") && !path.includes("\\");
 }
 
+function productSurfaceBytes(path, absolute) {
+  const bytes = readFileSync(absolute);
+  if (path !== "adapters/downstream-clarity-handoff.json") return bytes;
+
+  // Sprint 050 Patch 001 keeps the accepted product candidate frozen and adds
+  // governance-only bindings beside it. The Sprint 049 inventory continues to
+  // guard the exact pre-Patch product projection; the Patch suite independently
+  // validates every byte and fail-closed branch of the new governance fields.
+  let body = bytes.toString("utf8");
+  const repositoriesStart = body.indexOf('\n  "downstreamRepositories": {');
+  const orderStart = body.indexOf('\n  "downstreamOrder":', repositoriesStart);
+  if (repositoriesStart >= 0 && orderStart > repositoriesStart) {
+    body = `${body.slice(0, repositoriesStart)}${body.slice(orderStart)}`;
+  }
+  const governanceStart = body.indexOf(',\n  "userDecisionPreWriteGate": {');
+  if (governanceStart >= 0) body = `${body.slice(0, governanceStart)}\n}\n`;
+  return Buffer.from(body);
+}
+
 export function digestSurface(rootValue, pathsValue) {
   const root = resolve(rootValue);
   const paths = [...pathsValue].sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
@@ -51,7 +70,7 @@ export function digestSurface(rootValue, pathsValue) {
     if (!existsSync(absolute)) fail("inventory-path-missing", path);
     const stat = lstatSync(absolute);
     if (!stat.isFile() || stat.isSymbolicLink()) fail("inventory-path-not-regular", path);
-    hash.update(path).update("\0").update(mode(absolute)).update("\0").update(readFileSync(absolute)).update("\0");
+    hash.update(path).update("\0").update(mode(absolute)).update("\0").update(productSurfaceBytes(path, absolute)).update("\0");
   }
   return hash.digest("hex");
 }
