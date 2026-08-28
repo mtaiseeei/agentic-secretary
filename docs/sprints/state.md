@@ -5,7 +5,7 @@
 - Current ID: sprint-046
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-047
@@ -82,7 +82,7 @@
 | sprint-043 | done | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
 | sprint-044 | done-by-user-decision | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
 | sprint-045 | done | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
-| sprint-046 | active | [contract](sprint-046.md) | - | - |
+| sprint-046 | awaiting-eval | [contract](sprint-046.md) | [progress](../progress/sprint-046.md) | - |
 | sprint-047 | planned | [contract](sprint-047.md) | - | - |
 | sprint-048 | planned | [contract](sprint-048.md) | - | - |
 | sprint-049 | planned | [contract](sprint-049.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 046 Generator candidate `9c6da76f61bbf510a2b9f4cb74a24c3c119e8f3e`を固定。Secretary Project／外部Repoのprepare→accept→finalize、reciprocal manifest、immutable Project ID、Repo identity／digest、gitignored local mapping、manual bundle pull sync、authority／stale／schema／tombstone／conflict、6 resolution、doctor／stale Portfolio、symlink／root escape防止を実装。applyは自Repoのimports／projection／Eventだけ、相手Repo／remote／Git変更0、network許可前0。2隔離Git Repo＋canaryでTarget 34/34、registry差分0、Critical 19件未実行0、actual sync由来AT-008／009 2/2、041〜045とprojects／daily／weekly回帰、strict validator、release integrityがgreen。実GitHub／private／Yasashii／cache／marketplace／Xmind live／release 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 045 Retry 2はfresh独立Evaluator commit `d5679f1cec35c12ac8cf68db76da373efae66b74`でPASS。F-01〜F-05／V-01〜V-02はすべてRESOLVED、新規finding 0。1 Project×Attention 6件はcanonical／Portfolio／dailyで総数6／表示3／残件3、8 Project×各1件は総数8／表示3／残件5、plain、Evidence／choices、Decision両partial、全Item route、complete／closed／reopen、link healthを独立CLI／filesystemで確認。Target 35/35、registry差分0、AC 8/8、C1〜C7／C19／C20／C24全5/5、041〜044と関連回帰がgreen。Sprint 045をdone、Retry／Spec-Issue 0とし、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 046はresolverがstrong tier／fresh isolated Generatorを選択したため、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。Sprint 043 real Xmind MCP、Sprint 044 host残件、旧014／018 debtはSprint外残余として維持する。
 - 2026-08-28: Sprint 045 Retry 2 Generator candidate `ec6eed919152e47a661de49b7bd19794ac51eb89`を固定。F-05／V-02に限定し、Portfolioの総数を表示用`attention.top`件数ではなく各Projectのcanonical `activeCount`から集計し、bounded上位3件を維持したまま`otherCount`を総数との差として算出。Portfolio plainにも総件数と残件数を明示した。PF-012へ製品CLI JSON／plainによる1 Project×active Attention 6件＝総数6／表示3／残件3と、8 Project×各1件＝総数8／表示3／残件5の回帰を追加し、公式35 ID／registryを不変にした。F-01〜F-04の直接回帰も維持。Target 35/35、registry差分0、統合9/9、041〜044、関連Skill、report schema、Claude strict validator、release integrityがgreen。private／cache／marketplace／connector／Xmind／後続Sprint／push／release 0。fresh独立Evaluator予約としてLineage Dispatches 6、Status awaiting-eval、Retry Count 2、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 045 Retry 1 fresh独立Evaluator commit `24380ee4a781d267b973e160fd32ec3d44370d83`はFAIL／`implementation-issue`。前回F-01〜F-04とV-01はすべてRESOLVED、公式35/35、registry差分0、041〜044と関連直接回帰はgreen。新規Major product F-05として、canonical Stateが同一Projectのactive Attention 6件／top 3／other 3を保持する一方、Portfolio／morning dailyがtop 3だけを足してactive 3／other 0と誤表示する集約不整合を実CLIで再現。Minor verification-infra V-02として公式PF-012が8 Project×各1件だけで1 Project×6件を検知しない点を分離。Retry Count 2、fresh Generator予約としてLineage Dispatches 5、Status active、Model Tier strong、Rotate none。修正はcanonical activeCount／残件数を保つPortfolio／daily集約と同一Project多件CLI回帰だけに限定し、解消済みF-01〜F-04を回帰維持する。
