@@ -5,7 +5,7 @@
 - Current ID: sprint-047
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-048
@@ -83,7 +83,7 @@
 | sprint-044 | done-by-user-decision | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
 | sprint-045 | done | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
 | sprint-046 | done | [contract](sprint-046.md) | [progress](../progress/sprint-046.md) | [feedback](../feedback/sprint-046.md) |
-| sprint-047 | active | [contract](sprint-047.md) | - | - |
+| sprint-047 | awaiting-eval | [contract](sprint-047.md) | [progress](../progress/sprint-047.md) | - |
 | sprint-048 | planned | [contract](sprint-048.md) | - | - |
 | sprint-049 | planned | [contract](sprint-049.md) | - | - |
 | sprint-050 | planned | [contract](sprint-050.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 047 Generator candidate `4493fa660c41f40cc54e27d85f2772cae3eb5667`を固定。bounded Drift comparator、`unknown／aligned／possible_drift／drift／not_applicable`、双方Evidence locator、同義／old commit／generated authority誤検出抑制、純追加transition／waiver履歴、canonical lock、schema safe stop／明示rebuild、Clarity-owned明示commit、Secret／credential／transcript／path拒否を実装。Target 25/25、registry差分0、Critical 16/16、AC 7/7、actual AT-003=`decision_implementation_drift`／Critical／rank 1、AT-004=`possible_drift`／High／rank 1。CLI 32＋Hook 32 stress後parse／unique／rebuild 100%、dirty／stage／untracked／HEAD／branch／remote／visibility／canary不変、041〜046と関連回帰、strict validator、release integrityがgreen。実顧客／private／Yasashii／Windows junction／Xmind live／external deployment／release 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 046はfresh独立Evaluator commit `cd3b0f17d56bdf5fab40899c280e1253abb7478f`でPASS。Target 34/34、registry差分0、Critical 19/19、AC 8/8、新規product／verification-infra finding 0。独立2-Repoでprepare→accept→finalize、両方向manual sync、Secret／path非露出、peer／Git／remote／canary不変、tamper／stale／schema／tombstone／unknown保持、actual AT-008／009、6 resolution、doctor／stale Portfolio、retry byte安定を確認。C1〜C7／C19／C20／C22／C24は全閾値通過。Sprint 046をdone、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 047はresolverがstrong tier／fresh isolated Generatorを選択したため、Retry／Spec-Issue 0、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。実GitHub／Xmind／private／Yasashii／cache／marketplace／releaseは未実行を維持。
 - 2026-08-28: Sprint 046 Generator candidate `9c6da76f61bbf510a2b9f4cb74a24c3c119e8f3e`を固定。Secretary Project／外部Repoのprepare→accept→finalize、reciprocal manifest、immutable Project ID、Repo identity／digest、gitignored local mapping、manual bundle pull sync、authority／stale／schema／tombstone／conflict、6 resolution、doctor／stale Portfolio、symlink／root escape防止を実装。applyは自Repoのimports／projection／Eventだけ、相手Repo／remote／Git変更0、network許可前0。2隔離Git Repo＋canaryでTarget 34/34、registry差分0、Critical 19件未実行0、actual sync由来AT-008／009 2/2、041〜045とprojects／daily／weekly回帰、strict validator、release integrityがgreen。実GitHub／private／Yasashii／cache／marketplace／Xmind live／release 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 045 Retry 2はfresh独立Evaluator commit `d5679f1cec35c12ac8cf68db76da373efae66b74`でPASS。F-01〜F-05／V-01〜V-02はすべてRESOLVED、新規finding 0。1 Project×Attention 6件はcanonical／Portfolio／dailyで総数6／表示3／残件3、8 Project×各1件は総数8／表示3／残件5、plain、Evidence／choices、Decision両partial、全Item route、complete／closed／reopen、link healthを独立CLI／filesystemで確認。Target 35/35、registry差分0、AC 8/8、C1〜C7／C19／C20／C24全5/5、041〜044と関連回帰がgreen。Sprint 045をdone、Retry／Spec-Issue 0とし、Base Sprint変更でLineage Dispatchesを0へ戻した。high-risk Sprint 046はresolverがstrong tier／fresh isolated Generatorを選択したため、Model Tier strong、Rotate none、Generator予約としてLineage Dispatches 1、Status activeで開始する。Sprint 043 real Xmind MCP、Sprint 044 host残件、旧014／018 debtはSprint外残余として維持する。
