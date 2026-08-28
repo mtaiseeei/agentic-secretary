@@ -337,3 +337,148 @@ network、AI creditである。今回の実行件数はすべて0。push、relea
 - 実装、test、spec、state、progressへ越境していないか: yes
 - 最終分類根拠: product defectは0件。未達は、ユーザー未承認で実行できない4 surfaceのCritical live証拠だけである。
   Harness契約に従い`verification-scope-issue`としてユーザー判断へ返す。
+
+---
+
+## Retry 2 — Mac実host live評価
+
+**判定:** 不合格
+**分類:** `verification-scope-issue`
+**Generator candidate:** `53f327b7de3df0343122fae5692a4c5fbf8ee2e3`
+**評価開始HEAD:** `b3d2ca6db4add1973c9e700089277fc95ddd0099`
+**評価開始branch:** `codex/sprint-041-project-clarity`
+**評価開始時worktree:** clean
+**評価OS:** macOS。Windowsは未実行・`unverified`のままとし、Mac結果を昇格しない。
+**Evaluator model／effort metadata:** host metadataを取得できないため`unverified`。dispatch指定から推定しない。
+**Escalation Recommendation:** user decision。製品修正への自動差し戻しは行わない。
+
+### Retry 2 結論
+
+ユーザー承認の範囲でcandidateをMac実hostへ一時読込みし、Claude Code CLIとCodex CLIでは実lifecycleを確認できた。
+Claude Code CLI 2.1.231は実SessionStart、materialなWrite、PostToolUse、Stop一度限り、2回目停止、SessionEnd、
+環境flagによるHook disabled、manual fallbackを実行した。Codex CLI 0.147.0は`/hooks`のtrust前skip、untrusted doctor、
+trust後SessionStart、materialな`apply_patch`、PostToolUse、Stop一度限り、2回目停止、SessionEnd、5 Hookの実disable、
+manual fallback、PreCompactを実行した。両CLIともcanonical 4 fileはbyte不変で、実runtime eventはJSON parseできた。
+
+一方、Claude Code DesktopはComputer UseのApp state取得が2回とも60秒を超えて無応答となり中断した。
+Codex AppはComputer Useが`not allowed to use the app 'com.openai.codex' for safety reasons`として操作を拒否した。
+両Appでclick、type、candidate task／session作成は0件で、candidate load、trust、disable、lifecycleを実行していない。
+CLI証拠をDesktop／Appへ昇格しない。
+
+また、Codex CLIの`/compact`では実PreCompact recordを得たが、compact直後のcandidate SessionStart recordは0件だった。
+同じ評価sessionをsandbox外のexact resume commandで再開できたものの、resume時もcandidate SessionStart recordは0件だった。
+routerがpayloadを受け取って失敗した証拠ではなく、Codex 0.147.0から対象eventがcandidateへ配送された証拠がないため、
+製品findingへ推定せずhost capability未確認として分離する。ただしHX-004／C21のlive PASSには数えない。
+
+Target 40/40、registry 0/0/0、F-01／V-01解消、100＋128並行、禁止処理instrumentation、既存Skill inventoryは、
+同一candidate・clean worktreeのRetry 1証拠を増分評価規則に従ってcarry forwardした。CLIで確認できた面は増えたが、
+契約AC1は両hostのCritical liveと未実行0件、C21は両host別live、Sprint scopeはDesktop／Appを含むsurface別truthを要求する。
+したがって通常PASSには到達しない。
+
+### surface別結果
+
+| surface | host／version／load方法 | trust／disabled | 実event／manual | 判定 |
+|---|---|---|---|---|
+| Claude Code CLI | `claude 2.1.231`。candidate sourceの`plugins/secretary`を`--plugin-dir`でfresh `-p` sessionへ直接読込み。`--no-session-persistence` | Claude側hash trustは非該当。`CLARITY_HOOK_DISABLED=1`でcandidate runtime 11→11、canonical不変、manual attention 7件。hostのplugin disable操作自体は未実行 | SessionStartは重要3件＋`その他 4件`、material Writeは`touchedPaths=[live-claude-probe.txt]`、Stop `checkpoint-request`は1件、2回目0件、SessionEnd。実runtime 11件 | **一部PASS**。確認したeventはPASS。PreCompact／resume／compact、実plugin disable、実host concurrency／failure／network instrumentationは未実行 |
+| Claude Code Desktop | local scopeへcandidate 0.10.2を一時installし、source↔cache `diff -qr`は差分0 | UIへ到達できず未実行 | Computer UseのApp state取得が2回とも60秒超。click／type／task作成0、screenshot 0 | **UNVERIFIED**。Computer Use capability unavailable。CLIから昇格しない |
+| Codex CLI | `codex 0.147.0`。隔離local marketplace `clarity-live-eval`からcandidate 0.10.2をinstall。source↔cache差分0 | trust前の`/hooks`はcandidate 5件を`need review`表示し、`Continue without trusting`でcandidate runtime 0。manual doctorは`degraded`／`verified:false`と`/hooks`案内。trust後は5件Active。実disableでは5件Active 0、runtime 10→10、manual attention 7件。再有効化も確認 | trust後SessionStart、material `apply_patch`は`touchedPaths=[live-codex-probe.txt]`、Stop request 1件、2回目0件、SessionEnd。`/compact`でPreCompact 1件。実runtime 12件 | **一部PASS**。trust／disable／manual／主要eventはPASS。compact／resume SessionStart 0、実host concurrency／failure／network instrumentationは未実行 |
+| Codex App | candidateがCodex共通設定へ一時installされた時間帯にAppはrunningだったが、App sessionでのloadは証明していない | 未実行 | Computer Useが自己App操作を安全上拒否。click／type／task作成0、screenshot 0 | **UNVERIFIED**。Computer Use capability unavailable。CLIから昇格しない |
+
+`supported`は製品inventory上の宣言、`verified`はこの表の実測だけを指す。Retry 2終了時にもDesktop／Appを
+`verified:true`へ変更する根拠はない。
+
+### 実runtime／canonical証拠
+
+| host | 実runtime | 代表sessionと結果 |
+|---|---:|---|
+| Claude Code CLI | 11 | `30c8ebcd-8a4e-4f1b-aa0f-f948548e3a8e`: SessionStart、Write observation、checkpoint-request 1、SessionEnd。`3a489b28-ecd3-4f5e-aa53-f00ae87fdeac`: read-only observation。disabled sessionはcandidate record 0 |
+| Codex CLI | 12 | `01a0464e-fcc0-7433-8676-e105f0601e6a`: SessionStart、`apply_patch` observation、checkpoint-request 1、2回目request 0、SessionEnd。`01a04652-cba8-7b33-bc5c-f3d33d4555ae`: PreCompact、SessionEnd、resume SessionStart 0 |
+
+- runtime合計23件は全てowner `agentic-secretary:clarity-hook`でJSON parse成功。内訳はClaude 11、Codex 12。
+- kind内訳は`session-start` 6、`observation` 6、`checkpoint-request` 2、`pre-compact` 1、
+  `session-end-flush` 8。checkpoint-requestはmaterial sessionごとに1件だけである。
+- canonical before／after SHA-256は次のとおりで一致した。
+  - `events.jsonl`: `22bb4b850650ea6375d586efa39e472d4c944770703ad654b8d30c5a0c5ec447`
+  - `evidence.jsonl`: `05dac8465599724eac544a50885c4eb195600a2b0f0e4208ae39fa3914540830`
+  - `project.json`: `5e3c549c21261596c2f5be2b1f4752cb97ed412071be0a11616120b3b6d9ee11`
+  - `state.json`: `8bed7ac7b582b6e7d07e98d892f8e18d92513ee8b3e6ec477e1435cd26275af6`
+
+### Acceptance Criteria
+
+| AC | Retry 2判定 | 根拠 |
+|---|---|---|
+| 1. Target 40、両host Critical live、AC未実行0 | **FAIL** | fixture 40/40は維持。CLI 2面は一部liveだが、実host concurrency／failure／networkとDesktop／App 2面が未実行 |
+| 2. 共通manifest／router、同semantic | PASS | Retry 1の同一candidate証拠をcarry forward。実CLI runtimeも同じowner／schema／semantic |
+| 3. no-op、bounded、concurrency、Stop、SessionEnd | PASS | fixture 100＋128並行を維持し、両CLIのmaterial Stopは各1回、2回目0、SessionEndを実測 |
+| 4. trust前／disabled canonical 0、manual完全動作 | **INCOMPLETE** | Codex trust前／5 Hook disabledとmanualは実測。Claudeは環境flag disabledを実測したがhost plugin disable自体とDesktopは未実行 |
+| 5. Hook禁止処理0 | PASS | Retry 1 instrumentation／source inventoryを維持。liveで禁止処理を呼んだrecordは0 |
+| 6. surface別truthful state | PASS | CLIとApp、MacとWindowsを分離。Desktop／App／Windowsをverifiedへ昇格していない |
+| 7. AT-015／IM-012 live | PASS | Claude実SessionStartは3件＋その他4件。Codex trust前doctorは`degraded`と`/hooks`による確認方法を実表示 |
+
+### C21／C24 独立判定
+
+| 基準 | スコア | 閾値 | 判定 | Retry 2根拠 |
+|---|---:|---:|---|---|
+| C21 Clarity Hook・host parity | 4/5 | 5 | **FAIL** | 共通router、両CLIのtrust／disable／manual、競合安全fixture、Stop one-shotは成立。Desktop／App 0/2、Codex compact／resume SessionStart 0、Critical live未実行が残るためゼロ許容の5ではない |
+| C24 Clarity安全・統合・public-first | 4/5 | 5 | **FAIL** | candidate自身のpath／Secret／既存Skill／回帰はRetry 1どおり5相当で、新規product finding 0。ただし実host評価中の公式Codex marketplace refreshで既存private installed plugin／cacheが更新され、終了時にexact復元できない残差が1件ある。installed cache非変更のゼロ許容を満たさないため運用結果を4とする |
+
+C24の減点はcandidate製品codeの欠陥ではなく、実host検証の隔離／復元に関するverification-infra findingである。
+それでもrubricの閾値を緩めず、通常PASSへ読み替えない。
+
+### Finding／capability／cleanup residual
+
+| ID | 重要度 | 区分 | 状態 | 内容 | route |
+|---|---|---|---|---|---|
+| F-01 | Major | product | RESOLVED | 初回runtime symlink問題はRetry 1どおり解消 | none |
+| V-01 | Minor | verification-infra | RESOLVED | 公式runner coverage gapはRetry 1どおり解消 | none |
+| V-LIVE-01 | Major | verification-infra／verification-scope | OPEN | Desktop／Appと一部Critical liveが未実行。1 surfaceの証拠を他へ昇格できない | user decision。Generatorへ自動差し戻ししない |
+| V-HOST-02 | Major | host capability | OPEN | Codex 0.147.0でPreCompactは配送されたが、compact／resume時のcandidate SessionStartは0件。router failureとは判定できない | 対象host capabilityを別実測。推測でproduct PASS／FAILにしない |
+| V-UI-01 | Major | verification-infra／host capability | OPEN | Claude Desktopは状態取得timeout、Codex AppはComputer Use safety refusal。両App操作0 | UIが利用可能なfresh Evaluatorで再実行 |
+| V-CLEAN-01 | Major | verification-infra／cleanup residual | OPEN | Codex candidate導入時の既存Git marketplace自動refreshでprivate版が0.10.1系から0.10.3系へ更新。candidate cleanup後も旧版へexact復元できず残存 | local旧Git objectはあるが、networkなし・公式CLIだけでは旧revision／timestampをexact復元できないため停止 |
+
+Retry 2の新規product findingは0件である。製品不具合、host capability、verification scope、cleanup residualを
+同じ「失敗」へ混在させず、上表のrouteを維持する。
+
+### cleanup／副作用／復元
+
+- Codex candidate `agentic-secretary@clarity-live-eval`とlocal marketplaceを公式CLIで削除した。
+  candidate plugin list 0、candidate config entry 0、candidate cache 0である。
+- candidateの5 hook trust／enabled stateとtemporary workspace trustを削除した。評価中は全5 Hookをdisabled後に再有効化し、
+  終了時はcandidate entry自体を除去した。
+- Codex評価用保存session `01a0464b-dfd1-7272-a711-890e756e9763`と
+  `01a04652-cba8-7b33-bc5c-f3d33d4555ae`は、削除せずrecoverable archiveへ移した。ephemeral sessionは保存していない。
+- Claude local plugin／marketplaceを削除し、candidate cacheを削除した。`plugins/config.json`、
+  `installed_plugins.json`、`known_marketplaces.json`、user／local settingsの5 fileは全てbefore SHA-256へ一致した。
+  評価session固有のsecurity state JSON／lock 10件と空のtemporary project memory directoryも削除した。
+- Claude Desktop／Codex Appではclick、type、task／session作成、権限承認、credential入力、network、AI credit消費を0件に保った。
+  Claude CLI／Codex CLIのfresh AI sessionでは承認済みcreditを使用したが、外部connector、Xmind、push、tag、release、
+  public marketplace、downstream repo、実顧客data、Secretへの操作は0件である。
+- Codex `config.toml`のbefore SHA-256は
+  `05410eb7f94c3c5cca3eb0e0db0390f6dabf085d1d8cdc1f4101c355744f238f`、cleanup後は
+  `ce94e31de59511db043d88b8c74eb4d816e4c15362bfd58c2b1ed846e6ed3907`。差分は既存
+  `marketplaces.agentic-secretary`の`last_updated`と`last_revision` 2行だけである。
+- 残差のbeforeはversion `0.10.1+codex.20260814074627`、revision
+  `51f850a771618a8ad445e39e0dd939fb6515820b`。afterはversion
+  `0.10.3+codex.20260827213803`、revision `e9bc1882247403c90b47ce593f3bb25d7b79e99d`である。
+  local cloneには旧commit／plugin tree `322585a036b8ffaf76a501f5d23dbe7873c4940b`が残るが、旧cache実体はない。
+  公式CLIでtemporary local marketplaceを使うとsource type／pathがbefore不一致となり、Git URL＋旧refはnetwork fetchを要する。
+  exact revision／timestampまで戻せない条件に該当したため、private pluginの追加remove／add、checkout、direct cache edit、
+  config手書き復元は行わなかった。
+- Mac temporary fixture／marketplace／backupはsanitized要約を本節へ転記後に削除した。Windows環境への副作用は0件。
+
+### Retry 2 Evaluator 自己レビュー
+
+- Retry 1を改変せずRetry 2だけ追記したか: yes
+- candidate SHA、評価開始HEAD、branch、Mac／Windows境界を分けたか: yes
+- Claude CLI／Desktop、Codex CLI／Appを4 surfaceで別判定したか: yes
+- CLI証拠をDesktop／Appへ昇格していないか: yes
+- fixture 40/40をCritical liveへ昇格していないか: yes
+- trust前、trust後、disabled、manual fallback、Stop one-shot、canonical不変を実測値で記録したか: yes
+- Codex compact／resume SessionStart 0を成功へ推定していないか: yes
+- App UI未実行をproduct defectへ誤分類していないか: yes
+- private plugin自動更新残差を隠さず、candidate product findingと分離したか: yes
+- WindowsをMac結果から対応済みへ昇格していないか: yes
+- state、spec、code、test、progressを編集していないか: yes
+- 最終分類根拠: candidateの新規product findingは0件だが、C21とC24のゼロ許容thresholdを満たさない。
+  未達の主因はDesktop／Appを操作できないverification scope、Codex host event capability未確認、実host cleanup残差である。
+  よって`verification-scope-issue`としてユーザー判断へ返す。
