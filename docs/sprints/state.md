@@ -5,7 +5,7 @@
 - Current ID: sprint-045
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-046
@@ -81,7 +81,7 @@
 | sprint-042 | done | [contract](sprint-042.md) | [progress](../progress/sprint-042.md) | [feedback](../feedback/sprint-042.md) |
 | sprint-043 | done | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
 | sprint-044 | done-by-user-decision | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
-| sprint-045 | active | [contract](sprint-045.md) | - | - |
+| sprint-045 | awaiting-eval | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | - |
 | sprint-046 | planned | [contract](sprint-046.md) | - | - |
 | sprint-047 | planned | [contract](sprint-047.md) | - | - |
 | sprint-048 | planned | [contract](sprint-048.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 045 Generator candidate `f3c33dcd3815b85332b0eed4091aa7d6618d2bec`を固定。generic Secretary-local Clarity、open優先／legacy read-only／closed明示resolver、Projects所有のcomplete／reopen／canonicalRepo、既存Decision seam一度だけ＋両partial retry、bounded morning／evening／weekly／open-only Portfolio、暗黙task write 0／明示fixed handoff、public adapterとprivate非同梱境界、Clarity追加後22 report surfaceを実装。Target 35/35、registry差分0、統合9/9、Sprint 041〜044、projects／daily／weekly／memory／chat／identity／update直接回帰、release integrity、Claude strict validatorがgreen。旧Sprint 014 wrapperのloopback／README debtと旧Sprint 018 runnerの現行CLI不一致は隠さずprogressへ分離し、現行直接surfaceを実行。private／cache／marketplace／connector／Xmind／後続Sprint／external write 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: ユーザーがSprint 044 Retry 2の記録済み短所を受理し、「終わってから自分でもテストする。とりあえず進めて」と明示判断した。Sprint 044を`done-by-user-decision`とする。残余リスクはClaude Desktop／Codex App未実行、Codex compact／resume SessionStart未確認、Windows native未実行、private installed 0.10.3／marketplace metadata残存で、feedback Retry 2を変更せず後日確認へ引き継ぐ。Mac CLI結果を未検証面へ昇格しない。private 0.10.3は保持し、旧0.10.1 rollback、metadata削除、追加live、release／pushは行わない。Currentをhigh-risk Sprint 045へ進め、Retry／Spec-Issue 0、Base Sprint変更でLineage Dispatchesを0へ戻した後、fresh Generator予約として1。resolverのstrong tier、Rotate noneを維持する。
 - 2026-08-28: Sprint 044 Retry 2 fresh独立Evaluator commits `0a9ee54275c844b42cffc2a3bcb30760d67d2926`／`1068c1ff6461c2a41f7fd62b5c290db05f87bc34`はFAIL／`verification-scope-issue`。新規product finding 0。Mac liveでClaude Code CLI 2.1.231はSessionStart／Write／PostToolUse／Stop one-shot／SessionEnd／環境flag disabled／manual fallback、Codex CLI 0.147.0はtrust前skip／doctor／trust後主要event／5 Hook disable／manual fallback／Stop one-shot／PreCompactを実測した。一方、Claude DesktopはComputer Use状態取得timeout、Codex Appは自己App操作のsafety refusalで両面操作0、Codex compact／resume時のcandidate SessionStartも0。Mac結果をDesktop／App／Windowsへ昇格しない。candidate plugin／marketplace／trust／temp workspace／Claude設定はcleanup済みだが、Codex公式marketplace refreshにより既存private installed pluginが`0.10.1+codex.20260814074627`から独立評価PASS済みtag `0.10.3+codex.20260827213803`へ更新され、marketplace revision／timestampと未追跡install metadataが残った。旧Git objectはlocalにあるが、networkなし・公式CLIだけでexact復元できず追加操作を停止。Status awaiting-eval、Retry Count 1、Lineage Dispatches 5、Model Tier strong、Rotate noneのまま、live証拠の受理とprivate installed stateの扱いをユーザー判断へ返す。
 - 2026-08-28: ユーザーがSprint 044の実host評価を承認。「今まで通りの実装なら動くはず。WindowsとMac環境の差はあると思うけど、いったん進めて」との判断に基づき、Mac上のClaude Code Desktop／CLI・Codex App／CLIを隔離candidateで確認する。candidate一時読込み、必要なcache／設定、trust前後、enable／disable、fresh session、AI credit／networkの可能性は承認範囲内。既存状態へ触れる必要がある場合は事前inventoryと終了後復元を必須とし、push／release／下流write／Xmind／connectorは対象外。Windowsは今回のMac証拠から昇格せず`unverified`で別記録する。fresh独立Evaluator予約としてLineage Dispatches 5、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。
