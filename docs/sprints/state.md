@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-050
+- Current ID: sprint-050-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -87,6 +87,7 @@
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
+| sprint-050-patch-001 | active | [contract](sprint-050-patch-001.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -94,6 +95,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: ユーザーが、Sprint 050のexact product candidate `5f08d454c05576fcff8ab32c10c00887b4c15a96`、元Evaluator feedback `8483d86390b6c105163e64d24dcafe498ed2fe8b`、AC3／C21の実host live未実施という受容対象、実Xmind MCP・release／tag／push／marketplace／installed cache／new session等は対象外であること、展開順がprivate my-vault→Yasashiiであることを示した質問に「よいです」と回答し、`done-by-user-decision`をPASSへ偽装しない例外handoffの実装を明示承認した。fresh Planner commit `bdaa0d154fc88d2b67f503f88f30f1d8fc0b0ec7`が通常Patch `sprint-050-patch-001`（high risk）として、`public-evaluator-pass`と分離した`public-user-decision-risk-accepted`、`evaluatorPass=false`、固定authorization `sprint-050-downstream-user-decision-2026-08-28`、accepted product sourceとgovernance sourceの分離、改ざん・曖昧承認・順序逆転・残余削減を拒否するfail-closed契約を正本化した。Patchのfresh独立Evaluator PASSまではhandoff readyにも下流writeにもせず、公開製品bytes、Sprint 050 feedback、実host／Xmind／release面を変更しない。Current IDをsprint-050-patch-001、Status active、Retry／Spec-Issue 0、Model Tier strong、Rotate noneとし、fresh Sol/high Generator予約としてLineage Dispatches 3へ進める。
 - 2026-08-28: Sprint 050はfresh独立Evaluator commit `8483d86390b6c105163e64d24dcafe498ed2fe8b`でFAIL／`verification-scope-issue`。新規product findingは0。exact candidate `5f08d454c05576fcff8ab32c10c00887b4c15a96`についてregistry 274件は273 PASS／0 FAIL／実Xmind MCP `XM-007`のみconditional NOT-RUN、Critical 124/124、E2E 4/4、cross-root write／Hook loop／task自動作成／Decision誤確定0、source／detached checkout／Git-free archiveのtree digest `1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5`／828 filesとcommon digest `4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849`／44 filesは一致した。唯一の必須残余はAC3／C21のcandidate実install後Claude Code／Codex別live conversation・Hook発火で、両hostともinstalled false／incomplete。ユーザーがこの記録済み短所を自ら後日テストする残余として明示受容し、先へ進める判断をしたため、Evaluator feedbackを変更せずSprint 050を`done-by-user-decision`とする。固定handoffは仕様どおり`acceptedSource: null`／`pending-public-evaluator-pass`／gate `closed`のまま維持し、`done-by-user-decision`をEvaluator PASSへ昇格しない。したがってprivate my-vault／Yasashiiへの実適用、release／tag／push／marketplace／installed cache更新は行っていない。Retry／Spec-Issue 0、Lineage Dispatches 2、Model Tier strong、Rotate none、Next Planned TBDでpublic source候補を停止する。
 - 2026-08-28: Sprint 050 Generator candidate `5f08d454c05576fcff8ab32c10c00887b4c15a96`を固定。registry JSON由来primary 250／CLX 20／XV 4の合計274を同一candidateで再実行し、273 PASS／0 FAIL／実Xmind MCP `XM-007`のみconditional NOT-RUN、Critical 124/124、High 127/128＋1 NOT-RUN、Medium 22/22。E2E-001〜004は4/4、cross-root write／Hook loop／task自動作成／Decision誤確定0。ACは9件全実行、8 PASS、AC3のClaude Code／Codex実host install／conversation／Hook発火だけblocked。候補tree `1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5`／828 files、common `4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849`／44 filesでsource／detached checkout／Git-free archive一致、archive `.git` 0。handoff acceptedSource null／pending／closed／downstream write0を維持。ユーザーは実機確認を完成後の残余として自ら試す判断を明示済みだが、GeneratorはVerdictへ使わずreleaseReady falseのまま。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 049 Retry 1はfresh独立Evaluator commit `4ffd2a9142be0478be83f5d46c07c7056f6b1236`でPASS。初回8反例8/8、独立routing 25/25、補助正負matrix 38/38、全route side-effect違反0、CLX 20/20、registry差分0、Critical 15/15、AC 6/6、inventory 17/17、C15／C18／C21／C24全5/5、新規product finding 0。最終wrapper 12/12、Sprint 022 69/69＋8/8、Sprint 033 20/20、validator／release integrity／diffがgreen。sandbox loopback EPERMは同一通常環境wrapper exit 0でverification-infraへ分離。Sprint 049をdoneとし、Base Sprint変更でLineage Dispatchesを0へreset。high-risk Sprint 050はresolverがnext generator／strong tier／isolated work unitを選択し、native dispatch面ではrepo規則に従い設定済みSol/highを実roleへ渡す。Generator予約としてLineage Dispatches 1、Status active、Retry／Spec-Issue 0、Rotate none、Next Planned TBDで開始。accepted public SHA／digestはSprint 050独立PASSまで未固定、handoff gate closed、実Xmind／host／private／Yasashii／release／cache未実行を維持。
