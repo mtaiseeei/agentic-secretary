@@ -5,7 +5,7 @@
 - Current ID: sprint-045
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-046
@@ -81,7 +81,7 @@
 | sprint-042 | done | [contract](sprint-042.md) | [progress](../progress/sprint-042.md) | [feedback](../feedback/sprint-042.md) |
 | sprint-043 | done | [contract](sprint-043.md) | [progress](../progress/sprint-043.md) | [feedback](../feedback/sprint-043.md) |
 | sprint-044 | done-by-user-decision | [contract](sprint-044.md) | [progress](../progress/sprint-044.md) | [feedback](../feedback/sprint-044.md) |
-| sprint-045 | active | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
+| sprint-045 | awaiting-eval | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
 | sprint-046 | planned | [contract](sprint-046.md) | - | - |
 | sprint-047 | planned | [contract](sprint-047.md) | - | - |
 | sprint-048 | planned | [contract](sprint-048.md) | - | - |
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: Sprint 045 Retry 1 Generator candidate `e5b1225d416f1fcd8c1bc236dfafd4ee08586f58`を固定。F-01〜F-04に限定し、Decision両partialの実副作用に一致する`changed`／`completed`／`pending`／`nextAction`、canonical State全Itemからの明示task route、Project folder基準のmove-safe `projectRef`とclosed／reopen link health、bounded Evidence／choicesを含むdaily／Portfolio JSON・plainを修正。公式35 IDの件数・registryを維持したまま、両partialの製品CLI、top外／Attention外Item、complete／reopen、Evidence／choicesの直接回帰を追加した。Target 35/35、registry差分0、統合9/9、Sprint 041〜044、projects／daily／weekly／memory／chat／identity／update／Harness関連回帰、report schema 22 surface、Claude strict validator、release integrityがgreen。旧Sprint 014／018 debtは初回評価のcandidate／baseline同一記録を保持し、今回変更面の直接suiteで確認。private／cache／marketplace／connector／Xmind／後続Sprint／push／release 0。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 045初回fresh独立Evaluator commit `83cd43eff73464ead98ae2e4a85759647294924b`はFAIL／`implementation-issue`。公式35/35・registry差分0・既存直接回帰はgreenだが、独立CLI意味評価は31 PASS／4 FAIL。Major product F-01〜F-04として、Decision両partialの副作用を`changed:false`と誤報してdetailsを落とす、task routeがAttention top 3だけを検索して4件目以降を委譲不能、complete後`projectRef`がopen pathのままstaleなのにhealthy表示、daily／PortfolioがEvidence／choicesを削除する問題を再現。V-01として公式runnerがlibrary直呼び／1 Item／ID・Eventだけで4反例を見逃した。旧Sprint 014はcandidate／baselineとも38 PASS／3 FAIL、旧018も同じ5 FAIL＋FileNotFoundで045非因果。Retry Count 1、fresh Generator予約としてLineage Dispatches 3、Status active、Model Tier strong、Rotate none。修正はF-01〜F-04と直接CLI／multi-Item／link／UX回帰だけに限定する。
 - 2026-08-28: Sprint 045 Generator candidate `f3c33dcd3815b85332b0eed4091aa7d6618d2bec`を固定。generic Secretary-local Clarity、open優先／legacy read-only／closed明示resolver、Projects所有のcomplete／reopen／canonicalRepo、既存Decision seam一度だけ＋両partial retry、bounded morning／evening／weekly／open-only Portfolio、暗黙task write 0／明示fixed handoff、public adapterとprivate非同梱境界、Clarity追加後22 report surfaceを実装。Target 35/35、registry差分0、統合9/9、Sprint 041〜044、projects／daily／weekly／memory／chat／identity／update直接回帰、release integrity、Claude strict validatorがgreen。旧Sprint 014 wrapperのloopback／README debtと旧Sprint 018 runnerの現行CLI不一致は隠さずprogressへ分離し、現行直接surfaceを実行。private／cache／marketplace／connector／Xmind／後続Sprint／external write 0。fresh独立Evaluator予約としてLineage Dispatches 2、Status awaiting-eval、Retry／Spec-Issue 0、Model Tier strong、Rotate none。
 - 2026-08-28: ユーザーがSprint 044 Retry 2の記録済み短所を受理し、「終わってから自分でもテストする。とりあえず進めて」と明示判断した。Sprint 044を`done-by-user-decision`とする。残余リスクはClaude Desktop／Codex App未実行、Codex compact／resume SessionStart未確認、Windows native未実行、private installed 0.10.3／marketplace metadata残存で、feedback Retry 2を変更せず後日確認へ引き継ぐ。Mac CLI結果を未検証面へ昇格しない。private 0.10.3は保持し、旧0.10.1 rollback、metadata削除、追加live、release／pushは行わない。Currentをhigh-risk Sprint 045へ進め、Retry／Spec-Issue 0、Base Sprint変更でLineage Dispatchesを0へ戻した後、fresh Generator予約として1。resolverのstrong tier、Rotate noneを維持する。
