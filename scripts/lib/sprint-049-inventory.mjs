@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { assertClosedHandoffTemplateSchema } from "../sprint-048-handoff.mjs";
 
 export const INVENTORY_PATH = "plugins/secretary/collaboration-inventory.json";
 
@@ -41,23 +42,98 @@ function safeRelative(path) {
   return typeof path === "string" && path.length > 0 && !path.startsWith("/") && !path.includes("..") && !path.includes("\\");
 }
 
+function scanJsonString(body, start) {
+  let escaped = false;
+  for (let index = start + 1; index < body.length; index += 1) {
+    const char = body[index];
+    if (escaped) escaped = false;
+    else if (char === "\\") escaped = true;
+    else if (char === '"') return index + 1;
+  }
+  fail("inventory-handoff-json-string");
+}
+
+function scanJsonValue(body, start) {
+  if (body[start] === '"') return scanJsonString(body, start);
+  if (body[start] !== "{" && body[start] !== "[") {
+    let index = start;
+    while (index < body.length && body[index] !== "," && body[index] !== "}") index += 1;
+    return index;
+  }
+  const stack = [body[start]];
+  for (let index = start + 1; index < body.length; index += 1) {
+    if (body[index] === '"') index = scanJsonString(body, index) - 1;
+    else if (body[index] === "{" || body[index] === "[") stack.push(body[index]);
+    else if (body[index] === "}" || body[index] === "]") {
+      stack.pop();
+      if (stack.length === 0) return index + 1;
+    }
+  }
+  fail("inventory-handoff-json-value");
+}
+
+function topLevelJsonMembers(body) {
+  let cursor = 0;
+  while (/\s/u.test(body[cursor] || "")) cursor += 1;
+  if (body[cursor] !== "{") fail("inventory-handoff-json-root");
+  cursor += 1;
+  let previousComma = null;
+  const members = [];
+  while (cursor < body.length) {
+    const leadingStart = cursor;
+    while (/\s/u.test(body[cursor] || "")) cursor += 1;
+    if (body[cursor] === "}") break;
+    if (body[cursor] !== '"') fail("inventory-handoff-json-key");
+    const keyEnd = scanJsonString(body, cursor);
+    const key = JSON.parse(body.slice(cursor, keyEnd));
+    cursor = keyEnd;
+    while (/\s/u.test(body[cursor] || "")) cursor += 1;
+    if (body[cursor] !== ":") fail("inventory-handoff-json-colon", key);
+    cursor += 1;
+    while (/\s/u.test(body[cursor] || "")) cursor += 1;
+    const valueEnd = scanJsonValue(body, cursor);
+    cursor = valueEnd;
+    while (/\s/u.test(body[cursor] || "")) cursor += 1;
+    const commaAfter = body[cursor] === "," ? cursor : null;
+    members.push({ key, leadingStart, valueEnd, commaBefore: previousComma, commaAfter });
+    if (commaAfter === null) break;
+    previousComma = commaAfter;
+    cursor = commaAfter + 1;
+  }
+  return members;
+}
+
+function removeTopLevelJsonMembers(body, keys) {
+  const members = topLevelJsonMembers(body);
+  const ranges = [];
+  for (const key of keys) {
+    const member = members.find((candidate) => candidate.key === key);
+    if (!member) fail("inventory-handoff-governance-field-missing", key);
+    if (member.commaAfter !== null) ranges.push([member.leadingStart, member.commaAfter + 1]);
+    else if (member.commaBefore !== null) ranges.push([member.commaBefore, member.valueEnd]);
+    else fail("inventory-handoff-projection-empty", key);
+  }
+  let projected = body;
+  for (const [start, end] of ranges.sort((left, right) => right[0] - left[0])) {
+    projected = `${projected.slice(0, start)}${projected.slice(end)}`;
+  }
+  return projected;
+}
+
 function productSurfaceBytes(path, absolute) {
   const bytes = readFileSync(absolute);
   if (path !== "adapters/downstream-clarity-handoff.json") return bytes;
 
   // Sprint 050 Patch 001 keeps the accepted product candidate frozen and adds
   // governance-only bindings beside it. The Sprint 049 inventory continues to
-  // guard the exact pre-Patch product projection; the Patch suite independently
-  // validates every byte and fail-closed branch of the new governance fields.
-  let body = bytes.toString("utf8");
-  const repositoriesStart = body.indexOf('\n  "downstreamRepositories": {');
-  const orderStart = body.indexOf('\n  "downstreamOrder":', repositoriesStart);
-  if (repositoriesStart >= 0 && orderStart > repositoriesStart) {
-    body = `${body.slice(0, repositoriesStart)}${body.slice(orderStart)}`;
-  }
-  const governanceStart = body.indexOf(',\n  "userDecisionPreWriteGate": {');
-  if (governanceStart >= 0) body = `${body.slice(0, governanceStart)}\n}\n`;
-  return Buffer.from(body);
+  // guard the exact pre-Patch product projection. JSON-aware member discovery
+  // prevents field placement or formatting from widening the excluded range,
+  // while the closed schema makes every excluded governance byte explicit.
+  const body = bytes.toString("utf8");
+  const manifest = JSON.parse(body);
+  assertClosedHandoffTemplateSchema(manifest);
+  return Buffer.from(removeTopLevelJsonMembers(body,
+    ["downstreamRepositories", "userDecisionPreWriteGate"]));
 }
 
 export function digestSurface(rootValue, pathsValue) {

@@ -86,6 +86,7 @@ export function validateHandoffTemplate(rootValue = SCRIPT_ROOT, manifestValue =
     || manifest.preWriteGate?.requiredPublicationStatus !== "public-evaluator-pass"
     || manifest.preWriteGate?.writesDownstream !== false) fail("handoff-prewrite-template");
   if (manifest.rollback?.strategy !== "file-scoped-pre-sync-commit" || typeof manifest.rollback?.instruction !== "string") fail("handoff-rollback");
+  assertClosedHandoffTemplateSchema(manifest);
   return manifest;
 }
 
@@ -194,12 +195,70 @@ function assertJson(value, expected, code) {
   if (!jsonEqual(value, expected)) fail(code);
 }
 
+function assertExactKeys(value, expectedKeys, code) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) fail(code, "not-object");
+  const actual = Object.keys(value).sort();
+  const expected = [...expectedKeys].sort();
+  if (!jsonEqual(actual, expected)) fail(code, `expected=${expected.join(",")};actual=${actual.join(",")}`);
+}
+
+const TEMPLATE_TOP_LEVEL_KEYS = Object.freeze([
+  "schemaVersion", "collaborationMarker", "kind", "sourceEdition", "candidateVersion",
+  "publicationStatus", "acceptedSource", "commonPaths", "adapterSeams", "excludedPaths",
+  "protectedDownstreamPaths", "downstreamRepositories", "downstreamOrder", "xmindContract",
+  "rollback", "preWriteGate", "userDecisionPreWriteGate",
+]);
+const USER_DECISION_GATE_KEYS = Object.freeze([
+  "status", "requiredPublicationStatus", "requiredAcceptanceBasisType", "evaluatorPass",
+  "writesDownstream", "fixedBindings", "requiredGovernance",
+]);
+const ACCEPTED_PRODUCT_SOURCE_KEYS = Object.freeze([
+  "fullSha", "treeSha256", "fileCount", "commonTreeSha256", "commonFileCount",
+]);
+const ORIGIN_EVALUATION_KEYS = Object.freeze([
+  "feedbackCommit", "feedbackPath", "feedbackSha256", "verdict", "productFindingCount",
+  "blockingResidualIds", "conditionalNotRunIds", "otherPhaseResidualIds", "registry", "e2e",
+]);
+const AUTHORIZATION_RECORD_KEYS = Object.freeze([
+  "authorizationId", "decisionDate", "exactQuote", "recordedBy", "revoked", "context", "scope",
+  "targetAcceptedFullSha", "targetOriginFeedbackCommit", "targetOriginFeedbackSha256",
+  "acceptedResidualIds", "notAcceptedResidualIds", "downstreamOrder", "invalidatedBy",
+]);
+
+export function assertClosedHandoffTemplateSchema(manifest) {
+  assertExactKeys(manifest, TEMPLATE_TOP_LEVEL_KEYS, "handoff-template-top-level-schema");
+  assertExactKeys(manifest.downstreamRepositories,
+    ["agentic-secretary-my-vault", "yasashii-secretary"],
+    "handoff-downstream-repositories-schema");
+  const gate = manifest.userDecisionPreWriteGate;
+  assertExactKeys(gate, USER_DECISION_GATE_KEYS, "user-decision-gate-schema");
+  assertExactKeys(gate.fixedBindings,
+    ["acceptedProductSource", "originEvaluation", "authorizationRecord"],
+    "user-decision-fixed-bindings-schema");
+  assertExactKeys(gate.fixedBindings.acceptedProductSource,
+    ACCEPTED_PRODUCT_SOURCE_KEYS, "accepted-product-source-schema");
+  assertExactKeys(gate.fixedBindings.originEvaluation,
+    ORIGIN_EVALUATION_KEYS, "origin-evaluation-schema");
+  assertExactKeys(gate.fixedBindings.originEvaluation.registry,
+    ["pass", "fail", "conditionalNotRun"], "origin-registry-schema");
+  assertExactKeys(gate.fixedBindings.originEvaluation.e2e,
+    ["pass", "total"], "origin-e2e-schema");
+  assertExactKeys(gate.fixedBindings.authorizationRecord,
+    AUTHORIZATION_RECORD_KEYS, "authorization-record-schema");
+  assertExactKeys(gate.fixedBindings.authorizationRecord.scope,
+    ["authorized", "notAuthorized"], "authorization-scope-schema");
+  assertExactKeys(gate.requiredGovernance,
+    ["feedbackPath", "verdict", "evaluatedCommitLabel"], "governance-requirements-schema");
+}
+
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
 function assertAcceptedProductSource(source) {
-  if (!source || source.fullSha !== ACCEPTED_PRODUCT_SOURCE.fullSha) fail("accepted-source-sha");
+  if (!source) fail("accepted-source-sha");
+  assertExactKeys(source, ACCEPTED_PRODUCT_SOURCE_KEYS, "accepted-product-source-schema");
+  if (source.fullSha !== ACCEPTED_PRODUCT_SOURCE.fullSha) fail("accepted-source-sha");
   if (source.treeSha256 !== ACCEPTED_PRODUCT_SOURCE.treeSha256) fail("accepted-source-tree-digest");
   if (source.fileCount !== ACCEPTED_PRODUCT_SOURCE.fileCount) fail("accepted-source-file-count");
   if (source.commonTreeSha256 !== ACCEPTED_PRODUCT_SOURCE.commonTreeSha256) fail("accepted-source-common-digest");
@@ -207,7 +266,11 @@ function assertAcceptedProductSource(source) {
 }
 
 function assertOriginEvaluation(origin) {
-  if (!origin || origin.feedbackCommit !== ORIGIN_EVALUATION.feedbackCommit) fail("origin-feedback-commit");
+  if (!origin) fail("origin-feedback-commit");
+  assertExactKeys(origin, ORIGIN_EVALUATION_KEYS, "origin-evaluation-schema");
+  assertExactKeys(origin.registry, ["pass", "fail", "conditionalNotRun"], "origin-registry-schema");
+  assertExactKeys(origin.e2e, ["pass", "total"], "origin-e2e-schema");
+  if (origin.feedbackCommit !== ORIGIN_EVALUATION.feedbackCommit) fail("origin-feedback-commit");
   if (origin.feedbackPath !== ORIGIN_EVALUATION.feedbackPath) fail("origin-feedback-path");
   if (origin.feedbackSha256 !== ORIGIN_EVALUATION.feedbackSha256) fail("origin-feedback-digest");
   if (origin.verdict !== ORIGIN_EVALUATION.verdict) fail("origin-feedback-verdict");
@@ -221,6 +284,8 @@ function assertOriginEvaluation(origin) {
 
 function assertAuthorization(record) {
   if (!record || typeof record !== "object") fail("authorization-record-missing");
+  assertExactKeys(record, AUTHORIZATION_RECORD_KEYS, "authorization-record-schema");
+  assertExactKeys(record.scope, ["authorized", "notAuthorized"], "authorization-scope-schema");
   if (record.authorizationId !== AUTHORIZATION_RECORD.authorizationId) fail("authorization-id");
   if (record.decisionDate !== AUTHORIZATION_RECORD.decisionDate) fail("authorization-date");
   if (record.exactQuote !== AUTHORIZATION_RECORD.exactQuote) fail("authorization-quote");
@@ -265,6 +330,8 @@ function assertUserDecisionReadyShape(template, ready) {
   if (!ready.acceptanceBasis || ready.acceptanceBasis.type !== USER_DECISION_BASIS) fail("acceptance-basis-missing");
   if (ready.acceptanceBasis.evaluatorPass !== false) fail("user-decision-evaluator-pass-promoted");
   if (ready.acceptanceBasis.originVerdict !== ORIGIN_EVALUATION.verdict) fail("acceptance-basis-origin-verdict");
+  assertExactKeys(ready.acceptanceBasis,
+    ["type", "evaluatorPass", "originVerdict"], "acceptance-basis-schema");
   assertJson(gate.fixedBindings, template.userDecisionPreWriteGate.fixedBindings, "user-decision-fixed-bindings-changed");
   assertAcceptedProductSource(ready.acceptedSource);
   assertOriginEvaluation(ready.originEvaluation);
@@ -273,6 +340,12 @@ function assertUserDecisionReadyShape(template, ready) {
   assertJson(ready.verificationStatus?.hostLive?.blockingResidualIds, ["AC3", "C21"], "host-live-residuals-changed");
   if (ready.verificationStatus?.xmindMcp?.verified !== false) fail("xmind-verification-promoted");
   if (ready.verificationStatus?.xmindMcp?.conditionalNotRunId !== "XM-007") fail("xmind-conditional-residual-changed");
+  assertExactKeys(ready.verificationStatus,
+    ["hostLive", "xmindMcp"], "verification-status-schema");
+  assertExactKeys(ready.verificationStatus.hostLive,
+    ["verified", "blockingResidualIds"], "host-live-verification-schema");
+  assertExactKeys(ready.verificationStatus.xmindMcp,
+    ["verified", "conditionalNotRunId"], "xmind-verification-schema");
   assertJson(ready.commonPaths, template.commonPaths, "user-decision-common-paths-changed");
   assertJson(ready.adapterSeams, template.adapterSeams, "user-decision-adapter-seams-changed");
   assertJson(ready.excludedPaths, template.excludedPaths, "user-decision-excluded-paths-changed");
@@ -281,6 +354,15 @@ function assertUserDecisionReadyShape(template, ready) {
   assertJson(ready.downstreamOrder, template.downstreamOrder, "user-decision-downstream-order-changed");
   assertJson(ready.xmindContract, template.xmindContract, "user-decision-xmind-contract-changed");
   assertJson(ready.rollback, template.rollback, "user-decision-rollback-changed");
+  assertJson(ready.preWriteGate, template.preWriteGate, "public-evaluator-gate-was-repurposed");
+  assertJson(gate.requiredGovernance, template.userDecisionPreWriteGate.requiredGovernance,
+    "user-decision-governance-requirements-changed");
+  assertExactKeys(gate, USER_DECISION_GATE_KEYS, "user-decision-ready-gate-schema");
+  assertExactKeys(gate.requiredGovernance,
+    ["feedbackPath", "verdict", "evaluatedCommitLabel"], "user-decision-ready-governance-schema");
+  assertExactKeys(ready, [...TEMPLATE_TOP_LEVEL_KEYS,
+    "originEvaluation", "acceptanceBasis", "authorizationRecord", "governanceSource",
+    "verificationStatus", "protectedDigests"], "user-decision-ready-top-level-schema");
 }
 
 function assertOriginFeedback(rootValue, origin) {
@@ -290,12 +372,58 @@ function assertOriginFeedback(rootValue, origin) {
 }
 
 function parseGovernanceFeedback(bytes) {
-  const body = bytes.toString("utf8");
-  const verdict = body.match(/^\s*(?:\*\*)?(?:Verdict|判定)(?:\*\*)?\s*[:：]\s*(?:\*\*)?(PASS|合格)(?:\*\*)?\s*$/imu);
-  if (!verdict) fail("governance-feedback-non-pass");
-  const evaluated = body.match(/^\s*(?:\*\*)?(?:Evaluated commit|評価対象commit|評価対象 commit)(?:\*\*)?\s*[:：]\s*`?([0-9a-f]{40})`?\s*$/imu);
-  if (!evaluated) fail("governance-feedback-evaluated-commit-missing");
-  return { verdict: "PASS", evaluatedFullSha: evaluated[1] };
+  const lines = bytes.toString("utf8").split(/\r?\n/u);
+  const verdictMarker = /(?:Verdict|判定)\s*[:：]\s*(?:\*\*)?`?([a-z][a-z-]*|合格|不合格)`?(?:\*\*)?/giu;
+  const commitMarker = /(?:Evaluated commit|評価対象\s*commit)\s*[:：]\s*`?([0-9a-f]{40})`?/giu;
+  const verdicts = [];
+  const commits = [];
+  let fence = null;
+
+  for (const line of lines) {
+    const fenceMatch = line.match(/^\s*(```+|~~~+)/u);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0];
+      if (fence === marker) fence = null;
+      else if (fence === null) fence = marker;
+      continue;
+    }
+    const hasMarker = /(?:Verdict|判定)\s*[:：]|(?:Evaluated commit|評価対象\s*commit)\s*[:：]/iu.test(line);
+    if (!hasMarker) continue;
+    if (fence !== null) fail("governance-feedback-marker-in-code-fence");
+    if (/^\s*>/u.test(line)) fail("governance-feedback-marker-in-blockquote");
+    if (/^\s*(?:[-*]\s*)?(?:example|example marker|例|例示)\s*[:：]/iu.test(line)) {
+      fail("governance-feedback-marker-in-example");
+    }
+    if (/["'「『].*(?:Verdict|判定|Evaluated commit|評価対象\s*commit)\s*[:：]/iu.test(line)) {
+      fail("governance-feedback-marker-in-quotation");
+    }
+
+    const exactVerdict = line.match(/^Verdict: ([A-Za-z][A-Za-z-]*)$/u);
+    const exactCommit = line.match(/^Evaluated commit: ([0-9a-f]{40})$/u);
+    const verdictOccurrences = [...line.matchAll(verdictMarker)];
+    const commitOccurrences = [...line.matchAll(commitMarker)];
+    if (verdictOccurrences.length > 0) {
+      if (!exactVerdict || verdictOccurrences.length !== 1) fail("governance-feedback-verdict-noncanonical");
+      verdicts.push(exactVerdict[1]);
+    }
+    if (commitOccurrences.length > 0) {
+      if (!exactCommit || commitOccurrences.length !== 1) fail("governance-feedback-evaluated-commit-noncanonical");
+      commits.push(exactCommit[1]);
+    }
+  }
+
+  if (verdicts.length === 0) fail("governance-feedback-verdict-missing");
+  if (verdicts.length > 1) {
+    if (new Set(verdicts).size === 1) fail("governance-feedback-verdict-duplicate");
+    fail("governance-feedback-verdict-conflict");
+  }
+  if (verdicts[0] !== "PASS") fail("governance-feedback-non-pass");
+  if (commits.length === 0) fail("governance-feedback-evaluated-commit-missing");
+  if (commits.length > 1) {
+    if (new Set(commits).size === 1) fail("governance-feedback-evaluated-commit-duplicate");
+    fail("governance-feedback-evaluated-commit-conflict");
+  }
+  return { verdict: "PASS", evaluatedFullSha: commits[0] };
 }
 
 function assertGovernanceCheckout(rootValue, expectedSha) {
@@ -310,6 +438,9 @@ function assertGovernanceCheckout(rootValue, expectedSha) {
 
 function assertGovernanceSource(source, feedbackRoot, observedGovernanceSha, governanceRoot) {
   if (!source || !SHA40.test(source.implementationFullSha || "")) fail("governance-source-missing");
+  assertExactKeys(source,
+    ["implementationFullSha", "feedbackPath", "feedbackSha256", "verdict", "evaluatedFullSha"],
+    "governance-source-schema");
   if (source.implementationFullSha === ACCEPTED_PRODUCT_SOURCE.fullSha) fail("governance-source-accepted-source-confusion");
   if (!SHA40.test(observedGovernanceSha || "") || observedGovernanceSha !== source.implementationFullSha) fail("governance-source-stale");
   assertGovernanceCheckout(governanceRoot, source.implementationFullSha);

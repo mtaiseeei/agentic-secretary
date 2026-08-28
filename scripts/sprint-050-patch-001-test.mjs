@@ -16,6 +16,7 @@ import {
   validateHandoffTemplate,
   validateUserDecisionTemplate,
 } from "./sprint-048-handoff.mjs";
+import { digestSurface } from "./lib/sprint-049-inventory.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const work = mkdtempSync(join(tmpdir(), "agentic-s050-patch-001-"));
@@ -109,6 +110,16 @@ function reject(id, title, code, mutate, options = {}) {
   });
 }
 
+function rejectFeedback(id, title, body, code) {
+  return check(id, title, () => {
+    const root = join(work, `feedback-${id.toLowerCase()}`);
+    const file = writeGovernanceFeedback(root, body);
+    const fixture = clone(ready);
+    fixture.governanceSource.feedbackSha256 = file.sha256;
+    expectCode(() => evaluateReady(fixture, { governanceFeedbackRoot: root }), code);
+  });
+}
+
 const template = json(join(repo, "adapters/downstream-clarity-handoff.json"));
 const baselineProtected = protectedSnapshot(template);
 let ready;
@@ -135,6 +146,19 @@ try {
     verdict: "PASS",
     evaluatedFullSha: governanceSha,
   };
+  const buildWithTemplate = (fixtureTemplate) => buildUserDecisionReadyManifest({
+    root: repo,
+    template: fixtureTemplate,
+    acceptedCandidateRoot: candidateRoot,
+    observedAcceptedSha: acceptedSha,
+    originFeedbackRoot: repo,
+    authorizationRecord: authorization,
+    governanceSource,
+    governanceRoot: governanceCheckoutRoot,
+    governanceFeedbackRoot: governanceFeedbackFixtureRoot,
+    observedGovernanceSha: governanceSha,
+    protectedSnapshot: baselineProtected,
+  });
 
   await check("UD-001", "tracked templateはclosedで受入を推測しない", () => {
     const valid = validateUserDecisionTemplate(repo, template);
@@ -327,10 +351,130 @@ try {
     value.governanceSource.evaluatedFullSha = otherGovernanceSha;
   }, { observedGovernanceSha: otherGovernanceSha });
 
+  await rejectFeedback("UD-067", "FAILとPASSが併存するVerdictを拒否",
+    `# conflicting verdict\n\nVerdict: FAIL\nVerdict: PASS\nEvaluated commit: ${governanceSha}\n`,
+    "governance-feedback-verdict-conflict");
+  await rejectFeedback("UD-068", "異なるEvaluated commitが複数あるfeedbackを拒否",
+    `# conflicting commits\n\nVerdict: PASS\nEvaluated commit: ${governanceSha}\nEvaluated commit: ${otherGovernanceSha}\n`,
+    "governance-feedback-evaluated-commit-conflict");
+  await rejectFeedback("UD-069", "code fence内のPASS markerを拒否",
+    `# fenced marker\n\nVerdict: FAIL\nEvaluated commit: ${governanceSha}\n\n\`\`\`text\nVerdict: PASS\n\`\`\`\n`,
+    "governance-feedback-marker-in-code-fence");
+  await check("UD-070", "Sprint 049 projectionが未知governance PASS aliasを隠さない", () => {
+    const root = join(work, "inventory-hidden-governance");
+    const path = join(root, "adapters/downstream-clarity-handoff.json");
+    const fixture = clone(template);
+    fixture.userDecisionPreWriteGate.publicEvaluatorPassAlias = "PASS";
+    fixture.userDecisionPreWriteGate.hiddenEvaluatorPass = true;
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`);
+    expectCode(() => digestSurface(root, ["adapters/downstream-clarity-handoff.json"]), "user-decision-gate-schema");
+  });
+  await rejectFeedback("UD-071", "同じVerdictの重複を拒否",
+    `# duplicate verdict\n\nVerdict: PASS\nVerdict: PASS\nEvaluated commit: ${governanceSha}\n`,
+    "governance-feedback-verdict-duplicate");
+  await rejectFeedback("UD-072", "同じEvaluated commitの重複を拒否",
+    `# duplicate commit\n\nVerdict: PASS\nEvaluated commit: ${governanceSha}\nEvaluated commit: ${governanceSha}\n`,
+    "governance-feedback-evaluated-commit-duplicate");
+  await rejectFeedback("UD-073", "blockquote内のPASS markerを拒否",
+    `# quoted marker\n\nVerdict: FAIL\nEvaluated commit: ${governanceSha}\n\n> Verdict: PASS\n`,
+    "governance-feedback-marker-in-blockquote");
+  await rejectFeedback("UD-074", "例示内のPASS markerを拒否",
+    `# example marker\n\nVerdict: FAIL\nEvaluated commit: ${governanceSha}\n\nExample: Verdict: PASS\n`,
+    "governance-feedback-marker-in-example");
+  await rejectFeedback("UD-075", "引用符内のPASS markerを拒否",
+    `# quotation marker\n\nVerdict: FAIL\nEvaluated commit: ${governanceSha}\n\n「Verdict: PASS」\n`,
+    "governance-feedback-marker-in-quotation");
+  await rejectFeedback("UD-076", "Verdict 0件を拒否",
+    `# missing verdict\n\nEvaluated commit: ${governanceSha}\n`,
+    "governance-feedback-verdict-missing");
+  await rejectFeedback("UD-077", "Evaluated commit 0件を拒否",
+    "# missing commit\n\nVerdict: PASS\n",
+    "governance-feedback-evaluated-commit-missing");
+  await check("UD-078", "fixedBindings nested objectの未知keyを拒否", () => {
+    const fixture = clone(template);
+    fixture.userDecisionPreWriteGate.fixedBindings.originEvaluation.registry.passAlias = "PASS";
+    expectCode(() => validateUserDecisionTemplate(repo, fixture), "origin-registry-schema");
+  });
+  await check("UD-079", "standard validate-templateでtop-level未知keyを拒否", () => {
+    const root = join(work, "validate-template-top-level-extra");
+    const fixture = clone(template);
+    fixture.publicEvaluatorPass = true;
+    for (const path of fixture.commonPaths) {
+      const absolute = join(root, path);
+      mkdirSync(dirname(absolute), { recursive: true });
+      writeFileSync(absolute, "fixture\n");
+    }
+    const manifestPath = join(root, "adapters/downstream-clarity-handoff.json");
+    mkdirSync(dirname(manifestPath), { recursive: true });
+    writeFileSync(manifestPath, `${JSON.stringify(fixture, null, 2)}\n`);
+    const result = run(process.execPath,
+      ["scripts/sprint-048-handoff.mjs", "validate-template", "--root", root]);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /HANDOFF_GATE_FAIL handoff-template-top-level-schema/u);
+  });
+  await reject("UD-080", "ready-only acceptanceBasis未知keyを拒否", "acceptance-basis-schema", (value) => {
+    value.acceptanceBasis.passAlias = "PASS";
+  });
+  await reject("UD-081", "ready-only verificationStatus未知keyを拒否", "verification-status-schema", (value) => {
+    value.verificationStatus.evaluatorPass = true;
+  });
+  await reject("UD-082", "ready-only governanceSource未知keyを拒否", "governance-source-schema", (value) => {
+    value.governanceSource.passAlias = "PASS";
+  });
+  await check("UD-083", "downstreamRepositories未知keyを拒否", () => {
+    const fixture = clone(template);
+    fixture.downstreamRepositories.other = "example/other";
+    expectCode(() => validateHandoffTemplate(repo, fixture), "handoff-downstream-repositories-schema");
+  });
+  await check("UD-084", "build入口でfixedBindings未知keyを拒否", () => {
+    const fixture = clone(template);
+    fixture.userDecisionPreWriteGate.fixedBindings.passAlias = "PASS";
+    expectCode(() => buildWithTemplate(fixture), "user-decision-fixed-bindings-schema");
+  });
+  await check("UD-085", "build入口でrequiredGovernance未知keyを拒否", () => {
+    const fixture = clone(template);
+    fixture.userDecisionPreWriteGate.requiredGovernance.evaluatorPass = true;
+    expectCode(() => buildWithTemplate(fixture), "governance-requirements-schema");
+  });
+  await reject("UD-086", "authorization scope nested未知keyを拒否", "authorization-scope-schema", (value) => {
+    value.authorizationRecord.scope.passAlias = "PASS";
+  });
+  await check("UD-087", "template evaluatorPass=trueを拒否", () => {
+    const fixture = clone(template);
+    fixture.userDecisionPreWriteGate.evaluatorPass = true;
+    expectCode(() => validateUserDecisionTemplate(repo, fixture), "user-decision-template-gate");
+  });
+  await check("UD-088", "prewrite-user-decisionでready top-level PASS aliasを拒否", () => {
+    const fixture = clone(ready);
+    fixture.publicEvaluatorPassAlias = true;
+    const manifestPath = join(work, "prewrite-ready-extra.json");
+    const snapshotPath = join(work, "prewrite-protected-snapshot.json");
+    writeFileSync(manifestPath, `${JSON.stringify(fixture, null, 2)}\n`);
+    writeFileSync(snapshotPath, `${JSON.stringify(baselineProtected, null, 2)}\n`);
+    const result = run(process.execPath, [
+      "scripts/sprint-048-handoff.mjs", "prewrite-user-decision",
+      "--root", repo,
+      "--manifest", manifestPath,
+      "--protected-snapshot", snapshotPath,
+      "--accepted-candidate-root", candidateRoot,
+      "--accepted-observed-sha", acceptedSha,
+      "--origin-feedback-root", repo,
+      "--governance-root", governanceCheckoutRoot,
+      "--governance-feedback-root", governanceFeedbackFixtureRoot,
+      "--governance-observed-sha", governanceSha,
+    ]);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /HANDOFF_GATE_FAIL user-decision-ready-top-level-schema/u);
+  });
+  await reject("UD-089", "prewrite入口でhostLive nested未知keyを拒否", "host-live-verification-schema", (value) => {
+    value.verificationStatus.hostLive.evaluatorPass = true;
+  });
+
   const failed = results.filter((entry) => !entry.ok);
-  assert.equal(results.length, 66);
+  assert.equal(results.length, 89);
   assert.equal(failed.length, 0, `failed: ${failed.map((entry) => entry.id).join(",")}`);
-  process.stdout.write("SPRINT050_PATCH001_PASS=66 FAIL=0 POSITIVE=6 NEGATIVE=58 INTEGRITY=2 READY_ARTIFACT_TRACKED=0 DOWNSTREAM_WRITE=0 EXTERNAL_WRITE=0\n");
+  process.stdout.write("SPRINT050_PATCH001_PASS=89 FAIL=0 POSITIVE=6 NEGATIVE=81 INTEGRITY=2 ATTACK_FIXTURES=23 READY_ARTIFACT_TRACKED=0 DOWNSTREAM_WRITE=0 EXTERNAL_WRITE=0\n");
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

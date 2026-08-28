@@ -111,3 +111,70 @@ Decision誤確定0、external／downstream write 0。
 - Acceptance Criteria 1〜11をtargeted fixtureと関連回帰へ対応付けた。
 - zero-tolerance違反、公開product bytes変更、Sprint 050 feedback変更、tracked ready、実downstream／external writeは0。
 - C1、C2、C5、C6、C24、C25の最終採点とPASS判定はfresh独立Evaluatorへ引き渡す。
+
+## Retry 1 — 初回Evaluator FAILの限定修正
+
+初回feedback commit `2e92ecfd59eb1b1f23afe7a67f06d22b58dc2ec0` のproduct finding
+P-01／P-02だけを修正した。accepted product source、Sprint 050 feedback、既存`public-evaluator-pass`、
+authorization、残余、downstream順序、path scope、tracked templateのclosed状態は変更していない。
+
+### 変更
+
+- governance feedbackは、本文中のcanonicalな機械可読行 `Verdict: PASS` と
+  `Evaluated commit: <40hex>` がそれぞれちょうど1件ある場合だけ受理する。PASS／FAIL併存、同値を含む重複、
+  0件、code fence、blockquote、例示、引用内marker、非canonical表記は固有codeでfail closedにした。
+- manifest top-level、`downstreamRepositories`、`userDecisionPreWriteGate`、`fixedBindings`と全nested object、
+  `requiredGovernance`、ready-onlyの`acceptanceBasis`／`verificationStatus`／`governanceSource`等へ、
+  明示allow-key集合を持つclosed schemaを適用した。standard `validate-template`、user-decision build、
+  `prewrite-user-decision`は同じschemaを通り、未知key、PASS alias、`evaluatorPass=true`をreadyへ通さない。
+- Sprint 049の固定pre-Patch product projectionは、field位置に依存する`indexOf` sliceを廃止し、
+  JSON構造から除外対象top-level memberだけを特定するprojectionへ変更した。projection前に同じclosed schemaを
+  検査するため、除外領域へ未知governance bytesを追加してdigest検査から隠すことはできない。
+- `scripts/sprint-050-patch-001-test.mjs`へUD-067〜089の攻撃fixture 23件を追加した。
+  初回4系統に加え、同一Verdict重複、同一commit重複、blockquote、例示、引用、0件、nested／top-level／
+  ready-only extra key、PASS alias、`evaluatorPass=true`を負例化した。各fixtureは固有拒否codeと非0相当を確認する。
+
+Retry 1の変更fileは次の4件だけである。
+
+- `scripts/sprint-048-handoff.mjs`
+- `scripts/lib/sprint-049-inventory.mjs`
+- `scripts/sprint-050-patch-001-test.mjs`
+- `docs/progress/sprint-050-patch-001.md`
+
+### Retry 1 実行済み回帰
+
+| command | environment | result |
+|---|---|---|
+| `node scripts/sprint-050-patch-001-test.mjs` | sandbox | `PASS=89 FAIL=0`（positive 6、negative 81、integrity 2、attack fixture 23） |
+| `node scripts/sprint-049-test.mjs` | sandbox | `PASS=20 FAIL=0`、固定pre-Patch projection digest維持 |
+| `node scripts/sprint-048-validator.mjs` | sandbox | `PASS=23 FAIL=0 SKILLS=17 HOSTS=4` |
+| `node scripts/sprint-048-handoff.mjs validate-template` | sandbox | `status=valid`、両gate closed、write 0 |
+| `bash scripts/sprint-048-regression.sh` | sandbox | PK-007だけ`listen EPERM 127.0.0.1`。他の先行gateはPASS |
+| 同上 | normal environment | `SPRINT048_PASS=12 FAIL=0`、wrapper `8/8`、release integrity PASS |
+| `node scripts/sprint-050-test.mjs --report /tmp/agentic-secretary-sprint-050-patch-001-retry-1-product-report.json` | normal environment | primary 250／CLX 20／XV 4、`PASS=273 FAIL=0 CONDITIONAL_NOT_RUN=1`、E2E `4/4` |
+| `node --check`（変更3 script）／`git diff --check` | sandbox | exit 0 |
+
+Sprint 050回帰の唯一のconditional NOT-RUNは既存どおり`XM-007`。Critical 124/124、High 127 PASS＋1 NOT-RUN、
+Medium 22/22で、cross-root write、Hook loop、task自動作成、Decision誤確定、external／downstream writeは0だった。
+
+### Retry 1 再現手順
+
+1. `node scripts/sprint-050-patch-001-test.mjs`を実行し、UD-001〜089と
+   `ATTACK_FIXTURES=23`、`READY_ARTIFACT_TRACKED=0`、`DOWNSTREAM_WRITE=0`を確認する。
+2. UD-067〜077で、Verdict／commitの競合・同値重複・0件、code fence／blockquote／例示／引用が、
+   各固有codeで拒否されることを確認する。
+3. UD-070／078〜089で、Sprint 049 projection、standard `validate-template`、build、
+   `prewrite-user-decision`の全入口がtop-level／nested／ready-only未知key、PASS alias、
+   `evaluatorPass=true`を固有codeで拒否することを確認する。
+4. `node scripts/sprint-049-test.mjs`と通常環境の`bash scripts/sprint-048-regression.sh`を実行し、
+   pre-Patch projection、既存`public-evaluator-pass` PK-012、validator、wrapper、release integrityの無回帰を確認する。
+5. 通常環境でSprint 050 product回帰を実行し、274 case、E2E 4/4、`XM-007` truthful NOT-RUN、
+   host／Xmind verified昇格0、external／downstream write 0を確認する。
+
+### Retry 1 残余／境界
+
+- このRetry 1もGenerator自己評価であり、handoffはまだreadyではない。fresh独立Evaluatorの単一canonical PASSが必要。
+- Sprint 050でユーザーが受容したAC3／C21の実host live未実施はPASSへ変換していない。
+- `XM-007`、Claude Code Desktop、Codex App、Windows native、Mac mini、実downstream適用、release／tag／push／
+  marketplace／installed cache／new sessionは未実施・未許可のまま。
+- sandbox loopback `EPERM`は、通常環境の同一Sprint 048回帰12/12＋wrapper 8/8 PASSで切り分けた。
