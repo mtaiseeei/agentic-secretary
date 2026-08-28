@@ -5,7 +5,7 @@
 - Current ID: sprint-044
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
+- Lineage Dispatches: 5
 - Model Tier: strong
 - Rotate: none
 - Next Planned: sprint-045
@@ -94,6 +94,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-28: ユーザーがSprint 044の実host評価を承認。「今まで通りの実装なら動くはず。WindowsとMac環境の差はあると思うけど、いったん進めて」との判断に基づき、Mac上のClaude Code Desktop／CLI・Codex App／CLIを隔離candidateで確認する。candidate一時読込み、必要なcache／設定、trust前後、enable／disable、fresh session、AI credit／networkの可能性は承認範囲内。既存状態へ触れる必要がある場合は事前inventoryと終了後復元を必須とし、push／release／下流write／Xmind／connectorは対象外。Windowsは今回のMac証拠から昇格せず`unverified`で別記録する。fresh独立Evaluator予約としてLineage Dispatches 5、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。
 - 2026-08-28: Sprint 044 Retry 1 fresh独立Evaluator commit `dbc46d2c5ddf4eea7ce78a8b88a2bc2bd83c3501`はFAIL／`verification-scope-issue`。初回F-01 product／V-01 verification-infraはRESOLVED、新規product finding／verification-infra defect 0。Target 40/40、registry差分0、並行100/100＋128/128 parse、041〜043・015・021・022直接回帰、Claude strict validator、release integrity、diff checkはgreen。残件はユーザー未承認のClaude Code Desktop／CLI・Codex App／CLI candidate live 0/4 surfaceだけで、全surface `verified:false`を維持する。実plugin install／cache／trust／fresh AI session／network／credit／push／release／downstream write 0。Statusはawaiting-eval、Retry Count 1、Lineage Dispatches 4、Model Tier strong、Rotate noneのままユーザー判断を待ち、Sprint 045へ進めない。
 - 2026-08-28: Sprint 044 Retry 1 Generator candidate `53f327b7de3df0343122fae5692a4c5fbf8ee2e3`を固定。canonical rootからruntime／hooks／events／sessionまで全componentを作成前後とopen直前に検査し、recursive mkdir廃止、`O_EXCL`／利用可能時`O_NOFOLLOW`、descriptor/path inode照合、owned retry／未所有collision保護を追加。F-01を修正前39/40で再現し、全中間／最終symlink、非directory、root alias、open直前race、128並行を公式40-caseへ回帰化。修正後40/40、041〜043と安全回帰、Claude strict validator、release integrityがPASS。fresh独立Evaluator予約としてLineage Dispatches 4、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate none。実live／install／cache／trust／network／credit 0、4 surface verified:false。
 - 2026-08-28: Sprint 044初回fresh独立Evaluator commit `53f4fa7`はFAIL／implementation-issue。公式Target 40/40、並行128/128、禁止処理instrumentation 0、041〜043直接回帰はgreenだが、`.clarity/runtime`途中componentをproject外symlinkへ差し替えるとHookが外部へevent file 1件を書いた。Major product F-01としてAC3／C5／C21／C24違反、公式runnerに中間symlink負例がないMinor verification-infra V-01を分離。live 0/4 surface未承認は別境界。Retry Count 1、fresh Generator `gpt-5.6-sol`／`high`を予約してLineage Dispatches 3、Status active、Model Tier strong、Rotate none。修正は全runtime path componentの非symlink／root containment再検証と独立負回帰に限定する。
