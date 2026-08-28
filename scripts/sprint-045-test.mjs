@@ -20,7 +20,6 @@ import { fileURLToPath } from "node:url";
 import { appendEvent, history, status } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 import {
   dailyClarityRollup,
-  decideSecretaryProject,
   portfolioRollup,
   weeklyClarityRollup,
 } from "../plugins/secretary/scripts/lib/clarity-secretary.mjs";
@@ -58,8 +57,8 @@ function run(command, args, options = {}) {
     env: { ...process.env, ...(options.env || {}) },
   });
 }
-function runJson(command, args, expectedStatus = 0) {
-  const result = run(command, args);
+function runJson(command, args, expectedStatus = 0, options = {}) {
+  const result = run(command, args, options);
   assert.equal(result.status, expectedStatus, `${command} ${args.join(" ")}\n${result.stdout}\n${result.stderr}`);
   return JSON.parse(expectedStatus === 0 ? result.stdout : result.stderr);
 }
@@ -96,6 +95,18 @@ function init(root, name) {
   return { ...result, root: join(root, "projects/open", name, "clarity") };
 }
 function itemId(clarityRoot) { return status(clarityRoot).attention.top[0]?.itemId || json(join(clarityRoot, ".clarity/state.json")).items[0].itemId; }
+function appendFixtureItem(clarityRoot, suffix, overrides = {}) {
+  const base = structuredClone(json(join(clarityRoot, ".clarity/state.json")).items[0]);
+  const item = {
+    ...base,
+    ...overrides,
+    itemId: `ci_${String(suffix).padStart(20, "0")}`,
+    title: overrides.title || `追加Item ${suffix}`,
+    timestamps: { createdAt: fixedNow, updatedAt: fixedNow },
+  };
+  appendEvent(clarityRoot, { type: "item.discovered", itemId: item.itemId, actor: "sprint-045-fixture", payload: { item } });
+  return item.itemId;
+}
 function suite(key, command, args) {
   if (!suiteCache.has(key)) suiteCache.set(key, run(command, args, { timeout: 300_000 }));
   const result = suiteCache.get(key);
@@ -152,24 +163,39 @@ try {
     assert.equal(history(clarity.root).events.filter((event) => event.type === "decision.confirmed").length, 1);
 
     createProject(root, "確定後partial"); const after = init(root, "確定後partial"); const afterDecision = "対象地域は関西にする";
-    assert.throws(() => decideSecretaryProject(root, "確定後partial", { decision: afterDecision, current: "地域確認", next: "候補抽出", failAt: "clarity-finalize" }), (error) => error.code === "decision-partial" && error.details.completed.includes("project-decision"));
+    const afterArgs = [adapterCli, "decide", root, "確定後partial", "--decision", afterDecision, "--current", "地域確認", "--next", "候補抽出", "--json"];
+    const afterPartial = runJson(process.execPath, afterArgs, 4, { env: { CLARITY_DECISION_FAIL_AT: "clarity-finalize" } });
+    assert.equal(afterPartial.changed, true); assert.deepEqual(afterPartial.completed, ["project-decision"]); assert.deepEqual(afterPartial.pending, ["clarity-confirmation"]); assert.match(afterPartial.nextAction, /再実行/u);
+    assert.equal(runJson(process.execPath, afterArgs, 4, { env: { CLARITY_DECISION_FAIL_AT: "clarity-finalize" } }).changed, false);
     assert.notEqual(status(after.root).attention.top[0]?.reasons?.includes("confirmed_but_not_executed"), true);
-    decideSecretaryProject(root, "確定後partial", { decision: afterDecision, current: "地域確認", next: "候補抽出" });
+    assert.equal(runJson(process.execPath, afterArgs).status, "saved");
     assert.equal(readFileSync(join(root, "projects/open/確定後partial/PROJECT.md"), "utf8").split(afterDecision).length - 1, 1);
     assert.equal(history(after.root).events.filter((event) => event.type === "decision.confirmed").length, 1);
 
     createProject(root, "正本前partial"); const before = init(root, "正本前partial"); const beforeDecision = "公開日は10月1日にする";
-    assert.throws(() => decideSecretaryProject(root, "正本前partial", { decision: beforeDecision, current: "日付確認", next: "告知準備", failAt: "decision-write" }), (error) => error.code === "decision-partial" && error.details.completed.includes("clarity-pending"));
+    const beforeArgs = [adapterCli, "decide", root, "正本前partial", "--decision", beforeDecision, "--current", "日付確認", "--next", "告知準備", "--json"];
+    const beforePartial = runJson(process.execPath, beforeArgs, 4, { env: { CLARITY_DECISION_FAIL_AT: "decision-write" } });
+    assert.equal(beforePartial.changed, true); assert.deepEqual(beforePartial.completed, ["clarity-pending"]); assert.deepEqual(beforePartial.pending, ["project-decision", "clarity-confirmation"]); assert.match(beforePartial.nextAction, /再実行/u);
+    assert.equal(runJson(process.execPath, beforeArgs, 4, { env: { CLARITY_DECISION_FAIL_AT: "decision-write" } }).changed, false);
     assert(!readFileSync(join(root, "projects/open/正本前partial/PROJECT.md"), "utf8").includes(beforeDecision));
     assert(!history(before.root).events.some((event) => event.type === "decision.confirmed"));
-    decideSecretaryProject(root, "正本前partial", { decision: beforeDecision, current: "日付確認", next: "告知準備" });
+    assert.equal(runJson(process.execPath, beforeArgs).status, "saved");
     assert.equal(readFileSync(join(root, "projects/open/正本前partial/PROJECT.md"), "utf8").split(beforeDecision).length - 1, 1);
   });
 
   await test("SL-007", "Item作成はtask 0、明示時だけfixed handoff", () => {
     const root = secretary("sl007"); createProject(root, "タスク境界"); const clarity = init(root, "タスク境界"); const todo = join(root, "inbox/todo.md"); const before = readFileSync(todo, "utf8"); const id = itemId(clarity.root);
-    const implicit = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", id, "--target", "downstream-task", "--json"]); assert.equal(implicit.taskWrites, 0);
-    const explicit = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", id, "--target", "downstream-task", "--explicit", "--json"]); assert.equal(explicit.status, "fixed-handoff-required"); assert.equal(explicit.confirmationBoundary, "existing"); assert.equal(readFileSync(todo, "utf8"), before);
+    const added = [];
+    for (let index = 1; index <= 4; index += 1) added.push(appendFixtureItem(clarity.root, index));
+    const nonAttention = appendFixtureItem(clarity.root, 5, { disposition: "idea", title: "Attention外Item" });
+    const visible = new Set(status(clarity.root).attention.top.map((item) => item.itemId));
+    const allIds = [id, ...added, nonAttention];
+    const outsideTop = allIds.find((candidate) => candidate !== nonAttention && !visible.has(candidate)); assert(outsideTop);
+    const implicit = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", id, "--target", "downstream-task", "--json"]); assert.equal(implicit.status, "not-routed"); assert.equal(implicit.taskWrites, 0);
+    const local = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", outsideTop, "--target", "local-todo", "--explicit", "--json"]); assert.equal(local.route, "project-tools:add-todo");
+    const explicit = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", nonAttention, "--target", "downstream-task", "--explicit", "--json"]); assert.equal(explicit.status, "fixed-handoff-required"); assert.equal(explicit.confirmationBoundary, "existing");
+    const missing = runJson(process.execPath, [adapterCli, "task-route", root, "タスク境界", "--item-id", "ci_ffffffffffffffffffff", "--target", "local-todo", "--explicit", "--json"], 3); assert.equal(missing.code, "item-missing");
+    assert.equal(readFileSync(todo, "utf8"), before);
   });
 
   await test("SL-008", "public adapterはdownstream保護値を実装しない", () => {
@@ -193,14 +219,18 @@ try {
   await test("SL-011", "完了時もClarity IDと履歴を伴ってclosedへ移る", () => {
     const root = secretary("sl011"); createProject(root, "完了移動"); const clarity = init(root, "完了移動"); const beforeEvents = readFileSync(join(clarity.root, ".clarity/events.jsonl"), "utf8");
     assert.equal(run(process.execPath, [projectTool, "complete", root, "完了移動", "--result", "達成", "--remaining", "なし", "--confirm"]).status, 0);
-    const moved = join(root, "projects/closed/完了移動/clarity"); assert.equal(json(join(moved, ".clarity/project.json")).clarityProjectId, clarity.clarityProjectId); assert.equal(readFileSync(join(moved, ".clarity/events.jsonl"), "utf8"), beforeEvents);
+    const moved = join(root, "projects/closed/完了移動/clarity"); const project = json(join(moved, ".clarity/project.json")); assert.equal(project.clarityProjectId, clarity.clarityProjectId); assert.equal(project.secretaryLink.projectRef, "PROJECT.md"); assert.equal(project.secretaryLink.referenceBase, "secretary-project-root"); assert.equal(readFileSync(join(moved, ".clarity/events.jsonl"), "utf8"), beforeEvents);
+    const closedStatus = runJson(process.execPath, [adapterCli, "status", root, "完了移動", "--closed", "--json"]); assert.equal(closedStatus.linkHealth, "local-reference-healthy"); assert(existsSync(join(root, "projects/closed/完了移動", project.secretaryLink.projectRef)));
+    const staleProject = { ...project, secretaryLink: { ...project.secretaryLink, projectRef: "projects/open/完了移動/PROJECT.md", referenceBase: "secretary-root" } }; writeFileSync(join(moved, ".clarity/project.json"), `${JSON.stringify(staleProject, null, 2)}\n`);
+    assert.equal(runJson(process.execPath, [adapterCli, "status", root, "完了移動", "--closed", "--json"]).linkHealth, "local-reference-stale");
   });
 
   await test("SL-012", "再開時にClarity履歴を再作成しない", () => {
-    const root = secretary("sl012"); createProject(root, "再開案件"); const clarity = init(root, "再開案件");
+    const root = secretary("sl012"); createProject(root, "再開案件"); const clarity = init(root, "再開案件"); const beforeProject = readFileSync(join(clarity.root, ".clarity/project.json"), "utf8");
     assert.equal(run(process.execPath, [projectTool, "complete", root, "再開案件", "--result", "一旦完了", "--remaining", "追加確認", "--confirm"]).status, 0);
     assert.equal(run(process.execPath, [projectTool, "reopen", root, "再開案件", "--reason", "追加対応", "--next", "確認", "--confirm"]).status, 0);
-    const reopened = join(root, "projects/open/再開案件/clarity"); assert.equal(json(join(reopened, ".clarity/project.json")).clarityProjectId, clarity.clarityProjectId); assert.equal(lines(join(reopened, ".clarity/events.jsonl")).length, 1);
+    const reopened = join(root, "projects/open/再開案件/clarity"); const project = json(join(reopened, ".clarity/project.json")); assert.equal(project.clarityProjectId, clarity.clarityProjectId); assert.equal(project.secretaryLink.projectRef, "PROJECT.md"); assert.equal(readFileSync(join(reopened, ".clarity/project.json"), "utf8"), beforeProject); assert.equal(lines(join(reopened, ".clarity/events.jsonl")).length, 1);
+    const reopenedStatus = runJson(process.execPath, [adapterCli, "status", root, "再開案件", "--json"]); assert.equal(reopenedStatus.linkHealth, "local-reference-healthy"); assert(existsSync(join(root, "projects/open/再開案件", project.secretaryLink.projectRef)));
   });
 
   await test("PF-001", "複数open ProjectのPortfolio rollup", () => {
@@ -216,8 +246,8 @@ try {
   });
 
   await test("PF-003", "morningは独立した今日の要確認section", () => {
-    const root = secretary("pf003"); createProject(root, "朝案件"); init(root, "朝案件"); const result = run(process.execPath, [adapterCli, "daily", root, "--mode", "morning"]);
-    assert.equal(result.status, 0); assert.match(result.stdout, /^## 今日の要確認$/mu); assert.equal(dailyClarityRollup(root).section, "今日の要確認");
+    const root = secretary("pf003"); createProject(root, "朝案件"); init(root, "朝案件"); const result = run(process.execPath, [adapterCli, "daily", root, "--mode", "morning"]); const report = runJson(process.execPath, [adapterCli, "daily", root, "--mode", "morning", "--json"]);
+    assert.equal(result.status, 0); assert.match(result.stdout, /^## 今日の要確認$/mu); assert.match(result.stdout, /理由:/u); assert.match(result.stdout, /根拠:/u); assert.match(result.stdout, /選択:/u); assert.equal(report.section, "今日の要確認"); assert(report.items[0].conclusion); assert(report.items[0].evidence.length > 0); assert(report.items[0].choices.length > 0);
   });
 
   await test("PF-004", "TODOとAttentionが同内容でも自動task化しない", () => {
@@ -228,7 +258,8 @@ try {
   await test("PF-005", "Criticalを理由付きで最優先表示", () => {
     const root = secretary("pf005"); createProject(root, "重大案件"); const clarity = init(root, "重大案件"); const id = itemId(clarity.root);
     appendEvent(clarity.root, { type: "validation.changed", itemId: id, actor: "test", payload: { status: "failed" } });
-    const report = portfolioRollup(root); assert.equal(report.attention.top[0].level, "critical"); assert(report.attention.top[0].reasonLabels.some((label) => label.includes("検証")));
+    const report = runJson(process.execPath, [adapterCli, "portfolio", root, "--json"]); assert.equal(report.attention.top[0].level, "critical"); assert(report.attention.top[0].reasonLabels.some((label) => label.includes("検証"))); assert(report.attention.top[0].conclusion); assert(report.attention.top[0].evidence.length > 0); assert(report.attention.top[0].choices.length > 0);
+    const plain = run(process.execPath, [adapterCli, "portfolio", root]); assert.equal(plain.status, 0); assert.match(plain.stdout, /理由:/u); assert.match(plain.stdout, /根拠:/u); assert.match(plain.stdout, /選択:/u);
   });
 
   await test("PF-006", "Attentionなしは簡潔に現在判断不要", () => {

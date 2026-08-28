@@ -500,6 +500,11 @@ function readCanonical(rootValue) {
   return { root, clarity, project, events, evidence };
 }
 
+export function findCanonicalItem(rootValue, itemId) {
+  const canonical = readCanonical(rootValue);
+  return buildState(canonical.project, canonical.events, canonical.evidence).items.find((item) => item.itemId === itemId) || null;
+}
+
 function implemented(status) {
   return ["implemented", "verified", "operational"].includes(status);
 }
@@ -1358,13 +1363,21 @@ export function decideGenericProject(rootValue, {
   if (prior.some((event) => event.type === "decision.confirmed")) {
     return { status: "unchanged", operationId: opId, decision: findDecision(files, safeDecision), duplicate: false };
   }
+  let pendingChanged = false;
   if (!prior.some((event) => event.type === "decision.pending")) {
-    appendEvent(root, { type: "decision.pending", itemId: selectedItem, actor: "human-confirmation", payload: { operationId: opId, source: "generic-project-decision", humanConfirmed: false } });
+    pendingChanged = appendEvent(root, { type: "decision.pending", itemId: selectedItem, actor: "human-confirmation", payload: { operationId: opId, source: "generic-project-decision", humanConfirmed: false } }).changed;
   }
   let stored = findDecision(files, safeDecision);
+  let projectDecisionChanged = false;
   if (!stored) {
     if (failAt === "decision-write") {
-      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、Decision正本の書込みに失敗しました。確定表示していません。", 4, { operationId: opId, completed: ["clarity-pending"], pending: ["project-decision", "clarity-confirmation"] });
+      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、Decision正本の書込みに失敗しました。確定表示していません。", 4, {
+        operationId: opId,
+        changed: pendingChanged,
+        completed: ["clarity-pending"],
+        pending: ["project-decision", "clarity-confirmation"],
+        nextAction: "同じDecisionを再実行し、Project正本とClarity確定Eventの未完了分だけを完了してください",
+      });
     }
     const projectTool = resolve(dirname(fileURLToPath(import.meta.url)), "../project-tools.mjs");
     let result;
@@ -1378,16 +1391,39 @@ export function decideGenericProject(rootValue, {
         env: { ...process.env, CC_SECRETARY_NOW: process.env.CC_SECRETARY_NOW || nowIso() },
       });
     } catch (error) {
-      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、既存Decision正本の処理が安全に完了しませんでした。確定表示していません。", 4, { operationId: opId, completed: ["clarity-pending"], pending: ["project-decision", "clarity-confirmation"], decisionError: error?.code || "external-operation-failed" });
+      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、既存Decision正本の処理が安全に完了しませんでした。確定表示していません。", 4, {
+        operationId: opId,
+        changed: pendingChanged,
+        completed: ["clarity-pending"],
+        pending: ["project-decision", "clarity-confirmation"],
+        nextAction: "原因を確認して同じDecisionを再実行し、未完了分だけを完了してください",
+        decisionError: error?.code || "external-operation-failed",
+      });
     }
     if (result.status !== 0) {
-      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、既存Decision正本は更新できませんでした。確定表示していません。", 4, { operationId: opId, completed: ["clarity-pending"], pending: ["project-decision", "clarity-confirmation"], decisionExit: result.status, decisionError: String(result.stderr || "").trim().slice(0, 300) });
+      throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、既存Decision正本は更新できませんでした。確定表示していません。", 4, {
+        operationId: opId,
+        changed: pendingChanged,
+        completed: ["clarity-pending"],
+        pending: ["project-decision", "clarity-confirmation"],
+        nextAction: "原因を確認して同じDecisionを再実行し、未完了分だけを完了してください",
+        decisionExit: result.status,
+        decisionError: String(result.stderr || "").trim().slice(0, 300),
+      });
     }
     stored = findDecision(files, safeDecision);
     fail(stored, "decision-write-unverified", "既存Decision seam成功後の正本を再確認できませんでした。");
+    projectDecisionChanged = true;
   }
   if (failAt === "clarity-finalize") {
-    throw new ClarityError("decision-partial", "Decision正本は更新済みですが、Clarity確定Eventが未完了です。再実行はDecisionを重複せず残りだけ完了します。", 4, { operationId: opId, completed: ["project-decision"], pending: ["clarity-confirmation"], decision: stored });
+    throw new ClarityError("decision-partial", "Decision正本は更新済みですが、Clarity確定Eventが未完了です。再実行はDecisionを重複せず残りだけ完了します。", 4, {
+      operationId: opId,
+      changed: pendingChanged || projectDecisionChanged,
+      completed: ["project-decision"],
+      pending: ["clarity-confirmation"],
+      nextAction: "同じDecisionを再実行し、Clarity確定Eventだけを完了してください",
+      decision: stored,
+    });
   }
   const result = appendEvent(root, {
     type: "decision.confirmed",

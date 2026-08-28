@@ -16,6 +16,7 @@ import {
   ClarityError,
   buildState,
   decideGenericProject,
+  findCanonicalItem,
   history,
   status,
   validateEvent,
@@ -117,7 +118,8 @@ function createCanonical(record) {
     createdAt: timestamp,
     repoIdentity: { kind: "non-git", rootName: record.name, remote: { status: "not-applicable", repository: null }, branch: null, head: null },
     secretaryLink: {
-      projectRef: `${record.rel}/PROJECT.md`,
+      projectRef: "PROJECT.md",
+      referenceBase: "secretary-project-root",
       lifecycleAuthority: "projects",
       decisionAuthority: "project-decision-canonical",
       taskAuthority: "existing-task-seams",
@@ -227,7 +229,26 @@ function readProjectClarity(record) {
   const root = clarityRoot(record);
   if (!existsSync(root)) return null;
   directory(root, `${record.rel}/clarity`);
-  return { root, report: status(root), history: history(root) };
+  const projectPath = safeWritePath(root, ".clarity/project.json");
+  let project;
+  try { project = JSON.parse(readFileSync(projectPath, "utf8")); }
+  catch { throw new ClarityError("project-json-invalid", "Clarity project.jsonを安全に読めません。"); }
+  validateProject(project);
+  return { root, project, report: status(root), history: history(root) };
+}
+
+function localReferenceHealth(record, clarityProject) {
+  const link = clarityProject.secretaryLink;
+  if (!link || typeof link.projectRef !== "string") return "local-reference-missing";
+  let target;
+  try {
+    target = link.referenceBase === "secretary-project-root"
+      ? safeWritePath(record.root, `${record.rel}/${link.projectRef}`)
+      : safeWritePath(record.root, link.projectRef);
+  } catch { return "local-reference-invalid"; }
+  if (target !== record.file || !existsSync(target)) return "local-reference-stale";
+  const stat = lstatSync(target);
+  return stat.isFile() && !stat.isSymbolicLink() ? "local-reference-healthy" : "local-reference-invalid";
 }
 
 export function secretaryProjectClarityStatus(secretaryRootValue, rawName, options = {}) {
@@ -251,7 +272,7 @@ export function secretaryProjectClarityStatus(secretaryRootValue, rawName, optio
     project: { name: record.name, scope: record.scope, path: `${record.rel}/PROJECT.md` },
     resolver: { selected: record.scope, conflict: record.conflict },
     attention: clarity.report.attention,
-    linkHealth: "local-reference-healthy",
+    linkHealth: localReferenceHealth(record, clarity.project),
     lifecycleAuthority: "projects",
     detailPath: `${record.rel}/clarity/.clarity/state.json`,
   };
@@ -309,7 +330,16 @@ export function portfolioRollup(secretaryRootValue) {
     source: "generic-secretary-open-projects",
     projectCount: projects.length,
     projects,
-    attention: { activeCount: attention.length, top: attention.slice(0, DISPLAY_LIMIT).map(({ choices: _choices, evidence: _evidence, _rank, ...item }) => ({ ...item, lagDays: Number(_rank?.age || 0) })), otherCount: Math.max(0, attention.length - DISPLAY_LIMIT) },
+    attention: {
+      activeCount: attention.length,
+      top: attention.slice(0, DISPLAY_LIMIT).map(({ _rank, ...item }) => ({
+        ...item,
+        evidence: (item.evidence || []).slice(0, 3).map((row) => ({ evidenceId: row.evidenceId, summary: row.summary, availability: row.availability })),
+        choices: (item.choices || []).slice(0, 3),
+        lagDays: Number(_rank?.age || 0),
+      })),
+      otherCount: Math.max(0, attention.length - DISPLAY_LIMIT),
+    },
     unverifiedSources,
     closedIncluded: false,
     connectorReads: 0,
@@ -381,7 +411,7 @@ export function routeClarityTask(secretaryRootValue, rawName, { itemId, target =
   const record = resolveSecretaryProject(secretaryRootValue, rawName);
   const clarity = readProjectClarity(record);
   if (!clarity) throw new ClarityError("clarity-not-initialized", "このProjectにはClarityがありません。");
-  const selected = clarity.report.attention.top.find((item) => item.itemId === itemId) || null;
+  const selected = findCanonicalItem(clarity.root, itemId);
   if (!selected) throw new ClarityError("item-missing", "指定されたClarity Itemを確認できません。");
   if (!explicit) return { status: "not-routed", changed: false, reason: "explicit-task-request-required", taskWrites: 0 };
   if (target === "local-todo") {

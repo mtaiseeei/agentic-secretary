@@ -38,6 +38,13 @@ function parse(argv) {
   return { positional, options };
 }
 
+function attentionLines(item) {
+  const reasons = item.reasonLabels?.join("／") || "理由を確認してください";
+  const evidence = item.evidence?.map((row) => row.summary).join("／") || "根拠不足（未検証）";
+  const choices = item.choices?.join("／") || "詳細を確認する";
+  return `- ${item.project}: ${item.conclusion || item.title}\n  理由: ${reasons}\n  根拠: ${evidence}\n  選択: ${choices}\n`;
+}
+
 function render(command, result, asJson) {
   if (asJson) { process.stdout.write(`${JSON.stringify({ ok: true, command, ...result }, null, 2)}\n`); return; }
   if (command === "init") {
@@ -51,14 +58,14 @@ function render(command, result, asJson) {
   }
   if (command === "portfolio") {
     process.stdout.write(`Portfolio: open Project ${result.projectCount}件\n`);
-    for (const item of result.attention.top) process.stdout.write(`- ${item.project}: ${item.title}（${item.reasonLabels.join("／")}）\n`);
+    for (const item of result.attention.top) process.stdout.write(attentionLines(item));
     if (!result.attention.activeCount) process.stdout.write("- 現在判断不要です\n");
     if (result.unverifiedSources.length) process.stdout.write(`- 未確認: ${result.unverifiedSources.length}件\n`);
     return;
   }
   if (command === "daily" && result.mode === "morning") {
     process.stdout.write(`## ${result.section}\n\n${result.conclusion}\n`);
-    for (const item of result.items) process.stdout.write(`- ${item.project}: ${item.title}（${item.reasonLabels.join("／")}）\n`);
+    for (const item of result.items) process.stdout.write(attentionLines(item));
     if (result.otherCount) process.stdout.write(`- その他 ${result.otherCount}件\n`);
     if (result.unverifiedSources.length) process.stdout.write(`- 未確認範囲: ${result.unverifiedSources.map((row) => row.project).join("、")}\n`);
     return;
@@ -103,6 +110,13 @@ try {
   render(command, result, Boolean(options.get("--json")));
 } catch (error) {
   const known = error instanceof ClarityError;
-  process.stderr.write(`${JSON.stringify({ ok: false, code: known ? error.code : "unexpected-error", message: error instanceof Error ? error.message : String(error), changed: false }, null, 2)}\n`);
+  const details = known && error.details && typeof error.details === "object" ? error.details : {};
+  process.stderr.write(`${JSON.stringify({
+    ok: false,
+    ...details,
+    code: known ? error.code : "unexpected-error",
+    message: error instanceof Error ? error.message : String(error),
+    changed: details.changed === true,
+  }, null, 2)}\n`);
   process.exit(known ? error.exitCode : 3);
 }
