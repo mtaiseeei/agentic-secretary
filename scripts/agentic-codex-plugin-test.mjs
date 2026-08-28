@@ -21,7 +21,7 @@ const args = process.argv.slice(2);
 const rootIndex = args.indexOf("--root");
 const root = resolve(rootIndex >= 0 ? args[rootIndex + 1] : dirname(fileURLToPath(import.meta.url)), rootIndex >= 0 ? "" : "..");
 const expectedSkills = [
-  "build", "chatwork", "connections", "daily", "google-chat", "memory-care", "name", "onboarding",
+  "build", "chatwork", "clarity", "connections", "daily", "google-chat", "memory-care", "name", "onboarding",
   "projects", "secretary", "settings", "setup-google", "setup-microsoft", "setup-notion", "update", "weekly",
 ];
 let passes = 0;
@@ -74,7 +74,7 @@ function validateFormalDistribution(candidateRoot) {
     category: "Productivity",
   });
   assert.equal(manifest.name, "agentic-secretary");
-  assert.equal(manifest.version, "0.10.2");
+  assert.equal(manifest.version, "0.11.0");
   assert.equal(manifest.skills, "./skills/");
   assert.equal(manifest.repository, "https://github.com/mtaiseeei/agentic-secretary");
   assert.equal(manifest.license, "MIT");
@@ -83,12 +83,13 @@ function validateFormalDistribution(candidateRoot) {
   assert(Array.isArray(manifest.interface?.capabilities));
   assert(Array.isArray(manifest.interface?.defaultPrompt));
   assert.equal(manifest.interface.defaultPrompt.length, 3);
-  for (const forbidden of ["apps", "mcpServers", "hooks"]) assert(!(forbidden in manifest));
+  for (const forbidden of ["apps", "mcpServers"]) assert(!(forbidden in manifest));
+  assert.equal(manifest.hooks, "./hooks/hooks.json");
   assert.deepEqual(skillNames(pluginRoot), expectedSkills);
   return { marketplace, manifest, pluginRoot };
 }
 
-check("formal Codex manifest and marketplace satisfy the shared 16-skill contract", () => {
+check("formal Codex manifest and marketplace satisfy the shared 17-skill and Clarity Hook contract", () => {
   validateFormalDistribution(root);
 });
 
@@ -156,16 +157,17 @@ check("Codex CLI ingests the local marketplace with synthetic HOME and CODEX_HOM
     const available = runJson("plugin", "list", "--available", "--json");
     assert.equal(available.available.length, 1);
     assert.equal(available.available[0].pluginId, "agentic-secretary@agentic-secretary");
-    assert.equal(available.available[0].version, "0.10.2");
+    assert.equal(available.available[0].version, "0.11.0");
     assert.equal(available.available[0].installed, false);
 
     const installed = runJson("plugin", "add", "agentic-secretary@agentic-secretary", "--json");
-    assert.equal(installed.version, "0.10.2");
+    assert.equal(installed.version, "0.11.0");
     assert(installed.installedPath.startsWith(`${codexHome}/plugins/cache/`));
     const cachedRoot = resolve(installed.installedPath);
     assert.equal(json(join(cachedRoot, ".codex-plugin/plugin.json")).skills, "./skills/");
     assert.deepEqual(skillNames(cachedRoot), expectedSkills);
-    assert.equal(walk(cachedRoot).filter((path) => path.endsWith("/SKILL.md")).length, 16);
+    assert.equal(walk(cachedRoot).filter((path) => path.endsWith("/SKILL.md")).length, 17);
+    assert(existsSync(join(cachedRoot, "hooks/hooks.json")));
     for (const name of expectedSkills) {
       assert.equal(digest(join(cachedRoot, "skills", name, "SKILL.md")), digest(join(sourcePlugin, "skills", name, "SKILL.md")));
     }
@@ -173,7 +175,7 @@ check("Codex CLI ingests the local marketplace with synthetic HOME and CODEX_HOM
     const listed = runJson("plugin", "list", "--json");
     assert.equal(listed.installed.length, 1);
     assert.equal(listed.installed[0].enabled, true);
-    assert.equal(listed.installed[0].version, "0.10.2");
+    assert.equal(listed.installed[0].version, "0.11.0");
 
     const after = Object.fromEntries(walk(sourcePlugin).map((path) => [path.slice(sourcePlugin.length + 1), digest(path)]));
     assert.deepEqual(after, before, "Codex ingestion modified the source plugin");

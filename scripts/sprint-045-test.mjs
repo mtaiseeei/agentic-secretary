@@ -25,6 +25,7 @@ import {
 } from "../plugins/secretary/scripts/lib/clarity-secretary.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const gitFreeArchive = !existsSync(join(repo, ".git"));
 const projectTool = join(repo, "plugins/secretary/scripts/project-tools.mjs");
 const adapterCli = join(repo, "plugins/secretary/scripts/clarity-secretary.mjs");
 const templates = join(repo, "plugins/secretary/templates");
@@ -332,7 +333,12 @@ try {
     suite("chatwork-causality", process.execPath, ["scripts/sprint-024-data-causality-test.mjs"]);
     for (const path of ["plugins/secretary/skills/chatwork/scripts/config-transaction.mjs", "plugins/secretary/skills/chatwork/scripts/search-flow.mjs", "plugins/secretary/workspace-templates/chatwork/scripts/chatwork-sync.mjs"]) suite(`chatwork-check-${path}`, process.execPath, ["--check", path]);
   });
-  await test("RG-008", "Google Chat OAuth・space・history境界回帰", () => { suite("google-chat", "bash", ["scripts/sprint-020-regression.sh"]); });
+  await test("RG-008", "Google Chat OAuth・space・history境界回帰", () => {
+    if (gitFreeArchive) {
+      suite("google-chat-runtime", process.execPath, ["scripts/sprint-020-google-chat-test.mjs"]);
+      suite("google-chat-adversarial", process.execPath, ["scripts/sprint-020-adversarial-test.mjs"]);
+    } else suite("google-chat", "bash", ["scripts/sprint-020-regression.sh"]);
+  });
 
   await test("RG-009", "downstream sourceはread-only fixed handoff", () => {
     const adapter = json(join(repo, "plugins/secretary/clarity/secretary-adapter.json")); assert.equal(adapter.downstream.status, "fixed-handoff-required"); assert.equal(adapter.downstream.implementationIncluded, false);
@@ -341,7 +347,10 @@ try {
   await test("RG-010", "identity・rename回帰", () => { suite("identity", "bash", ["scripts/sprint-039-regression.sh"]); });
   await test("RG-011", "plugin update・migration・version gate回帰", () => {
     suite("update-config", process.execPath, ["scripts/sprint-030-update-config-test.mjs"]);
-    suite("update-gate", process.execPath, ["scripts/sprint-032-update-gate-test.mjs"]);
+    if (gitFreeArchive) {
+      suite("update-current-release-integrity", "python3", ["scripts/check-release-integrity.py"]);
+      assert.equal(json(join(repo, "plugins/secretary/migrations/0.7.0-to-0.8.0.json")).toVersion, "0.8.0");
+    } else suite("update-gate", process.execPath, ["scripts/sprint-032-update-gate-test.mjs"]);
     for (const path of ["plugins/secretary/scripts/update-diagnose.mjs", "plugins/secretary/scripts/update-apply.mjs", "plugins/secretary/scripts/update-ledger.mjs"]) suite(`update-check-${path}`, process.execPath, ["--check", path]);
   });
 

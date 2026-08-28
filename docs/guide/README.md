@@ -11,6 +11,7 @@ host別install手順を読み、必要な詳細をこのガイドで確認して
 
 - [はじめ方（インストールと初回体験）](getting-started.md)
 - [できること（機能の使い方）](features.md)
+- [Project Clarity（正本・Attention・投影・Drift）](project-clarity.md)
 - [更新状況を確認する](updates.md)
 - [外部サービスにつなぐ（コネクタ）](connectors.md)
 

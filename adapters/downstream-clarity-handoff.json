@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "agentic-secretary-clarity-fixed-handoff",
+  "sourceEdition": "agentic-secretary",
+  "candidateVersion": "0.11.0",
+  "publicationStatus": "pending-public-evaluator-pass",
+  "acceptedSource": null,
+  "commonPaths": [
+    "plugins/secretary/clarity/schemas/event.schema.json",
+    "plugins/secretary/clarity/schemas/evidence.schema.json",
+    "plugins/secretary/clarity/schemas/item.schema.json",
+    "plugins/secretary/clarity/schemas/project.schema.json",
+    "plugins/secretary/clarity/schemas/state.schema.json",
+    "plugins/secretary/clarity/secretary-adapter.json",
+    "plugins/secretary/hooks/hooks.json",
+    "plugins/secretary/host-inventory.json",
+    "plugins/secretary/release-inventory.json",
+    "plugins/secretary/scripts/clarity-hook.mjs",
+    "plugins/secretary/scripts/clarity-secretary.mjs",
+    "plugins/secretary/scripts/clarity.mjs",
+    "plugins/secretary/scripts/lib/clarity-core.mjs",
+    "plugins/secretary/scripts/lib/clarity-drift.mjs",
+    "plugins/secretary/scripts/lib/clarity-hook.mjs",
+    "plugins/secretary/scripts/lib/clarity-link.mjs",
+    "plugins/secretary/scripts/lib/clarity-projection.mjs",
+    "plugins/secretary/scripts/lib/clarity-secretary.mjs",
+    "plugins/secretary/skills/clarity/SKILL.md"
+  ],
+  "adapterSeams": [
+    { "id": "secretary-local", "path": "plugins/secretary/clarity/secretary-adapter.json", "owner": "public-common" },
+    { "id": "host-status", "path": "plugins/secretary/host-inventory.json", "owner": "public-common" },
+    { "id": "release-status", "path": "plugins/secretary/release-inventory.json", "owner": "public-common" },
+    { "id": "xmind-edition-default", "path": "plugins/secretary/release-inventory.json", "owner": "downstream-adaptation", "allowedFields": ["xmind.editions[].defaultEnabled", "xmind.editions[].reason"] }
+  ],
+  "excludedPaths": [
+    ".git/**",
+    ".harness/**",
+    "docs/spec/**",
+    "docs/sprints/**",
+    "docs/progress/**",
+    "docs/feedback/**",
+    "README.md",
+    "plugins/secretary/rules/copy/**",
+    "plugins/secretary/rules/styles/**"
+  ],
+  "protectedDownstreamPaths": {
+    "agentic-secretary-my-vault": [
+      "AGENTS.md",
+      "README.md",
+      "docs/**",
+      "plugins/secretary/skills/notion-tasks/**",
+      "plugins/secretary/skills/task-triage/**",
+      "plugins/secretary/skills/vault-documents/**",
+      "plugins/secretary/skills/vault-search/**"
+    ],
+    "yasashii-secretary": [
+      "README.md",
+      "docs/**",
+      "plugins/secretary/rules/copy/yasashii.json",
+      "plugins/secretary/rules/styles/yasashii.md"
+    ]
+  },
+  "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+  "rollback": {
+    "strategy": "file-scoped-pre-sync-commit",
+    "instruction": "各downstreamの同期前commitへcommon pathだけを戻し、protected／excluded pathとrepo正本を変更しません。"
+  },
+  "preWriteGate": {
+    "script": "scripts/sprint-048-handoff.mjs",
+    "status": "closed",
+    "requiredPublicationStatus": "public-evaluator-pass",
+    "requires": ["accepted full SHA", "full tree digest", "common path digest", "file count", "protected path digests", "excluded path coverage", "clean candidate tree"],
+    "writesDownstream": false
+  }
+}

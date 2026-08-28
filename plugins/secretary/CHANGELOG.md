@@ -1,5 +1,30 @@
 # 変更履歴
 
+## [0.11.0] - 2026-08-28
+
+### 対象者
+
+- public Agentic版のProject Clarity source candidateを評価する保守者。Yasashii版とprivate版への機能展開はまだ行いません。
+
+### 変わること
+
+- Project Clarityの初期化、Attention、Markdown／Mermaid／Xmind投影、Secretary-local表示、Repo間link／sync、Drift検出を共通のSkillとCLIから使えるようにします。
+- Claude CodeとCodexで共通のClarity専用Hookを配布し、Hookを使えないときも手動commandで同じ正本を確認できます。
+- このentryはAgentic先行のsource candidateです。Yasashii版とprivate版は、固定handoff後の別Harnessと独立評価が終わるまで未展開です。
+
+### 設定・ファイルへの影響
+
+- public Agentic版のXmind integrationは既定OFFです。ON時もXmind MCPを第1優先とし、local `.xmind`はpreviewと明示承認後だけ書きます。
+- 既存のmemory、project、identity、Chatwork／Google Chat設定、Gitの利用者変更は自動変更しません。
+
+### 必要な操作
+
+- 現在はpublic source candidateのため、release操作は不要です。全最終Sprintと各配布系統の独立評価後に、公開・更新手順を別途案内します。
+
+### 互換性上の注意
+
+- `0.10.2`以前のrelease記録、fixture、tag、Git履歴は変更しません。source検査のPASSをtag、GitHub Release、marketplace、installed cache、下流版のPASSへ昇格しません。
+
 ## [0.10.2] - 2026-08-26
 
 ### 対象者

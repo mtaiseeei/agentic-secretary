@@ -18,5 +18,9 @@ node scripts/sprint-047-test.mjs
 bash scripts/sprint-046-regression.sh
 python3 scripts/check-release-integrity.py
 
-git diff --check
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  git diff --check
+else
+  printf 'SPRINT047_GIT_DIFF_CHECK=NOT_APPLICABLE_GIT_FREE\n'
+fi
 printf 'SPRINT047_REGRESSION_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0\n'

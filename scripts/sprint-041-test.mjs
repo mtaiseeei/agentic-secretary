@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -89,9 +90,17 @@ async function test(id, title, fn) {
 }
 function cloneFixture(name) {
   const target = join(work, name);
-  const cloned = run("git", ["clone", "--quiet", "--no-hardlinks", repo, target]);
-  assert.equal(cloned.status, 0, cloned.stderr);
-  assert.equal(run("git", ["-C", target, "remote", "remove", "origin"]).status, 0);
+  if (existsSync(join(repo, ".git"))) {
+    const cloned = run("git", ["clone", "--quiet", "--no-hardlinks", repo, target]);
+    assert.equal(cloned.status, 0, cloned.stderr);
+    assert.equal(run("git", ["-C", target, "remote", "remove", "origin"]).status, 0);
+  } else {
+    cpSync(repo, target, { recursive: true });
+    assert.equal(run("git", ["init", "-q", "-b", "main"], { cwd: target }).status, 0);
+    const env = { GIT_AUTHOR_NAME: "Sprint 041", GIT_AUTHOR_EMAIL: "s041@example.invalid", GIT_COMMITTER_NAME: "Sprint 041", GIT_COMMITTER_EMAIL: "s041@example.invalid" };
+    assert.equal(run("git", ["add", "."], { cwd: target, env }).status, 0);
+    assert.equal(run("git", ["commit", "-qm", "Git-free archive fixture"], { cwd: target, env }).status, 0);
+  }
   return target;
 }
 function secretaryProject(name) {

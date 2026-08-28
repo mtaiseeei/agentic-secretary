@@ -149,7 +149,7 @@ secretary/
 
 </details>
 
-### Google Chatをつなぐ
+### Google Chatをつなぐ（少し高度な設定）
 
 Google Workspace版Google Chatに対応しています。`/google-chat` または「Google Chatを設定したい」と依頼すると、
 Google Cloudの準備から案内します。接続後は、選択した通常スペースだけを取得・検索できます。
@@ -159,7 +159,8 @@ Google Cloudの準備から案内します。接続後は、選択した通常�
 <details><summary>設定と安全性の詳細を見る</summary>
 
 Google Workspace組織が所有するGoogle Cloud projectで、Google Chat API、People API、Audience `Internal`、
-Application type `Desktop app` のOAuth clientを準備します。管理者またはCloud project作成権限者の操作が必要な場合があります。
+Application type `Desktop app` のOAuth clientを準備します。Google Workspace管理者またはCloud project作成権限者の操作が必要な場合があります。
+People APIの参照範囲により、連絡先にない同僚名を表示できない場合があります。その場合もIDを捏造せず、確認できた範囲を示します。
 
 接続用JSONを取得した後、ローカルwizardでファイルを選び、別タブでGoogleの接続を許可します。OAuthは
 `chat.spaces.readonly`、`chat.messages.readonly`、`contacts.readonly` だけを要求します。client secret、
@@ -199,8 +200,11 @@ Application type `Desktop app` のOAuth clientを準備します。管理者ま�
 更新は、対象と復元方法を示して了承を得た後だけ開始します。変更内容の正本は
 [CHANGELOG](plugins/secretary/CHANGELOG.md)です。
 
-現在のmanifest candidateは **0.10.2** です。明示した低リスクの「覚えて」を、その依頼自体の承認として
-同じturnで一度だけ保存します。削除、外部送信、公開、Secret、権限変更、一括処理は従来どおり確認します。
+現在のpublic source candidateは **0.11.0** です。Project Clarityの正本、Attention、投影、
+共通Hook、link／sync／Drift、host inventoryを同じ配布物へ揃えます。`0.11.0`はまだtag、GitHub Release、
+marketplace公開、installed cache、新しいsessionへ反映していません。public版以外のinstalled versionとも混同しません。
+明示した低リスクの「覚えて」は、その依頼自体の承認として同じturnで一度だけ保存します。
+削除、外部送信、公開、Secret、権限変更、一括処理は従来どおり確認します。
 `0.10.1`で追加した既存workspaceのidentity migrationは変更せず、完了済みなら再実行しません。
 read-only診断で移行が残っている場合だけ、名前確認、migration preview、別の適用確認の順に進みます。
 identity、AGENTS／CLAUDEの製品所有節、最小台帳だけをlocal checkpointへ記録し、

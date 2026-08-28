@@ -5,16 +5,30 @@ description: Project Clarityを安全に初期化し、人間が考える必要�
 
 # Project Clarity
 
+## plugin root（必須）
+
+このSKILL.mdの実ファイル絶対pathを `SECRETARY_SKILL_FILE` に入れ、最初に1回だけ解決する。
+空・相対path・未解決placeholderならcommandへ渡さず停止し、cwdやhost固有の環境変数から推測しない。
+
+```bash
+SECRETARY_SKILL_FILE="<このSKILL.mdの実ファイル絶対path>"
+case "$SECRETARY_SKILL_FILE" in /*/skills/*/SKILL.md) ;; *) exit 2 ;; esac
+SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/resolve-plugin-root.mjs" --skill-file "$SECRETARY_SKILL_FILE")" || exit 2
+```
+
+以後の共通file参照は `${SECRETARY_PLUGIN_ROOT}` を使う。
+
 Project ClarityはTODO一覧ではありません。Decision、Execution、Validationと根拠を分け、「何が決まり、何が実行され、どこに人間の判断が要るか」を扱います。
 
-通常の利用者向け応答は`${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/rules/plain-language.md`を参照し、最終応答serializerだけを正本にする。Clarity Skill独自の固定帳票へ包み直さない。
+通常の利用者向け応答は`${SECRETARY_PLUGIN_ROOT}/rules/plain-language.md`を参照する。Secretary workspaceを扱う場合は既存の
+`secretary/memory/preferences.md`を読み、最終応答serializerだけを正本にする。Clarity Skill独自の固定帳票へ包み直さない。
 
 ## 初期化
 
 1. 最初は必ずread-only previewを実行する。
 
    ```bash
-   node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" init "<repo-root>" --json
+   node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" init "<repo-root>" --json
    ```
 
 2. Project名、Repo identity、Item候補、作成予定path、競合、除外・未確認範囲を利用者へ示す。
@@ -26,14 +40,14 @@ Project ClarityはTODO一覧ではありません。Decision、Execution、Valid
 Hookが無効・未信頼・失敗でも、次は完全に手動で使える。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" status "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" attention "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" review "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" attention-override "<repo-root>" --item-id "<item-id>" --level "<level>" --reason "<reason>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" history "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" checkpoint "<repo-root>" --operation-id "<stable-operation-id>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" rebuild "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" doctor "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" status "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" attention "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" review "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" attention-override "<repo-root>" --item-id "<item-id>" --level "<level>" --reason "<reason>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" history "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" checkpoint "<repo-root>" --operation-id "<stable-operation-id>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" rebuild "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" doctor "<repo-root>" --json
 ```
 
 `rebuild`はEvent／EvidenceからStateを再生成します。Stateやquadrantの手編集をDecision確定として扱いません。
@@ -46,8 +60,8 @@ node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clar
 - Codexで`/hooks`がtrust未承認を示した場合は、`doctor --host codex --hook-state untrusted --json`でdegraded状態とtrust確認方法を表示する。無効時は`disabled`、command失敗時は`failure`を渡す。1hostの結果を別hostのverifiedへ昇格しない。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" migrate "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" cleanup "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" migrate "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" cleanup "<repo-root>" --json
 ```
 
 previewの対象path、保持する履歴、削除候補を利用者が確認した後だけ、それぞれ`--apply`を付ける。migration失敗は旧schemaを利用可能な状態へ戻し、cleanupは所有確認済みの期限切れruntimeだけを削除する。
@@ -64,8 +78,8 @@ previewの対象path、保持する履歴、削除候補を利用者が確認し
 Decision／ADR／spec／顧客合意と、現在のcode／commit／test Evidenceを比較するときは、対象fileと行範囲を明示した小さなJSON manifestを使う。最初は必ずpreviewし、`unknown`、`aligned`、`possible_drift`、`drift`、`not_applicable`の結果と双方のlocatorを確認した後だけapplyする。全文検索や意味検索は行わず、各sourceは64KB・240行以内に限定される。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --apply --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" drift "<repo-root>" --input-file "<comparison.json>" --apply --json
 ```
 
 manifestは`schemaVersion: 1`、`itemId`、`decision`、`implementation`を持つ。双方にtype、working rootからの相対locator、比較対象の`claim.field`／`claim.value`、source内で確認できる1〜12件の`claim.markers`を指定する。生成物は`authority: "generated"`と`generatedFrom`で生成元を示し、生成元がなければ断定しない。古いcommitは履歴Evidenceとして残し、現在実装の一致とは扱わない。marker不足や同義表現を一意に判断できない場合は`possible_drift`に留める。
@@ -73,15 +87,15 @@ manifestは`schemaVersion: 1`、`itemId`、`decision`、`implementation`を持�
 waiver、つまり理由付きの一時抑制はDriftを消去しない。理由・範囲・期限をpreviewし、明示applyでEventへ追加する。期限切れまたは`revoked`後はAttentionへ再出現でき、過去の比較・waiver履歴は保持される。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --apply --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" drift-waiver "<repo-root>" --item-id "<id>" --reason "<reason>" --scope "<scope>" --expires-at "<ISO-8601>" --apply --json
 ```
 
 Clarity所有fileだけを明示commitする必要がある場合もpreviewを先に行う。`commit --apply`は`.clarity/`と`CLARITY.md`だけを対象にし、既存のdirty／stage／untracked、branch、remoteを変えず、pushしない。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --apply --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" commit "<repo-root>" --message "<message>" --apply --json
 ```
 
 ## Markdown／Mermaid投影
@@ -89,8 +103,8 @@ node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clar
 同じcanonical Stateから、概要・Attention・マトリクスのMarkdownと、象限・Project構造・依存関係・状態遷移のraw Mermaidを生成する。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" project "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" project "<repo-root>" --apply --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" project "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" project "<repo-root>" --apply --json
 ```
 
 previewはwrite 0件。Mermaid rendererが使えなくても`.mmd`とMarkdownを保持し、構造図のmindmap構文を使えない場合は`--mindmap-failure`でflowchartへfallbackする。
@@ -104,13 +118,13 @@ previewはwrite 0件。Mermaid rendererが使えなくても`.mmd`とMarkdownを
 - authority Primary重複、identity／digest改ざん、stale、newer schema、tombstone、concurrent revisionは自動採用しない。last-write-winsを使わず、Secretary側／Repo側／new Decision／split／defer／unlinkから選び、resolutionをEventへ残す。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-identity "<repo-root>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-prepare "<secretary-project-clarity-root>" --target-project-id "<id>" --target-repo-identity-json '<JSON>' --role secretary --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-accept "<external-repo>" --input-file "<request-bundle.json>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" link-identity "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" link-prepare "<secretary-project-clarity-root>" --target-project-id "<id>" --target-repo-identity-json '<JSON>' --role secretary --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" link-accept "<external-repo>" --input-file "<request-bundle.json>" --json
 # previewを確認後だけ同じcommandへ--applyを付ける。finalizeも双方で同じ境界を守る。
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-export "<repo-root>" --link-id "<link-id>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" sync-preview "<repo-root>" --input-file "<manual-bundle.json>" --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-doctor "<repo-root>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" link-export "<repo-root>" --link-id "<link-id>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" sync-preview "<repo-root>" --input-file "<manual-bundle.json>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" link-doctor "<repo-root>" --json
 ```
 
 ## Xmind provider
@@ -123,11 +137,11 @@ node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clar
 - Xmind側の状態変更はproposalとして返す。承認前／拒否時はcanonical Stateを変更せず、明示承認後だけClarity Eventへ反映する。
 
 ```bash
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" xmind-setting "<repo-root>" --enabled on --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" xmind-resolve "<repo-root>" --capabilities-json '<JSON>' --json
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-setting "<repo-root>" --enabled on --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-resolve "<repo-root>" --capabilities-json '<JSON>' --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --json
 # previewのapprovalDigestと表示内容を人間が確認した後だけ:
-node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --apply --approval-digest "<sha256>" --json
+node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity.mjs" xmind-local "<repo-root>" --target ".clarity/maps/clarity.xmind" --apply --approval-digest "<sha256>" --json
 ```
 
 ## 安全境界
