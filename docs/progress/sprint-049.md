@@ -149,3 +149,82 @@ Evaluator scenario:
 - private my-vault／Yasashii／Mac mini write: 0
 - downstream handoff適用: 0
 - local／cloud Xmind write: 0
+
+## Retry 1 — F-01／V-01 修正（2026-08-28）
+
+- Retry 1開始HEAD: `ab3ab29f1fa62203184ab135564601cd6d482f4f`
+- Generator: fresh strong tier、Retry 1
+- 修正範囲: Evaluator feedbackの`F-01`と、その恒久回帰を既存CLXへ加える`V-01`だけ。仕様、Sprint契約、state、feedback、release／downstream／cacheは変更していない。
+- 判定範囲: Generator自己検査のみ。Evaluatorの再評価／PASSを兼ねない。
+
+### router修正
+
+- selection-onlyと`sideEffect={performed:false,fileWrites:0,adapterCalls:0,commandCalls:0,externalCalls:0}`を維持した。
+- connectorはサービス名だけで選ばず、対象サービスと検索／取得／接続／設定／同期等の現在操作が同じ依頼にある場合だけ既存Skillへ送る。Chatwork／Google Chatの履歴操作、Google Calendar／Drive／Gmailの取得・接続・設定、Microsoft／Notionの明示接続・設定を正例として固定した。
+- task、memory、build、updateの明示操作をClarityより先に扱う。connectorの明示操作の後、daily／weeklyの期間・集計intentをProject／Clarityという名詞より優先し、Project lifecycle、Clarity初期化・5状態の順に一意化した。
+- Clarityが所有する英語5状態`Decision`／`Execution`／`Validation`／`Attention`／`Drift`を日本語文・英語文の双方から選択する。`Project Clarityを作って`はClarity初期化、`Clarity付きプロジェクトを完了にして`は既存projects lifecycleを維持する。
+
+### Evaluator再現8件と恒久回帰
+
+次の8件はRetry 1 candidateで全件期待Skill／routeへ一致し、全件side effect 0だった。
+
+| 入力 | 期待結果 |
+|---|---|
+| `今日のProject Clarityの要確認をまとめて` | `daily / daily-existing-entry` |
+| `今週のProject Clarityを振り返って` | `weekly / weekly-existing-entry` |
+| `DecisionとExecutionの状態を見せて` | `clarity / clarity-manual-entry` |
+| `Validationが失敗している項目を見せて` | `clarity / clarity-manual-entry` |
+| `Driftを確認して` | `clarity / clarity-manual-entry` |
+| `Chatwork連携のClarity Itemを見せて` | `clarity / clarity-manual-entry` |
+| `Google Chat連携のクラリティを確認して` | `clarity / clarity-manual-entry` |
+| `Googleカレンダー連携について今、人間が考える必要があることを見せて` | `clarity / clarity-manual-entry` |
+
+- 上記8件、connector正例、daily／weekly混合、英語5状態、task／memory／build／update／project lifecycle境界を既存`scripts/sprint-049-test.mjs`の`CLX-001`／`CLX-007`／`CLX-008`／`CLX-018`へ追加した。
+- Target IDは`CLX-001`〜`CLX-020`のまま、primary 250／CLX 20の意味と割当は変更していない。新collector、別schema、許容緩和は追加していない。
+- feedback fixture相当の別実行も行い、`INDEPENDENT_ROUTER_PASS=25 FAIL=0 TOTAL=25`を確認した。
+- router変更に伴う`secretary-router`のmode込みdigestだけを、既存inventoryの正規計算`node scripts/sprint-049-inventory.mjs digests`へ追随させた。marker、surface path、test割当、neutral／Agentic digest、fixed handoff common pathsは変更不要で、validatorが整合を確認した。
+
+### Retry 1検証結果
+
+```text
+node scripts/sprint-049-test.mjs
+  SPRINT049_PASS=20 FAIL=0
+  REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+  CRITICAL_PASS=15 CRITICAL_NOT_RUN=0
+  AC_EXECUTED=6 AC_NOT_RUN=0 SIDE_EFFECT_VIOLATIONS=0
+
+node scripts/sprint-049-inventory.mjs validate
+  SPRINT049_INVENTORY_PASS=17 FAIL=0 CASES=20 MARKERS=VALID DIGESTS=VALID
+
+bash scripts/sprint-049-regression.sh
+  SPRINT049_REGRESSION_PASS=12 FAIL=0 TARGETS=20
+  REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+  CRITICAL_NOT_RUN=0 AC_NOT_RUN=0
+
+bash scripts/sprint-022-regression.sh
+  SPRINT022_PASS=69 SPRINT022_FAIL=0
+  SPRINT022_WRAPPER_PASS=8 SPRINT022_WRAPPER_FAIL=0
+
+node scripts/sprint-033-test.mjs
+  SPRINT_033_TEST_PASS=20 FAIL=0
+
+node scripts/sprint-048-validator.mjs
+  SPRINT048_VALIDATOR_PASS=23 FAIL=0 SKILLS=17 HOSTS=4
+
+python3 scripts/check-release-integrity.py
+  PASS release integrity: manifests and CHANGELOG are consistent
+
+git diff --check
+  exit 0
+```
+
+- 最終wrapper内のSprint 045は35/35・wrapper 9/9、Sprint 048は12/12・wrapper 8/8でPASSした。master内のClarity各Sprint、strict validator、release integrityもgreenである。
+- sandbox内で最初にwrapperを実行した際、Sprint 048 PK-007内の既存master regressionが`listen EPERM 127.0.0.1`で停止した。これはfeedbackにも記録済みのsandbox loopback制限であり、テスト条件や製品側timeoutを変更していない。同一wrapperを通常環境で再実行し、PK-007を含めexit 0まで完走した。
+- Sprint 022はRetry 1で専用suiteを単独実行し69/69、wrapper 8/8だった。待ち時間緩和、`safe-git.mjs`、`external-ops.mjs`、Sprint 022 fixtureの変更は0件である。
+
+### Retry 1の既知residual／未検証境界
+
+- 実Xmind MCP／Xmind App、Claude Code Desktop／CLI、Codex App／CLI、Windows native、Mac miniは未検証のまま。offline／syntheticをexternal-live PASSへ昇格していない。
+- 実private my-vault／Yasashiiへのcopy、Harness、独立評価、release、fixed handoff適用は未実行。gateはclosed、downstream write 0である。
+- push、tag、GitHub Release、marketplace publish／refresh、installed plugin／cache、new session loaded versionは未実行。
+- primary 250全件、XV 4件、E2E 4本の同一candidate全再実行はSprint 050の責務であり、Retry 1の新しい合格条件にしていない。

@@ -103,11 +103,27 @@ try {
   await test("CLX-001", "Clarity intentを選び既存用件を横取りしない", () => {
     const fixtures = [
       ["今、人間が考える必要があることを見せて", "clarity", "clarity-manual-entry"],
+      ["Project Clarityを作って", "clarity", "clarity-manual-entry"],
       ["プロジェクトの状況を見せて", "projects", "project-lifecycle"],
       ["今日やることを整理して", "daily", "daily-existing-entry"],
       ["覚えておいて", "memory-care", "memory-explicit-entry"],
       ["最新版を確認して", "update", "update-read-only-diagnosis"],
       ["アプリを作って", "build", "harness-entry"],
+      ["今日のProject Clarityの要確認をまとめて", "daily", "daily-existing-entry"],
+      ["今週のProject Clarityを振り返って", "weekly", "weekly-existing-entry"],
+      ["DecisionとExecutionの状態を見せて", "clarity", "clarity-manual-entry"],
+      ["Validationが失敗している項目を見せて", "clarity", "clarity-manual-entry"],
+      ["Driftを確認して", "clarity", "clarity-manual-entry"],
+      ["Show Decision status", "clarity", "clarity-manual-entry"],
+      ["Show Execution status", "clarity", "clarity-manual-entry"],
+      ["Show failed Validation items", "clarity", "clarity-manual-entry"],
+      ["Show Attention items", "clarity", "clarity-manual-entry"],
+      ["Check Drift", "clarity", "clarity-manual-entry"],
+      ["このClarity ItemをTODOにして", "projects", "local-todo-handoff"],
+      ["このClarityの決定は覚えておいて", "memory-care", "clarity-reference-no-duplicate-memory"],
+      ["Clarityの状況を使ってアプリを作って", "build", "harness-entry"],
+      ["Clarity連携を含むagentic-secretaryの最新版を確認して", "update", "update-read-only-diagnosis"],
+      ["Clarity付きプロジェクトを完了にして", "projects", "project-lifecycle"],
     ];
     for (const [input, skill, route] of fixtures) { const observed = routeSecretaryIntent(input); assert.equal(observed.selectedSkill, skill, input); assert.equal(observed.route, route, input); zeroEffect(observed); }
   });
@@ -148,6 +164,7 @@ try {
   });
 
   await test("CLX-007", "dailyは予定／TODOと別の今日の要確認をbounded表示", () => {
+    const routed = routeSecretaryIntent("今日のProject Clarityの要確認をまとめて"); assert.equal(routed.selectedSkill, "daily"); assert.equal(routed.route, "daily-existing-entry"); zeroEffect(routed);
     const root = secretary("clx007"); for (const name of ["A", "B", "C", "D"]) { createProject(root, name); initClarity(root, name); }
     const before = tree(root); const report = runJson(process.execPath, [claritySecretary, "daily", root, "--mode", "morning", "--json"]); assert.equal(tree(root), before);
     assert.equal(report.section, "今日の要確認"); assert(report.items.length <= 3); assert.equal(report.connectorReads, 0); assert.equal(report.itemBodiesIncluded, false);
@@ -155,6 +172,7 @@ try {
   });
 
   await test("CLX-008", "weeklyはjournal集計と別にAttention増減／Drift解消を集計", () => {
+    const routed = routeSecretaryIntent("今週のProject Clarityを振り返って"); assert.equal(routed.selectedSkill, "weekly"); assert.equal(routed.route, "weekly-existing-entry"); zeroEffect(routed);
     const root = secretary("clx008"); createProject(root, "週次案件"); initClarity(root, "週次案件"); const journalBefore = text(join(root, "memory/journal/.gitkeep"));
     const report = runJson(process.execPath, [claritySecretary, "weekly", root, "--json"]); assert.equal(report.section, "Project Clarity"); assert.equal(report.attention.comparison, "前回集計なし"); assert(Array.isArray(report.longRunning)); assert.equal(report.connectorReads, 0); assert.equal(text(join(root, "memory/journal/.gitkeep")), journalBefore);
   });
@@ -216,7 +234,19 @@ try {
 
   await test("CLX-018", "Clarityからconnectorを暗黙実行せず明示serviceだけ既存入口へroute", () => {
     const clarityOnly = routeSecretaryIntent("Clarity Itemを見せて"); assert.equal(clarityOnly.selectedSkill, "clarity"); zeroEffect(clarityOnly);
-    const fixtures = [["Chatworkで探して", "chatwork"], ["Google Chatにつないで", "google-chat"], ["Googleカレンダーを見て", "setup-google"], ["Outlookにつないで", "setup-microsoft"], ["Notionにつないで", "setup-notion"]];
+    const clarityFixtures = [
+      "Chatwork連携のClarity Itemを見せて",
+      "Google Chat連携のクラリティを確認して",
+      "Googleカレンダー連携について今、人間が考える必要があることを見せて",
+    ];
+    for (const input of clarityFixtures) { const routed = routeSecretaryIntent(input); assert.equal(routed.selectedSkill, "clarity", input); assert.equal(routed.route, "clarity-manual-entry", input); zeroEffect(routed); }
+    const fixtures = [
+      ["Chatworkで探して", "chatwork"], ["Chatworkにつないで", "chatwork"], ["Chatworkと連携して", "chatwork"],
+      ["Google Chatにつないで", "google-chat"], ["Google Chatで探して", "google-chat"],
+      ["Googleカレンダーを見て", "setup-google"], ["Google Driveからファイルを取得して", "setup-google"], ["Gmailを設定して", "setup-google"], ["Googleカレンダーと連携して", "setup-google"],
+      ["Outlookにつないで", "setup-microsoft"], ["Microsoft 365を設定して", "setup-microsoft"],
+      ["Notionにつないで", "setup-notion"], ["Notionを設定して", "setup-notion"],
+    ];
     for (const [input, skill] of fixtures) { const routed = routeSecretaryIntent(input); assert.equal(routed.selectedSkill, skill, input); assert.equal(routed.delegation, "existing-explicit-connector-entry"); zeroEffect(routed); }
     const connectorPaths = ["chatwork", "google-chat", "connections", "setup-google", "setup-microsoft", "setup-notion"];
     for (const skill of connectorPaths) assert(text(join(repo, `plugins/secretary/skills/${skill}/SKILL.md`)).includes("agentic-secretary:clarity-collaboration:connector:v1"));

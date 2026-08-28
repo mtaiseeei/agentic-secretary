@@ -16,7 +16,7 @@
       "edition": "common-core",
       "paths": ["plugins/secretary/skills/secretary/SKILL.md", "plugins/secretary/scripts/collaboration-router.mjs", "plugins/secretary/scripts/lib/collaboration-router.mjs"],
       "markers": [{"path": "plugins/secretary/skills/secretary/SKILL.md", "token": "agentic-secretary:clarity-collaboration-router:v1"}],
-      "contentDigest": "04676be814f6c06af48f5e678ec3a996b15ebb5e4e1655df2a0a2652e484e33e",
+      "contentDigest": "418de15de96d0f6bdb1761fb7e38ceed7c0efffa5877a2cc902e3f14f0ae7279",
       "tests": ["CLX-001", "CLX-018"],
       "delegation": "Select one existing Skill; the router itself executes nothing",
       "noTouch": ["current non-Clarity intent", "file", "adapter", "command", "external service"]
