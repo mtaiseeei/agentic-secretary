@@ -1,66 +1,108 @@
-# Sprint 050 Patch 001 fresh独立Evaluator feedback
+# Sprint 050 Patch 001 Retry 1 fresh独立Evaluator feedback
 
-Verdict: FAIL
-Evaluated commit: 9e5d9e64d4b82eb11c1a0ffec9c8e5414b33fdbd
+Verdict: PASS
+Evaluated commit: df6d95b409977d36de8c8425858dcbae1034fa32
 
-- **対象区分:** `product`
-- **失敗分類:** `implementation-issue`
-- **Escalation Recommendation:** none
-- **評価checkout:** 現在HEADには対象実装後のOrchestrator state commitだけが追加されているため、製品差分は指定commit `9e5d9e64...` を親commit `9d37585a...` と比較した。accepted product sourceは別のclean detached checkout `/tmp/agentic-s050-accepted.DMySSB/repo` で再計算した。
+- 対象区分: `product`
+- 失敗分類: なし
+- Escalation Recommendation: none
+- 評価方法: 指定commitのclean clone、exact accepted candidateの別clean clone、実CLI、独立敵対fixture
 
 ## 結論
 
-既存製品の回帰は維持されている。Patch専用suiteは66/66、Sprint 049 inventoryは20/20、Sprint 048 public packagingは12/12、wrapperは8/8、validatorは23/23、release integrityもPASSした。Sprint 050 product registryも273 PASS／0 FAIL／1 conditional NOT-RUN、E2E 4/4で、accepted product sourceのtree 828件／common 44件は固定digestと一致した。
+初回評価のproduct finding P-01／P-02は解消した。Retry 1の変更4fileを実物で確認し、Patch専用89件、独立敵対28件、Sprint 049 inventory 20件、validator 23件、通常環境Sprint 048の12件とwrapper 8件、release integrity、Sprint 050 product registry 274件とE2E 4本を再実行した。
 
-ただし、本Patchが追加したgovernance gateには2つのfail-open、つまり拒否すべき入力をreadyとして通す欠陥がある。
+governance feedbackは、本文のcanonicalな判定行と評価commit行が各1件だけの場合に限り受理される。競合、異なるcommit複数、同一marker重複、code fence、blockquote、例示、引用、0件、非canonical表記は、ready生成前に固有codeで拒否された。
 
-1. governance feedbackにFAILとPASSが併存する、評価対象commitが複数ある、またはcode fence内だけにPASS表記がある曖昧入力を、すべて`ready`として受理した。
-2. Sprint 049 product projectionから除外した新governance JSONへ未知のPASS alias／`evaluatorPass=true`相当fieldを追加しても、Sprint 049、標準`validate-template`、user-decision validation、実ready生成が全て成功した。
+templateとreadyのgovernance schemaはclosedである。manifest top-level、user-decision gate、fixed bindings、origin registry、authorization scope、required governance、ready-only objectへ未知のPASS aliasまたは`evaluatorPass=true`を追加した入力は、Sprint 049 inventory、標準template検証、build、user-decision prewriteの各入口でfail closedになった。
 
-この2件は、単一で明確なPatch Evaluator PASSだけを根拠にするAC6・AC7・C25と、新governance bytesをPatch gateが全て守るC24の要件に反する。C25は5/5必須かつゼロ許容なので、他のgreen回帰では相殺できない。
+accepted product source `5f08d454c05576fcff8ab32c10c00887b4c15a96`とgovernance source `df6d95b409977d36de8c8425858dcbae1034fa32`は別identityのままである。元Sprint 050の`verification-scope-issue`、product finding 0、AC3／C21、`XM-007`、別phase残余は保持され、`public-evaluator-pass`、live verified、Xmind verifiedへ昇格していない。
+
+AC1〜11は全てPASS。C1、C2、C5、C6、C24、C25は全て5/5で、ゼロ許容違反は0件である。
 
 ## 評価対象差分
 
-指定commitの変更は次の5fileだった。
+Retry 1 commitの変更は次の4fileだけだった。
 
-- `adapters/downstream-clarity-handoff.json`
 - `scripts/sprint-048-handoff.mjs`
 - `scripts/lib/sprint-049-inventory.mjs`
 - `scripts/sprint-050-patch-001-test.mjs`
 - `docs/progress/sprint-050-patch-001.md`
 
-`plugins/secretary/**`、`docs/feedback/sprint-050.md`、`docs/spec/**`、`docs/sprints/**`の製品／正本bytesは対象Generator commitで変更されていない。既存`evaluatePreWriteGate`とCLI `prewrite`のpublic-evaluator-pass正例／負例は、差分と実回帰の両方で不変を確認した。
+`plugins/secretary/**`、`docs/feedback/sprint-050.md`、accepted product sourceのbytes、tracked handoff templateはRetry 1で変更されていない。tracked templateは`pending-public-evaluator-pass`、`acceptedSource: null`、両gate closed、`writesDownstream: false`のままである。
 
-## 正式回帰とidentity証拠
+## 実行証拠
 
-### Patch targeted suite
+### Patch targeted／直接回帰
+
+指定commitのclean cloneで実行した。
 
 ```text
 node scripts/sprint-050-patch-001-test.mjs
-SPRINT050_PATCH001_PASS=66 FAIL=0 POSITIVE=6 NEGATIVE=58 INTEGRITY=2
+SPRINT050_PATCH001_PASS=89 FAIL=0 POSITIVE=6 NEGATIVE=81 INTEGRITY=2 ATTACK_FIXTURES=23
 READY_ARTIFACT_TRACKED=0 DOWNSTREAM_WRITE=0 EXTERNAL_WRITE=0
-```
 
-既存66件は全てgreenだが、後述の複数Verdict、複数commit、code fence内PASS、未知governance fieldの負例を含んでいない。
-
-### Sprint 049 inventory／validator／標準template
-
-```text
 node scripts/sprint-049-test.mjs
-SPRINT049_PASS=20 FAIL=0 ... SIDE_EFFECT_VIOLATIONS=0
+SPRINT049_PASS=20 FAIL=0 CRITICAL_PASS=15 CRITICAL_NOT_RUN=0 AC_EXECUTED=6 AC_NOT_RUN=0 SIDE_EFFECT_VIOLATIONS=0
 
 node scripts/sprint-048-validator.mjs
 SPRINT048_VALIDATOR_PASS=23 FAIL=0 SKILLS=17 HOSTS=4
 
 node scripts/sprint-048-handoff.mjs validate-template
-publicationStatus=pending-public-evaluator-pass
-preWriteGate=closed
-writesDownstream=false
+status=valid publicationStatus=pending-public-evaluator-pass preWriteGate=closed writesDownstream=false
 ```
 
-### Sprint 048 public-evaluator-pass回帰
+変更3 scriptの`node --check`と`git diff --check`もexit 0だった。
 
-sandboxではPK-007のloopback待受だけが`listen EPERM 127.0.0.1`で停止した。同一checkout・同一commandを通常環境で再実行して切り分けた。
+### 独立敵対fixture
+
+提供suiteの自己申告を使わず、Evaluatorが別fixtureを作成し、実`buildUserDecisionReadyManifest`、`evaluateUserDecisionPreWriteGate`、標準template CLI、user-decision prewrite CLI、Sprint 049 `digestSurface`を直接操作した。
+
+```text
+INDEPENDENT_PASS=28 FAIL=0
+```
+
+parser負例12件の観測は次のとおり。
+
+| fixture | 攻撃分類 | 観測した固有拒否code |
+|---|---|---|
+| F01 | PASS／FAIL競合 | `governance-feedback-verdict-conflict` |
+| F02 | 異なる評価commit複数 | `governance-feedback-evaluated-commit-conflict` |
+| F03 | code fence内marker | `governance-feedback-marker-in-code-fence` |
+| F04 | 同一判定marker重複 | `governance-feedback-verdict-duplicate` |
+| F05 | 同一評価commit marker重複 | `governance-feedback-evaluated-commit-duplicate` |
+| F06 | blockquote内marker | `governance-feedback-marker-in-blockquote` |
+| F07 | 例示内marker | `governance-feedback-marker-in-example` |
+| F08 | 引用内marker | `governance-feedback-marker-in-quotation` |
+| F09 | 判定行0件 | `governance-feedback-verdict-missing` |
+| F10 | 評価commit行0件 | `governance-feedback-evaluated-commit-missing` |
+| F11 | 全角colonを使う表記 | `governance-feedback-verdict-noncanonical` |
+| F12 | 日本語alias表記 | `governance-feedback-verdict-noncanonical` |
+
+canonicalな合成feedbackだけは`public-user-decision-risk-accepted`、`evaluatorPass=false`でreadyになった。
+
+schema負例は次の8階層を独立に改ざんし、全てready前に拒否された。
+
+- manifest top-level
+- `userDecisionPreWriteGate`
+- origin registry
+- `requiredGovernance`
+- ready top-level
+- `acceptanceBasis`
+- `verificationStatus.hostLive`
+- `governanceSource`
+
+標準template CLIとuser-decision prewrite CLIでも、未知のPASS alias／`evaluatorPass=true`をそれぞれ非0 exitで拒否した。
+
+### JSON構造recognition projection
+
+Sprint 049のpre-Patch product projectionは既存digestを維持した。独立fixtureでは、除外対象2 memberを先頭または中間へ移動しても同じprojection digestを再現した。compact JSONでretained fieldを変更するとdigestは変化し、top-level extra fieldとnested extra fieldはprojection前のclosed schemaで拒否された。
+
+これにより、field順やformatの変化で除外範囲がretained product bytesへ広がらず、未知governance bytesを除外領域へ隠してSprint 049 inventoryを通すこともできないと確認した。
+
+### Sprint 048 public packaging回帰
+
+sandbox runでは既知のloopback `EPERM`だけがPK-007を停止した。正規GitHub originを持つ同一clean cloneを通常環境で再実行し、次を得た。
 
 ```text
 bash scripts/sprint-048-regression.sh
@@ -69,144 +111,98 @@ SPRINT048_REGRESSION_PASS=8 FAIL=0 TARGETS=12
 release integrity: PASS
 ```
 
-PK-012の既存public-evaluator-pass正例／負例もPASSしており、user-decision statusや`evaluatorPass=false`を既存PASS aliasにはしていない。
+PK-012の既存`public-evaluator-pass`正例／負例はgreenであり、既存経路のrequired source、tree、common、protected、excluded、rollback、clean tree検査の意味は維持された。
 
-### Sprint 050 product registry／E2E
+### Sprint 050 product回帰
 
-通常環境で次を実行した。
+通常環境で同一governance cloneから実行した。
 
 ```text
-node scripts/sprint-050-test.mjs --report /tmp/agentic-secretary-sprint-050-patch-001-evaluator-product-report.json
+node scripts/sprint-050-test.mjs --report <temporary-report>
 SPRINT050_REGISTRY primary=250 collaboration=20 visual=4 unique=274 missing=0 extra=0 duplicate=0 semantic_changed=0 assignment_changed=0
 SPRINT050_COVERAGE PASS=273 FAIL=0 CONDITIONAL_NOT_RUN=1 TOTAL=274 CRITICAL=124/124 HIGH_PASS=127 HIGH_NOT_RUN=1
 SPRINT050_E2E PASS=4 FAIL=0 CROSS_ROOT_WRITE=0 HOOK_LOOP=0 TASK_AUTO_CREATE=0 DECISION_FALSE_CONFIRM=0
 ```
 
-唯一のconditional NOT-RUNは既存どおり`XM-007`。実Xmind MCPをverifiedへ昇格せず、Claude Code／Codex host liveも`external-live-gate-unavailable`のまま分離されている。
+唯一のconditional NOT-RUNは既存の`XM-007`である。host liveとXmind liveの未検証状態を変更していない。
 
-### Accepted product source
+### accepted source／origin feedback
 
-accepted SHAをclean detached checkoutにし、そこから別checkoutとGit-free archiveを作る既存candidate checkerを実行した。
-
-```text
-SHA=5f08d454c05576fcff8ab32c10c00887b4c15a96
-TREE=1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5
-FILES=828
-COMMON=4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849
-COMMON_FILES=44
-CHECKOUT_MATCH=1 ARCHIVE_MATCH=1 ARCHIVE_GIT=0
-```
-
-accepted product sourceとPatch governance sourceは別identityのまま。origin feedbackもcommit `8483d863...` と現在pathの両方でSHA-256 `fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd`に一致した。
-
-## 独立敵対試験
-
-### P-01: 曖昧なgovernance feedbackがreadyになる
-
-**対象区分:** `product`
-
-**重大度:** Critical
-
-**分類:** `implementation-issue`
-
-`parseGovernanceFeedback`は本文全体からPASS相当行を1件見つけ、評価対象commitも最初に一致した1件だけを返す。PASS／FAILの全候補数、矛盾、code fence、評価対象commitの一意性を確認していない。
-
-実`buildUserDecisionReadyManifest`へ、exact accepted candidate、clean governance checkout、正しいorigin feedback、authorization、protected snapshotと共に次の3fixtureを渡した。
-
-| fixture | 攻撃入力 | 期待 | 観測 |
-|---|---|---|---|
-| `MULTI_VERDICT` | FAIL行とPASS行を同じfeedbackに配置 | reject | `READY/public-user-decision-risk-accepted` |
-| `MULTI_COMMIT` | 正しいSHAの後に別SHAの評価対象行を配置 | reject | `READY/public-user-decision-risk-accepted` |
-| `CODE_FENCE_PASS` | 本文はFAIL、code fence内だけPASS表記 | reject | `READY/public-user-decision-risk-accepted` |
-
-PASS行が1つあるだけで、同じfeedback内の非PASS／曖昧性を隠してreadyにできる。feedback digestは攻撃本文そのものへ正しく束縛しており、digest照合ではこの意味上の曖昧性を止められない。
-
-### P-02: inventoryから除外した新governance bytesがstrict gateで守られない
-
-**対象区分:** `product`
-
-**重大度:** Major
-
-**分類:** `implementation-issue`
-
-`productSurfaceBytes`は`downstreamRepositories`と`userDecisionPreWriteGate`の文字列範囲をSprint 049 digestから丸ごと除外する。既存product projectionを正確に再現する目的自体は成立し、現行bytesではSprint 049 digestが従来値と一致した。
-
-しかし、除外した全bytesをPatch側でstrictに検査していない。隔離cloneの`userDecisionPreWriteGate`へ未知fieldとしてPASS aliasと`evaluatorPass=true`相当値を追加したところ、次が全て成功した。
+accepted SHAの別clean cloneから再計算した。
 
 ```text
-Sprint 049 inventory: 20/20 PASS
-standard validate-template: valid / gate closed
-validateUserDecisionTemplate: accepted
-buildUserDecisionReadyManifest: EXTRA_GOVERNANCE_READY=ready HIDDEN_EVALUATOR_PASS=true
+accepted SHA=5f08d454c05576fcff8ab32c10c00887b4c15a96
+full tree SHA-256=1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5 files=828
+common SHA-256=4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849 files=44
+governance SHA=df6d95b409977d36de8c8425858dcbae1034fa32
 ```
 
-既知fieldは個別に照合しているが、許可field集合の外側を拒否していない。そのため、Sprint 049が意図的に見ないgovernance bytesを任意に増やしても、Patch gateとready manifestが受理する。これは「新governance欄の全bytesをPatch gateで守る」「aliasを拒否する」というC24／C25のfail-closed境界を満たさない。
+origin feedbackはcommit `8483d86390b6c105163e64d24dcafe498ed2fe8b`、path `docs/feedback/sprint-050.md`、SHA-256 `fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd`で一致した。
+
+## 実feedbackを使う最終ready gate
+
+この文書の最終bytesをSHA-256で束縛したgovernance evidenceを一時fixtureに作り、exact accepted cloneをaccepted root、指定commitのclean cloneをgovernance rootとして、実build関数と実prewrite関数を連続実行した。
+
+```text
+REAL_FEEDBACK_MARKERS verdict=1 evaluatedCommit=1
+BUILD status=public-user-decision-risk-accepted evaluatorPass=false trackedArtifact=0 writesDownstream=false
+PREWRITE status=ready publicationStatus=public-user-decision-risk-accepted evaluatorPass=false writesDownstream=false
+```
+
+ready objectと補助JSONは`/tmp`内の一時fixtureだけで扱い、repositoryへ保存していない。
 
 ## Acceptance Criteria
 
-| AC | 判定 | 独立証拠 |
+| AC | 結果 | 独立証拠 |
 |---|---|---|
-| AC1 既存public-evaluator-pass不変 | PASS | PK-012を含むSprint 048 12/12、wrapper 8/8。既存関数・入力・失敗条件の変更なし |
-| AC2 truthful user-decision status／residual保持 | PASS | canonical正例では専用status、`evaluatorPass=false`、AC3／C21、XM-007、別phase残余を保持 |
-| AC3 accepted source固定／再計算 | PASS | SHA／tree 828／common 44がclean checkout・archiveで一致 |
-| AC4 origin feedback固定 | PASS | commit／path／digest／元Verdict／残余の既知field差替えを拒否 |
-| AC5 authorization束縛 | PASS | ID、日付、原文、文脈、scope、candidate、feedback、残余、順序の既知field負例を拒否 |
-| AC6 変更・撤回・governance非PASSでstale | **FAIL** | FAILとPASSが併存するfeedback、code fence内PASSだけのfeedbackがreadyになった |
-| AC7 governanceSourceと独立Evaluator PASS一致 | **FAIL** | 複数評価対象commitを持つ曖昧feedbackをreadyとして受理。単一の明確な評価対象へ束縛できていない |
-| AC8 path／protected／Xmind edition／rollback不変 | PASS | common／excluded／protected／adapter／Xmind／rollbackの既知差替えを拒否 |
-| AC9 targeted／public／product regression | **FAIL** | 提供suiteはgreenだが、契約上rejectすべき独立governance負例4系統が実readyへ到達 |
-| AC10 downstream／external／release／host／Xmind write 0 | PASS | source・両downstreamのHEAD／status前後不変、remote／tag不変、実外部操作なし |
-| AC11 ready判定はpure、実適用は別Harness | PASS | 実行結果はJSON／stdoutだけで、private／Yasashiiへのwrite 0 |
+| AC1 | PASS | Sprint 048 12/12、wrapper 8/8、PK-012正負。既存PASS経路の意味維持 |
+| AC2 | PASS | 専用status、`evaluatorPass=false`、元評価・AC3／C21・XM-007・別phase残余保持 |
+| AC3 | PASS | exact SHA、tree 828、common 44を別clean cloneで再計算 |
+| AC4 | PASS | origin commit／path／digest／元評価／残余集合を固定しtamper拒否 |
+| AC5 | PASS | authorization ID、日付、原文、文脈、scope、candidate、残余、順序を固定 |
+| AC6 | PASS | candidate、feedback、残余、scope、順序、path、rollback、撤回、governance非PASSの負例をclosed化 |
+| AC7 | PASS | governance sourceは指定commitとこの独立評価の単一canonical PASSへ一致し、accepted sourceと分離 |
+| AC8 | PASS | common／excluded／protected、adapter seam、Xmind edition差、順序、rollbackの変更を拒否 |
+| AC9 | PASS | Patch 89/89、独立28/28、Sprint 049 20/20、Sprint 048、Sprint 050が0 FAIL |
+| AC10 | PASS | source／downstream HEAD・status・remote・tag不変、外部／release／host／Xmind write 0 |
+| AC11 | PASS | build／prewriteは純粋な結果のみ。実downstream適用0、別Harness境界維持 |
 
-合計: **PASS 8／FAIL 3**。1件でも必須ACが未達ならSprintは不合格。
+合計はPASS 11、FAIL 0。
 
 ## Rubric scores
 
-| 基準 | スコア | 閾値 | 判定 | 根拠 |
+| 基準 | スコア | 閾値 | 結果 | 根拠 |
 |---|---:|---:|---|---|
-| C1 完成度 | **3/5** | ≥4 | FAIL | 必須AC6・AC7・AC9未達 |
-| C2 構文・整合 | **4/5** | 5 | FAIL | governance JSONをclosed schemaとして扱わず未知fieldを受理 |
-| C5 安全・規律 | 5/5 | 5 | PASS | source／downstream／external write 0、accepted sourceとgovernance sourceの既知identity分離は維持 |
-| C6 無回帰 | **4/5** | 5 | FAIL | 既存suiteはgreenだが、必須fail-closed挙動に独立再現可能な新規失敗あり |
-| C24 Clarity安全・統合・public-first | **4/5** | 5 | FAIL | 非PASS／曖昧governanceと未管理governance bytesからready生成が可能 |
-| C25 user-decision handoff governance | **3/5** | 5 | FAIL | 単一PASS・単一commitの束縛と全governance bytes保護が成立しない |
+| C1 完成度 | 5/5 | 4 | PASS | AC1〜11を全て実物で確認 |
+| C2 構文・整合 | 5/5 | 5 | PASS | parser一意性、closed schema、JSON projection、validatorが整合 |
+| C5 安全・規律 | 5/5 | 5 | PASS | accepted／governance分離、残余保持、ready純粋性、write 0 |
+| C6 無回帰 | 5/5 | 5 | PASS | 必須追加・既存回帰が全てgreen。通常環境でloopbackを切り分け |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | Sprint 049 inventoryを弱めず、固定handoff・下流境界を維持 |
+| C25 user-decision handoff governance | 5/5 | 5 | PASS | 単一PASS／commit、exact束縛、失効、順序、scope、rollbackが全てfail closed |
 
-ゼロ許容違反は2根本原因、攻撃fixtureは4系統。C2、C6、C24、C25は必須5/5に届かない。
+ゼロ許容違反は0件。
+
+## Finding
+
+- `product`: 0件。初回P-01／P-02はRESOLVED。
+- `verification-infra`: 1件。sandboxのloopback `EPERM`。同一commit、正規origin、通常環境の同一commandが12/12＋wrapper 8/8でgreenのため、product failureへ数えていない。
 
 ## 副作用snapshot
 
-評価開始時と敵対fixture実行後で、public sourceはHEAD `ebe7af9e19159e2da0da192b4debf85eb8a270ba`、canonical origin、remote refs、tagsが不変だった。feedback作成前のsource worktreeはclean。downstreamは次のHEAD／clean状態を維持した。
+評価用clean clone、accepted clone、敵対fixture、reportは`/tmp`内だけに作成した。source worktreeで変更したのは本feedbackだけである。private my-vaultはHEAD `a50e591170aa6c445ac69caf9ece982305072727`、YasashiiはHEAD `c6cfb40a6026c5447a8ec4729f517adb4cc51031`かつ両方cleanを維持した。
 
-- private my-vault: `a50e591170aa6c445ac69caf9ece982305072727`
-- Yasashii: `c6cfb40a6026c5447a8ec4729f517adb4cc51031`
+実downstream、remote、release、tag、push、marketplace、installed cache、new session、実host、実Xmind MCPへのwriteは0件。tracked ready artifactも0件である。
 
-敵対fixture、accepted checkout、reportは全て`/tmp`内。release、tag、push、marketplace、installed cache、new session、実host、実Xmind MCP、実downstreamへのwriteは0件。tracked ready artifactも0件で、tracked templateはclosedのままである。
+## 残余
 
-## Verification-infra finding
+Sprint 050から引き継いだAC3／C21の実host live未実施、`XM-007`、Claude Code Desktop、Codex App、Windows native、Mac mini、実downstream適用と各repo独立評価、release／tag／push／marketplace／installed cache／new sessionは、今回もPASS、verified、実施済み、許可済みへ昇格していない。
 
-### V-01: sandbox loopback EPERM
-
-- **対象区分:** `verification-infra`
-- **重大度:** Minor、環境依存
-- sandboxのSprint 048 PK-007だけが`listen EPERM 127.0.0.1`で停止した。
-- 通常環境の同一checkout・同一commandは12/12、wrapper 8/8でPASSしたため、product failureには数えていない。
-
-## 残余／次回再評価の焦点
-
-product修正後は、少なくとも次を同じtargeted suiteへ恒久回帰として追加する必要がある。
-
-1. PASS／FAIL相当行が複数または矛盾するfeedbackをrejectする。
-2. 評価対象commit行が0件、複数、矛盾するfeedbackをrejectする。
-3. code fence、引用、本文例示のPASS表記をcanonical verdictとして採用しない。
-4. Sprint 049 projectionから除外する全governance JSONをstrict schemaまたは同等の完全な許可集合で検査し、未知field／extra keyをrejectする。
-5. 標準`validate-template`、user-decision build、`prewrite-user-decision`の全入口で同じfail-closed結果を確認する。
-
-Sprint 050から引き継いだAC3／C21の実host live未実施、`XM-007`、Claude Code Desktop、Codex App、Windows native、Mac mini、実downstream適用、release／tag／push／marketplace／installed cache／new sessionは、今回もPASS／verified／許可済みへ昇格していない。
+本PatchのPASSは、固定handoff governanceが契約どおり動くことの評価である。実適用はprivate my-vault、次にYasashiiの各別Harnessで扱う。
 
 ## Evaluator self-review
 
-1. Generator自己評価をVerdictへ流用せず、指定commit差分、実CLI、accepted source checkout、独立敵対fixtureから判定した。
-2. green suiteとproduct fail-openを分離し、sandbox EPERMは通常環境で切り分けた。
-3. fake Xmind、synthetic host、ユーザー判断statusをlive／PASSへ昇格していない。
-4. 実downstream write、実host、実Xmind、release操作、追加collectorを新合格条件にしていない。
-5. findingはproductとverification-infraを分け、FAIL主因をproductの実ready誤受理だけに限定した。
+1. Generator自己評価を判定根拠へ流用せず、指定commit差分、実CLI、別clean clone、独立敵対fixtureで再現した。
+2. 初回4系統だけでなく、重複、引用系、0件、非canonical、template／readyの各nested schema、projectionのfield移動とformat変化を確認した。
+3. public PASS経路、user-decision経路、accepted product source、governance source、元評価、残余を混同していない。
+4. sandbox制約を製品PASSへ流用せず、通常環境の同一回帰で切り分けた。
+5. safe harborを超えるcollector、実downstream write、実host、実Xmind、release操作を合格条件にしていない。
