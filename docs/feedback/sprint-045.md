@@ -1,58 +1,56 @@
-# Sprint 045 Retry 1 評価結果
+# Sprint 045 Retry 2 評価結果
 
-**判定:** 不合格
-**分類:** `implementation-issue`
+**判定:** 合格
+**分類:** PASS（前回`implementation-issue`解消）
 **評価対象:** Sprint 045 — generic Secretary-local、daily／weekly／Portfolio
-**Generator candidate:** `e5b1225d416f1fcd8c1bc236dfafd4ee08586f58`
-**評価開始HEAD:** `e7f1825b0863144793d964cfd1c0c48880376643`（candidateとの差分はOrchestrator所有の`docs/sprints/state.md`とGenerator所有の`docs/progress/sprint-045.md`）
+**Generator candidate:** `ec6eed919152e47a661de49b7bd19794ac51eb89`
+**評価開始HEAD:** `0d586d51209c6a49ec7b12164b425d35e065ef84`（candidateとの差分はOrchestrator所有の`docs/sprints/state.md`とGenerator所有の`docs/progress/sprint-045.md`）
 **評価開始branch:** `codex/sprint-041-project-clarity`
 **評価開始時worktree:** clean
-**Escalation Recommendation:** none（同じSprintのGeneratorで修正可能）
+**Escalation Recommendation:** none
 
 ## 結論
 
-前回Major product finding F-01〜F-04は、Generator runnerを使わない匿名Secretary fixtureと実製品CLIで再評価し、すべて解消を確認した。
+前回Major product finding F-05とMinor verification-infra finding V-02は、Generator runnerとは別に作成した匿名Secretary fixtureと実製品CLIで再評価し、解消を確認した。
 
-- Decisionの`clarity-finalize`後partialと`decision-write`後partialは、初回stderr JSONの`changed: true`、`completed`、`pending`、`nextAction`が実filesystemの副作用と一致した。同じfailure injectionのretryは`changed: false`で、通常retry後もDecision本文、pending Event、confirmed Eventは各1件だった。
-- canonical StateにAttention 6件とAttention外Item 1件を作り、表示top 3外のItemをlocal TODO seamへ、Attention外Itemをdownstream seamへ明示routeできた。unknown IDと暗黙routeはwrite 0だった。
-- complete前、closed後、reopen後でClarity Project ID、`project.json` bytes、Event bytesを保持した。`projectRef: PROJECT.md`はProject folder基準で実在し、closed／reopenはhealthy、意図的な旧open参照は`local-reference-stale`だった。
-- Portfolio／dailyのJSONとplainは、表示された上位3件について「結論→理由→短いEvidence→choices」を保持した。plainは3,000 bytes未満、connector read 0、全Item本文非同梱、closed非同梱だった。
+- 1つのopen Projectにactive Attentionを6件作ると、canonical status、Portfolio JSON、morning daily JSONはすべて総数6／表示3／残件3となった。Portfolio plainは`Attention 6件`と`その他 3件`、daily plainは`今日確認したい項目は6件です`と`その他 3件`を伝えた。
+- 8つのopen Projectへactive Attentionを各1件作ると、Portfolio／dailyは総数8、上位`横断案件0`〜`横断案件2`、残件5となった。JSON／plainを繰り返してbyte同一で、stable orderingを確認した。
+- 表示項目は結論→理由→短いEvidence→choicesを保持し、全Item本文canary、closed Project名、legacy Project名はJSON／plainのいずれにも出なかった。`connectorReads: 0`、`itemBodiesIncluded: false`、open-onlyを維持した。
+- 前回解消済みF-01〜F-04も、Decision両partial、top外／Attention外task route、complete／closed／reopen、move-safe `projectRef`／link health、Evidence／choicesの近傍で回帰していない。
 
-公式runnerもTarget 35/35、registry missing／duplicate／extra 0で、F-01〜F-04を製品CLI、multi-Item、link health、JSON／plain UXで直接捕捉する回帰へ更新されている。前回V-01は`RESOLVED`である。
+公式runnerはTarget 35/35、registry missing／duplicate／extra 0で、PF-012が製品CLIのstatus／Portfolio／dailyをJSON／plainで直接実行し、同一Project 6件の6／3／3と複数Project 8／3／5を検査する回帰へ更新されている。V-02も`RESOLVED`である。
 
-ただし、同じ独立fixtureで新しいproduct defectを再現した。1つのopen Project内にactive Attentionを6件作ると、canonical statusは`activeCount: 6`、`top.length: 3`、`otherCount: 3`である。一方、Portfolioとmorning dailyは`activeCount: 3`、`top/items: 3`、`otherCount: 0`、daily conclusion「今日確認したい項目は3件です」と返した。
-
-表示サイズはboundedだが、4〜6件目を「その他3件」として畳まず、存在しないように誤集計する。F67、UIのProject Clarity中核表示、C20の「最大3件程度・残りは件数へ畳む」と、実状態に一致する応答を満たさない。Acceptance Criteria 4、C1／C4／C7／C20／C24が閾値未達であるため、Sprint 045 Retry 1は不合格とする。
+Acceptance Criteria未達は0件、新規product findingは0件、全採点閾値を通過したため、Sprint 045 Retry 2を合格とする。
 
 ## スコア
 
 | 基準 | スコア | 閾値 | 判定 | 根拠 |
 |---|---:|---:|---|---|
-| C1 完成度 | 3/5 | 4 | FAIL | 前回4 findingは解消したが、1 Project内の4件目以降のAttentionをPortfolio／dailyが件数へ畳めず、AC4が未達 |
+| C1 完成度 | 5/5 | 4 | PASS | AC1〜8を実CLI／filesystem／回帰で確認し、未達0件 |
 | C2 構文・整合 | 5/5 | 5 | PASS | Node構文、adapter JSON、registry 35 unique、report-schema 22面、strict validator、diff checkが成立 |
-| C3 機能の実証 | 4/5 | 4 | PASS | Decision partial、全Item route、lifecycle、JSON／plain主要導線は実CLIで成立。集約件数の欠陥はC20／C24へ計上 |
-| C4 非エンジニア体験 | 3/5 | 4 | FAIL | 実際はAttention 6件なのに「3件・その他0件」と表示し、利用者が未表示3件の存在を判断できない |
-| C5 安全・規律 | 5/5 | 5 | PASS | preview／暗黙route／unknownはwrite 0、Decision本文非複製、task自動write 0、private／external write 0 |
-| C6 無回帰 | 5/5 | 5 | PASS | 公式045、041〜044、projects／daily／weekly／memory／chat／identity／update／release integrityが0 FAIL。旧014／018は既存debtとして条件付き証跡再利用 |
-| C7 やさしさ | 3/5 | 4 | FAIL | 表示された各項目の構造は自然だが、隠れたAttention件数を0とするため選択に必要な全体像が欠ける |
-| C19 Clarity正本・状態モデル | 5/5 | 5 | PASS | canonical Stateは6件を正しく保持し、Decision本文非複製、Project ID／Event履歴、041〜043のState回帰も成立 |
-| C20 Attention・Clarity UX | 3/5 | 4 | FAIL | 上位3件の結論→理由→根拠→選択は成立するが、残り3件を`otherCount`へ畳まず消失させる |
-| C24 Clarity安全・統合・public-first | 4/5 | 5 | FAIL | task委譲、lifecycle、public-first、安全境界は成立するが、daily／Portfolio統合がcanonical activeCountを正しく集約しない |
+| C3 機能の実証 | 5/5 | 4 | PASS | 匿名fixtureでDecision、task route、lifecycle、1 Project 6件、8 Project横断を実CLI操作 |
+| C4 非エンジニア体験 | 5/5 | 4 | PASS | JSON／plainが総数、上位3件、残件数と次の選択を正直かつ自然な日本語で示す |
+| C5 安全・規律 | 5/5 | 5 | PASS | 暗黙task write 0、本文非複製、closed／legacy／connector除外、private／external write 0 |
+| C6 無回帰 | 5/5 | 5 | PASS | 公式045、041〜044、projects／daily／weekly／memory／chat／identity／update／release integrityが0 FAIL |
+| C7 やさしさ | 5/5 | 4 | PASS | 結論→理由→根拠→選択、上位3件、`その他N件`で全体像とbounded表示を両立 |
+| C19 Clarity正本・状態モデル | 5/5 | 5 | PASS | canonical activeCount、Project ID、Event／Evidence、Decision partial、lifecycle移動が整合 |
+| C20 Attention・Clarity UX | 5/5 | 4 | PASS | 6件／8件の総数を失わず、表示3件と残件数、Evidence／choices、stable orderingが成立 |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | projects責務、daily／Portfolio統合、task明示委譲、public境界、関連inventory／回帰が成立 |
 
-C8〜C18、C21〜C23はSprint 045の新規採点対象外である。Sprint 043の`XM-007` real Xmind MCP external-liveは契約どおりconditional NOT-RUNで、Sprint 045のPASS／FAILへ代用していない。Sprint 044の`done-by-user-decision`残件も再採点していない。
+C8〜C18、C21〜C23はSprint 045の新規採点対象外である。Sprint 043の`XM-007` real Xmind MCP external-liveは契約どおりconditional NOT-RUNで、Sprint 045の合格へ代用していない。Sprint 044の`done-by-user-decision`残件も再採点していない。
 
 ## Acceptance Criteria
 
 | AC | 判定 | 実行証拠 |
 |---|---|---|
-| 1. Target 35件、Acceptance Criteria未実行0、private live非偽装 | **FAIL** | Target 35/35とregistry差分0は成立したが、AC4にproduct未達。private liveは未実行と分離 |
-| 2. projectsがlifecycle／canonicalRepoを所有し、Clarityが二重実装しない | PASS | complete／reopenは`project-tools.mjs`だけで実行し、Clarity Project ID／bytesを保持。staleをhealthyと誤表示しない |
-| 3. PJ Decisionは既存seamへ1回、一般memory／Clarityへ本文重複0 | PASS | success、両partial、failure retry、通常retryでPROJECT本文1、pending 1、confirmed 1、一般memory 0、Event本文0 |
-| 4. daily／weekly／Portfolioは独立・bounded、closed／全本文／connector自動読込0 | **FAIL** | top 3、Evidence／choices、closed／本文／connector 0は成立。ただし同一Projectの残り3 Attentionを`otherCount: 0`と誤集計 |
-| 5. Item作成でtask 0、明示時だけ既存確認境界へ進む | PASS | top外local、Attention外downstreamを明示route。暗黙／unknownはwrite 0、TODO／Event bytes不変 |
-| 6. projects／daily／weekly／memory／chat／identity／update／Harness回帰0 FAIL | PASS | 公式045と個別直接suiteはすべてexit 0 |
-| 7. public sourceにprivate実装0、downstream adapter契約 | PASS | candidate product差分はpublicの3 scriptと回帰だけ。private実装／literal／live実行なし |
-| 8. SL-006をSecretary-local＋lifecycle＋partialで再評価 | PASS | 製品CLI stderr JSONとfilesystemを両partial／retryで比較し、前回F-01を解消 |
+| 1. Target 35件、Acceptance Criteria未実行0、private live非偽装 | PASS | Target 35/35、registry差分0、AC1〜8未実行0。private liveは未実行と分離 |
+| 2. projectsがlifecycle／canonicalRepoを所有し、Clarityが二重実装しない | PASS | `project-tools.mjs`でcomplete／reopenし、Clarity Project ID／project.json／Event bytesを保持 |
+| 3. PJ Decisionは既存seamへ1回、一般memory／Clarityへ本文重複0 | PASS | 両partial＋failure retry＋通常retryでDecision本文、pending Event、confirmed Eventは各1件、一般memory／Clarity Event本文0 |
+| 4. daily／weekly／Portfolioは独立・bounded、closed／全本文／connector自動読込0 | PASS | 6件は6／3／3、8件は8／3／5。closed／legacy／full body canary 0、connector read 0 |
+| 5. Item作成でtask 0、明示時だけ既存確認境界へ進む | PASS | top外local、Attention外downstreamを明示route。暗黙／unknownはwrite 0 |
+| 6. projects／daily／weekly／memory／chat／identity／update／Harness回帰0 FAIL | PASS | 公式045と関連個別suiteはすべてexit 0 |
+| 7. public sourceにprivate実装0、downstream adapter契約 | PASS | Retry 2製品差分はpublicのClarity集約2 scriptだけ。private実装／literal／live実行なし |
+| 8. SL-006をSecretary-local＋lifecycle＋partialで再評価 | PASS | 製品CLI stderr JSONとfilesystemを両partial／retryで比較し、F-01回帰なし |
 
 ## Target Case 35件／registry
 
@@ -62,7 +60,7 @@ registry JSONを独立parseし、次の正確な35 ID、unique 35、missing 0、
 - `PF-001`〜`PF-008`、`PF-010`〜`PF-012`
 - `RG-001`〜`RG-012`
 
-`bash scripts/sprint-045-regression.sh`はexit 0で、`SPRINT045_CASE_PASS=35 FAIL=0 TOTAL=35`、`SPRINT045_REGISTRY_MISSING=0 DUPLICATE=0 EXTRA=0`だった。独立fixtureでは前回F-01〜F-04の直接面は4/4 RESOLVEDだが、case IDの個別期待を越えてC20横断基準を検査した結果、新規F-05を検出した。
+`bash scripts/sprint-045-regression.sh`はexit 0で、`SPRINT045_CASE_PASS=35 FAIL=0 TOTAL=35`、`SPRINT045_REGISTRY_MISSING=0 DUPLICATE=0 EXTRA=0`だった。
 
 ## 実行証跡
 
@@ -81,65 +79,85 @@ registry JSONを独立parseし、次の正確な35 ID、unique 35、missing 0、
 
 `XM-007`はreal Xmind MCP external-live未承認のconditional NOT-RUNで、他証拠からverifiedへ昇格していない。
 
-### 2. 独立CLI／filesystem fixture
+### 2. 独立CLI／filesystem fixture: 1 Project × 6 Attention
 
-fixture rootは`/var/folders/k1/582ptqfx73l_t0glc9q1hck40000gn/T/s045-r1-independent-o2ccc3`。plugin同梱templateから匿名Secretaryを作り、製品の`project-tools.mjs`と`clarity-secretary.mjs`を実行した。検証後にfixtureを削除した。実private workspace、installed cache、connectorは使っていない。
+fixture rootは`/private/tmp/s045-r2-evaluator.B9p5ZO`。plugin同梱templateから匿名Secretaryを作り、製品の`project-tools.mjs`と`clarity-secretary.mjs`を実行した。公式runnerのfixture名、Item ID、assert helperは使っていない。評価後にfixtureを削除した。
 
-#### Decision partial／retry
+```json
+{
+  "canonical": {"activeCount": 6, "topCount": 3, "otherCount": 3},
+  "portfolio": {"activeCount": 6, "topCount": 3, "otherCount": 3, "connectorReads": 0, "itemBodiesIncluded": false},
+  "daily": {"conclusion": "今日確認したい項目は6件です", "topCount": 3, "otherCount": 3, "connectorReads": 0, "itemBodiesIncluded": false}
+}
+```
+
+Portfolio plainは`Portfolio: open Project 1件、Attention 6件`、結論→理由→根拠→選択を3件、`その他 3件`を表示した。daily plainも`今日確認したい項目は6件です`と`その他 3件`を表示した。
+
+表示された各ItemはEvidence 1件とchoices 3件を持った。Attention外ideaへ`EVALUATOR_FULL_BODY_CANARY_9A7C`を入れ、closed Project、legacy Projectも同じfixtureへ追加したが、Portfolio／dailyのJSON／plainにはcanary、closed名、legacy名が各0件だった。
+
+### 3. 独立CLI fixture: 8 Project × 各1 Attention
+
+fixture rootは`/private/tmp/s045-r2-multi.RjbWqj`。8つの匿名open Projectを製品CLIで作成・初期化し、Portfolio／dailyのJSON／plainを各2回実行した。評価後にfixtureを削除した。
+
+```json
+{
+  "portfolio": [8, ["横断案件0", "横断案件1", "横断案件2"], 5],
+  "daily": ["今日確認したい項目は8件です", ["横断案件0", "横断案件1", "横断案件2"], 5],
+  "stable": true
+}
+```
+
+plainも`Attention 8件`／`今日確認したい項目は8件です`、上位3件、`その他 5件`を示した。繰り返し出力はbyte同一だった。
+
+### 4. Decision両partial／retry
+
+fixture rootは`/private/tmp/s045-r2-decision.NYwRor`。評価後に削除した。
 
 `clarity-finalize`後partial:
 
 - 初回exit 4、`changed: true`、`completed: ["project-decision"]`、`pending: ["clarity-confirmation"]`、具体的`nextAction`あり。
-- 実filesystemはDecision本文1、pending Event 1、confirmed Event 0、一般memory本文0、Clarity Event本文0。
-- 同じfailure injection retryは`changed: false`。通常retry後はDecision本文1、pending 1、confirmed 1で重複0。
+- 同じfailure injection retryはexit 4、`changed: false`。通常retryはexit 0、`status: saved`。
+- Decision本文1、pending Event 1、confirmed Event 1、一般memory本文0、Clarity Event本文0。
 
 `decision-write`後partial:
 
 - 初回exit 4、`changed: true`、`completed: ["clarity-pending"]`、`pending: ["project-decision", "clarity-confirmation"]`、具体的`nextAction`あり。
-- 実filesystemはDecision本文0、pending Event 1、confirmed Event 0、一般memory本文0、Clarity Event本文0。
-- 同じfailure injection retryは`changed: false`。通常retry後はDecision本文1、pending 1、confirmed 1で重複0。
+- 同じfailure injection retryはexit 4、`changed: false`。通常retryはexit 0、`status: saved`。
+- Decision本文1、pending Event 1、confirmed Event 1、一般memory本文0、Clarity Event本文0。
 
-#### 全Item task route
+stderr JSONの副作用説明と実filesystemが一致し、retry重複は0だった。
 
-- canonical State: active Attention 6、表示top 3、その他3、Attention外idea 1。
-- top外Item IDの明示local route: `route=project-tools:add-todo`、`taskWrites=0`。
-- Attention外Item IDの明示downstream route: `route=downstream-task-adapter`、`taskWrites=0`。
+### 5. 全Item task route
+
+canonical Stateにはactive Attention 6件とAttention外idea 1件を置いた。
+
+- top外active Itemの明示local route: `route=project-tools:add-todo`、`taskWrites=0`。
+- Attention外ideaの明示downstream route: `route=downstream-task-adapter`、`taskWrites=0`。
 - 暗黙route: `status=not-routed`、`taskWrites=0`。
 - unknown ID: exit 3、`code=item-missing`、`changed=false`。
-- 全操作前後で`inbox/todo.md`とClarity Event bytesは同一。
+- TODO fileは操作前後とも不在で新規作成0。Clarity Event SHA-256は前後とも`b57cef0646031fad79925c028ab57e3a0cf9c9795c36f5e678cf18c2a08323da`。
 
-#### lifecycle／projectRef／link health
+### 6. lifecycle／projectRef／link health
 
-- Clarity Project ID: `cp_c9a1d0469153ba5e9dad`。
-- `project.json` SHA-256: `769d454a6be254e8df5d9eba51589d39426d9986534dc86abf85da792ecd98fd`。
-- `events.jsonl` SHA-256: `aa8f8be9daa655bd02076ded184f830e23bd025792af87ea705b1c3e1b678f3b`。
+- Clarity Project ID: `cp_fdb849dccc82678f629b`。
+- `project.json` SHA-256: `567b014c9799f988e04400e4f870a3e7528ee95b9049a7ae9da1931f9407fba5`。
+- `events.jsonl` SHA-256: `68c11d4b5134e345cbaab928cc2d405a3e8947bab89d22b44bb3dcbeca282b45`。
 - complete前、closed後、reopen後で上記ID／bytesは同一。
-- `projectRef=PROJECT.md`、`referenceBase=secretary-project-root`。closed／reopenで実fileが存在し`local-reference-healthy`。
-- 旧`projects/open/.../PROJECT.md`を注入すると`local-reference-stale`で、healthy誤表示なし。
+- canonical `projectRef=PROJECT.md`、`referenceBase=secretary-project-root`はclosed／reopenで実在し、`local-reference-healthy`。
+- 旧open pathをclosed fixtureへ注入すると`local-reference-stale`となり、healthyへ誤表示しなかった。
 
-#### Portfolio／dailyの表示と新規反例
+### 7. 公式PF-012のV-02回帰
 
-canonical status:
+`e5b1225..ec6eed9`の実diffを確認した。PF-012はlibrary返値だけでなく製品CLIを直接実行し、次をassertする。
 
-```json
-{"activeCount":6,"topCount":3,"otherCount":3}
-```
+- 1 Project×active Attention 6件: status JSON、Portfolio JSON／plain、daily JSON／plainの6／3／3。
+- Portfolio／dailyの`connectorReads: 0`、`itemBodiesIncluded: false`。
+- 8 Project×各1件: daily総数8、上位`案件0`〜`案件2`、残件5。
+- 公式case IDとregistry件数は不変。
 
-Portfolio:
+この回帰は前回F-05の実製品反例を捕捉するため、V-02を`RESOLVED`とする。
 
-```json
-{"activeCount":3,"topCount":3,"otherCount":0,"plainBytes":728}
-```
-
-morning daily:
-
-```json
-{"conclusion":"今日確認したい項目は3件です","topCount":3,"otherCount":0,"plainBytes":763}
-```
-
-各表示Itemは`conclusion`、`reasonLabels`、Evidence 1〜3件、choices 1〜3件を持ち、plain内の順序も結論→理由→根拠→選択だった。出力はboundedだが、4〜6件目の存在と件数が消えている。
-
-### 3. 既存Skill直接回帰
+### 8. 既存Skill直接回帰
 
 | Surface | Command | 結果 |
 |---|---|---|
@@ -158,43 +176,34 @@ morning daily:
 
 - `python3 scripts/check-report-schema.py --plugin-root plugins/secretary` → `PASS=1 FAIL=0`、22 surface、conflict 0。
 - `claude plugin validate plugins/secretary --strict` → exit 0、`Validation passed`。
-- 変更3製品scriptの`node --check` → exit 0。
-- `git diff --check f3c33dc..e5b1225` → exit 0。
+- Retry 2変更3 scriptの`node --check` → exit 0。
+- `git diff --check e5b1225..ec6eed9` → exit 0。
 
-### 4. 旧Sprint 014／018 baseline debtの証跡再利用
+### 9. 増分証跡の扱い
 
-評価開始worktreeがcleanで、引き渡された045回帰と関連suiteがgreenであることを確認した。前回評価時点`f3c33dc`からcandidate`e5b1225`までの製品／test差分は、Clarityの3 scriptと`scripts/sprint-045-test.mjs`だけで、旧014／018、README、Chatwork wizard／runtime、update runtimeに変更はない。
+評価開始worktreeがcleanで、引き渡された045回帰と関連suiteがgreenであることを確認した。前回candidate`e5b1225`からRetry 2 candidate`ec6eed9`までの製品差分は、Portfolio集約の2 scriptとPF-012回帰だけである。
 
-そのため増分再評価原則に従い、前回のcandidate／開始baseline同条件比較を再利用した。
+変更面と近傍F-01〜F-04は今回実CLIで取り直し、非関連の旧Sprint 014／018 baseline debtは前回feedbackのcandidate／baseline同条件比較を引き継いだ。これらをgreenへ昇格していない。
 
-- 旧014: candidate／baselineとも`PASS=38 FAIL=3`で内容・順序同一。loopback bindのhost capabilityとREADME／guide既存debt。今回candidate因果なし。
-- 旧018: candidate／baselineとも同じ5 assert FAIL後に同じ`FileNotFoundError`。現行update CLI前提との既存verification-infra debt。今回candidate因果なし。
-
-これらをgreenとは表示せず、Sprint 045変更面の現行projects／daily／weekly／chat／update surfaceを直接greenで確認した。
+- 旧014: candidate／baselineとも38 PASS／3 FAILだった既存のloopback host capability／README debt。Retry 2非因果。
+- 旧018: candidate／baselineとも同じ5 assert FAIL＋`FileNotFoundError`だった旧runnerと現行update CLIの前提不一致。Retry 2非因果。
 
 ## Finding／バグ一覧
 
 | ID | 重要度 | 対象区分 | 状態／内容 | 影響／route |
 |---|---|---|---|---|
-| F-01 | Major | product | **RESOLVED** — Decision両partialのstderr JSONが実副作用と一致し、retry重複0 | `SL-006`、AC8 |
+| F-01 | Major | product | **RESOLVED** — Decision両partialのstderr JSONと実副作用が一致し、retry重複0 | `SL-006`、AC8 |
 | F-02 | Major | product | **RESOLVED** — canonical全Itemからtop外／Attention外を明示route可能 | `SL-007`、`RG-002`、AC5 |
 | F-03 | Major | product | **RESOLVED** — folder基準`projectRef`、closed／reopen healthy、staleはstale表示 | `SL-011`、AC2 |
-| F-04 | Major | product | **RESOLVED** — Portfolio／dailyの表示ItemにEvidence／choicesを保持 | C4／C7／C20の前回指摘 |
-| V-01 | Major | verification-infra | **RESOLVED** — 公式runnerが製品CLI、両partial、multi-Item route、link health、JSON／plainを直接検査 | 前回4反例を回帰で捕捉 |
-| F-05 | Major | product | **OPEN** — 同一Project内のAttention 4件目以降をPortfolio／dailyのglobal集計が落とし、6件を3件・その他0件と誤表示 | AC4、C1／C4／C7／C20／C24。Generatorへ |
-| V-02 | Minor | verification-infra | **OPEN** — 公式PF-012は8 Project×1 Itemだけでbounded sizeを検査し、1 Project×6 AttentionのactiveCount／otherCount整合を検査しない | F-05修正と同じ既存基準の回帰へ追加 |
-| H-014 | Existing | host capability | 前回証跡再利用。sandbox loopback `EPERM` | candidate非因果 |
-| V-014 | Existing | product／verification-infra debt | 前回証跡再利用。README／guide 2 assert | candidate非因果、別Patch候補 |
-| V-018 | Existing | verification-infra | 前回証跡再利用。旧runnerと現行update CLI前提不一致 | candidate非因果 |
+| F-04 | Major | product | **RESOLVED** — Portfolio／dailyの表示ItemにEvidence／choicesを保持 | C4／C7／C20 |
+| V-01 | Major | verification-infra | **RESOLVED** — 公式runnerが製品CLI、両partial、multi-Item route、link health、JSON／plainを直接検査 | 初回4反例を捕捉 |
+| F-05 | Major | product | **RESOLVED** — 同一Projectのactive 6件をPortfolio／dailyが6／3／3で集約し、plainも残件を表示 | AC4、C1／C4／C7／C20／C24 |
+| V-02 | Minor | verification-infra | **RESOLVED** — PF-012が同一Project 6件の製品CLI JSON／plainを直接検査 | F-05の再発を捕捉 |
+| H-014 | Existing | host capability | 前回証跡を増分再利用。sandbox loopback `EPERM` | candidate非因果 |
+| V-014 | Existing | product／verification-infra debt | 前回証跡を増分再利用。README／guide 2 assert | candidate非因果、別Patch候補 |
+| V-018 | Existing | verification-infra | 前回証跡を増分再利用。旧runnerと現行update CLI前提不一致 | candidate非因果 |
 
-F-05はverification-infra単独ではなく、製品CLIのJSON／plainがcanonical Stateと異なるproduct defectである。仕様矛盾、無許可external gate、検証形式不足ではなく、同Sprint実装で修正できるため`implementation-issue`とする。
-
-## Generatorへの修正指示
-
-1. Portfolioのglobal aggregationで、各Projectの`attention.top`だけを足し合わせてactive総数を作らない。canonical各Projectの`activeCount`／`otherCount`を失わず、全Project横断の上位3件と残件数を正しく算出する。
-2. daily morningのconclusionと`otherCount`をPortfolioの正しいglobal countへ揃える。1 Projectに4件以上、複数Projectに4件以上、source failure混在でも、表示topは最大3件のまま残件数を正直に示す。
-3. 既存F-01〜F-04回帰を維持し、`1 Project × active Attention 6`の製品CLI JSON／plain反例をPF-012または同じ着手時点caseへ追加する。全Item本文、closed／legacy、connector readを引き続き含めない。
-4. 旧014／018、Sprint 044 user-accepted live残件、Sprint 046以降を今回修正へ混ぜない。
+新規product findingは0件、新規verification-infra findingは0件である。verification-infra findingをproduct判定へ混ぜていない。
 
 ## UI／スクリーンショット
 
@@ -208,22 +217,30 @@ F-05はverification-infra単独ではなく、製品CLIのJSON／plainがcanonic
 - Mac mini／installed cache／marketplace metadata: **0変更**
 - push／tag／release: **0件**
 - 回帰suiteが作るpushはOS temporary directory内のlocal bare remoteだけ。外部送信ではない。
-- 評価中の永続書込みは本feedbackだけ。独立fixtureはOS temporary directoryに限定し、検証後に削除した。
+- 評価中の永続書込みは本feedbackだけ。3つの独立fixtureは`/private/tmp`に限定し、検証後に削除した。
+
+## 残余リスク
+
+- Sprint 043のreal Xmind MCP external-liveは未承認NOT-RUNのまま。Sprint 045の製品集約には非因果で、verifiedへ昇格していない。
+- Sprint 044のユーザー受理済みhost実機残件と、旧Sprint 014／018のbaseline debtは未解消。今回のPASSはSprint 045の固定契約と変更面に限る。
+- private my-vault、Yasashii、installed cache、marketplace、release、Sprint 046以降は未実行であり、public Sprint 045 PASSから適用済みへ昇格しない。
 
 ## Evaluator自己レビュー
 
-- Generatorの自己評価を合否根拠として流用せず、実製品CLIと別の匿名fixtureを操作したか: yes
-- 前回candidateとの差分を実Gitで確認し、変更面の証跡を取り直したか: yes
+- Generatorの自己評価を合否根拠として流用せず、実製品CLIと別名・別Item IDの匿名fixtureを操作したか: yes
+- 前回candidateとの差分を実Gitで確認し、F-05／V-02と近傍F-01〜F-04の証跡を取り直したか: yes
 - Targetの正確な35 ID、missing／duplicate／extraを独立parseしたか: yes
+- 1 Project×6件でcanonical、Portfolio JSON／plain、daily JSON／plainの総数6／表示3／残件3を比較したか: yes
+- 8 Project×1件で総数8、上位3、残件5、繰り返しbyte同一を確認したか: yes
+- 結論→理由→Evidence→choices、bounded、closed／legacy／full body／connector除外を確認したか: yes
 - Decision両partialのstderr JSONとfilesystemを比較し、failure retry／通常retryの重複を数えたか: yes
-- 5件以上のItemでtop外、Attention外、unknown、暗黙、local／downstreamを分けたか: yes
+- top外、Attention外、unknown、暗黙、local／downstream routeを分け、write 0を確認したか: yes
 - complete／closed／reopenのProject ID、Clarity bytes、projectRef実在、stale healthを操作したか: yes
-- Portfolio／dailyのJSONとplainで結論→理由→根拠→選択、bounded size、禁止読込を確認したか: yes
-- 公式35/35をそのまま製品PASSへ流用せず、同一Project内6 Attentionの反例を探したか: yes
-- F-05をproduct、V-02をverification-infraとして分離し、V-02単独でFAILにしていないか: yes
+- 公式35/35をそのまま製品PASSへ流用せず、前回F-05反例を独立fixtureで再現したか: yes
+- V-02をverification-infraとして分離し、それ単独でproduct判定を操作していないか: yes
 - 旧014／018の証跡再利用条件としてclean worktree、green suite、実diff非関連を確認したか: yes
 - private／cache／marketplace／network／release／Sprint 046以降へ触れていないか: yes
 - spec、contract、state、code、test、progressを編集していないか: yes
 - 契約外のcollector／attestation／Evidence formatを合否条件に追加していないか: yes
 - UI非該当理由を明記したか: yes
-- 最終分類根拠: F-01〜F-04／V-01は解消したが、F-05によりcanonical active Attentionの残件がdaily／Portfolioから消え、AC4、C1／C4／C7／C20／C24が未達。同Sprintの集約実装修正で解消可能なため`implementation-issue`。
+- 最終分類根拠: 全Acceptance Criteria、C19／C20／C24、Target 35件、関連回帰が閾値を通過。F-05／V-02は解消し、新規product finding 0件のためPASS。
