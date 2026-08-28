@@ -434,7 +434,7 @@ C24の減点はcandidate製品codeの欠陥ではなく、実host検証の隔離
 | V-LIVE-01 | Major | verification-infra／verification-scope | OPEN | Desktop／Appと一部Critical liveが未実行。1 surfaceの証拠を他へ昇格できない | user decision。Generatorへ自動差し戻ししない |
 | V-HOST-02 | Major | host capability | OPEN | Codex 0.147.0でPreCompactは配送されたが、compact／resume時のcandidate SessionStartは0件。router failureとは判定できない | 対象host capabilityを別実測。推測でproduct PASS／FAILにしない |
 | V-UI-01 | Major | verification-infra／host capability | OPEN | Claude Desktopは状態取得timeout、Codex AppはComputer Use safety refusal。両App操作0 | UIが利用可能なfresh Evaluatorで再実行 |
-| V-CLEAN-01 | Major | verification-infra／cleanup residual | OPEN | Codex candidate導入時の既存Git marketplace自動refreshでprivate版が0.10.1系から0.10.3系へ更新。candidate cleanup後も旧版へexact復元できず残存 | local旧Git objectはあるが、networkなし・公式CLIだけでは旧revision／timestampをexact復元できないため停止 |
+| V-CLEAN-01 | Major | verification-infra／cleanup residual | OPEN | Codex candidate導入時の既存Git marketplace自動refreshでprivate版が0.10.1系から0.10.3系へ更新。candidate cleanup後も旧版、revision／timestamp、未追跡install metadataをexact復元できず残存 | local旧Git objectはあるが、networkなし・公式CLIだけでは旧revision／timestampをexact復元できないため停止。未追跡fileは追加承認前に削除しない |
 
 Retry 2の新規product findingは0件である。製品不具合、host capability、verification scope、cleanup residualを
 同じ「失敗」へ混在させず、上表のrouteを維持する。
@@ -464,6 +464,11 @@ Retry 2の新規product findingは0件である。製品不具合、host capabil
   公式CLIでtemporary local marketplaceを使うとsource type／pathがbefore不一致となり、Git URL＋旧refはnetwork fetchを要する。
   exact revision／timestampまで戻せない条件に該当したため、private pluginの追加remove／add、checkout、direct cache edit、
   config手書き復元は行わなかった。
+- marketplace cloneには未追跡`.codex-marketplace-install.json`が残る。preflightはcloneの未追跡statusを記録しておらず、
+  その記録単独ではbefore不在を証明できない。ただしfileのbirth time／mtimeはともに
+  `2026-08-28T11:54:45+0900`で、今回のrefresh `last_updated=2026-08-28T02:54:45Z`と秒単位で一致し、
+  内容のrevision markerもafter `e9bc1882247403c90b47ce593f3bb25d7b79e99d`だった。評価開始後に新規作成された
+  refresh residualと判定し、追加のユーザー承認前に削除していない。
 - Mac temporary fixture／marketplace／backupはsanitized要約を本節へ転記後に削除した。Windows環境への副作用は0件。
 
 ### Retry 2 Evaluator 自己レビュー
