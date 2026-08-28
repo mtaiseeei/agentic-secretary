@@ -1008,3 +1008,43 @@ Hook observationはsession ID、turn ID、event ID、host event、tool、touched
 一時eventであり、runtime領域へ競合安全に記録する。重い意味分類はreview／checkpointのSkill側で行う。
 Checkpointはmaterial change、last checkpoint、same-turn markerから必要性を決め、同一turnに1回だけ生成する。
 trust前skip、disabled、failureは`degraded`であり、canonical Clarityを失敗状態へ変更しない。
+
+### Downstream handoff acceptance basis
+
+固定handoffの`publicationStatus`は次を区別する。
+
+| status | 意味 | readyの根拠 |
+|---|---|---|
+| `pending-public-evaluator-pass` | template。受入根拠未固定 | 常にclosed |
+| `public-evaluator-pass` | public candidateが独立Evaluator PASS | 既存PASS経路のexact source／digest／scope／rollback |
+| `public-user-decision-risk-accepted` | public candidateはPASSではないが、記録済み残余をユーザーがcandidate限定で受容 | exact source／元feedback／残余／明示承認／scope／rollback／governance Evaluator PASS |
+
+ユーザー判断経路の`acceptanceBasis`は少なくとも次を持つ。
+
+- `type=user-risk-acceptance`、`evaluatorPass=false`、元Verdict=`verification-scope-issue`
+- feedback commit、repo-relative path、content SHA-256
+- 受容したblocking residual IDsと、受容対象外のconditional NOT-RUN／別phase residual IDs
+- `authorizationId`、承認日、原文、具体的な判断文脈、scope、対象candidate、下流順序、失効条件、撤回状態
+
+`acceptedSource`は配る製品bytesのidentity、`governanceSource`はhandoff判定を実装してPatch Evaluatorが確認した
+bytesのidentityである。両者を入れ替えない。Sprint 050の固定値は次とする。
+
+| field | value |
+|---|---|
+| product full SHA | `5f08d454c05576fcff8ab32c10c00887b4c15a96` |
+| full tree SHA-256／files | `1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5`／828 |
+| common path SHA-256／files | `4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849`／44 |
+| feedback commit | `8483d86390b6c105163e64d24dcafe498ed2fe8b` |
+| feedback path／SHA-256 | `docs/feedback/sprint-050.md`／`fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd` |
+| feedback Verdict | `verification-scope-issue`、product finding 0 |
+| downstream order | `agentic-secretary-my-vault`→`yasashii-secretary` |
+
+この承認が受容するblocking residualは、AC3／C21のexact candidate実install後Claude Code／Codex別live conversation・
+Hook発火が未実施であることだけである。`XM-007`実Xmind MCPはconditional NOT-RUNのまま、Claude Code Desktop／
+Codex App／Windows native／Mac mini、downstream独立評価、release／tag／push／marketplace／cache／new sessionは
+別phase残余のままで、この承認から実施済み・verified・許可済みを推測しない。
+
+承認記録は2026-08-28の現Harness会話で、上記candidate・feedback・残余・順序・別repo Harness境界を示した問いに対する
+ユーザー原文「よいです」と、その判断文脈を一体で保持する。原文だけを切り出して再利用しない。candidate SHA／tree／common digest、
+feedback digest／Verdict／残余集合、downstream order／repo identity／file scope／rollbackが変わる、承認が撤回される、または
+Patch governanceが独立Evaluator PASSでなくなる場合は失効し、readyからclosedへ戻る。

@@ -13,6 +13,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - Sprint 021は、Google Chatのlocal wizard session memory→`gh` stdin→Repository Secretと、Chatworkの利用者本人によるGitHub Repository Secret画面への直接入力という既存の2導線、および製品管理対象／初回publish inventoryにおける合理的な誤混入を0許容で評価する。Chatwork wizardへToken取得・受領・登録機能を要求しない。利用者が任意のJS／TS／shell／JSONを意図的に特殊構文・難読化・computed／escaped key・偽placeholderへ改変したケースの未検出だけでは不合格にしない。その形式を製品が生成する、または通常導線が実値を残すなら不合格とする。
 - 1軸でも閾値を下回ればスプリント全体を不合格にする。
 - やさしさの得点で安全・規律・回帰の欠陥を相殺しない。
+- Sprint 050 Patch 001はC25を5/5必須とし、ユーザー判断経路のtruthful status、束縛、失効、製品候補分離、downstream write 0の違反を他軸で相殺しない。
 
 ## 検証方法
 
@@ -144,6 +145,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C22 | federated link・sync・Drift | reciprocal identity、authority、pull、conflict、cross-root write 0 | **5** |
 | C23 | projection・Xmind | deterministic Markdown／Mermaid、MCP-first provider、承認付きlocal fallback、fixed visual、proposal | ≥4 |
 | C24 | Clarity安全・統合・public-first | path／Secret／dirty、既存Skill協働、inventory、回帰、固定handoff | **5** |
+| C25 | ユーザー判断handoff governance | PASS分離、exact source／feedback／承認束縛、失効、順序、scope、rollback | **5** |
 
 ## スコアアンカー
 
@@ -272,8 +274,13 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C24 Clarity安全・統合・public-first【ゼロ許容】
 
-- 5: path／symlink／Secret／dirty／stage／schema／lock／retry境界が全て成立し、secretary、projects、daily、weekly、notion-tasks、memory-care、build、update、onboarding、templates、rules、host／release inventory、edition handoffの実内容inventoryと回帰が0 FAIL。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public PASS前のdownstream／release／cache／external write 0件。
-- 4以下: private値のpublic混入、対象surface漏れ、file存在だけのinventory、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、下流先行反映、release stage混同が1件でもある。→不合格。
+- 5: path／symlink／Secret／dirty／stage／schema／lock／retry境界が全て成立し、secretary、projects、daily、weekly、notion-tasks、memory-care、build、update、onboarding、templates、rules、host／release inventory、edition handoffの実内容inventoryと回帰が0 FAIL。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public Evaluator PASS、またはC25を満たす束縛済みユーザー判断のready前は、downstream／release／cache／external write 0件。
+- 4以下: private値のpublic混入、対象surface漏れ、file存在だけのinventory、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、正当なacceptance basisより前の下流反映、release stage混同が1件でもある。→不合格。
+
+### C25 ユーザー判断handoff governance【ゼロ許容】
+
+- 5: `public-evaluator-pass`を回帰させず、ユーザー判断経路は`public-user-decision-risk-accepted`と`evaluatorPass=false`を保つ。accepted product sourceは`5f08d454c05576fcff8ab32c10c00887b4c15a96`と既定tree／common digest、元feedbackはcommit／path／digest／Verdictまで一致する。受容したAC3／C21と、受容していない`XM-007`／別phase残余が分かれ、承認原文は具体的文脈・scope・candidate・順序・失効条件と一体である。`acceptedSource`とPatchの`governanceSource`、private my-vault→Yasashiiの順序、common／excluded／protected path、protected digest、file-scoped rollbackが固定され、Patch評価中の実downstream／release／host／Xmind writeは0件。Patch governanceの独立Evaluator PASSを確認した入力だけがreadyになる。
+- 4以下: ユーザー判断をPASS／verifiedへ昇格、state文字列だけからready、自動推測、短い了承の文脈なし採用、別candidate／feedbackへの承認転用、source／tree／common digest／未達／順序／scope変更後もready、撤回・失効承認の再利用、governance commitによるaccepted product source置換、既存PASS経路の破壊、protected／excluded path変更、rollback不能、またはPatch中の実downstream／release／host／Xmind writeが1件でもある。→不合格。
 
 ## Project Clarityの検証方法（safe harbor）
 
@@ -284,6 +291,13 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - Xmind MCP caseはadapter／capability／priority／selected／reason／確認境界を必須実装とする。未接続・無効・能力不足・許可なしのreal external-liveは正直なconditional NOT-RUNでよいが、fallbackは自動writeせずpreview／confirmを評価する。外部write、local write、network、credit消費を合格のために自動実行しない。isolated fakeをreal providerのverified証拠にしない。
 - private固有case IDはpublic stageではadapter seam、private literal非混入、固定handoffを評価する。実`05/02/10_sources/Notion`と実顧客fixture／提供PDF／提供Xmindはprivate版の別Harnessで再実行し、public PASSへ偽装しない。`XM-012`／`E2E-002`のpublic評価は同構造の匿名fixtureを使う。
 - 実行command、exit code、case ID、期待／観測、fixture root、前後digest、PASS／FAIL／NOT-RUN理由、host／provider状態があれば十分とする。新しいcollector、統一attestation、実顧客data、無許可network／release／downstream writeを追加条件にしない。
+
+## Sprint 050 Patch 001の検証方法（safe harbor）
+
+- 隔離fixtureで既存`public-evaluator-pass` ready入力と、新しい`public-user-decision-risk-accepted` ready入力を各1件成功させる。後者はexact product source、元feedback、残余分類、承認記録、Patch Evaluator PASS、下流順序、common／excluded／protected、rollbackを検査する。
+- 負fixtureは少なくとも、state文字列だけ、文脈なしの短い了承、source SHA／tree／common digest差替え、feedback digest／Verdict／残余差替え、別candidate承認、撤回／失効、governance commitのacceptedSource誤代入、下流順序変更、common／excluded／protected／rollback変更、Patch feedback非PASSを個別に実行し、全てclosed／非0 exitとなることを確認する。
+- exact `5f08d454...` candidateのclean checkoutまたはGit-free archiveからtree／common digestを再計算し、handoff governance candidateとは別identityとして照合する。元feedbackはcanonical pathのbytesとSHA-256で照合し、内容を書き換えない。
+- 実行command、exit、fixture名、期待した拒否code、observed publication status、accepted／governance SHA、前後Git／filesystem snapshot、downstream／remote／release／host／Xmind write 0があれば十分とする。実downstream repo、追加collector、統一attestation、実host live、実Xmind MCP、release操作を合格条件にしない。
 
 ## Sprint 039の検証方法（safe harbor）
 

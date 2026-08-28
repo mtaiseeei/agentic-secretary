@@ -575,7 +575,9 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 
 - public `agentic-secretary`のSkill、Hook、host inventory、manifest、marketplace metadata、archive／clean checkout回帰を整合させる。
 - Claude CodeとCodex、DesktopとCLIのsupported／verifiedを別に表示し、1 surfaceのPASSを他へ昇格しない。
-- publicの独立PASS後だけ完全SHA、共通digest、共通path、除外・保護path、rollbackを固定し、private my-vault、次にYasashiiの別Harnessへ渡す。
+- 通常経路はpublicの独立Evaluator PASS後だけ`public-evaluator-pass`として完全SHA、共通digest、共通path、除外・保護path、rollbackを固定し、private my-vault、次にYasashiiの別Harnessへ渡す。
+- `verification-scope-issue`をユーザーが明示的に引き受けた場合だけ、PASSと別の`public-user-decision-risk-accepted`を使える。この経路はexact candidate、元feedbackとdigest、受容した未達、受容していない条件付き／別phase残余、候補へ束縛した承認記録、下流順序、file scope、rollback、handoff governanceの独立Evaluator PASSがすべて一致した時だけreadyになる。
+- `done-by-user-decision`の文字列だけ、曖昧な了承、別candidate、変更済みfeedback、失効・撤回済み承認からreadyを自動推測しない。accepted product sourceとhandoff governance commitを別fieldにし、後者で前者を置き換えない。
 - push、tag、Release、marketplace公開、cache更新、実downstream反映はこのmain sprint群の対象外とする。
 
 ### F80 Clarity-aware collaboration surface inventory

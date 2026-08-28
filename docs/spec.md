@@ -70,8 +70,15 @@ Standalone、generic Secretary-local、Linked External Repo、Portfolioを共通
 memory、TODO／Notion、外部Repoの正本を置き換えない。Claude Code／Codex共通のcommand-only HookはClarity専用の狭い例外で、
 未初期化Repoではno-op、manual fallback必須、network／LLM／重い処理禁止とする。他SkillへHookを追加しない。
 Xmind integrationは明示ON／OFFとprovider能力を分け、Agentic／Yasashiiは既定OFF、private my-vaultは既定ON、
-ON時は、Xmind MCPが接続済みで必要能力を満たすときに第1優先とし、local native `.xmind`は理由・対象path・影響のpreviewと明示承認後だけ使う第2優先のfallbackとする。ON設定とprovider capability／priority／selected stateは分離し、network、sign-in、credit／課金、cloud map／local fileのcreate／updateは対象と予想影響を示した別確認なしに実行しない。publicの独立PASS後だけ固定SHA／digestを
+ON時は、Xmind MCPが接続済みで必要能力を満たすときに第1優先とし、local native `.xmind`は理由・対象path・影響のpreviewと明示承認後だけ使う第2優先のfallbackとする。ON設定とprovider capability／priority／selected stateは分離し、network、sign-in、credit／課金、cloud map／local fileのcreate／updateは対象と予想影響を示した別確認なしに実行しない。通常はpublicの独立PASS後だけ固定SHA／digestを
 private my-vault、次にYasashiiの別Harnessへ渡す。Planning、push、tag、Release、marketplace、cache、downstream反映は別phaseである。
+同日、Sprint 050は製品finding 0件のまま実host liveだけを残す`verification-scope-issue`となり、ユーザーが残余リスクを引き受けて
+`done-by-user-decision`とした。さらに、exact product candidateを変えず、Evaluator PASSとは別の
+`public-user-decision-risk-accepted`としてprivate my-vault→Yasashiiへ進める例外を明示承認した。
+この例外は、元feedback、未達項目、候補SHA／tree／common digest、承認記録、下流順序、保護・除外path、rollback、
+および本例外gate自体の独立Evaluator PASSをすべて固定した場合だけ有効である。`public-evaluator-pass`へ偽装せず、
+製品候補と後続のhandoff governance commitを別identityとして保持する。release／tag／push／marketplace／cache／new session、
+実Xmind MCP、実host検証、実downstream writeは引き続き別phaseとする。
 
 ## ひとことで
 
@@ -179,6 +186,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-048](sprints/sprint-048.md) | public packaging、host inventory、clean／archive gate、固定handoff準備 | sprint-047 |
 | [sprint-049](sprints/sprint-049.md) | secretary関連全surfaceのClarity-aware協働inventoryと追加回帰 | sprint-048 |
 | [sprint-050](sprints/sprint-050.md) | 250 case全件、追加collaboration case、4 E2E、既存master全回帰の最終判定 | sprint-049 |
+| [sprint-050-patch-001](sprints/sprint-050-patch-001.md) | Sprint 050のユーザー判断をPASSと分離した固定handoff gateへ束縛する | sprint-050 done-by-user-decision |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

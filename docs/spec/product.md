@@ -284,7 +284,7 @@ Hookが未信頼・無効・失敗でもmanual Skillから全機能を使える�
 27. Standalone Repoをread-only previewから初期化でき、後からSecretaryへリンクしてもClarity Project IDと履歴を失わない。linked Repoは相手を直接書き換えず、双方が相手exportを読むpull方式で同期する。
 28. Claude Code／CodexのHookが正常時に軽量な観測・再開支援を行い、未信頼・無効・失敗時は正常なdegraded状態としてmanual Skillへ戻れる。Hookはnetwork、LLM、重い全Repo解析を行わない。
 29. Mermaid、Markdownに加え、Xmind integration ON時はprovider resolverがMCP-firstでcloud mapまたは明示承認後のlocal native `.xmind`を選び、同じ状態と固定4象限visualを可視化できる。いずれも正本ではなく再生成可能なprojectionであり、Xmind編集は人間確認前のproposalに留まる。
-30. public `agentic-secretary`を先に独立PASSさせ、その固定SHA／digestだけをprivate my-vault、次にYasashiiの別Harnessへ渡せる。public版へprivate固有のvault／Notion実装を混ぜない。
+30. public `agentic-secretary`は、独立Evaluator PASS、または元feedbackと残余リスクへ束縛したユーザー判断の明示的例外のどちらかを正直な別statusで固定し、そのexact SHA／digestだけをprivate my-vault、次にYasashiiの別Harnessへ渡せる。例外をPASSへ昇格せず、public版へprivate固有のvault／Notion実装を混ぜない。
 
 ## 成功状態
 
@@ -339,7 +339,7 @@ Hookが未信頼・無効・失敗でもmanual Skillから全機能を使える�
 - Clarity未導入RepoではHookが高速no-opし、初期化済みRepoでもHook内のnetwork／LLM／重いscanは0件である。Claude Code／Codexの未信頼・無効状態を故障と誤表示しない。
 - Standalone、generic Secretary-local、Linked、Portfolioの各modeで正本所有が一意で、cross-root write、last-write-wins、自動タスク起票が0件である。
 - 同じ入力からMarkdown／Mermaid／選択されたXmind providerのprojectionが安定して再生成され、projectionの手編集だけでDecision／Executionが確定しない。Xmind MCPの未接続／無効／能力不足／失敗は理由つきでlocal fallback承認待ちとなり、承認なしにlocal fileを作成・更新しない。
-- public版の独立PASS、固定SHA／digest、protected path、rollbackが揃う前にprivate／Yasashiiへ反映せず、release／marketplace／cache／pushをPlanningまたは実装Sprintの完了へ混ぜない。
+- public版の独立PASS、または元feedback・未達・明示承認へ束縛した`public-user-decision-risk-accepted`のいずれかと、固定SHA／digest、protected path、rollbackが揃う前にprivate／Yasashiiへ反映しない。ユーザー判断経路をEvaluator PASSと表示せず、release／marketplace／cache／pushをPlanningまたは実装Sprintの完了へ混ぜない。
 
 ## 非ゴール
 
@@ -389,6 +389,7 @@ Hookが未信頼・無効・失敗でもmanual Skillから全機能を使える�
 - Xmind MCP、local `.xmind`、表現可能なMermaidは、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`の固定配置・固定色を守る。上軸は「決まっている」、下軸は「まだ決まっていない」。色だけでなくemoji／ラベル／意味文を併記する。
 - Clarityがprojectsのcomplete／reopenなどproject lifecycle、memory-careの一般memory、dailyの予定・TODO、updateの更新判断を所有しない。関連Skillは責務を保ったままinput／output／routingだけをClarity-awareにする。
 - 本計画ではpush、tag、GitHub Release、marketplace、installed cache、Mac mini、downstream実repoへの反映を行わない。
+- `done-by-user-decision`というstate文字列、文脈から切り離した短い了承、別candidateへの承認転用だけでdownstream gateを開かない。handoff governance commitをaccepted product sourceとして置き換えず、実機未検証をPASSと表示しない。
 
 ## 承認済みの条件付き判断
 
