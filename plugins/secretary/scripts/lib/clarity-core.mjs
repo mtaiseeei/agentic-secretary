@@ -1345,8 +1345,9 @@ export function decideGenericProject(rootValue, {
   const root = rootPath(rootValue);
   const secretary = rootPath(secretaryRootValue);
   const files = projectDecisionFiles(secretary, projectName);
-  fail(realpathSync(files.projectDir) === root, "project-root-mismatch", "Clarity rootとgeneric project rootが一致しません。別Repoへwriteしません。");
   const canonical = readCanonical(root);
+  const expectedProjectRoot = canonical.project.mode === "secretary-local" ? dirname(root) : root;
+  fail(realpathSync(files.projectDir) === expectedProjectRoot, "project-root-mismatch", "Clarity rootとgeneric project rootが一致しません。別Repoへwriteしません。");
   const selectedItem = itemId || buildState(canonical.project, canonical.events, canonical.evidence).items[0]?.itemId;
   fail(selectedItem, "item-missing", "Decisionを関連付けるClarity Itemがありません。");
   const safeDecision = oneLine(decision, "Decision", 240);

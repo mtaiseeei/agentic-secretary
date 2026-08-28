@@ -7,6 +7,8 @@ description: Project Clarityを安全に初期化し、人間が考える必要�
 
 Project ClarityはTODO一覧ではありません。Decision、Execution、Validationと根拠を分け、「何が決まり、何が実行され、どこに人間の判断が要るか」を扱います。
 
+通常の利用者向け応答は`${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/rules/plain-language.md`を参照し、最終応答serializerだけを正本にする。Clarity Skill独自の固定帳票へ包み直さない。
+
 ## 初期化
 
 1. 最初は必ずread-only previewを実行する。
