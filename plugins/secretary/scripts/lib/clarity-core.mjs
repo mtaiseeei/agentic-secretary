@@ -49,6 +49,12 @@ const eventTypes = new Set([
   "checkpoint.recorded",
   "attention.resolved",
   "attention.override",
+  "link.accepted",
+  "link.finalized",
+  "link.disabled",
+  "sync.applied",
+  "sync.conflict.detected",
+  "sync.conflict.resolved",
 ]);
 const evidenceTypes = new Set([
   "user-confirmation", "project-decision", "adr", "spec-section", "meeting-reference",
@@ -444,6 +450,10 @@ export function validateEvent(event) {
     oneLine(event.payload?.reason, "Attention override reason", 160);
     fail(Number.isFinite(Number(event.payload?.rank || 0)), "event-schema-invalid", "Attention override rankが不正です。");
   }
+  if (/^(?:link|sync)\./u.test(event.type)) {
+    fail(event.itemId === null, "event-schema-invalid", "link／sync EventはProject-level Eventとして記録してください。");
+    fail(/^cl_[a-f0-9]{20}$/u.test(event.payload?.linkId || ""), "event-schema-invalid", "link／sync Eventのlink IDが不正です。");
+  }
   return event;
 }
 
@@ -709,7 +719,7 @@ export function buildState(project, events, evidence, clock = nowIso()) {
       if (!itemMap.has(item.itemId)) itemMap.set(item.itemId, item);
       continue;
     }
-    if (event.type === "checkpoint.recorded") continue;
+    if (event.type === "checkpoint.recorded" || /^(?:link|sync)\./u.test(event.type)) continue;
     const item = itemMap.get(event.itemId);
     fail(item, "event-item-missing", `Eventが存在しないItemを参照しています: ${event.itemId}`);
     applyEvent(item, event);
@@ -1249,6 +1259,43 @@ function hookDiagnostic(root, { host = null, hookState = null } = {}) {
   };
 }
 
+function linkedProjectDiagnostic(root, project) {
+  const link = project.secretaryLink;
+  if (!link?.linkId) return { status: "not-linked", healthy: true, stale: false, reason: "active linkはありません" };
+  if (!/^cl_[a-f0-9]{20}$/u.test(link.linkId)) return { status: "broken", healthy: false, stale: false, reason: "Project metadataのlink IDが不正です", issues: ["link-id-invalid"] };
+  const path = safeWritePath(root, `.clarity/links/${link.linkId}.json`);
+  if (!existsSync(path)) return { status: "broken", healthy: false, stale: false, reason: "reciprocal manifestがありません", issues: ["manifest-missing"] };
+  let manifest;
+  try { manifest = JSON.parse(readFileSync(path, "utf8")); }
+  catch { return { status: "broken", healthy: false, stale: false, reason: "reciprocal manifestがJSONではありません", issues: ["manifest-invalid"] }; }
+  const issues = [];
+  if (manifest.linkId !== link.linkId) issues.push("link-id-mismatch");
+  if (manifest.local?.projectId !== project.clarityProjectId) issues.push("project-id-mismatch");
+  if (manifest.manifestDigest !== link.manifestDigest) issues.push("manifest-digest-mismatch");
+  if (manifest.state !== "active") issues.push(`link-${manifest.state || "unknown"}`);
+  const metaPath = safeWritePath(root, `.clarity/imports/${link.linkId}/meta.json`);
+  let importedAt = null;
+  if (existsSync(metaPath)) {
+    try { importedAt = JSON.parse(readFileSync(metaPath, "utf8")).importedAt || null; }
+    catch { issues.push("import-meta-invalid"); }
+  }
+  const stale = !importedAt || Number.isNaN(new Date(importedAt).valueOf()) || new Date(nowIso()).valueOf() - new Date(importedAt).valueOf() > 7 * 86_400_000;
+  if (stale) issues.push("sync-stale");
+  return { status: issues.length ? "broken" : "healthy", healthy: !issues.length, stale, reason: issues.length ? "linkの再確認が必要です" : "reciprocal linkとimportは正常です", linkId: link.linkId, peerProjectId: link.peerProjectId, importedAt, issues };
+}
+
+function xmindDiagnostic(root) {
+  const settingsPath = safeWritePath(root, ".clarity/xmind-settings.json");
+  if (!existsSync(settingsPath)) return { status: "disabled", enabled: false, source: "default", verified: true };
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    if (settings.schemaVersion !== 1 || typeof settings.xmindEnabled !== "boolean") return { status: "broken", enabled: false, source: "explicit-setting", verified: false, issue: "settings-invalid" };
+    return { status: settings.xmindEnabled ? "enabled" : "disabled", enabled: settings.xmindEnabled, source: "explicit-setting", verified: true };
+  } catch {
+    return { status: "broken", enabled: false, source: "explicit-setting", verified: false, issue: "settings-json-invalid" };
+  }
+}
+
 export function doctor(rootValue, options = {}) {
   const canonical = readCanonical(rootValue);
   const expected = buildState(canonical.project, canonical.events, canonical.evidence);
@@ -1263,8 +1310,10 @@ export function doctor(rootValue, options = {}) {
   const schemaStatus = canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION ? "current" : "migration-available";
   const projectionOk = !stored.error && storedBytes === expectedBytes;
   const hook = hookDiagnostic(canonical.root, options);
+  const link = linkedProjectDiagnostic(canonical.root, canonical.project);
+  const xmind = xmindDiagnostic(canonical.root);
   return {
-    ok: projectionOk && cleanup.candidates.length === 0 && !["degraded", "untrusted", "failure"].includes(hook.status),
+    ok: projectionOk && cleanup.candidates.length === 0 && !["degraded", "untrusted", "failure"].includes(hook.status) && link.healthy && xmind.status !== "broken",
     mode: canonical.project.mode,
     schemaVersion: canonical.project.schemaVersion,
     currentSchemaVersion: CLARITY_SCHEMA_VERSION,
@@ -1281,12 +1330,13 @@ export function doctor(rootValue, options = {}) {
     rootEntry: canonical.project.rootEntry,
     capabilities: {
       hook,
-      link: { status: canonical.project.secretaryLink ? "設定あり・未検証" : "未設定", reason: "link healthの実検証は後続Sprintです" },
+      link,
+      xmind,
       projection: { status: projectionOk ? "正常" : "要再構築", verified: projectionOk },
       lock: { status: cleanup.candidates.length ? "残骸あり" : "残骸なし", verified: true },
     },
     runtimeCleanup: cleanup,
-    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : !["supported", "verified"].includes(hook.status) ? hook.nextAction : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
+    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : !link.healthy ? "link mapping／manual bundle／manifestを確認してください" : !["supported", "verified"].includes(hook.status) ? hook.nextAction : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
   };
 }
 
@@ -1300,6 +1350,7 @@ export function status(rootValue) {
     name: canonical.project.name,
     mode: canonical.project.mode,
     repoIdentity: canonical.project.repoIdentity,
+    linkHealth: linkedProjectDiagnostic(canonical.root, canonical.project),
     itemCount: state.items.length,
     quadrants: Object.fromEntries(Object.entries(state.quadrants).map(([key, ids]) => [key, { label: quadrantMeta[key].label, count: ids.length }])),
     partial: doctor(canonical.root).stateMismatch,

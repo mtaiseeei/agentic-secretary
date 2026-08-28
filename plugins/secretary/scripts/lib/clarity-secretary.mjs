@@ -272,7 +272,12 @@ export function secretaryProjectClarityStatus(secretaryRootValue, rawName, optio
     project: { name: record.name, scope: record.scope, path: `${record.rel}/PROJECT.md` },
     resolver: { selected: record.scope, conflict: record.conflict },
     attention: clarity.report.attention,
-    linkHealth: localReferenceHealth(record, clarity.project),
+    linkHealth: clarity.report.linkHealth?.status === "broken"
+      ? (clarity.report.linkHealth.stale ? "linked-stale" : "linked-broken")
+      : clarity.report.linkHealth?.status === "healthy"
+        ? "linked-healthy"
+        : localReferenceHealth(record, clarity.project),
+    linkDiagnostic: clarity.report.linkHealth,
     lifecycleAuthority: "projects",
     detailPath: `${record.rel}/clarity/.clarity/state.json`,
   };
@@ -318,7 +323,8 @@ export function portfolioRollup(secretaryRootValue) {
         continue;
       }
       const top = clarity.report.attention.top[0] || null;
-      projects.push({ name: record.name, scope: record.scope, clarity: "available", attentionCount: clarity.report.attention.activeCount, top: top ? { itemId: top.itemId, title: top.title, level: top.level, reasons: top.reasonLabels, lagDays: Number(top._rank?.age || 0) } : null });
+      const externalLink = clarity.report.linkHealth || { status: "not-linked", stale: false, healthy: true };
+      projects.push({ name: record.name, scope: record.scope, clarity: "available", attentionCount: clarity.report.attention.activeCount, linkHealth: externalLink.status, linkStale: Boolean(externalLink.stale), top: top ? { itemId: top.itemId, title: top.title, level: top.level, reasons: top.reasonLabels, lagDays: Number(top._rank?.age || 0) } : null });
       activeCount += clarity.report.attention.activeCount;
       for (const item of clarity.report.attention.top) attention.push({ project: record.name, ...item });
     } catch (error) {

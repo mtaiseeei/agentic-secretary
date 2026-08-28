@@ -70,6 +70,24 @@ node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clar
 
 previewはwrite 0件。Mermaid rendererが使えなくても`.mmd`とMarkdownを保持し、構造図のmindmap構文を使えない場合は`--mindmap-failure`でflowchartへfallbackする。
 
+## Linked External Repo
+
+- linkは`prepare → accept → finalize`の順で行う。各段階で双方のClarity Project ID、Repo identity、link ID、digest、authority profileを確認し、既存Standalone／Secretary-localのProject IDを変えない。
+- Link Request、reciprocal manifest、sync bundleへSecret、資格情報、absolute local path、顧客本文を入れない。local checkout mappingはtracked fileではなく各Repoの`.git/clarity-links.json`だけへ、previewと確認後に保存する。
+- manual bundleが標準経路であり、networkなしで全link／sync semanticを完了できる。GitHub read-only adapterも明示許可前は0 callで停止し、許可があってもpush、fetch、pull、remote変更を行わない。
+- sync previewはwrite 0件。applyは自Repoの`.clarity/imports/`、`.clarity/projections/linked/`と純追加Eventだけを更新し、相手Repo、remote、branch、Git状態を変更しない。
+- authority Primary重複、identity／digest改ざん、stale、newer schema、tombstone、concurrent revisionは自動採用しない。last-write-winsを使わず、Secretary側／Repo側／new Decision／split／defer／unlinkから選び、resolutionをEventへ残す。
+
+```bash
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-identity "<repo-root>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-prepare "<secretary-project-clarity-root>" --target-project-id "<id>" --target-repo-identity-json '<JSON>' --role secretary --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-accept "<external-repo>" --input-file "<request-bundle.json>" --json
+# previewを確認後だけ同じcommandへ--applyを付ける。finalizeも双方で同じ境界を守る。
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-export "<repo-root>" --link-id "<link-id>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" sync-preview "<repo-root>" --input-file "<manual-bundle.json>" --json
+node "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT:-${CODEX_PLUGIN_ROOT:-}}}/scripts/clarity.mjs" link-doctor "<repo-root>" --json
+```
+
 ## Xmind provider
 
 - Xmind設定は既定OFF。利用者が明示した場合だけ`xmind-setting --enabled on`とし、`off`で再停止できる。

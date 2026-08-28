@@ -31,6 +31,20 @@ import {
   writeLocalXmind,
   writeProjectionBundle,
 } from "./lib/clarity-projection.mjs";
+import {
+  DEFAULT_AUTHORITY_PROFILE,
+  acceptLink,
+  applySync,
+  exportSyncBundle,
+  finalizeLink,
+  inspectLinkIdentity,
+  linkDoctor,
+  prepareLink,
+  previewSync,
+  readOnlyGitHubAdapter,
+  resolveSyncConflict,
+  setLocalLinkMapping,
+} from "./lib/clarity-link.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { safeWritePath } from "./lib/safe-fs.mjs";
@@ -56,6 +70,17 @@ function usage(message = "") {
   clarity xmind-validate <repo> --target <relative.xmind> [--json]
   clarity xmind-propose <repo> --item-id <id> --section <decision|execution|validation> --value <status> [--json]
   clarity xmind-proposal-apply <repo> --proposal-json '<JSON>' --decision <approved|rejected|canceled> [--json]
+  clarity link-prepare <repo> --target-project-id <id> --target-repo-identity-json '<JSON>' --role <secretary|repo> [--authority-json '<JSON>'] [--json]
+  clarity link-identity <repo> [--json]
+  clarity link-accept <repo> --input-file <bundle.json> [--apply] [--json]
+  clarity link-finalize <repo> --input-file <bundle.json> [--apply] [--json]
+  clarity link-map <repo> --link-id <id> --peer-root <path> [--apply] [--json]
+  clarity link-export <repo> [--link-id <id>] [--json]
+  clarity sync-preview <repo> --input-file <bundle.json> [--json]
+  clarity sync-apply <repo> --input-file <bundle.json> --apply [--json]
+  clarity sync-resolve <repo> --link-id <id> --conflict-id <id> --choice <secretary|repo|new-decision|split|defer|unlink> [--note <text>] [--apply] [--json]
+  clarity link-doctor <repo> [--link-id <id>] [--json]
+  clarity github-read-adapter <repo> [--allow-read] --input-file <bundle.json> [--json]
   clarity event <repo> --event-json '<JSON>' [--json]
   clarity evidence <repo> --evidence-json '<JSON>' [--json]
   clarity decide-project <project-root> --secretary-root <secretary> --project <name> --decision <text> --current <text> --next <text> [--item-id <id>] [--operation-id <id>] [--json]`, 2);
@@ -66,7 +91,7 @@ function parse(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
     if (!value.startsWith("--")) { positional.push(value); continue; }
-    if (["--apply", "--cancel", "--json", "--mindmap-failure"].includes(value)) { options.set(value, true); continue; }
+    if (["--apply", "--cancel", "--json", "--mindmap-failure", "--allow-read"].includes(value)) { options.set(value, true); continue; }
     if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) usage(`${value} の値がありません。`);
     options.set(value, argv[index + 1]);
     index += 1;
@@ -78,6 +103,16 @@ function parseJson(value, label) {
   if (!value) usage(`${label} を指定してください。`);
   try { return JSON.parse(value); }
   catch { usage(`${label} がJSONではありません。`); }
+}
+
+function inputJson(options, { optional = false } = {}) {
+  if (options.get("--input-json")) return parseJson(options.get("--input-json"), "--input-json");
+  if (options.get("--input-file")) {
+    try { return JSON.parse(readFileSync(resolve(options.get("--input-file")), "utf8")); }
+    catch { usage("--input-fileをJSONとして読めません。"); }
+  }
+  if (optional) return null;
+  usage("--input-fileまたは--input-jsonを指定してください。");
 }
 
 function render(command, result, json) {
@@ -129,6 +164,16 @@ function render(command, result, json) {
     process.stdout.write(`- mode: ${result.mode}\n- schema: ${result.schemaVersion}（${result.schemaStatus}）\n`);
     process.stdout.write(`- projection: ${result.capabilities.projection.status}\n- Hook: ${result.capabilities.hook.status}\n- link: ${result.capabilities.link.status}\n- lock: ${result.capabilities.lock.status}\n`);
     process.stdout.write(`次の一手: ${result.nextAction}\n`);
+    return;
+  }
+  if (["link-identity", "link-prepare", "link-accept", "link-finalize", "link-map", "link-export", "sync-preview", "sync-apply", "sync-resolve", "link-doctor", "github-read-adapter"].includes(command)) {
+    process.stdout.write(`Project Clarity ${command}: ${result.status}\n`);
+    process.stdout.write(`- 変更: ${result.changed ? "あり" : "なし"}\n`);
+    if (result.linkId) process.stdout.write(`- link ID: ${result.linkId}\n`);
+    if (result.networkCalls !== undefined) process.stdout.write(`- network: ${result.networkCalls}件\n`);
+    if (result.externalWrites !== undefined) process.stdout.write(`- 外部write: ${result.externalWrites}件\n`);
+    if (result.status === "conflict") process.stdout.write(`- conflict: ${result.conflicts.length}件（last-write-winsは行いません）\n`);
+    if (result.nextAction) process.stdout.write(`次の一手: ${result.nextAction}\n`);
     return;
   }
   if (["migrate", "cleanup"].includes(command)) {
@@ -215,6 +260,25 @@ try {
   }
   else if (command === "xmind-propose") result = proposeXmindEdit(root, { itemId: options.get("--item-id"), section: options.get("--section"), value: options.get("--value") });
   else if (command === "xmind-proposal-apply") result = applyXmindProposal(root, parseJson(options.get("--proposal-json"), "--proposal-json"), { decision: options.get("--decision") || "unanswered" });
+  else if (command === "link-identity") result = inspectLinkIdentity(root);
+  else if (command === "link-prepare") result = prepareLink(root, {
+    targetProjectId: options.get("--target-project-id"),
+    targetRepositoryIdentity: parseJson(options.get("--target-repo-identity-json"), "--target-repo-identity-json"),
+    localRole: options.get("--role") || "secretary",
+    authorityProfile: options.get("--authority-json") ? parseJson(options.get("--authority-json"), "--authority-json") : DEFAULT_AUTHORITY_PROFILE,
+  });
+  else if (command === "link-accept") result = acceptLink(root, inputJson(options), { apply: Boolean(options.get("--apply")) });
+  else if (command === "link-finalize") result = finalizeLink(root, inputJson(options), { apply: Boolean(options.get("--apply")) });
+  else if (command === "link-map") result = setLocalLinkMapping(root, { linkId: options.get("--link-id"), peerRoot: options.get("--peer-root"), apply: Boolean(options.get("--apply")) });
+  else if (command === "link-export") result = exportSyncBundle(root, { linkId: options.get("--link-id") || null });
+  else if (command === "sync-preview") result = previewSync(root, inputJson(options));
+  else if (command === "sync-apply") {
+    if (!options.get("--apply")) usage("sync applyはpreview確認後に--applyを指定してください。");
+    result = applySync(root, inputJson(options));
+  }
+  else if (command === "sync-resolve") result = resolveSyncConflict(root, { linkId: options.get("--link-id"), conflictId: options.get("--conflict-id"), choice: options.get("--choice"), note: options.get("--note"), apply: Boolean(options.get("--apply")) });
+  else if (command === "link-doctor") result = linkDoctor(root, { linkId: options.get("--link-id") || null });
+  else if (command === "github-read-adapter") result = readOnlyGitHubAdapter({ allowed: Boolean(options.get("--allow-read")), bundle: inputJson(options, { optional: !options.get("--allow-read") }) });
   else if (command === "event") result = appendEvent(root, parseJson(options.get("--event-json"), "--event-json"));
   else if (command === "evidence") result = appendEvidence(root, parseJson(options.get("--evidence-json"), "--evidence-json"));
   else if (command === "decide-project") {
