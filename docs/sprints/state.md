@@ -2,11 +2,11 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-050-patch-003
-- Retry Count: 2
+- Current ID: TBD
+- Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 4
-- Model Tier: strong
+- Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
 
@@ -89,7 +89,7 @@
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
-| sprint-050-patch-003 | awaiting-eval | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
+| sprint-050-patch-003 | done | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -97,6 +97,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-30: Sprint 050 Patch 003 Retry 2はGenerator candidate `51329fc05ea0e9e66f64aa5c3bf2ee2db168ed58`をfresh独立Evaluator commit `0f0407758f854633814b485b84e46af8a508044c`でPASS、35/35、blocking product finding 0。Target通常／exact Git-free各21/21、独立fixture 5/5で、F-02の正常／例外request後cleanup、request中read／write guard維持、F-01の複数alias token／dedupe／2 lease／段階cleanup／reuse、CLI／core／link／projection／Drift／Secretary adapter／Hook実入口、旧／新Repo bytes／Git不変を確認した。Sprint 041 43/43、045 35/35、046 34/34、047 25/25、inventory 19/19、049 20/20、変更11 `.mjs`構文11/11。Sprint 050既知digest差とSprint 048 wrapperのsandbox EPERM／通常環境長時間化はcandidate非因果のverification-infraとして分離し、未変更面のRetry 1証跡と変更面direct suiteで増分評価。Statusをdone、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0、Model Tier standard、Rotate noneとする。Lineage Dispatchesは承認reset後の実dispatch数4を保持。実顧客repo、private／Yasashii、release／install／cache／remote writeは未実施。
 - 2026-08-30: Sprint 050 Patch 003 Retry 2 Generator candidate `51329fc05ea0e9e66f64aa5c3bf2ee2db168ed58`を固定。Evaluator F-02に限定し、同期request scopeが所有するroot observation handleを成功・例外の両方で`finally`相当に逆順解放するよう、CLI／core／link／projection／Drift／Secretary adapter／Hookの実入口へ結線した。同一requestのnested resolveは同tokenをdedupeし、別alias tokenと全live guardはrequest中維持する。既存AR-014に正常完了反復→alias retarget→旧physical別request成功、失敗request後cleanupを追加し、AR-008の2 alias read／write fail-closed、`changed:false`、旧A／新B bytes不変、lease／reuseを維持。専用21/21、Git-free 21/21、inventory 19/19、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、構文／diff checkがgreen。Sprint 048はsandbox EPERMと通常環境の既存master回帰長時間化をPASS扱いせずprogressへ記録。Statusをawaiting-evalとし、fresh独立Evaluator dispatchを1件予約してLineage Dispatchesを4へ更新する。仕様・契約・rubric・feedback、実顧客repo、private／Yasashii、release／install／cache／remote writeは未変更。
 - 2026-08-30: Sprint 050 Patch 003 Retry 1のfresh独立Evaluatorはcandidate `202b40711fc61db772024548bcd6a87a4848deea`をFAIL（product／`implementation-issue`）、31/35と判定した。前回F-01の複数alias guard上書きは解消し、read／write fail-closed、`changed:false`、旧A／新B bytes不変、helper cleanup／reuseは成立。一方、実際のCLI／core／link／projection／Drift／Secretary adapter／Hook入口が`observationToken`を破棄し、製品側cleanup呼出0のため、完了済み`previewInit(aliasC)`の観測が残り、aliasをDへ差し替えた後の別`previewInit(physicalC)`をstale guardで誤停止するCritical F-02を独立再現した。Retry開始HEADでは成功しcandidateだけ失敗するためcandidate因果。C1／C6／C24、AR-014、AC1／5／13が未達。Target／Git-free 21/21と近傍回帰はgreenだが実入口lifecycleを検出しないV-01をverification-infraとして分離。Retry Countを2、Status activeとし、同じstrong tier／Rotate noneのfresh Generator dispatchを1件予約してLineage Dispatchesを3へ更新する。修正は実入口のrequest-scoped handle cleanupと既存AR-014回帰に限定し、仕様・契約・rubric拡張、実顧客repo、private／Yasashii、release／install／cache／remote writeは行わない。
 - 2026-08-30: Sprint 050 Patch 003 Retry 1 Generator candidate `202b40711fc61db772024548bcd6a87a4848deea`を固定。Evaluator F-01に限定し、同一physical rootの単一observation slotをalias別live observation token、同一観測dedupe／lease、handle cleanupへ変更し、root guardが全live観測のalias chain／root／Repo／Git identityを重要read／write直前に再検証する形へ修正した。既存AR-008に2 alias interleavingのread／write拒否、`changed:false`、旧Repo A／新Repo B bytes不変、cleanup後の継続／再利用を追加。専用21/21、Git-free 21/21、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、inventory 19/19・41 case、通常環境Sprint 048 12/12＋wrapper 8/8、オーケストレーター専用再実行21/21、diff checkがgreen。Sprint 050 coverage-onlyの既存digest差はV-02のまま分離。Statusをawaiting-evalとし、fresh独立Evaluator dispatchを1件予約してLineage Dispatchesを2へ更新する。仕様・契約・rubric・feedback、実顧客repo、private／Yasashii、release／install／cache／remote writeは未変更。
