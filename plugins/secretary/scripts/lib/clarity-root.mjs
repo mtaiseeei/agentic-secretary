@@ -9,7 +9,11 @@ import {
 import { runExternalSync } from "./external-ops.mjs";
 
 // agentic-secretary:clarity-root-policy:v1
+// A physical root can be reached through more than one live alias request. Keep
+// each distinct observation until its handle is released; replacing a single
+// physical-root slot would let a later alias hide an earlier alias change.
 const observations = new Map();
+let observationSequence = 0;
 
 function sha256(value) {
   return createHash("sha256").update(String(value ?? "")).digest("hex");
@@ -109,6 +113,50 @@ function snapshot(requested, physicalRoot, previous = null) {
   };
 }
 
+function observationFingerprint(observation) {
+  return sha256(JSON.stringify(observation));
+}
+
+function observationBucket(physicalRoot, { create = false } = {}) {
+  let bucket = observations.get(physicalRoot);
+  if (!bucket && create) {
+    bucket = { byToken: new Map(), byFingerprint: new Map(), latestToken: null };
+    observations.set(physicalRoot, bucket);
+  }
+  return bucket || null;
+}
+
+function latestEntry(bucket) {
+  if (!bucket) return null;
+  return bucket.byToken.get(bucket.latestToken) || [...bucket.byToken.values()].at(-1) || null;
+}
+
+function revalidateAll(physicalRoot) {
+  const bucket = observationBucket(physicalRoot);
+  if (!bucket) return;
+  for (const entry of bucket.byToken.values()) revalidate(entry.observation);
+}
+
+function registerObservation(observation) {
+  const bucket = observationBucket(observation.physicalRoot, { create: true });
+  const fingerprint = observationFingerprint(observation);
+  const existingToken = bucket.byFingerprint.get(fingerprint);
+  const existing = existingToken ? bucket.byToken.get(existingToken) : null;
+  if (existing) {
+    existing.leases += 1;
+    bucket.latestToken = existing.token;
+    registerWorkingRootGuard(observation.physicalRoot, () => revalidateAll(observation.physicalRoot));
+    return existing;
+  }
+  const token = `clarity-root-observation-${process.pid}-${++observationSequence}`;
+  const entry = { token, observation, fingerprint, leases: 1 };
+  bucket.byToken.set(token, entry);
+  bucket.byFingerprint.set(fingerprint, token);
+  bucket.latestToken = token;
+  registerWorkingRootGuard(observation.physicalRoot, () => revalidateAll(observation.physicalRoot));
+  return entry;
+}
+
 function rootChanged(message, previous, current = null) {
   throw new FilesystemBoundaryError(message, "clarity-root-changed", {
     changed: false,
@@ -159,13 +207,16 @@ export function resolveClarityRoot(value) {
     if (error instanceof FilesystemBoundaryError) throw error;
     throw new FilesystemBoundaryError("Clarity working rootを安全に確認できません。", "working-root-unsafe");
   }
-  const existing = observations.get(physicalRoot);
-  const observation = existing && requested === physicalRoot ? existing : snapshot(requested, physicalRoot);
-  observations.set(physicalRoot, observation);
-  registerWorkingRootGuard(physicalRoot, () => revalidate(observation));
+  const bucket = observationBucket(physicalRoot);
+  const existing = requested === physicalRoot ? latestEntry(bucket) : null;
+  const entry = existing
+    ? registerObservation(existing.observation)
+    : registerObservation(snapshot(requested, physicalRoot));
+  const observation = entry.observation;
   return {
     root: physicalRoot,
     observation,
+    observationToken: entry.token,
     policy: {
       source: "clarity-internal-root-resolver",
       allowAncestorSymlinks: true,
@@ -177,45 +228,60 @@ export function resolveClarityRoot(value) {
 }
 
 export function revalidateClarityRoot(rootValue) {
-  const physical = realpathSync(resolve(rootValue));
-  const observation = observations.get(physical);
-  if (!observation) return resolveClarityRoot(rootValue);
-  revalidate(observation);
-  return { root: physical, observation, policy: rootPolicyFor(physical) };
+  const physical = realpathSync(resolve(typeof rootValue === "object" && rootValue?.root ? rootValue.root : rootValue));
+  const bucket = observationBucket(physical);
+  const entry = rootValue?.observationToken
+    ? bucket?.byToken.get(rootValue.observationToken)
+    : latestEntry(bucket);
+  if (!entry) return resolveClarityRoot(rootValue?.root || rootValue);
+  if (rootValue?.observationToken) revalidate(entry.observation);
+  else revalidateAll(physical);
+  return { root: physical, observation: entry.observation, observationToken: entry.token, policy: rootPolicyFor(rootValue) };
 }
 
 export function refreshClarityRootAfterOwnedReplacement(rootValue) {
-  const physical = realpathSync(resolve(rootValue));
-  const previous = observations.get(physical);
-  if (!previous) return resolveClarityRoot(rootValue);
-  const currentPhysical = workingRoot(previous.requested, { allowAncestorSymlinks: true });
-  if (currentPhysical !== previous.physicalRoot) {
-    return rootChanged("Clarity working rootのalias解決先が変わったため、旧・新rootとも変更せず停止しました。", previous, { physicalRoot: currentPhysical });
+  const physical = realpathSync(resolve(typeof rootValue === "object" && rootValue?.root ? rootValue.root : rootValue));
+  const bucket = observationBucket(physical);
+  if (!bucket) return resolveClarityRoot(rootValue?.root || rootValue);
+  for (const entry of bucket.byToken.values()) {
+    const previous = entry.observation;
+    const currentPhysical = workingRoot(previous.requested, { allowAncestorSymlinks: true });
+    if (currentPhysical !== previous.physicalRoot) {
+      return rootChanged("Clarity working rootのalias解決先が変わったため、旧・新rootとも変更せず停止しました。", previous, { physicalRoot: currentPhysical });
+    }
+    const current = snapshot(previous.requested, currentPhysical, previous);
+    if (previous.aliases.length !== current.aliases.length || previous.aliases.some((row, index) => {
+      const next = current.aliases[index];
+      return !next || row.path !== next.path || row.linkTarget !== next.linkTarget || row.resolvedTarget !== next.resolvedTarget
+        || !sameIdentity(row.linkIdentity, next.linkIdentity) || !sameIdentity(row.targetIdentity, next.targetIdentity);
+    })) {
+      return rootChanged("Clarity working rootのancestor aliasが差し替わったため、旧・新rootとも変更せず停止しました。", previous, current);
+    }
+    if (previous.git.kind !== current.git.kind || previous.git.top !== current.git.top
+      || previous.git.remoteDigest !== current.git.remoteDigest
+      || Boolean(previous.git.topIdentity) !== Boolean(current.git.topIdentity)
+      || (previous.git.topIdentity && !sameIdentity(previous.git.topIdentity, current.git.topIdentity))
+      || Boolean(previous.git.gitDirIdentity) !== Boolean(current.git.gitDirIdentity)
+      || (previous.git.gitDirIdentity && !sameIdentity(previous.git.gitDirIdentity, current.git.gitDirIdentity))) {
+      return rootChanged("Clarity working rootのRepo／Git identityが変わったため、変更せず停止しました。", previous, current);
+    }
+    entry.observation = current;
+    entry.fingerprint = observationFingerprint(current);
   }
-  const current = snapshot(previous.requested, currentPhysical, previous);
-  if (previous.aliases.length !== current.aliases.length || previous.aliases.some((row, index) => {
-    const next = current.aliases[index];
-    return !next || row.path !== next.path || row.linkTarget !== next.linkTarget || row.resolvedTarget !== next.resolvedTarget
-      || !sameIdentity(row.linkIdentity, next.linkIdentity) || !sameIdentity(row.targetIdentity, next.targetIdentity);
-  })) {
-    return rootChanged("Clarity working rootのancestor aliasが差し替わったため、旧・新rootとも変更せず停止しました。", previous, current);
-  }
-  if (previous.git.kind !== current.git.kind || previous.git.top !== current.git.top
-    || previous.git.remoteDigest !== current.git.remoteDigest
-    || Boolean(previous.git.topIdentity) !== Boolean(current.git.topIdentity)
-    || (previous.git.topIdentity && !sameIdentity(previous.git.topIdentity, current.git.topIdentity))
-    || Boolean(previous.git.gitDirIdentity) !== Boolean(current.git.gitDirIdentity)
-    || (previous.git.gitDirIdentity && !sameIdentity(previous.git.gitDirIdentity, current.git.gitDirIdentity))) {
-    return rootChanged("Clarity working rootのRepo／Git identityが変わったため、変更せず停止しました。", previous, current);
-  }
-  observations.set(physical, current);
-  registerWorkingRootGuard(physical, () => revalidate(current));
-  return { root: physical, observation: current, policy: rootPolicyFor(physical) };
+  bucket.byFingerprint.clear();
+  for (const entry of bucket.byToken.values()) bucket.byFingerprint.set(entry.fingerprint, entry.token);
+  registerWorkingRootGuard(physical, () => revalidateAll(physical));
+  const entry = latestEntry(bucket);
+  return { root: physical, observation: entry.observation, observationToken: entry.token, policy: rootPolicyFor(rootValue) };
 }
 
 export function rootPolicyFor(rootValue) {
-  const physical = realpathSync(resolve(rootValue));
-  const observation = observations.get(physical);
+  const physical = realpathSync(resolve(typeof rootValue === "object" && rootValue?.root ? rootValue.root : rootValue));
+  const bucket = observationBucket(physical);
+  const entry = rootValue?.observationToken
+    ? bucket?.byToken.get(rootValue.observationToken)
+    : latestEntry(bucket);
+  const observation = entry?.observation;
   return {
     source: "clarity-internal-root-resolver",
     allowAncestorSymlinks: true,
@@ -226,7 +292,26 @@ export function rootPolicyFor(rootValue) {
 }
 
 export function clearClarityRootObservation(rootValue) {
-  const physical = realpathSync(resolve(rootValue));
-  observations.delete(physical);
-  registerWorkingRootGuard(physical, null);
+  const isHandle = typeof rootValue === "object" && rootValue?.root && rootValue?.observationToken;
+  // A handle already carries the canonical physical key. Do not require that
+  // path to still exist merely to release a failed or displaced observation.
+  const physical = isHandle ? resolve(rootValue.root) : realpathSync(resolve(rootValue));
+  const bucket = observationBucket(physical);
+  if (!bucket) return;
+  if (!isHandle) {
+    observations.delete(physical);
+    registerWorkingRootGuard(physical, null);
+    return;
+  }
+  const entry = bucket.byToken.get(rootValue.observationToken);
+  if (!entry) return;
+  entry.leases -= 1;
+  if (entry.leases > 0) return;
+  bucket.byToken.delete(entry.token);
+  if (bucket.byFingerprint.get(entry.fingerprint) === entry.token) bucket.byFingerprint.delete(entry.fingerprint);
+  if (bucket.latestToken === entry.token) bucket.latestToken = [...bucket.byToken.keys()].at(-1) || null;
+  if (bucket.byToken.size === 0) {
+    observations.delete(physical);
+    registerWorkingRootGuard(physical, null);
+  }
 }

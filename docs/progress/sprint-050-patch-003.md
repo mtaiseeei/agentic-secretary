@@ -143,3 +143,72 @@ tracked link bundle、Event、Evidence、projectionをscanし、fixtureのreques
 ## Evaluator handoff
 
 EvaluatorはGenerator commitのclean candidateで、まず`node scripts/sprint-050-patch-003-test.mjs`を実行し、CF 7／AR 14、actual path／realpath、identity、error code、tree／Git snapshot、operation countを独立確認する。続いてinventory、Sprint 041／045／046／047／049、通常環境のSprint 048 wrapperを再実行する。coverage-onlyの既知digest差は開始HEAD再現と区別し、製品findingとverification baselineを混同しない。
+
+## Retry 1 — F-01複数alias interleavingのfail-closed修正
+
+- Retry開始HEAD: `ff8dc313032d06cc1526b29b5c6f9176a8b16838`
+- 対象: Evaluator Critical finding F-01と、既存AR-008を守るV-01回帰だけ
+- 実装日: 2026-08-30
+- ステータス: Generator実装・自己検査完了、fresh独立Evaluator待ち。本節はEvaluator PASSではない。
+
+### 実装
+
+- `clarity-root.mjs`の物理root単位の単一observation slotを廃止し、同じ物理rootを指すaliasごとにlive observation tokenを保持するbucketへ変更した。alias 2のresolveはalias 1の観測を上書きしない。
+- `safeWritePath()`から呼ばれる既存root guardは、その物理rootに残る全live observationについて、要求path、ancestor alias chain、物理root identity、Repo／Git identityを重要read／write直前に再検証する。どれか一つでも差替えを検出すると`clarity-root-changed`、`changed:false`で停止する。
+- 同じalias／identityの反復resolveは同じtokenへdedupeし、lease countだけを増やす。`clearClarityRootObservation(handle)`はhandle単位でleaseを解放し、最後のleaseで観測を除去する。従来のroot文字列cleanupはその物理rootの全観測を除去する。最後の観測を解放した後はroot guard自体も除去するため、token／観測の無制限な重複とstale guardの再利用を避ける。
+- `refreshClarityRootAfterOwnedReplacement()`と`revalidateClarityRoot()`も単一slotではなくlive observation集合を扱うように揃えた。一般`workingRoot()`、Clarity以外のfilesystem API、利用者向けflagは変更していない。
+- collaboration inventoryの`clarity-root-policy` digestだけを現在product bytesへ更新した。surface、case、marker、path集合は変更していない。
+
+### AR-008回帰追加
+
+同じ物理Repo Aを指すalias 1／alias 2を同一processで順にresolveし、alias 1 handleを保持したままalias 1だけをRepo Bへ差し替えた。その後、alias 1旧handleから次を独立検査した。
+
+- `README.md`の重要read直前path解決: `clarity-root-changed`、`changed:false`
+- `.clarity/project.json`の重要write直前path解決: `clarity-root-changed`、`changed:false`
+- 旧Repo A／新Repo Bのtree digest: read／write negativeの前後で双方不変
+- alias 1 handle cleanup後: alias 2 handleは誤停止せずRepo Aをread可能
+- alias 2の重複handle cleanup後: alias 1の現在参照先Repo Bを新規resolveして安全pathを再利用可能
+- 同一aliasの反復resolve: observation tokenが同一で、同じlive observationを重複保持しない
+
+既存AR-008の単一alias差替えと同path inode差替えも保持した。AR-008は1 caseのままで、CF 7＋AR 14の21 ID、Severity、feature割当、受け入れ基準、証拠形式は変更していない。
+
+### Retry 1変更file
+
+```text
+plugins/secretary/collaboration-inventory.json
+plugins/secretary/scripts/lib/clarity-root.mjs
+scripts/sprint-050-patch-003-test.mjs
+docs/progress/sprint-050-patch-003.md
+```
+
+Planner所有の`docs/spec*`／Sprint契約、Orchestrator所有の`docs/sprints/state.md`、Evaluator所有の`docs/feedback/**`は変更していない。private／Yasashii、installed cache、manifest、version、release／Marketplaceも変更していない。
+
+### Retry 1実行結果
+
+| command | result |
+|---|---|
+| `node scripts/sprint-050-patch-003-test.mjs` | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0`。新しいAR-008 interleaving read／write／cleanupを含む |
+| Git-free current bytesで同上 | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+| `node scripts/sprint-041-test.mjs` | `PASS=43 FAIL=0` |
+| `node scripts/sprint-045-test.mjs` | `PASS=35 FAIL=0` |
+| `node scripts/sprint-046-test.mjs` | `PASS=34 FAIL=0`、LK-007 PASS、remote command 0、canary不変 |
+| `node scripts/sprint-047-test.mjs` | `PASS=25 FAIL=0`、GS-009 stress 32 CLI＋32 Hook、parse／unique／rebuild 100% |
+| `node scripts/sprint-049-inventory.mjs validate` | `PASS=19 FAIL=0 CASES=41 MARKERS=VALID DIGESTS=VALID` |
+| `node scripts/sprint-049-test.mjs` | `PASS=20 FAIL=0`、CLX-006／020 PASS、side-effect violation 0 |
+| `bash scripts/sprint-048-regression.sh`（通常環境） | validator 24/24、`SPRINT048_PASS=12 FAIL=0`、wrapper `PASS=8 FAIL=0`、PK-007／008 PASS |
+| `node --check`（変更した2つの`.mjs`） | exit 0 |
+| `git diff --check` | exit 0 |
+
+最初のsandbox内Sprint 048は既知の`listen EPERM 127.0.0.1`でPK-007が停止した。同じcandidateを通常環境で再実行し、master回帰、Git-free、clean checkout相当、wrapperを含め0 FAILで完走した。
+
+`node scripts/sprint-050-test.mjs --coverage-only`はRetry 1でも既知baselineの`primary meaning/severity changed`でexit 1、actual `6c073e574638b2e9382e0521a936c9b4605eea7ccc03dbabd21d0953d5b0bba8`、expected `f3782f008a362f4a7d9d38afeb48cda97ced61062e69fd062093132277ccf979`だった。Retry 0と開始HEADで因果分離済みのV-02であり、本Retryではspec／registry case本文を変更していない。
+
+### Retry 1残余／未実施境界
+
+- fresh独立Evaluatorの再現・採点、Evaluator PASS、Orchestratorのstate更新は未実施。
+- UI変更がないためbrowser／DOM／screenshotは非該当。Windows native、Claude Code／Codex live Hook、external Xmindは未実施。
+- 実顧客repo、Mac mini対象repo、private my-vault、Yasashii、installed cache、実provider／connector、実remote、networkへは触れていない。
+- install、version bump、CHANGELOG、release inventory、Marketplace、cachebuster、reinstall、new session、push、PR、tag、GitHub Releaseは未実施・未変更。
+- external／downstream writeは0件。検証のwriteはOS一時directory内のsynthetic fixtureだけである。
+
+Evaluatorはclean candidateでTarget suiteを先に実行し、AR-008のalias 1／alias 2 tokenが別であること、alias 2 resolve後もalias 1旧観測が残ること、差替え後のread／write双方が`clarity-root-changed`／`changed:false`であること、旧A／新B tree不変、handle cleanup後のalias 2／Repo B再利用を独立確認する。その後、上表の近傍回帰を増分再評価する。Generator自己評価をVerdictへ流用しない。

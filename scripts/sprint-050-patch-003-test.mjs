@@ -151,6 +151,27 @@ try {
   test("AR-008", "alias replacement is detected before a guarded read or write", () => {
     const parentA = join(fixture, "swap-a"); const parentB = join(fixture, "swap-b"); mkdirSync(parentA); mkdirSync(parentB); const repoA = makeRepo(join(parentA, "repo"), { initialized: true }); makeRepo(join(parentB, "repo"), { initialized: true }); const alias = join(fixture, "swap"); symlinkSync(parentA, alias, "dir"); const requested = join(alias, "repo"); const resolved = resolveClarityRoot(requested); const beforeA = tree(repoA); unlinkSync(alias); symlinkSync(parentB, alias, "dir"); expectCode(() => safeWritePath(resolved.root, ".clarity/project.json"), "clarity-root-changed"); assert.equal(tree(repoA), beforeA);
     const stableRepo = makeRepo(join(fixture, "same-path-repo"), { initialized: true }); const stableObservation = resolveClarityRoot(stableRepo); const displaced = join(fixture, "same-path-repo-old"); renameSync(stableRepo, displaced); makeRepo(stableRepo); const beforeOld = tree(displaced); const beforeNew = tree(stableRepo); expectCode(() => safeWritePath(stableObservation.root, ".clarity/project.json"), "clarity-root-changed"); assert.equal(tree(displaced), beforeOld); assert.equal(tree(stableRepo), beforeNew);
+
+    const interleavedA = join(fixture, "interleaved-a"); const interleavedB = join(fixture, "interleaved-b"); mkdirSync(interleavedA); mkdirSync(interleavedB);
+    const interleavedRepoA = makeRepo(join(interleavedA, "repo"), { initialized: true }); const interleavedRepoB = makeRepo(join(interleavedB, "repo"), { initialized: true });
+    const aliasOne = join(fixture, "interleaved-alias-1"); const aliasTwo = join(fixture, "interleaved-alias-2"); symlinkSync(interleavedA, aliasOne, "dir"); symlinkSync(interleavedA, aliasTwo, "dir");
+    const aliasOneRequest = join(aliasOne, "repo"); const aliasTwoRequest = join(aliasTwo, "repo");
+    const aliasOneHandle = resolveClarityRoot(aliasOneRequest); const aliasTwoHandle = resolveClarityRoot(aliasTwoRequest);
+    assert.notEqual(aliasOneHandle.observationToken, aliasTwoHandle.observationToken);
+    const repeatedAliasTwoHandle = resolveClarityRoot(aliasTwoRequest); assert.equal(repeatedAliasTwoHandle.observationToken, aliasTwoHandle.observationToken);
+    const beforeInterleavedA = tree(interleavedRepoA); const beforeInterleavedB = tree(interleavedRepoB);
+    unlinkSync(aliasOne); symlinkSync(interleavedB, aliasOne, "dir");
+    const readError = expectCode(() => readFileSync(safeWritePath(aliasOneHandle.root, "README.md"), "utf8"), "clarity-root-changed");
+    const writeError = expectCode(() => safeWritePath(aliasOneHandle.root, ".clarity/project.json"), "clarity-root-changed");
+    assert.equal(readError.details.changed, false); assert.equal(writeError.details.changed, false);
+    assert.equal(tree(interleavedRepoA), beforeInterleavedA); assert.equal(tree(interleavedRepoB), beforeInterleavedB);
+
+    clearClarityRootObservation(aliasOneHandle);
+    assert.equal(readFileSync(safeWritePath(aliasTwoHandle.root, "README.md"), "utf8").includes("Alias fixture"), true);
+    clearClarityRootObservation(aliasTwoHandle); clearClarityRootObservation(repeatedAliasTwoHandle);
+    const reused = resolveClarityRoot(aliasOneRequest); assert.equal(reused.root, realpathSync(interleavedRepoB));
+    assert.equal(safeWritePath(reused.root, ".clarity/project.json"), join(realpathSync(interleavedRepoB), ".clarity/project.json"));
+    clearClarityRootObservation(reused);
   });
   test("AR-009", "link bundle contains no alias or physical absolute local path", () => {
     const identity = inspectLinkIdentity(aliasRepo); const peer = inspectLinkIdentity(peerRepo); const request = prepareLink(aliasRepo, { targetProjectId: peer.projectId, targetRepositoryIdentity: peer.repositoryIdentity, localRole: "repo" }); const body = JSON.stringify(request); assert(!body.includes(aliasRepo)); assert(!body.includes(physicalRepo)); assert.equal(identity.changed, false);
