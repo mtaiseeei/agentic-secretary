@@ -2,7 +2,7 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-050-patch-002
+- Current ID: TBD
 - Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 8
@@ -88,7 +88,7 @@
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
-| sprint-050-patch-002 | awaiting-eval | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
+| sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -96,6 +96,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-29: Sprint 050 Patch 002はGenerator candidate `60cda8f7529950465920aa2bed5657da30cacc07`をfresh独立Evaluator commit `5556c09cf76ac3f164f6f3066385166c4a27240d`でPASS。機能完全性／動作安定性／回帰なしは全5/5、product finding 0。candidate archive／Git checkoutでhost別manifest、validator 24/24、Hook 40/40、Sprint 049 inventory 17/17＋統合20/20、Sprint 035 15/15、Codex plugin 4/4、Sprint 048 12/12、release integrity、negative、bytes不変を独立確認した。Sprint 050 coverage入口のregistry digest差はbaseline／candidate双方で同じ開始guardを再現しnonblocking verification-infra、archive上のGit command差もproduct非因果として記録。private実機証拠をpublic live PASSへ昇格せず、Statusをdone、Current IDをTBD、Retry／Spec-Issue 0、Lineage Dispatches 8、Model Tier standard、Rotate noneとする。release、push、tag、Marketplace、install、cache、workspace、downstream writeは0件。
 - 2026-08-29: Sprint 050 Patch 002 Generator candidate `60cda8f7529950465920aa2bed5657da30cacc07`を固定。Claude manifestの標準Hook重複参照だけを除き、Codex manifest参照、共通Hook、Clarity router／core／Skill／rules、inventory JSON、release inventory bytesを維持した。Sprint 048 validator 24/24、Sprint 048 12/12＋wrapper 8/8、Hook 40/40、Sprint 049 inventory 17/17＋統合20/20、Sprint 035 15/15、Codex plugin 4/4、release integrity、diff checkが0 FAIL。固定Sprint 050 coverage入口は今回未変更の既存registry meaning／severity digest差で停止したため、candidate因果をfresh独立Evaluatorへ委ねる。dispatch予約としてLineage Dispatchesを8、Statusをawaiting-eval、Model Tier standard、Rotate noneへ更新する。release、push、tag、Marketplace、install、cache、workspace、downstream writeは0件。
 - 2026-08-29: private版のClaude Code 2.1.232実導入で、標準`hooks/hooks.json`の自動読込とClaude manifestの同一参照が重複し、`Duplicate hooks file detected`となることを確認した。共通Hook本体とProject Clarity semanticsを変えず、Claude側の重複宣言だけを除く`Type: micro`のsprint-050-patch-002を開始。fresh Generator dispatch予約としてLineage Dispatchesを7、Model Tierをstandard、Rotateを`model-escalation`、Statusをactiveへ更新する。private実機証拠は共通契約のtriggerに限定し、public live PASSへは昇格しない。release、Marketplace、cache、install、new sessionは本Patchの対象外。
 - 2026-08-29: Sprint 050 Patch 001 Retry 1はfresh独立Evaluator commit `d50127a488fe424f48662807599ab79198a7b104`でPASS。対象Generator `df6d95b409977d36de8c8425858dcbae1034fa32`についてAC 11/11、C1／C2／C5／C6／C24／C25全5/5、ゼロ許容0、product finding 0。Patch 89/89、独立敵対28/28、Sprint 049 20/20、validator 23/23、通常環境Sprint 048 12/12＋wrapper 8/8＋release integrity、Sprint 050 273 PASS／0 FAIL／XM-007のみconditional NOT-RUN＋E2E 4/4、accepted tree 828／common 44 digest一致。最終feedback SHA-256 `331a324a05b7e7d8d783fed1addaebe5be32d427bac2105b2a4ed024276e291d`を使い、両downstream protected snapshotをread-only計算して一時handoff `/private/tmp/project-clarity-handoff-20260829/ready-handoff.json`を生成・再prewriteした。ready SHA-256 `09c3fa1289fa0af4d31c084a74ab108ce5cf85bcf3b3e7c9320cab72758d83c0`、snapshot SHA-256 `7a0ea5724296e7fe96cac0f6c6b1c1d19d36f6bf0fb05c23c9337a8fceb6f3be`、status `public-user-decision-risk-accepted`、`evaluatorPass=false`、accepted source `5f08d454c05576fcff8ab32c10c00887b4c15a96`、governance source `df6d95b409977d36de8c8425858dcbae1034fa32`、originは`verification-scope-issue`、AC3／C21とXM-007等の残余を保持、orderはprivate my-vault→Yasashii、writesDownstream false。public tracked templateはclosedのまま、source／両downstream／remote／release／host／Xmind write 0。Sprintをdone、Current ID／Next Planned TBD、Retry／Spec-Issue 0、Lineage Dispatches 6、Model Tier strong、Rotate noneとし、private版の別Harnessへ引き渡す。
