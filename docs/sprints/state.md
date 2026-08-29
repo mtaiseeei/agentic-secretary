@@ -2,12 +2,12 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: TBD
+- Current ID: sprint-050-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
-- Model Tier: strong
-- Rotate: none
+- Lineage Dispatches: 7
+- Model Tier: standard
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -88,6 +88,7 @@
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
+| sprint-050-patch-002 | active | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -95,6 +96,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-29: private版のClaude Code 2.1.232実導入で、標準`hooks/hooks.json`の自動読込とClaude manifestの同一参照が重複し、`Duplicate hooks file detected`となることを確認した。共通Hook本体とProject Clarity semanticsを変えず、Claude側の重複宣言だけを除く`Type: micro`のsprint-050-patch-002を開始。fresh Generator dispatch予約としてLineage Dispatchesを7、Model Tierをstandard、Rotateを`model-escalation`、Statusをactiveへ更新する。private実機証拠は共通契約のtriggerに限定し、public live PASSへは昇格しない。release、Marketplace、cache、install、new sessionは本Patchの対象外。
 - 2026-08-29: Sprint 050 Patch 001 Retry 1はfresh独立Evaluator commit `d50127a488fe424f48662807599ab79198a7b104`でPASS。対象Generator `df6d95b409977d36de8c8425858dcbae1034fa32`についてAC 11/11、C1／C2／C5／C6／C24／C25全5/5、ゼロ許容0、product finding 0。Patch 89/89、独立敵対28/28、Sprint 049 20/20、validator 23/23、通常環境Sprint 048 12/12＋wrapper 8/8＋release integrity、Sprint 050 273 PASS／0 FAIL／XM-007のみconditional NOT-RUN＋E2E 4/4、accepted tree 828／common 44 digest一致。最終feedback SHA-256 `331a324a05b7e7d8d783fed1addaebe5be32d427bac2105b2a4ed024276e291d`を使い、両downstream protected snapshotをread-only計算して一時handoff `/private/tmp/project-clarity-handoff-20260829/ready-handoff.json`を生成・再prewriteした。ready SHA-256 `09c3fa1289fa0af4d31c084a74ab108ce5cf85bcf3b3e7c9320cab72758d83c0`、snapshot SHA-256 `7a0ea5724296e7fe96cac0f6c6b1c1d19d36f6bf0fb05c23c9337a8fceb6f3be`、status `public-user-decision-risk-accepted`、`evaluatorPass=false`、accepted source `5f08d454c05576fcff8ab32c10c00887b4c15a96`、governance source `df6d95b409977d36de8c8425858dcbae1034fa32`、originは`verification-scope-issue`、AC3／C21とXM-007等の残余を保持、orderはprivate my-vault→Yasashii、writesDownstream false。public tracked templateはclosedのまま、source／両downstream／remote／release／host／Xmind write 0。Sprintをdone、Current ID／Next Planned TBD、Retry／Spec-Issue 0、Lineage Dispatches 6、Model Tier strong、Rotate noneとし、private版の別Harnessへ引き渡す。
 - 2026-08-29: Sprint 050 Patch 001 Retry 1 Generator candidate `df6d95b409977d36de8c8425858dcbae1034fa32`を固定。初回Evaluator P-01／P-02に限定し、governance feedbackをcanonicalな単一`Verdict: PASS`／単一`Evaluated commit`へ厳格化して、競合・同値重複・0件・code fence・blockquote・例示・引用markerを拒否した。template／readyのgovernance全階層をclosed schemaにし、Sprint 049 projectionをfield位置依存sliceからJSON構造認識へ置換、除外前に未知key／PASS alias／`evaluatorPass=true`をstandard validate／build／prewrite全入口で拒否する。攻撃fixture 23件を追加しPatch 89/89、Sprint 049 20/20、validator 23/23、通常環境Sprint 048 12/12＋wrapper 8/8＋release integrity、通常環境Sprint 050 273 PASS／0 FAIL／XM-007のみconditional NOT-RUN＋E2E 4/4、write 0。変更はhandoff validator、inventory、Patch test、progressの4fileだけで、spec／state／feedback／accepted product bytesは不変。Status awaiting-eval、Retry 1、Spec-Issue 0、Model Tier strong、Rotate none、fresh Sol/high Evaluator予約としてLineage Dispatches 6へ進める。AC3／C21実host live、XM-007、実downstream／release等の残余は未昇格。
 - 2026-08-28: Sprint 050 Patch 001初回fresh独立Evaluatorは対象commit `9e5d9e64d4b82eb11c1a0ffec9c8e5414b33fdbd`をFAIL（product／`implementation-issue`）。正式回帰はPatch 66/66、Sprint 049 20/20、validator 23/23、通常環境Sprint 048 12/12＋wrapper 8/8＋release integrity、Sprint 050 273 PASS／0 FAIL／XM-007のみconditional NOT-RUN＋E2E 4/4、accepted tree 828／common 44 digest一致だった。一方、実ready gateがFAIL＋PASS複数Verdict、複数Evaluated commit、code fence内だけのPASSを受理し、inventory projectionから除外したgovernance JSONへ未知のPASS alias／`evaluatorPass=true`相当fieldを追加してもstandard／user validationとready生成を通すfail-openを独立再現した。AC 8 PASS／3 FAIL、C25 3/5、ゼロ許容2根本原因。feedback commit `2e92ecfd59eb1b1f23afe7a67f06d22b58dc2ec0`を保持し、Retry 1ではcanonical単一Verdict／単一評価commitの厳格parse、code fence・引用・例示排除、全governance JSONのclosed schema、全入口の同一拒否を限定修正する。Status active、Retry 1、Spec-Issue 0、Model Tier strong、Rotate none、fresh Sol/high Generator予約としてLineage Dispatches 5へ進める。private／Yasashii／release／host／Xmind writeは0のまま。
