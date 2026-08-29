@@ -5,7 +5,7 @@
 - Current ID: sprint-050-patch-003
 - Retry Count: 2
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -89,7 +89,7 @@
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
-| sprint-050-patch-003 | active | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
+| sprint-050-patch-003 | awaiting-eval | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -97,6 +97,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-30: Sprint 050 Patch 003 Retry 2 Generator candidate `51329fc05ea0e9e66f64aa5c3bf2ee2db168ed58`を固定。Evaluator F-02に限定し、同期request scopeが所有するroot observation handleを成功・例外の両方で`finally`相当に逆順解放するよう、CLI／core／link／projection／Drift／Secretary adapter／Hookの実入口へ結線した。同一requestのnested resolveは同tokenをdedupeし、別alias tokenと全live guardはrequest中維持する。既存AR-014に正常完了反復→alias retarget→旧physical別request成功、失敗request後cleanupを追加し、AR-008の2 alias read／write fail-closed、`changed:false`、旧A／新B bytes不変、lease／reuseを維持。専用21/21、Git-free 21/21、inventory 19/19、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、構文／diff checkがgreen。Sprint 048はsandbox EPERMと通常環境の既存master回帰長時間化をPASS扱いせずprogressへ記録。Statusをawaiting-evalとし、fresh独立Evaluator dispatchを1件予約してLineage Dispatchesを4へ更新する。仕様・契約・rubric・feedback、実顧客repo、private／Yasashii、release／install／cache／remote writeは未変更。
 - 2026-08-30: Sprint 050 Patch 003 Retry 1のfresh独立Evaluatorはcandidate `202b40711fc61db772024548bcd6a87a4848deea`をFAIL（product／`implementation-issue`）、31/35と判定した。前回F-01の複数alias guard上書きは解消し、read／write fail-closed、`changed:false`、旧A／新B bytes不変、helper cleanup／reuseは成立。一方、実際のCLI／core／link／projection／Drift／Secretary adapter／Hook入口が`observationToken`を破棄し、製品側cleanup呼出0のため、完了済み`previewInit(aliasC)`の観測が残り、aliasをDへ差し替えた後の別`previewInit(physicalC)`をstale guardで誤停止するCritical F-02を独立再現した。Retry開始HEADでは成功しcandidateだけ失敗するためcandidate因果。C1／C6／C24、AR-014、AC1／5／13が未達。Target／Git-free 21/21と近傍回帰はgreenだが実入口lifecycleを検出しないV-01をverification-infraとして分離。Retry Countを2、Status activeとし、同じstrong tier／Rotate noneのfresh Generator dispatchを1件予約してLineage Dispatchesを3へ更新する。修正は実入口のrequest-scoped handle cleanupと既存AR-014回帰に限定し、仕様・契約・rubric拡張、実顧客repo、private／Yasashii、release／install／cache／remote writeは行わない。
 - 2026-08-30: Sprint 050 Patch 003 Retry 1 Generator candidate `202b40711fc61db772024548bcd6a87a4848deea`を固定。Evaluator F-01に限定し、同一physical rootの単一observation slotをalias別live observation token、同一観測dedupe／lease、handle cleanupへ変更し、root guardが全live観測のalias chain／root／Repo／Git identityを重要read／write直前に再検証する形へ修正した。既存AR-008に2 alias interleavingのread／write拒否、`changed:false`、旧Repo A／新Repo B bytes不変、cleanup後の継続／再利用を追加。専用21/21、Git-free 21/21、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、inventory 19/19・41 case、通常環境Sprint 048 12/12＋wrapper 8/8、オーケストレーター専用再実行21/21、diff checkがgreen。Sprint 050 coverage-onlyの既存digest差はV-02のまま分離。Statusをawaiting-evalとし、fresh独立Evaluator dispatchを1件予約してLineage Dispatchesを2へ更新する。仕様・契約・rubric・feedback、実顧客repo、private／Yasashii、release／install／cache／remote writeは未変更。
 - 2026-08-30: ユーザーが同一Sprint 050系譜のLineage Dispatchesリセットを明示承認したため、10から0へリセットした。直後にSprint 050 Patch 003 Retry 1のfresh Generator dispatchを1件予約し、現在値を1とする。修正範囲はEvaluator Critical finding F-01と、その既存AR-008基準を守る複数alias interleaving回帰V-01に限定する。契約・rubric・受け入れ基準は拡張せず、private／Yasashii、実顧客repo、release／install／cache／remote writeへは進めない。Retry Count 1、Spec-Issue Count 0、Model Tier strong、Rotate noneを維持する。
