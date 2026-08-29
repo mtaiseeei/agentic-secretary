@@ -19,7 +19,7 @@ import {
   validateProject,
 } from "./clarity-core.mjs";
 import { safeWritePath, writeFileAtomicSafe } from "./safe-fs.mjs";
-import { resolveClarityRoot } from "./clarity-root.mjs";
+import { resolveClarityRoot, withClarityRootObservation } from "./clarity-root.mjs";
 
 const LINK_SCHEMA_VERSION = 1;
 const LINK_STATES = new Set(["accepted", "active", "disabled"]);
@@ -213,7 +213,7 @@ function localParticipant(rootValue) {
   return { root, project, participant: { projectId: project.clarityProjectId, repositoryIdentity: identityRef } };
 }
 
-export function inspectLinkIdentity(rootValue) {
+function inspectLinkIdentityImpl(rootValue) {
   const { participant, project } = localParticipant(rootValue);
   return { status: "inspected", changed: false, projectId: participant.projectId, repositoryIdentity: participant.repositoryIdentity, mode: project.mode, networkCalls: 0, externalWrites: 0 };
 }
@@ -322,7 +322,7 @@ function updateProjectLink(rootValue, manifest) {
   return { project, originalMode };
 }
 
-export function prepareLink(rootValue, { targetProjectId, targetRepositoryIdentity, localRole = "secretary", authorityProfile = DEFAULT_AUTHORITY_PROFILE } = {}) {
+function prepareLinkImpl(rootValue, { targetProjectId, targetRepositoryIdentity, localRole = "secretary", authorityProfile = DEFAULT_AUTHORITY_PROFILE } = {}) {
   fail(LINK_ROLES.has(localRole), "link-role-invalid", "local roleはsecretaryまたはrepoです。");
   const { participant: source, project: sourceProject } = localParticipant(rootValue);
   const target = normalizeParticipant({ projectId: targetProjectId, repositoryIdentity: targetRepositoryIdentity }, "Link Request target");
@@ -345,7 +345,7 @@ export function prepareLink(rootValue, { targetProjectId, targetRepositoryIdenti
   return { status: "prepared", changed: false, networkCalls: 0, externalWrites: 0, request };
 }
 
-export function acceptLink(rootValue, requestInput, { apply = false } = {}) {
+function acceptLinkImpl(rootValue, requestInput, { apply = false } = {}) {
   const request = validateRequest(structuredClone(requestInput));
   let root;
   try { root = localParticipant(rootValue); }
@@ -390,7 +390,7 @@ export function acceptLink(rootValue, requestInput, { apply = false } = {}) {
   return { status: "accepted", changed: true, acceptance, manifest, networkCalls: 0, externalWrites: 0 };
 }
 
-export function finalizeLink(rootValue, input, { apply = false } = {}) {
+function finalizeLinkImpl(rootValue, input, { apply = false } = {}) {
   const local = localParticipant(rootValue);
   if (input?.kind === "clarity-link-finalization") {
     const finalization = validateFinalization(structuredClone(input));
@@ -469,7 +469,7 @@ function currentSourceRevision(root, participant = null) {
   return sha256({ projectId: local.projectId, items: rebuilt.state.items.map(exportItem), quadrants: rebuilt.state.quadrants });
 }
 
-export function exportSyncBundle(rootValue, { linkId = null, tombstones = [], extra = {} } = {}) {
+function exportSyncBundleImpl(rootValue, { linkId = null, tombstones = [], extra = {} } = {}) {
   const { root, participant } = localParticipant(rootValue);
   const manifest = activeManifest(root, linkId);
   assertLocal(participant, manifest.local, "active link local");
@@ -553,7 +553,7 @@ function conflictAttention(conflicts) {
   };
 }
 
-export function previewSync(rootValue, bundleInput) {
+function previewSyncImpl(rootValue, bundleInput) {
   const bundle = validateBundle(structuredClone(bundleInput));
   const { root, participant } = localParticipant(rootValue);
   const manifest = activeManifest(root, bundle.linkId);
@@ -651,7 +651,7 @@ export function previewSync(rootValue, bundleInput) {
   };
 }
 
-export function applySync(rootValue, bundleInput) {
+function applySyncImpl(rootValue, bundleInput) {
   const preview = previewSync(rootValue, bundleInput);
   if (preview.status === "unchanged") return { ...preview, status: "unchanged", changed: false, writeCount: 0 };
   fail(preview.status === "ready", `sync-${preview.status}`, preview.status === "conflict" ? "sync conflictを解消するまでapplyしません。" : preview.status === "stale" ? "stale bundleはapplyしません。" : "未対応schemaのbundleはapplyしません。", { preview });
@@ -667,7 +667,7 @@ export function applySync(rootValue, bundleInput) {
   return { ...preview, status: "applied", changed: true, writeCount: 4, importedAt, projection };
 }
 
-export function resolveSyncConflict(rootValue, { linkId, conflictId: selectedConflictId, choice, note = null, apply = false } = {}) {
+function resolveSyncConflictImpl(rootValue, { linkId, conflictId: selectedConflictId, choice, note = null, apply = false } = {}) {
   fail(/^cl_[a-f0-9]{20}$/u.test(String(linkId || "")), "link-id-invalid", "link IDが不正です。");
   fail(/^cf_[a-f0-9]{20}$/u.test(String(selectedConflictId || "")), "conflict-id-invalid", "conflict IDが不正です。");
   fail(RESOLUTION_CHOICES.has(choice), "resolution-choice-invalid", "resolutionはSecretary側／Repo側／new Decision／split／defer／unlinkから選んでください。");
@@ -689,7 +689,7 @@ export function resolveSyncConflict(rootValue, { linkId, conflictId: selectedCon
   return { ...result, status: choice === "defer" ? "deferred" : "resolved", changed: event.changed, event: event.event };
 }
 
-export function setLocalLinkMapping(rootValue, { linkId, peerRoot, apply = false } = {}) {
+function setLocalLinkMappingImpl(rootValue, { linkId, peerRoot, apply = false } = {}) {
   const local = localParticipant(rootValue);
   const manifest = activeManifest(local.root, linkId);
   const peer = currentRoot(peerRoot, { legacyLocatorError: true });
@@ -713,7 +713,7 @@ export function setLocalLinkMapping(rootValue, { linkId, peerRoot, apply = false
   return { ...result, status: "mapped", changed: true };
 }
 
-export function linkDoctor(rootValue, { linkId = null } = {}) {
+function linkDoctorImpl(rootValue, { linkId = null } = {}) {
   const { root, participant } = localParticipant(rootValue);
   const rows = listManifests(root).filter((row) => !linkId || row.linkId === linkId);
   if (!rows.length) return { status: "not-linked", healthy: true, stale: false, links: [], nextAction: "link prepareから開始できます" };
@@ -734,6 +734,21 @@ export function linkDoctor(rootValue, { linkId = null } = {}) {
   const healthy = links.every((row) => row.healthy);
   return { status: healthy ? "healthy" : "broken", healthy, stale: links.some((row) => row.stale), links, nextAction: healthy ? "追加操作は不要です" : "原因を確認し、mapping再確認／manual sync／unlinkを選んでください" };
 }
+
+function runRootRequest(rootValue, operation) {
+  return withClarityRootObservation(rootValue, (handle) => operation(handle.root));
+}
+
+export function inspectLinkIdentity(rootValue) { return runRootRequest(rootValue, inspectLinkIdentityImpl); }
+export function prepareLink(rootValue, options = {}) { return runRootRequest(rootValue, (root) => prepareLinkImpl(root, options)); }
+export function acceptLink(rootValue, requestInput, options = {}) { return runRootRequest(rootValue, (root) => acceptLinkImpl(root, requestInput, options)); }
+export function finalizeLink(rootValue, input, options = {}) { return runRootRequest(rootValue, (root) => finalizeLinkImpl(root, input, options)); }
+export function exportSyncBundle(rootValue, options = {}) { return runRootRequest(rootValue, (root) => exportSyncBundleImpl(root, options)); }
+export function previewSync(rootValue, bundleInput) { return runRootRequest(rootValue, (root) => previewSyncImpl(root, bundleInput)); }
+export function applySync(rootValue, bundleInput) { return runRootRequest(rootValue, (root) => applySyncImpl(root, bundleInput)); }
+export function resolveSyncConflict(rootValue, options = {}) { return runRootRequest(rootValue, (root) => resolveSyncConflictImpl(root, options)); }
+export function setLocalLinkMapping(rootValue, options = {}) { return runRootRequest(rootValue, (root) => setLocalLinkMappingImpl(root, options)); }
+export function linkDoctor(rootValue, options = {}) { return runRootRequest(rootValue, (root) => linkDoctorImpl(root, options)); }
 
 export function readOnlyGitHubAdapter({ allowed = false, bundle = null } = {}) {
   if (!allowed) return { status: "permission-required", changed: false, networkCalls: 0, externalWrites: 0, reason: "GitHub read-only取得も明示許可前は実行しません" };

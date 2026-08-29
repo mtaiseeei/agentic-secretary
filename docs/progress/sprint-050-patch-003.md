@@ -212,3 +212,73 @@ Planner所有の`docs/spec*`／Sprint契約、Orchestrator所有の`docs/sprints
 - external／downstream writeは0件。検証のwriteはOS一時directory内のsynthetic fixtureだけである。
 
 Evaluatorはclean candidateでTarget suiteを先に実行し、AR-008のalias 1／alias 2 tokenが別であること、alias 2 resolve後もalias 1旧観測が残ること、差替え後のread／write双方が`clarity-root-changed`／`changed:false`であること、旧A／新B tree不変、handle cleanup後のalias 2／Repo B再利用を独立確認する。その後、上表の近傍回帰を増分再評価する。Generator自己評価をVerdictへ流用しない。
+
+## Retry 2 — F-02 request lifecycleとstale guard解放
+
+- Retry開始HEAD: `19d9231e29327378c5d46bdc0ccf7fc5a7d54943`
+- 対象: 最新EvaluatorのCritical F-02と、既存AR-014／AC13を守るV-01回帰だけ
+- 実装日: 2026-08-30
+- ステータス: Generator実装・自己検査完了、fresh独立Evaluator待ち。本節はEvaluator PASSではない。
+
+### lifecycle修正
+
+- `clarity-root.mjs`へ同期request scopeを追加した。scopeはrequest中に取得したobservation handleだけを所有し、正常returnとthrowの双方で`finally`相当により逆順解放する。timeout、process global全clear、次request開始時のstale観測掃除には依存しない。
+- 同一request内で同じobservation tokenをnested resolveした場合、追加取得したleaseだけを即時返却し、request所有handleを1つ維持する。別aliasの異なるtokenは同じ物理rootでも独立保持し、重要read／write直前の全live alias guardを弱めない。
+- CLI、公開core、link、projection、Drift、Secretary adapter、Hook runnerと各library entrypointをrequest scopeへ結線した。各入口はalias handleをrequest開始から結果render／例外処理直前まで保持し、その間のphysical rootを使うnested callも同じscopeへ参加する。
+- `clearClarityRootObservation()`は製品入口からscopeの所有handle単位で呼ばれる。root文字列による全clearは製品request lifecycleに使っていない。一般`workingRoot`既定、root自身／内部／broken／file-target symlink拒否、Drift source locator、Git／portable metadata境界は変更していない。
+- lifecycle対象pathを含むcollaboration inventoryの既存surface digestだけを更新した。surface、marker、case ID、割当、証拠形式は追加・変更していない。
+
+### AR-008／AR-014回帰
+
+- AR-008はRetry 1のalias 1／alias 2 interleavingを維持する。異なるalias token、同一観測2 lease、alias 1差替え後の重要read／write双方の`clarity-root-changed`／`changed:false`、旧Repo A／新Repo B bytes不変、alias 2継続利用、最終lease後のRepo B再利用を検査する。
+- さらにrequest scope内でalias observationを保持し、physical rootへのnested resolveが同じtokenへdedupeされることを確認した。request中にaliasを別Repoへ差し替えるとread／write双方がfail-closedし、scope終了後は旧physical Repoを新しいrequestで正常利用できる。
+- AR-014へEvaluator F-02と同じ製品入口再現を追加した。同一processで公開core `previewInit(aliasC)`を2回正常完了し、aliasをRepo Dへretargetした後、別requestの`previewInit(physicalC)`が成功する。Repo C／Dのtree digestとGit snapshotは前後不変である。
+- 失敗requestも別fixtureで検査した。`applyInit(aliasC)`が`no-candidates`でthrowした後にaliasをretargetし、別requestの`previewInit(physicalC)`が`clarity-root-changed`へ誤停止せず成功する。
+
+### Retry 2変更file
+
+```text
+plugins/secretary/collaboration-inventory.json
+plugins/secretary/scripts/clarity.mjs
+plugins/secretary/scripts/clarity-secretary.mjs
+plugins/secretary/scripts/clarity-hook.mjs
+plugins/secretary/scripts/lib/clarity-root.mjs
+plugins/secretary/scripts/lib/clarity-core.mjs
+plugins/secretary/scripts/lib/clarity-link.mjs
+plugins/secretary/scripts/lib/clarity-projection.mjs
+plugins/secretary/scripts/lib/clarity-drift.mjs
+plugins/secretary/scripts/lib/clarity-secretary.mjs
+plugins/secretary/scripts/lib/clarity-hook.mjs
+scripts/sprint-050-patch-003-test.mjs
+docs/progress/sprint-050-patch-003.md
+```
+
+Planner所有の`docs/spec*`／Sprint契約、Orchestrator所有の`docs/sprints/state.md`、Evaluator所有の`docs/feedback/**`は編集していない。private／Yasashii、installed cache、manifest、version、release／Marketplaceも変更していない。
+
+### Retry 2実行結果
+
+| command | result |
+|---|---|
+| `node scripts/sprint-050-patch-003-test.mjs` | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0`。AR-008 request中差替え／dedupe／cleanupとAR-014 success・failure lifecycleを含む |
+| Generator commitのGit-free archiveで同上 | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+| `node scripts/sprint-041-test.mjs` | `PASS=43 FAIL=0` |
+| `node scripts/sprint-045-test.mjs` | `PASS=35 FAIL=0` |
+| `node scripts/sprint-046-test.mjs` | `PASS=34 FAIL=0`、LK-007 PASS、remote command 0、canary不変 |
+| `node scripts/sprint-047-test.mjs` | `PASS=25 FAIL=0`、GS-009 stress 32 CLI＋32 Hook、parse／unique／rebuild 100% |
+| `node scripts/sprint-049-inventory.mjs validate` | `PASS=19 FAIL=0 CASES=41 MARKERS=VALID DIGESTS=VALID` |
+| `node scripts/sprint-049-test.mjs` | `PASS=20 FAIL=0`、CLX-006／020 PASS、side-effect violation 0 |
+| `node --check`（変更した全11 `.mjs`） | exit 0 |
+| `git diff --check` | exit 0 |
+
+`bash scripts/sprint-048-regression.sh`はsandbox内で既知の`listen EPERM 127.0.0.1`によりPK-007が停止した。通常環境でもvalidator 24/24とPK-001〜006の後にexisting master regressionが長時間無出力となったため、このGenerator runでは中断し、PASSとは記録していない。Retry 1 candidateでは同じ回帰が通常環境で0 FAILだったが、Retry 2 candidateのEvaluator証拠へ流用しない。
+
+### Retry 2残余／未実施境界
+
+- fresh独立Evaluatorの再現・採点、Evaluator PASS、Orchestratorのstate更新は未実施。
+- UI変更がないためbrowser／DOM／screenshotは非該当。Windows native、Claude Code／Codex live Hook、external Xmindは未実施。
+- Sprint 048 full wrapperは上記の長時間baseline中断によりRetry 2 candidateで完走していない。Sprint 041／045／046／047／049とTarget／inventoryは0 FAILである。
+- 実顧客repo、Mac mini対象repo、private my-vault、Yasashii、installed cache、実provider／connector、実remote、networkへは触れていない。
+- install、version bump、CHANGELOG、release inventory、Marketplace、cachebuster、reinstall、new session、push、PR、tag、GitHub Releaseは未実施・未変更。
+- external／downstream writeは0件。検証のwriteはOS一時directory内のsynthetic fixtureだけである。
+
+Evaluatorはclean candidateでTarget suiteを最初に実行し、AR-014の公開core success反復→alias retarget→旧physical別request成功、failure request後のcleanup、Repo C／D tree・Git不変を独立確認する。AR-008は複数alias guard、request中のread／write fail-closed、nested token dedupe、lease cleanup／reuseを再確認する。その後、上表の近傍回帰を増分評価する。Generator自己評価をVerdictへ流用しない。

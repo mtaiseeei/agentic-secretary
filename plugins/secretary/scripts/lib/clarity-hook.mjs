@@ -16,7 +16,12 @@ import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { attention, history } from "./clarity-core.mjs";
 import { FilesystemBoundaryError, safeWritePath } from "./safe-fs.mjs";
-import { resolveClarityRoot, rootPolicyFor } from "./clarity-root.mjs";
+import {
+  resolveClarityRoot,
+  rootPolicyFor,
+  withClarityRootObservation,
+  withClarityRootRequest,
+} from "./clarity-root.mjs";
 
 const MAX_INPUT_BYTES = 1024 * 1024;
 const MAX_CONTEXT_CHARS = 3600;
@@ -143,7 +148,7 @@ function assertRuntimeDirectoryChain(rootValue, relativeDirectory, { allowMissin
   return { root, directory: current, missing: null };
 }
 
-export function inspectClarityHookRoot(cwdValue) {
+function inspectClarityHookRootImpl(cwdValue) {
   const requestedCwd = resolve(cwdValue || ".");
   let current;
   try {
@@ -309,7 +314,7 @@ function stableEventId(normalized, semantic) {
   return `he_${sha256(`${normalized.host}:${normalized.sessionId}:${normalized.event}:${discriminator}:${JSON.stringify(semantic)}`).slice(0, 24)}`;
 }
 
-export function writeRuntimeEvent(rootValue, normalized, semantic, options = {}) {
+function writeRuntimeEventImpl(rootValue, normalized, semantic, options = {}) {
   const prepared = ensureRuntimeDirectory(rootValue, normalized.sessionId);
   const { root, directory, eventsDirectory } = prepared;
   const eventId = stableEventId(normalized, semantic);
@@ -403,7 +408,7 @@ function hasCheckpointAfter(root, materialEvents) {
   return canonical.events.some((row) => row.type === "checkpoint.recorded" && (Date.parse(row.occurredAt) || 0) >= lastMaterial);
 }
 
-export function semanticHookResult(root, normalized) {
+function semanticHookResultImpl(root, normalized) {
   if (normalized.event === "SessionStart") {
     const context = brief(root);
     writeRuntimeEvent(root, normalized, { kind: normalized.source === "compact" ? "compact-resume" : "session-start" });
@@ -436,6 +441,18 @@ export function semanticHookResult(root, normalized) {
     return { action: "none" };
   }
   return { action: "none" };
+}
+
+export function inspectClarityHookRoot(cwdValue) {
+  return withClarityRootRequest(() => inspectClarityHookRootImpl(cwdValue));
+}
+
+export function writeRuntimeEvent(rootValue, normalized, semantic, options = {}) {
+  return withClarityRootObservation(rootValue, (handle) => writeRuntimeEventImpl(handle.root, normalized, semantic, options));
+}
+
+export function semanticHookResult(rootValue, normalized) {
+  return withClarityRootObservation(rootValue, (handle) => semanticHookResultImpl(handle.root, normalized));
 }
 
 export function serializeHookResult(host, event, result) {

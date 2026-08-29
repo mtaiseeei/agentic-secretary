@@ -12,7 +12,7 @@ import {
   weeklyClarityRollup,
 } from "./lib/clarity-secretary.mjs";
 import { ClarityError } from "./lib/clarity-core.mjs";
-import { resolveClarityRoot, rootPolicyFor } from "./lib/clarity-root.mjs";
+import { resolveClarityRoot, rootPolicyFor, withClarityRootRequest } from "./lib/clarity-root.mjs";
 
 function usage(message = "") {
   throw new ClarityError("usage", `${message ? `${message}\n\n` : ""}使い方:
@@ -94,6 +94,7 @@ try {
   const { positional, options } = parse(rawArgs);
   const [secretary, project] = positional;
   if (!secretary) usage("secretary rootを指定してください。");
+  withClarityRootRequest(() => {
   let result;
   if (command === "init") {
     if (!project) usage("Project名を指定してください。");
@@ -117,6 +118,7 @@ try {
   const resolvedRoot = resolveClarityRoot(secretary).root;
   result = { ...result, rootPolicy: rootPolicyFor(resolvedRoot) };
   render(command, result, Boolean(options.get("--json")));
+  });
 } catch (error) {
   const known = error instanceof ClarityError || typeof error?.code === "string";
   const details = known && error.details && typeof error.details === "object" ? error.details : {};

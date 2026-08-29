@@ -20,7 +20,12 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } 
 import { fileURLToPath } from "node:url";
 import { copyTreeNoFollow, removeSafe, safeDeletePath, safeWritePath, writeFileAtomicSafe } from "./safe-fs.mjs";
 import { runExternalSync } from "./external-ops.mjs";
-import { refreshClarityRootAfterOwnedReplacement, resolveClarityRoot, revalidateClarityRoot } from "./clarity-root.mjs";
+import {
+  refreshClarityRootAfterOwnedReplacement,
+  resolveClarityRoot,
+  revalidateClarityRoot,
+  withClarityRootObservation,
+} from "./clarity-root.mjs";
 
 export const CLARITY_SCHEMA_VERSION = 2;
 export const CLARITY_MIN_SCHEMA_VERSION = 1;
@@ -291,7 +296,7 @@ function safeRemoteIdentity(raw) {
   }
 }
 
-export function inspectRepoIdentity(rootValue) {
+function inspectRepoIdentityImpl(rootValue) {
   const root = rootPath(rootValue);
   const top = optionalGit(root, ["rev-parse", "--show-toplevel"]);
   if (!top) {
@@ -340,7 +345,7 @@ function classifyCandidate(path, content) {
   return null;
 }
 
-export function scanRepository(rootValue) {
+function scanRepositoryImpl(rootValue) {
   const root = rootPath(rootValue);
   const report = {
     limits: { ...CLARITY_LIMITS },
@@ -611,7 +616,7 @@ function readCanonical(rootValue) {
   return { root, clarity, project, events, evidence };
 }
 
-export function findCanonicalItem(rootValue, itemId) {
+function findCanonicalItemImpl(rootValue, itemId) {
   const canonical = readCanonical(rootValue);
   return buildState(canonical.project, canonical.events, canonical.evidence).items.find((item) => item.itemId === itemId) || null;
 }
@@ -907,7 +912,7 @@ function rebuildStateUnlocked(rootValue, { write = true } = {}) {
   return { state, bytes, digest: sha256(bytes), changed };
 }
 
-export function rebuildState(rootValue, { write = true } = {}) {
+function rebuildStateImpl(rootValue, { write = true } = {}) {
   if (!write) return rebuildStateUnlocked(rootValue, { write: false });
   return withCanonicalWriteLock(rootValue, (root) => rebuildStateUnlocked(root, { write: true }));
 }
@@ -930,7 +935,7 @@ function initializedPreview(root) {
   };
 }
 
-export function previewInit(rootValue) {
+function previewInitImpl(rootValue) {
   const root = rootPath(rootValue);
   let clarityPath;
   try { clarityPath = safeWritePath(root, ".clarity"); }
@@ -988,7 +993,7 @@ function createCanonicalFromPreview(root, preview) {
   return { project, events, evidence, state };
 }
 
-export function applyInit(rootValue) {
+function applyInitImpl(rootValue) {
   const root = rootPath(rootValue);
   const preview = previewInit(root);
   if (preview.initialized) {
@@ -1053,7 +1058,7 @@ function assertStoredStateValidBeforeLock(root) {
   validateState(stored);
 }
 
-export function appendEvent(rootValue, input) {
+function appendEventImpl(rootValue, input) {
   const preflightRoot = rootPath(rootValue);
   readCanonical(preflightRoot);
   assertStoredStateValidBeforeLock(preflightRoot);
@@ -1080,7 +1085,7 @@ export function appendEvent(rootValue, input) {
   });
 }
 
-export function appendEvidence(rootValue, input) {
+function appendEvidenceImpl(rootValue, input) {
   const preflightRoot = rootPath(rootValue);
   readCanonical(preflightRoot);
   assertStoredStateValidBeforeLock(preflightRoot);
@@ -1105,13 +1110,13 @@ export function appendEvidence(rootValue, input) {
   });
 }
 
-export function attention(rootValue, { limit = 3, clock = nowIso() } = {}) {
+function attentionImpl(rootValue, { limit = 3, clock = nowIso() } = {}) {
   const canonical = readCanonical(rootValue);
   const state = buildState(canonical.project, canonical.events, canonical.evidence, clock);
   return evaluateAttention(state, canonical.evidence, { clock, limit });
 }
 
-export function setAttentionOverride(rootValue, { itemId, level, reason = "利用者が優先度を指定", rank = 0, operationId } = {}) {
+function setAttentionOverrideImpl(rootValue, { itemId, level, reason = "利用者が優先度を指定", rank = 0, operationId } = {}) {
   const canonical = readCanonical(rootValue);
   fail(canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION, "migration-required", "Attention overrideの前にschema migrationが必要です。", { changed: false, nextAction: "clarity migrate previewを確認してください" });
   const state = buildState(canonical.project, canonical.events, canonical.evidence);
@@ -1130,7 +1135,7 @@ export function setAttentionOverride(rootValue, { itemId, level, reason = "利�
   return { status: result.changed ? "saved" : "unchanged", changed: result.changed, operationId: opId, eventId: result.event.eventId, itemId, level, reason: safeReason };
 }
 
-export function checkpoint(rootValue, {
+function checkpointImpl(rootValue, {
   operationId,
   summary = "現在のClarity状態をcheckpointしました",
   failAt = process.env.CLARITY_CHECKPOINT_FAIL_AT || "",
@@ -1241,7 +1246,7 @@ function migrationData(rootValue) {
   return { root, clarity, current: false, fromVersion: project.schemaVersion, toVersion: CLARITY_SCHEMA_VERSION, project: migratedProject, events, evidence, state };
 }
 
-export function previewMigration(rootValue) {
+function previewMigrationImpl(rootValue) {
   const data = migrationData(rootValue);
   return {
     status: data.current ? "current" : "preview",
@@ -1256,7 +1261,7 @@ export function previewMigration(rootValue) {
   };
 }
 
-export function applyMigration(rootValue, { failAt = process.env.CLARITY_MIGRATION_FAIL_AT || "" } = {}) {
+function applyMigrationImpl(rootValue, { failAt = process.env.CLARITY_MIGRATION_FAIL_AT || "" } = {}) {
   const data = migrationData(rootValue);
   if (data.current) return { ...previewMigration(data.root), status: "unchanged" };
   const nonce = `${process.pid}-${Date.now()}`;
@@ -1289,7 +1294,7 @@ export function applyMigration(rootValue, { failAt = process.env.CLARITY_MIGRATI
 
 const ownedRuntimeName = /^(?:lock\.json|checkpoint-[a-f0-9_-]+\.json|operation-[a-f0-9_-]+\.json|\.tmp-[a-f0-9_-]+)$/u;
 
-export function previewRuntimeCleanup(rootValue, { clock = nowIso() } = {}) {
+function previewRuntimeCleanupImpl(rootValue, { clock = nowIso() } = {}) {
   const canonical = readCanonical(rootValue);
   const runtime = safeWritePath(canonical.root, ".clarity/runtime");
   const candidates = [];
@@ -1322,7 +1327,7 @@ export function previewRuntimeCleanup(rootValue, { clock = nowIso() } = {}) {
   return { status: candidates.length ? "cleanup-available" : "clean", changed: false, candidates, preserved, nextAction: candidates.length ? "内容を確認し、明示的に cleanup --apply を付けてください" : "追加操作は不要です" };
 }
 
-export function applyRuntimeCleanup(rootValue, options = {}) {
+function applyRuntimeCleanupImpl(rootValue, options = {}) {
   const preview = previewRuntimeCleanup(rootValue, options);
   const root = rootPath(rootValue);
   for (const candidate of preview.candidates) {
@@ -1468,7 +1473,7 @@ function xmindDiagnostic(root) {
   }
 }
 
-export function doctor(rootValue, options = {}) {
+function doctorImpl(rootValue, options = {}) {
   const canonical = readCanonical(rootValue);
   const expected = buildState(canonical.project, canonical.events, canonical.evidence);
   const expectedBytes = stableJson(expected);
@@ -1512,7 +1517,7 @@ export function doctor(rootValue, options = {}) {
   };
 }
 
-export function status(rootValue) {
+function statusImpl(rootValue) {
   const canonical = readCanonical(rootValue);
   const state = buildState(canonical.project, canonical.events, canonical.evidence);
   const attentionResult = evaluateAttention(state, canonical.evidence, { limit: 3 });
@@ -1531,7 +1536,7 @@ export function status(rootValue) {
   };
 }
 
-export function history(rootValue) {
+function historyImpl(rootValue) {
   const canonical = readCanonical(rootValue);
   return {
     clarityProjectId: canonical.project.clarityProjectId,
@@ -1583,7 +1588,7 @@ function rawCanonicalDigest(root) {
   return sha256(rows.join("\n"));
 }
 
-export function decideGenericProject(rootValue, {
+function decideGenericProjectImpl(rootValue, {
   secretaryRoot: secretaryRootValue,
   projectName,
   itemId,
@@ -1689,3 +1694,27 @@ export function decideGenericProject(rootValue, {
   });
   return { status: result.changed ? "saved" : "unchanged", operationId: opId, decision: stored, eventId: result.event.eventId, duplicate: false };
 }
+
+function runRootRequest(rootValue, operation) {
+  return withClarityRootObservation(rootValue, (handle) => operation(handle.root));
+}
+
+export function inspectRepoIdentity(rootValue) { return runRootRequest(rootValue, inspectRepoIdentityImpl); }
+export function scanRepository(rootValue) { return runRootRequest(rootValue, scanRepositoryImpl); }
+export function findCanonicalItem(rootValue, itemId) { return runRootRequest(rootValue, (root) => findCanonicalItemImpl(root, itemId)); }
+export function rebuildState(rootValue, options = {}) { return runRootRequest(rootValue, (root) => rebuildStateImpl(root, options)); }
+export function previewInit(rootValue) { return runRootRequest(rootValue, previewInitImpl); }
+export function applyInit(rootValue) { return runRootRequest(rootValue, applyInitImpl); }
+export function appendEvent(rootValue, input) { return runRootRequest(rootValue, (root) => appendEventImpl(root, input)); }
+export function appendEvidence(rootValue, input) { return runRootRequest(rootValue, (root) => appendEvidenceImpl(root, input)); }
+export function attention(rootValue, options = {}) { return runRootRequest(rootValue, (root) => attentionImpl(root, options)); }
+export function setAttentionOverride(rootValue, options = {}) { return runRootRequest(rootValue, (root) => setAttentionOverrideImpl(root, options)); }
+export function checkpoint(rootValue, options = {}) { return runRootRequest(rootValue, (root) => checkpointImpl(root, options)); }
+export function previewMigration(rootValue) { return runRootRequest(rootValue, previewMigrationImpl); }
+export function applyMigration(rootValue, options = {}) { return runRootRequest(rootValue, (root) => applyMigrationImpl(root, options)); }
+export function previewRuntimeCleanup(rootValue, options = {}) { return runRootRequest(rootValue, (root) => previewRuntimeCleanupImpl(root, options)); }
+export function applyRuntimeCleanup(rootValue, options = {}) { return runRootRequest(rootValue, (root) => applyRuntimeCleanupImpl(root, options)); }
+export function doctor(rootValue, options = {}) { return runRootRequest(rootValue, (root) => doctorImpl(root, options)); }
+export function status(rootValue) { return runRootRequest(rootValue, statusImpl); }
+export function history(rootValue) { return runRootRequest(rootValue, historyImpl); }
+export function decideGenericProject(rootValue, options = {}) { return runRootRequest(rootValue, (root) => decideGenericProjectImpl(root, options)); }

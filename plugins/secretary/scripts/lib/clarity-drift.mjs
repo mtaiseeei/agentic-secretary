@@ -10,7 +10,7 @@ import {
   history,
 } from "./clarity-core.mjs";
 import { runExternalSync } from "./external-ops.mjs";
-import { resolveClarityRoot } from "./clarity-root.mjs";
+import { resolveClarityRoot, withClarityRootObservation } from "./clarity-root.mjs";
 
 const MAX_SOURCE_BYTES = 64 * 1024;
 const MAX_SOURCE_LINES = 240;
@@ -142,7 +142,7 @@ function evidenceSummary(role, inspected) {
   return `${role} ${inspected.claim.field}=${inspected.claim.value} (${suffix})`;
 }
 
-export function compareDrift(rootValue, input) {
+function compareDriftImpl(rootValue, input) {
   const root = resolveClarityRoot(rootValue).root;
   fail(input && input.schemaVersion === 1, "drift-input-invalid", "Drift comparison schemaVersionは1にしてください。");
   const itemId = line(input.itemId, "itemId", 32);
@@ -191,7 +191,7 @@ function evidenceInput(itemId, role, side, comparisonDigest) {
   };
 }
 
-export function applyDrift(rootValue, input, { apply = false, failAt = process.env.CLARITY_DRIFT_FAIL_AT || "" } = {}) {
+function applyDriftImpl(rootValue, input, { apply = false, failAt = process.env.CLARITY_DRIFT_FAIL_AT || "" } = {}) {
   const root = resolveClarityRoot(rootValue).root;
   const compared = compareDrift(root, input);
   if (!apply) return { ...compared, status: "preview", nextAction: "双方のlocatorと比較結果を確認し、明示的に --apply を付けてください" };
@@ -215,7 +215,7 @@ export function applyDrift(rootValue, input, { apply = false, failAt = process.e
   return { ...compared, status: changed ? "applied" : "unchanged", changed, operationId, evidenceIds: [decisionEvidence.evidence.evidenceId, implementationEvidence.evidence.evidenceId], eventId: alignmentEvent.event.eventId, attention: ranked ? { reason: ranked.reasons[0], level: ranked.level, rank: report.items.findIndex((row) => row.itemId === compared.itemId) + 1, ranking: "attention-deterministic-rank" } : null };
 }
 
-export function recordDriftWaiver(rootValue, input, { apply = false } = {}) {
+function recordDriftWaiverImpl(rootValue, input, { apply = false } = {}) {
   const root = resolveClarityRoot(rootValue).root;
   const itemId = line(input.itemId, "itemId", 32);
   const item = findCanonicalItem(root, itemId);
@@ -234,7 +234,7 @@ export function recordDriftWaiver(rootValue, input, { apply = false } = {}) {
   return { ...preview, status: result.changed ? "saved" : "unchanged", changed: result.changed, eventId: result.event.eventId, activeAttention: report.items.some((row) => row.itemId === itemId), historyCount: history(root).alignmentHistory.filter((row) => row.itemId === itemId).length };
 }
 
-export function commitClarityOwned(rootValue, { message = "Project Clarity checkpoint", apply = false } = {}) {
+function commitClarityOwnedImpl(rootValue, { message = "Project Clarity checkpoint", apply = false } = {}) {
   const root = resolveClarityRoot(rootValue).root;
   const safeMessage = line(message, "commit message", 160);
   const top = git(root, ["rev-parse", "--show-toplevel"])?.trim();
@@ -264,3 +264,12 @@ export function commitClarityOwned(rootValue, { message = "Project Clarity check
   fail((git(root, ["remote", "-v"]) || "") === beforeRemote, "clarity-commit-remote-changed", "commit中にremoteが変わりました。");
   return { ...preview, status: "committed", changed: true, commit, committedPaths: committed };
 }
+
+function runRootRequest(rootValue, operation) {
+  return withClarityRootObservation(rootValue, (handle) => operation(handle.root));
+}
+
+export function compareDrift(rootValue, input) { return runRootRequest(rootValue, (root) => compareDriftImpl(root, input)); }
+export function applyDrift(rootValue, input, options = {}) { return runRootRequest(rootValue, (root) => applyDriftImpl(root, input, options)); }
+export function recordDriftWaiver(rootValue, input, options = {}) { return runRootRequest(rootValue, (root) => recordDriftWaiverImpl(root, input, options)); }
+export function commitClarityOwned(rootValue, options = {}) { return runRootRequest(rootValue, (root) => commitClarityOwnedImpl(root, options)); }

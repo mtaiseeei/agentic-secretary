@@ -14,6 +14,7 @@ import { runExternalSync } from "./external-ops.mjs";
 // physical-root slot would let a later alias hide an earlier alias change.
 const observations = new Map();
 let observationSequence = 0;
+let activeRequestScope = null;
 
 function sha256(value) {
   return createHash("sha256").update(String(value ?? "")).digest("hex");
@@ -157,6 +158,21 @@ function registerObservation(observation) {
   return entry;
 }
 
+function trackRequestHandle(handle) {
+  if (!activeRequestScope) return handle;
+  const existing = activeRequestScope.handles.find((candidate) => (
+    candidate.root === handle.root && candidate.observationToken === handle.observationToken
+  ));
+  if (existing) {
+    // resolveClarityRoot acquired one more lease before finding the request-local
+    // duplicate. Release only that lease; the request-owned handle stays live.
+    clearClarityRootObservation(handle);
+    return existing;
+  }
+  activeRequestScope.handles.push(handle);
+  return handle;
+}
+
 function rootChanged(message, previous, current = null) {
   throw new FilesystemBoundaryError(message, "clarity-root-changed", {
     changed: false,
@@ -213,7 +229,7 @@ export function resolveClarityRoot(value) {
     ? registerObservation(existing.observation)
     : registerObservation(snapshot(requested, physicalRoot));
   const observation = entry.observation;
-  return {
+  return trackRequestHandle({
     root: physicalRoot,
     observation,
     observationToken: entry.token,
@@ -224,7 +240,24 @@ export function resolveClarityRoot(value) {
       ancestorAliasCount: observation.aliases.length,
       physicalRootApplied: true,
     },
-  };
+  });
+}
+
+export function withClarityRootRequest(callback) {
+  if (typeof callback !== "function") throw new TypeError("Clarity root request callback is required");
+  if (activeRequestScope) return callback();
+  const scope = { handles: [] };
+  activeRequestScope = scope;
+  try {
+    return callback();
+  } finally {
+    activeRequestScope = null;
+    for (const handle of [...scope.handles].reverse()) clearClarityRootObservation(handle);
+  }
+}
+
+export function withClarityRootObservation(value, callback) {
+  return withClarityRootRequest(() => callback(resolveClarityRoot(value)));
 }
 
 export function revalidateClarityRoot(rootValue) {

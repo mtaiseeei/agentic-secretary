@@ -18,7 +18,11 @@ import { buildProjectionBundle } from "../plugins/secretary/scripts/lib/clarity-
 import {
   dailyClarityRollup, observeCanonicalRepo, portfolioRollup, secretaryProjectClarityStatus, weeklyClarityRollup,
 } from "../plugins/secretary/scripts/lib/clarity-secretary.mjs";
-import { clearClarityRootObservation, resolveClarityRoot } from "../plugins/secretary/scripts/lib/clarity-root.mjs";
+import {
+  clearClarityRootObservation,
+  resolveClarityRoot,
+  withClarityRootObservation,
+} from "../plugins/secretary/scripts/lib/clarity-root.mjs";
 import { safeWritePath, workingRoot } from "../plugins/secretary/scripts/lib/safe-fs.mjs";
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -172,6 +176,20 @@ try {
     const reused = resolveClarityRoot(aliasOneRequest); assert.equal(reused.root, realpathSync(interleavedRepoB));
     assert.equal(safeWritePath(reused.root, ".clarity/project.json"), join(realpathSync(interleavedRepoB), ".clarity/project.json"));
     clearClarityRootObservation(reused);
+
+    const scopedA = join(fixture, "scoped-a"); const scopedB = join(fixture, "scoped-b"); mkdirSync(scopedA); mkdirSync(scopedB);
+    const scopedRepoA = makeRepo(join(scopedA, "repo"), { initialized: true }); const scopedRepoB = makeRepo(join(scopedB, "repo"), { initialized: true });
+    const scopedAlias = join(fixture, "scoped-alias"); symlinkSync(scopedA, scopedAlias, "dir"); const scopedRequest = join(scopedAlias, "repo");
+    const beforeScopedA = tree(scopedRepoA); const beforeScopedB = tree(scopedRepoB);
+    withClarityRootObservation(scopedRequest, (requestHandle) => {
+      const nestedHandle = resolveClarityRoot(requestHandle.root); assert.equal(nestedHandle.observationToken, requestHandle.observationToken);
+      unlinkSync(scopedAlias); symlinkSync(scopedB, scopedAlias, "dir");
+      const scopedRead = expectCode(() => readFileSync(safeWritePath(requestHandle.root, "README.md"), "utf8"), "clarity-root-changed");
+      const scopedWrite = expectCode(() => safeWritePath(requestHandle.root, ".clarity/project.json"), "clarity-root-changed");
+      assert.equal(scopedRead.details.changed, false); assert.equal(scopedWrite.details.changed, false);
+    });
+    assert.equal(tree(scopedRepoA), beforeScopedA); assert.equal(tree(scopedRepoB), beforeScopedB);
+    assert.equal(previewInit(scopedRepoA).initialized, true);
   });
   test("AR-009", "link bundle contains no alias or physical absolute local path", () => {
     const identity = inspectLinkIdentity(aliasRepo); const peer = inspectLinkIdentity(peerRepo); const request = prepareLink(aliasRepo, { targetProjectId: peer.projectId, targetRepositoryIdentity: peer.repositoryIdentity, localRole: "repo" }); const body = JSON.stringify(request); assert(!body.includes(aliasRepo)); assert(!body.includes(physicalRepo)); assert.equal(identity.changed, false);
@@ -192,6 +210,27 @@ try {
   test("AR-014", "all declared entrypoints share the Clarity internal physical policy and registry", () => {
     const core = previewInit(aliasRepo); const link = inspectLinkIdentity(aliasRepo); const projection = buildProjectionBundle(aliasRepo); const hook = inspectClarityHookRoot(aliasRepo); const observation = secretaryProjectClarityStatus(secretary, "開発案件").canonicalObservation; const root = resolveClarityRoot(aliasRepo);
     assert(core.initialized); assert(link.projectId); assert(projection.digest); assert.equal(hook.root, realpathSync(physicalRepo)); assert.equal(observation.rootPolicy.source, "clarity-internal-root-resolver"); assert.equal(root.policy.source, "clarity-internal-root-resolver");
+
+    // A completed public-core request must release only its own root-observation
+    // lease. Retargeting the old alias must not poison a later physical-root
+    // request in the same process.
+    const lifecycleC = join(fixture, "lifecycle-c"); const lifecycleD = join(fixture, "lifecycle-d"); mkdirSync(lifecycleC); mkdirSync(lifecycleD);
+    const lifecycleRepoC = makeRepo(join(lifecycleC, "repo"), { initialized: true }); const lifecycleRepoD = makeRepo(join(lifecycleD, "repo"), { initialized: true });
+    const lifecycleAlias = join(fixture, "lifecycle-alias"); symlinkSync(lifecycleC, lifecycleAlias, "dir"); const lifecycleAliasRepo = join(lifecycleAlias, "repo");
+    const lifecycleBefore = { c: tree(lifecycleRepoC), d: tree(lifecycleRepoD), cGit: gitSnapshot(lifecycleRepoC), dGit: gitSnapshot(lifecycleRepoD) };
+    assert.equal(previewInit(lifecycleAliasRepo).initialized, true); assert.equal(previewInit(lifecycleAliasRepo).initialized, true);
+    unlinkSync(lifecycleAlias); symlinkSync(lifecycleD, lifecycleAlias, "dir");
+    assert.equal(previewInit(lifecycleRepoC).initialized, true);
+    assert.deepEqual({ c: tree(lifecycleRepoC), d: tree(lifecycleRepoD), cGit: gitSnapshot(lifecycleRepoC), dGit: gitSnapshot(lifecycleRepoD) }, lifecycleBefore);
+
+    // The same finally-style lifecycle applies when the public operation fails.
+    const failureC = join(fixture, "failure-c"); const failureD = join(fixture, "failure-d"); mkdirSync(failureC); mkdirSync(failureD);
+    const failureRepoC = join(failureC, "repo"); const failureRepoD = join(failureD, "repo"); mkdirSync(failureRepoC); mkdirSync(failureRepoD);
+    const failureAlias = join(fixture, "failure-alias"); symlinkSync(failureC, failureAlias, "dir"); const failureAliasRepo = join(failureAlias, "repo");
+    expectCode(() => applyInit(failureAliasRepo), "no-candidates");
+    unlinkSync(failureAlias); symlinkSync(failureD, failureAlias, "dir");
+    assert.equal(previewInit(failureRepoC).initialized, false);
+
     const reg = registry(); const ids = reg.patchCaseIds["sprint-050-patch-003"]; assert.equal(ids.length, 21); assert.equal(new Set(ids).size, 21); assert.deepEqual([...ids].sort(), tests.map((row) => row.id).sort()); assert.equal(Object.keys(reg.patchCaseFeatureAssignments).length, 21);
     const semantic = readFileSync(casesPath, "utf8"); for (const id of ids) assert(semantic.includes(`| ${id} | Critical |`), id);
   });

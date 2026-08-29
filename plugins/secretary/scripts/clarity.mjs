@@ -49,7 +49,7 @@ import { applyDrift, commitClarityOwned, recordDriftWaiver } from "./lib/clarity
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { safeWritePath } from "./lib/safe-fs.mjs";
-import { resolveClarityRoot, rootPolicyFor } from "./lib/clarity-root.mjs";
+import { resolveClarityRoot, rootPolicyFor, withClarityRootRequest } from "./lib/clarity-root.mjs";
 
 function usage(message = "") {
   const prefix = message ? `${message}\n\n` : "";
@@ -242,6 +242,7 @@ try {
   const { positional, options } = parse(rawArgs);
   const root = positional[0];
   if (!root) usage("repo／project rootを指定してください。");
+  withClarityRootRequest(() => {
   let result;
   if (command === "init") {
     if (options.get("--apply") && options.get("--cancel")) usage("--apply と --cancel は同時に指定できません。");
@@ -328,6 +329,7 @@ try {
   const resolvedRoot = resolveClarityRoot(root).root;
   result = { ...result, rootPolicy: rootPolicyFor(resolvedRoot) };
   render(command, result, Boolean(options.get("--json")));
+  });
 } catch (error) {
   const known = error instanceof ClarityError || typeof error?.code === "string";
   const output = {

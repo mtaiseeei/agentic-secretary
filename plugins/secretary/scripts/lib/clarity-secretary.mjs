@@ -12,7 +12,12 @@ import {
 import { createHash } from "node:crypto";
 import { extname, isAbsolute, join } from "node:path";
 import { safeWritePath } from "./safe-fs.mjs";
-import { resolveClarityRoot, rootPolicyFor } from "./clarity-root.mjs";
+import {
+  resolveClarityRoot,
+  rootPolicyFor,
+  withClarityRootObservation,
+  withClarityRootRequest,
+} from "./clarity-root.mjs";
 import { runExternalSync } from "./external-ops.mjs";
 import {
   CLARITY_SCHEMA_VERSION,
@@ -80,7 +85,7 @@ function projectRecord(root, name, scope) {
   return { root, name, scope, rel, dir, file, markdown: readFileSync(file, "utf8") };
 }
 
-export function resolveSecretaryProject(secretaryRootValue, rawName, { closedOnly = false, includeClosed = false } = {}) {
+function resolveSecretaryProjectImpl(secretaryRootValue, rawName, { closedOnly = false, includeClosed = false } = {}) {
   const root = resolveClarityRoot(secretaryRootValue).root;
   const name = projectName(rawName);
   if (closedOnly) {
@@ -182,7 +187,7 @@ function createCanonical(record) {
   return { project, events: [event], evidence: [evidence], state };
 }
 
-export function previewSecretaryProjectClarity(secretaryRootValue, rawName, options = {}) {
+function previewSecretaryProjectClarityImpl(secretaryRootValue, rawName, options = {}) {
   const record = resolveSecretaryProject(secretaryRootValue, rawName, options);
   const target = clarityRoot(record);
   const initialized = existsSync(target);
@@ -201,7 +206,7 @@ export function previewSecretaryProjectClarity(secretaryRootValue, rawName, opti
   };
 }
 
-export function applySecretaryProjectClarity(secretaryRootValue, rawName) {
+function applySecretaryProjectClarityImpl(secretaryRootValue, rawName) {
   const record = resolveSecretaryProject(secretaryRootValue, rawName);
   if (record.scope !== "open") throw new ClarityError("project-scope-read-only", "legacy Projectは既存resolverどおり読み取り専用です。openへの明示移行前はClarityを二重作成しません。");
   const target = clarityRoot(record);
@@ -326,7 +331,7 @@ function canonicalClarity(root) {
   };
 }
 
-export function observeCanonicalRepo(record) {
+function observeCanonicalRepoImpl(record) {
   const pointer = pointerFields(record);
   const observedAt = nowIso();
   const base = {
@@ -398,7 +403,7 @@ function localReferenceHealth(record, clarityProject) {
   return stat.isFile() && !stat.isSymbolicLink() ? "local-reference-healthy" : "local-reference-invalid";
 }
 
-export function secretaryProjectClarityStatus(secretaryRootValue, rawName, options = {}) {
+function secretaryProjectClarityStatusImpl(secretaryRootValue, rawName, options = {}) {
   const record = resolveSecretaryProject(secretaryRootValue, rawName, options);
   const canonicalObservation = observeCanonicalRepo(record);
   const clarity = readProjectClarity(record);
@@ -433,7 +438,7 @@ export function secretaryProjectClarityStatus(secretaryRootValue, rawName, optio
   };
 }
 
-export function renderSecretaryProjectClaritySummary(secretaryRootValue, rawName, options = {}) {
+function renderSecretaryProjectClaritySummaryImpl(secretaryRootValue, rawName, options = {}) {
   const report = secretaryProjectClarityStatus(secretaryRootValue, rawName, options);
   if (!report.initialized) return "";
   const first = report.attention.top[0];
@@ -458,7 +463,7 @@ function listProjectRecords(root) {
   return rows;
 }
 
-export function portfolioRollup(secretaryRootValue) {
+function portfolioRollupImpl(secretaryRootValue) {
   const root = resolveClarityRoot(secretaryRootValue).root;
   const projects = [];
   const unverifiedSources = [];
@@ -508,7 +513,7 @@ export function portfolioRollup(secretaryRootValue) {
   };
 }
 
-export function dailyClarityRollup(secretaryRootValue, { mode = "morning" } = {}) {
+function dailyClarityRollupImpl(secretaryRootValue, { mode = "morning" } = {}) {
   const rollup = portfolioRollup(secretaryRootValue);
   const top = rollup.attention.top;
   if (mode === "morning") {
@@ -537,7 +542,7 @@ export function dailyClarityRollup(secretaryRootValue, { mode = "morning" } = {}
   return { mode, section: "Clarityの振り返り", ...separated, unverifiedSources: rollup.unverifiedSources, canonicalObservations: rollup.projects.map((project) => ({ project: project.name, observation: project.canonicalObservation })), connectorReads: 0, itemBodiesIncluded: false };
 }
 
-export function weeklyClarityRollup(secretaryRootValue, previous = null) {
+function weeklyClarityRollupImpl(secretaryRootValue, previous = null) {
   const rollup = portfolioRollup(secretaryRootValue);
   let resolvedAttention = 0;
   let resolvedDrift = 0;
@@ -570,7 +575,7 @@ export function weeklyClarityRollup(secretaryRootValue, previous = null) {
   };
 }
 
-export function routeClarityTask(secretaryRootValue, rawName, { itemId, target = "local-todo", explicit = false } = {}) {
+function routeClarityTaskImpl(secretaryRootValue, rawName, { itemId, target = "local-todo", explicit = false } = {}) {
   const record = resolveSecretaryProject(secretaryRootValue, rawName);
   const clarity = readProjectClarity(record);
   if (!clarity) throw new ClarityError("clarity-not-initialized", "このProjectにはClarityがありません。");
@@ -586,10 +591,26 @@ export function routeClarityTask(secretaryRootValue, rawName, { itemId, target =
   throw new ClarityError("task-target-invalid", "未対応のtask委譲先です。");
 }
 
-export function decideSecretaryProject(secretaryRootValue, rawName, options = {}) {
+function decideSecretaryProjectImpl(secretaryRootValue, rawName, options = {}) {
   const record = resolveSecretaryProject(secretaryRootValue, rawName);
   if (record.scope !== "open") throw new ClarityError("project-scope-read-only", "Decision確定はopen Projectだけが対象です。");
   const root = clarityRoot(record);
   if (!existsSync(root)) throw new ClarityError("clarity-not-initialized", "このProjectにはClarityがありません。");
   return decideGenericProject(root, { ...options, secretaryRoot: record.root, projectName: record.name });
 }
+
+function runSecretaryRequest(secretaryRootValue, operation) {
+  return withClarityRootObservation(secretaryRootValue, (handle) => operation(handle.root));
+}
+
+export function resolveSecretaryProject(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => resolveSecretaryProjectImpl(root, rawName, options)); }
+export function previewSecretaryProjectClarity(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => previewSecretaryProjectClarityImpl(root, rawName, options)); }
+export function applySecretaryProjectClarity(secretaryRootValue, rawName) { return runSecretaryRequest(secretaryRootValue, (root) => applySecretaryProjectClarityImpl(root, rawName)); }
+export function observeCanonicalRepo(record) { return withClarityRootRequest(() => observeCanonicalRepoImpl(record)); }
+export function secretaryProjectClarityStatus(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => secretaryProjectClarityStatusImpl(root, rawName, options)); }
+export function renderSecretaryProjectClaritySummary(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => renderSecretaryProjectClaritySummaryImpl(root, rawName, options)); }
+export function portfolioRollup(secretaryRootValue) { return runSecretaryRequest(secretaryRootValue, portfolioRollupImpl); }
+export function dailyClarityRollup(secretaryRootValue, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => dailyClarityRollupImpl(root, options)); }
+export function weeklyClarityRollup(secretaryRootValue, previous = null) { return runSecretaryRequest(secretaryRootValue, (root) => weeklyClarityRollupImpl(root, previous)); }
+export function routeClarityTask(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => routeClarityTaskImpl(root, rawName, options)); }
+export function decideSecretaryProject(secretaryRootValue, rawName, options = {}) { return runSecretaryRequest(secretaryRootValue, (root) => decideSecretaryProjectImpl(root, rawName, options)); }
