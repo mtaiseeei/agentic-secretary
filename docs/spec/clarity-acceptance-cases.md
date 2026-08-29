@@ -408,7 +408,7 @@ XV-001〜004はprimary 250とCLX 20のID／意味／割当を変更せず、2026
 
 | ID | Severity | シナリオ | 期待結果 | 必須証拠 |
 |---|---|---|---|---|
-| PK-001 | Critical | Claude manifest | version／description／hooks／skills整合 | validator |
+| PK-001 | Critical | Claude manifest | version／description／skills整合、標準`hooks/hooks.json`の重複宣言なし | validator |
 | PK-002 | Critical | Codex manifest | version／skills／hooks整合 | validator |
 | PK-003 | High | marketplace manifests | source／version／metadata整合 | tests |
 | PK-004 | Critical | host inventory | Clarity追加とhost差分が記録 | file、test |
