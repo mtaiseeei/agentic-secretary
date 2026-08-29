@@ -109,8 +109,10 @@ def validate(root: Path) -> list[str]:
         errors.append("Codex plugin manifest declares a nonexistent or unsupported companion")
     if codex_plugin.get("hooks") != "./hooks/hooks.json":
         errors.append("Codex plugin manifest must enumerate the shared Clarity hooks")
-    if plugin.get("skills") != "./skills/" or plugin.get("hooks") != "./hooks/hooks.json":
-        errors.append("Claude plugin manifest must enumerate the shared skills and Clarity hooks")
+    if plugin.get("skills") != "./skills/":
+        errors.append("Claude plugin manifest skills must be ./skills/")
+    if "hooks" in plugin:
+        errors.append("Claude plugin manifest must not redeclare standard Clarity hooks")
     codex_interface = codex_plugin.get("interface")
     if not isinstance(codex_interface, dict) or any(not codex_interface.get(field) for field in (
         "displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt"

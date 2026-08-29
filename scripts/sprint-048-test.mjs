@@ -68,14 +68,50 @@ const upstreamBefore = {
 };
 
 try {
-  await test("PK-001", "Claude manifestは0.11.0のClarity Skill／共通Hookを列挙", () => {
+  await test("PK-001", "Claude manifestは0.11.0のClarity Skillを列挙し標準Hookを重複宣言しない", () => {
     const manifest = json(repo, "plugins/secretary/.claude-plugin/plugin.json");
-    assert.equal(manifest.version, version); assert.equal(manifest.skills, "./skills/"); assert.equal(manifest.hooks, "./hooks/hooks.json");
+    assert.equal(manifest.version, version); assert.equal(manifest.skills, "./skills/"); assert.equal(Object.hasOwn(manifest, "hooks"), false);
     assert.match(manifest.description, /技術者向けAI秘書/u);
+    if (!existsSync(archiveRoot)) copyCandidate(archiveRoot);
+    const restore = mutateJson(archiveRoot, "plugins/secretary/.claude-plugin/plugin.json", (value) => { value.hooks = "./hooks/hooks.json"; });
+    const negative = validator(archiveRoot);
+    assert.notEqual(negative.status, 0, "Claude hooks redeclaration fixture must fail");
+    assert.match(negative.stderr, /Claude manifest must not redeclare standard Clarity hooks/u);
+    restore();
   });
-  await test("PK-002", "Codex manifestはClaudeと同じSkill／Hook treeを列挙", () => {
-    const claude = json(repo, "plugins/secretary/.claude-plugin/plugin.json"); const codex = json(repo, "plugins/secretary/.codex-plugin/plugin.json");
-    assert.equal(codex.version, version); assert.equal(codex.skills, claude.skills); assert.equal(codex.hooks, claude.hooks);
+  await test("PK-002", "Codex manifestは明示Hook参照を維持し共通Hook欠落／改変を拒否", () => {
+    if (!existsSync(archiveRoot)) copyCandidate(archiveRoot);
+    const codex = json(repo, "plugins/secretary/.codex-plugin/plugin.json");
+    assert.equal(codex.version, version); assert.equal(codex.skills, "./skills/"); assert.equal(codex.hooks, "./hooks/hooks.json");
+
+    let restore = mutateJson(archiveRoot, "plugins/secretary/.codex-plugin/plugin.json", (value) => { delete value.hooks; });
+    let negative = validator(archiveRoot);
+    assert.notEqual(negative.status, 0, "Codex hooks omission fixture must fail");
+    assert.match(negative.stderr, /Codex manifest must explicitly reference shared Clarity hooks/u);
+    restore();
+
+    restore = mutateJson(archiveRoot, "plugins/secretary/.codex-plugin/plugin.json", (value) => { value.hooks = "./hooks/other.json"; });
+    negative = validator(archiveRoot);
+    assert.notEqual(negative.status, 0, "Codex hooks wrong-path fixture must fail");
+    assert.match(negative.stderr, /Codex manifest must explicitly reference shared Clarity hooks/u);
+    restore();
+
+    const hookPath = join(archiveRoot, "plugins/secretary/hooks/hooks.json");
+    const hookBytes = readFileSync(hookPath);
+    rmSync(hookPath);
+    negative = validator(archiveRoot);
+    assert.notEqual(negative.status, 0, "missing shared Hook fixture must fail");
+    assert.match(negative.stderr, /shared Clarity Hook file is missing/u);
+    writeFileSync(hookPath, hookBytes);
+
+    restore = mutateJson(archiveRoot, "plugins/secretary/hooks/hooks.json", (value) => {
+      value.hooks.SessionStartRenamed = value.hooks.SessionStart;
+      delete value.hooks.SessionStart;
+    });
+    negative = validator(archiveRoot);
+    assert.notEqual(negative.status, 0, "changed shared Hook fixture must fail");
+    assert.match(negative.stderr, /Clarity Hook event inventory mismatch/u);
+    restore();
   });
   await test("PK-003", "両marketplace metadataは同一candidate sourceを指す", () => {
     const claude = json(repo, ".claude-plugin/marketplace.json").plugins[0]; const codex = json(repo, ".agents/plugins/marketplace.json").plugins[0];

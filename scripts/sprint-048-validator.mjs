@@ -22,7 +22,9 @@ const codexMarket = json(".agents/plugins/marketplace.json");
 const claude = json("plugins/secretary/.claude-plugin/plugin.json");
 const codex = json("plugins/secretary/.codex-plugin/plugin.json");
 const host = json("plugins/secretary/host-inventory.json");
-const hooks = json("plugins/secretary/hooks/hooks.json");
+const hooksPath = join(root, "plugins/secretary/hooks/hooks.json");
+const hooks = existsSync(hooksPath) ? json("plugins/secretary/hooks/hooks.json") : { hooks: {} };
+if (!existsSync(hooksPath)) failures.push("shared Clarity Hook file is missing");
 
 check(release.schemaVersion === 1 && release.edition === "agentic-secretary" && release.candidateVersion === VERSION, "release inventory identity/version mismatch");
 check(release.publicationStatus === "source-candidate-unverified" && release.releaseState.sourcePrepared === true
@@ -30,7 +32,8 @@ check(release.publicationStatus === "source-candidate-unverified" && release.rel
 check(claudeMarket.plugins?.length === 1 && claudeMarket.plugins[0].version === VERSION && claudeMarket.plugins[0].source === "./plugins/secretary", "Claude marketplace mismatch");
 check(codexMarket.plugins?.length === 1 && codexMarket.plugins[0].source?.path === "./plugins/secretary", "Codex marketplace mismatch");
 check(claude.version === VERSION && codex.version === VERSION && claude.name === codex.name && claude.name === "agentic-secretary", "manifest identity/version mismatch");
-check(claude.skills === "./skills/" && codex.skills === "./skills/" && claude.hooks === "./hooks/hooks.json" && codex.hooks === "./hooks/hooks.json", "both manifests must enumerate shared skills and hooks");
+check(claude.skills === "./skills/" && !Object.hasOwn(claude, "hooks"), "Claude manifest must not redeclare standard Clarity hooks");
+check(codex.skills === "./skills/" && codex.hooks === "./hooks/hooks.json", "Codex manifest must explicitly reference shared Clarity hooks");
 check(release.distribution.claudeCode.manifest === "plugins/secretary/.claude-plugin/plugin.json"
   && release.distribution.codex.manifest === "plugins/secretary/.codex-plugin/plugin.json"
   && release.distribution.claudeCode.hooks === release.distribution.codex.hooks, "distribution inventory mismatch");

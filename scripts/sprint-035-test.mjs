@@ -180,7 +180,7 @@ check("host-specific inventory covers all skills and distribution surfaces", () 
   assert.equal(inventory.distributionSurfaces.codex.manifest, ".codex-plugin/plugin.json");
 });
 
-check("Codex and Claude formal manifests share the same 17 skills and Clarity Hook", () => {
+check("Codex and Claude formal manifests share the same 17 skills with host-specific Hook loading", () => {
   const edition = json(join(plugin, "edition.json"));
   const codex = json(join(plugin, ".codex-plugin/plugin.json"));
   const codexMarket = json(join(root, ".agents/plugins/marketplace.json"));
@@ -191,7 +191,7 @@ check("Codex and Claude formal manifests share the same 17 skills and Clarity Ho
   assert.equal(codex.skills, "./skills/");
   assert.equal(codex.hooks, "./hooks/hooks.json");
   assert.equal(claude.skills, "./skills/");
-  assert.equal(claude.hooks, "./hooks/hooks.json");
+  assert.equal(Object.hasOwn(claude, "hooks"), false);
   assert.equal(codexMarket.plugins[0].source.path, "./plugins/secretary");
   assert.equal(codexMarket.name, edition.distribution.marketplaceId);
   assert(!existsSync(join(root, "adapters", "codex-app", "skills")));

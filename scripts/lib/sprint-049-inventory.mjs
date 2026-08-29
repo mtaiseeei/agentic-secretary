@@ -122,6 +122,19 @@ function removeTopLevelJsonMembers(body, keys) {
 
 function productSurfaceBytes(path, absolute) {
   const bytes = readFileSync(absolute);
+  if (path === "plugins/secretary/.claude-plugin/plugin.json") {
+    // Claude Code loads the standard hooks/hooks.json automatically. The
+    // host adapter therefore omits the redundant manifest field, while the
+    // collaboration inventory keeps its pre-patch digest stable by hashing
+    // the historical equivalent bytes for this one optional declaration.
+    const body = bytes.toString("utf8");
+    if (!topLevelJsonMembers(body).some(({ key }) => key === "hooks")) {
+      const closingBrace = body.lastIndexOf("}");
+      const prefix = body.slice(0, closingBrace).replace(/\s*$/u, "");
+      return Buffer.from(`${prefix},\n  "hooks": "./hooks/hooks.json"\n${body.slice(closingBrace)}`);
+    }
+    return bytes;
+  }
   if (path !== "adapters/downstream-clarity-handoff.json") return bytes;
 
   // Sprint 050 Patch 001 keeps the accepted product candidate frozen and adds
