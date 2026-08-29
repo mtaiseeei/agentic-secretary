@@ -18,7 +18,8 @@ import {
   rebuildState,
   validateProject,
 } from "./clarity-core.mjs";
-import { safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { safeWritePath, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { resolveClarityRoot } from "./clarity-root.mjs";
 
 const LINK_SCHEMA_VERSION = 1;
 const LINK_STATES = new Set(["accepted", "active", "disabled"]);
@@ -95,10 +96,13 @@ function noSensitiveData(value, label) {
   return value;
 }
 
-function currentRoot(rootValue) {
+function currentRoot(rootValue, { legacyLocatorError = false } = {}) {
   let root;
-  try { root = workingRoot(rootValue); }
-  catch (error) { throw new ClarityError(error?.code || "working-root-unsafe", error instanceof Error ? error.message : "working rootを安全に確認できません。", 3, { changed: false }); }
+  try { root = resolveClarityRoot(rootValue).root; }
+  catch (error) {
+    const code = legacyLocatorError && error?.code === "root-self-symlink" ? "working-root-unsafe" : error?.code || "working-root-unsafe";
+    throw new ClarityError(code, error instanceof Error ? error.message : "working rootを安全に確認できません。", 3, { changed: false });
+  }
   let identity;
   try { identity = inspectRepoIdentity(root); }
   catch (error) {
@@ -128,7 +132,12 @@ function readJson(path, code, message) {
 }
 
 function clarityProject(root) {
-  const path = safeWritePath(root, ".clarity/project.json");
+  let path;
+  try { path = safeWritePath(root, ".clarity/project.json"); }
+  catch (error) {
+    if (["symlink-boundary", "filesystem-boundary"].includes(error?.code)) throw new ClarityError("root-internal-symlink", "Repo内の.clarityが安全ではないため、参照先を追わず停止しました。", 3, { changed: false });
+    throw error;
+  }
   fail(existsSync(path) && lstatSync(path).isFile() && !lstatSync(path).isSymbolicLink(), "clarity-not-initialized", "このRepoにはClarityが初期化されていません。");
   const project = readJson(path, "project-json-invalid", "Clarity project.jsonがJSONではありません。");
   validateProject(project);
@@ -683,7 +692,7 @@ export function resolveSyncConflict(rootValue, { linkId, conflictId: selectedCon
 export function setLocalLinkMapping(rootValue, { linkId, peerRoot, apply = false } = {}) {
   const local = localParticipant(rootValue);
   const manifest = activeManifest(local.root, linkId);
-  const peer = currentRoot(peerRoot);
+  const peer = currentRoot(peerRoot, { legacyLocatorError: true });
   const peerProject = clarityProject(peer.root).project;
   assertLocal({ projectId: peerProject.clarityProjectId, repositoryIdentity: peer.identityRef }, manifest.peer, "local mapping peer");
   const mapping = { schemaVersion: 1, links: { [linkId]: { peerRoot: realpathSync(peer.root), peerProjectId: peerProject.clarityProjectId, peerRepositoryIdentityId: peer.identityRef.identityId, verifiedAt: nowIso() } } };

@@ -1,0 +1,145 @@
+# Sprint 050 Patch 003 Generator進捗 — 正本freshness確認とClarity ancestor alias
+
+- 開始HEAD: `e75a3f27ec894b03f705eff09b6e5f3f06b37cd7`
+- 担当: Generator（自己検査とEvaluator handoffのみ。Evaluator PASSは宣言しない）
+- 実装日: 2026-08-30
+- 対象: `sprint-050-patch-003`（Retry 0、Model Tier strong）
+
+## 実装内容
+
+- development-pointerの`canonicalRepo`が利用可能なlocal checkoutなら、Project status、daily、weekly、Portfolioが毎回read-onlyで現在根拠を観測するようにした。最初に読むfile、Repo／Git／Clarity identity、`observedAt`、source revision、freshness、inspected／excluded／uninspected理由を返す。
+- 1 file 64 KiB、Clarity metadata 256 KiB、最大3 fileに制限した。Secret候補名／値、binary、巨大file、symlink、通常file以外は本文を読まず理由だけを返す。remote-onlyは`unavailable`で、clone／fetch／pull／networkを行わない。
+- `workingRoot(value, { allowAncestorSymlinks: false })`を追加した。option省略／falseは従来の`working-root-unsafe`を維持し、Clarity専用resolverだけが内部的にtrueを指定する。利用者向けflagは追加していない。
+- ancestor aliasは`realpath`で物理rootへ固定し、root／ancestor link／Git top-level／`.git`／Git configのfilesystem identityを保持する。重要path解決、read、write、rename前のguardで再確認し、alias差替えまたは同じrealpath文字列でのroot実体差替えを`clarity-root-changed`、`changed:false`で停止する。
+- root自身のsymlink、root内`.clarity`、broken ancestor、file向きancestorを、それぞれ`root-self-symlink`、`root-internal-symlink`、`ancestor-symlink-broken`、`ancestor-symlink-not-directory`で区別した。`link-map --peer-root`は外部locatorとして既存LK-007の`working-root-unsafe`互換を維持する。
+- macOSの標準`/var`→`/private/var`、`/tmp`→`/private/tmp`だけは従来どおり正規化する。host固有home／volume pathは製品コードへ追加していない。
+- concurrency中に一時pathがrename／削除される正常競合はbounded retryし、既存canonical lockの一貫性を維持した。root resolverのGit照合は既存`runExternalSync`境界を使い、直接`spawnSync`を追加していない。
+- tracked collaboration inventoryへ`canonical-repo-reader`と`clarity-root-policy`を追加した。19 surface、CLX 20＋CF 7＋AR 14の41 case、marker、content digestを双方向検査する。
+
+## 変更file
+
+```text
+plugins/secretary/collaboration-inventory.json
+plugins/secretary/scripts/clarity-secretary.mjs
+plugins/secretary/scripts/clarity.mjs
+plugins/secretary/scripts/lib/clarity-core.mjs
+plugins/secretary/scripts/lib/clarity-drift.mjs
+plugins/secretary/scripts/lib/clarity-hook.mjs
+plugins/secretary/scripts/lib/clarity-link.mjs
+plugins/secretary/scripts/lib/clarity-projection.mjs
+plugins/secretary/scripts/lib/clarity-root.mjs
+plugins/secretary/scripts/lib/clarity-secretary.mjs
+plugins/secretary/scripts/lib/safe-fs.mjs
+scripts/lib/sprint-049-inventory.mjs
+scripts/sprint-049-test.mjs
+scripts/sprint-050-patch-003-test.mjs
+docs/progress/sprint-050-patch-003.md
+```
+
+Planner所有の`docs/spec*`／`docs/sprints/sprint-*`、Orchestrator所有の`docs/sprints/state.md`、Evaluator所有の`docs/feedback/**`は変更していない。Skill本文、manifest、version、release／Marketplace／cacheも変更していない。
+
+## 起動／CLI
+
+server／UI／test URLはない。通常checkoutまたはworkspace ancestor alias配下のRepoで次を実行できる。
+
+```bash
+node plugins/secretary/scripts/clarity.mjs status <repo-root> --json
+node plugins/secretary/scripts/clarity.mjs link-identity <repo-root> --json
+node plugins/secretary/scripts/clarity.mjs init <repo-root> --json
+```
+
+Project status／daily／weekly／Portfolio adapterの回帰入口:
+
+```bash
+node scripts/sprint-050-patch-003-test.mjs
+```
+
+## case集計
+
+| group | PASS | FAIL | NOT-RUN | 補足 |
+|---|---:|---:|---:|---|
+| CF-001〜007 | 7 | 0 | 0 | local／remote-only／missing／unsafe／unreadable、Secret／binary／large／symlink、Git状態保存 |
+| AR-001〜014 | 14 | 0 | 0 | alias／physical、preview／apply、root差替え、Drift negative、macOS alias、全入口 |
+| Patch合計 | 21 | 0 | 0 | `EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+
+registry正本は既存274 caseの本文、Severity、初回Sprint割当、feature割当を変更していない。Patch 21 IDは重複0、未割当0、各1 featureである。既存Sprint 050 coverage guardの非因果baselineは「既知issue」に分離した。
+
+## root policy適用matrix
+
+| surface | Clarity内部opt-in | 観測／結果 |
+|---|---|---|
+| 一般`workingRoot` | なし（省略／false） | ancestor aliasを`working-root-unsafe`で拒否 |
+| CLI Repo root | あり | policy sourceをJSONへ返し、previewは`changed:false` |
+| core init／status／Event／Evidence | あり | 物理rootの`.clarity/**`だけを参照／変更 |
+| link prepare／accept／finalize／sync | あり | alias／physical identity同一、tracked absolute local path 0 |
+| projection | あり | 物理root内の宣言済みprojectionのみ |
+| Drift Repo root | あり | Repo rootは許可、Decision／implementation locator symlinkは従来どおり拒否 |
+| Secretary adapter／canonicalRepo | あり | local正本をbounded read、remote-onlyはunavailable |
+| Clarity Hook cwd／root discovery | あり | alias入力を物理rootへ固定 |
+| `link-map --peer-root` locator | なし | LK-007互換の`working-root-unsafe` |
+
+AR-004ではunmanaged `CLARITY.md`をcanaryとして保持し、alias経由applyが物理Repo内の`.clarity/**`だけを作成した。AR-008ではalias targetを別Repoへ変更するfixtureと、rootをrename後に同じpathへ別inodeのRepoを作るfixtureの双方で、旧／新treeが不変のまま`clarity-root-changed`になった。
+
+## canonical read report
+
+synthetic `development-pointer`の`canonicalRepo`記載値そのものをworkspace ancestor alias配下に置いた。macOSでrequested pathは`/var`配下、actual pathは`/private/var`配下へ正規化され、alias／physicalでRepo identity、Git HEAD／branch／top-level、Clarity Project IDが一致した。
+
+| source | availability／freshness | inspected | excluded／uninspected |
+|---|---|---|---|
+| local Git＋Clarity | `available`／`current-at-observation` | 最初に読む`README.md`と`.clarity` metadataのdigest／bytes | なし |
+| stale workspace snapshot＋新しい正本 | current observationと`stale-snapshot`を分離 | source revision／`observedAt`あり | snapshotをcurrentへ昇格しない |
+| remote-only URL | `unavailable` | 0 file | `read-only-provider-evidence-unavailable`、network 0 |
+| missing／root-self unsafe／permission 000／missing first file | `missing`／`unsafe`／`unreadable`／`stale` | 読めた範囲だけ | 固有reason、包括的aligned／no-drift断定なし |
+| Secret名／binary／70 KiB／外向きsymlink | `stale` | 本文0 | `sensitive-name`／`binary`／`file-too-large`／`symlink-not-followed` |
+
+canonical observation前後でfilesystem tree、dirty、staged、untracked、HEAD、branch、remoteが一致した。canonical repo write、Git write、network callはいずれも0。例外はAR-004のsynthetic `.clarity/**` applyだけである。
+
+## negative evidence
+
+| fixture | observed | 副作用 |
+|---|---|---|
+| option省略／false＋ancestor alias | `working-root-unsafe` | 0 |
+| root自身symlink | `root-self-symlink` | 0 |
+| Repo内`.clarity`外向きsymlink | `root-internal-symlink` | external canary不変 |
+| broken ancestor | `ancestor-symlink-broken` | 0 |
+| file向きancestor | `ancestor-symlink-not-directory` | 0 |
+| alias target差替え／同path実体差替え | `clarity-root-changed`、`changed:false` | 旧／新root不変 |
+| Drift source locator symlink | `drift-path-symlink` | Evidence／Git変更0 |
+| remote-only canonicalRepo | `unavailable` | clone／fetch／network 0 |
+
+tracked link bundle、Event、Evidence、projectionをscanし、fixtureのrequested／physical absolute pathとSecret値は0件だった。dirty／staged／untracked、HEAD、branch、remoteはpositive／negative fixtureの前後で不変だった。
+
+## 実行済み回帰
+
+| command | result |
+|---|---|
+| `node scripts/sprint-050-patch-003-test.mjs` | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+| Git-free current bytesで同上 | `PASS=21 FAIL=0 TOTAL=21` |
+| `node scripts/sprint-041-test.mjs` | `PASS=43 FAIL=0` |
+| `node scripts/sprint-045-test.mjs` | `PASS=35 FAIL=0` |
+| `node scripts/sprint-046-test.mjs` | `PASS=34 FAIL=0`、LK-007 PASS |
+| `node scripts/sprint-047-test.mjs` | `PASS=25 FAIL=0`、GS-009 stress 32 CLI＋32 Hook、parse／unique／rebuild 100% |
+| `node scripts/sprint-049-inventory.mjs validate` | `PASS=19 FAIL=0 CASES=41 MARKERS=VALID DIGESTS=VALID` |
+| `node scripts/sprint-049-test.mjs` | `PASS=20 FAIL=0`、CLX-006／020 PASS |
+| sandbox外`bash scripts/sprint-048-regression.sh` | `SPRINT048_PASS=12 FAIL=0`、wrapper `PASS=8 FAIL=0`、PK-008 Git-free PASS |
+| `node scripts/sprint-050-test.mjs --coverage-only` | 既知baselineでexit 1。詳細は次節 |
+| `git diff --check` | exit 0 |
+
+## 既知issue／非因果baseline
+
+`node scripts/sprint-050-test.mjs --coverage-only`は、Patch開始HEADと現在の双方でregistry guard
+`primary meaning/severity changed`により停止する。actualは`6c073e574638b2e9382e0521a936c9b4605eea7ccc03dbabd21d0953d5b0bba8`、expectedは`f3782f008a362f4a7d9d38afeb48cda97ced61062e69fd062093132277ccf979`で同一だった。開始HEAD `e75a3f2`のGit-free archiveでも同じcommand、同じdigest差、同じstack位置を再現したため、本PatchのCF／AR追加とは非因果である。既存274 caseの本文／Severity／割当／hashはこのPatchで修正していない。
+
+最初のsandbox内Sprint 048はlocalhost `listen EPERM 127.0.0.1`でPK-007が停止した。同じcandidateを通常環境で再実行しPK-001〜012とwrapper 8 gateを0 FAILで完走したため、製品findingへ数えていない。実行中にsource修正が入った中間runのGit-free digest差も破棄し、固定した最終bytesでPK-008／009を再PASSさせた。
+
+## Not-run／境界
+
+- Evaluatorの独立操作、Evaluator PASS、orchestratorのstate更新は未実施。本書を判定に流用しない。
+- 実顧客repo、Mac mini対象repo、private版、Yasashii版、実provider／network、実remoteへのread／writeは未実施。
+- install、version bump、CHANGELOG、release inventory、Marketplace、cachebuster、reinstall、new session、release、tag、push、PRは未実施・未変更。
+- Windows native、Claude Code／Codexのlive Hook、external Xmindは未実施。UI変更がないためbrowser／screenshotは対象外。
+- external／downstream writeは0件。テストの全writeはOS一時directory内のsynthetic fixtureだけである。
+
+## Evaluator handoff
+
+EvaluatorはGenerator commitのclean candidateで、まず`node scripts/sprint-050-patch-003-test.mjs`を実行し、CF 7／AR 14、actual path／realpath、identity、error code、tree／Git snapshot、operation countを独立確認する。続いてinventory、Sprint 041／045／046／047／049、通常環境のSprint 048 wrapperを再実行する。coverage-onlyの既知digest差は開始HEAD再現と区別し、製品findingとverification baselineを混同しない。

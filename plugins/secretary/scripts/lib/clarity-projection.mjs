@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { ClarityError, appendEvent, attention, history, rebuildState, status } from "./clarity-core.mjs";
-import { FilesystemBoundaryError, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { FilesystemBoundaryError, safeWritePath, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { resolveClarityRoot } from "./clarity-root.mjs";
 
 export const QUADRANT_VISUALS = Object.freeze({
   stabilize: Object.freeze({ quadrant: "q2", position: "左上", emoji: "🟢", label: "定着・検証", meaning: "安定している", color: "#16A34A" }),
@@ -18,8 +19,8 @@ const SETTINGS_PATH = ".clarity/xmind-settings.json";
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function stableJson(value) { return `${JSON.stringify(value, null, 2)}\n`; }
 function safeRoot(value) {
-  try { return workingRoot(value || "."); }
-  catch { throw new ClarityError("root-unsafe", "working rootを安全に確認できません。"); }
+  try { return resolveClarityRoot(value || ".").root; }
+  catch (error) { throw new ClarityError(error?.code || "root-unsafe", error instanceof Error ? error.message : "working rootを安全に確認できません。", 3, { changed: false, ...(error?.details || {}) }); }
 }
 function relativeTarget(root, value) {
   const absolute = resolve(root, value);

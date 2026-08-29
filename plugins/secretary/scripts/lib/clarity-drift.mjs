@@ -10,7 +10,7 @@ import {
   history,
 } from "./clarity-core.mjs";
 import { runExternalSync } from "./external-ops.mjs";
-import { workingRoot } from "./safe-fs.mjs";
+import { resolveClarityRoot } from "./clarity-root.mjs";
 
 const MAX_SOURCE_BYTES = 64 * 1024;
 const MAX_SOURCE_LINES = 240;
@@ -143,7 +143,7 @@ function evidenceSummary(role, inspected) {
 }
 
 export function compareDrift(rootValue, input) {
-  const root = workingRoot(rootValue);
+  const root = resolveClarityRoot(rootValue).root;
   fail(input && input.schemaVersion === 1, "drift-input-invalid", "Drift comparison schemaVersionは1にしてください。");
   const itemId = line(input.itemId, "itemId", 32);
   fail(/^ci_[a-f0-9]{20}$/u.test(itemId), "drift-input-invalid", "itemIdが不正です。");
@@ -192,7 +192,7 @@ function evidenceInput(itemId, role, side, comparisonDigest) {
 }
 
 export function applyDrift(rootValue, input, { apply = false, failAt = process.env.CLARITY_DRIFT_FAIL_AT || "" } = {}) {
-  const root = workingRoot(rootValue);
+  const root = resolveClarityRoot(rootValue).root;
   const compared = compareDrift(root, input);
   if (!apply) return { ...compared, status: "preview", nextAction: "双方のlocatorと比較結果を確認し、明示的に --apply を付けてください" };
   fail(compared.decision && compared.implementation?.sourceAuthority !== "missing", "drift-evidence-insufficient", "保存可能な双方のEvidenceが揃っていません。追加調査後に再実行してください。");
@@ -216,7 +216,7 @@ export function applyDrift(rootValue, input, { apply = false, failAt = process.e
 }
 
 export function recordDriftWaiver(rootValue, input, { apply = false } = {}) {
-  const root = workingRoot(rootValue);
+  const root = resolveClarityRoot(rootValue).root;
   const itemId = line(input.itemId, "itemId", 32);
   const item = findCanonicalItem(root, itemId);
   fail(item, "item-missing", "指定したClarity Itemが見つかりません。");
@@ -235,7 +235,7 @@ export function recordDriftWaiver(rootValue, input, { apply = false } = {}) {
 }
 
 export function commitClarityOwned(rootValue, { message = "Project Clarity checkpoint", apply = false } = {}) {
-  const root = workingRoot(rootValue);
+  const root = resolveClarityRoot(rootValue).root;
   const safeMessage = line(message, "commit message", 160);
   const top = git(root, ["rev-parse", "--show-toplevel"])?.trim();
   fail(top && resolve(top) === root, "clarity-commit-non-git", "Clarity commitはGit top-levelでだけ実行できます。");

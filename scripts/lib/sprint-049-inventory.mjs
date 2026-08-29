@@ -23,9 +23,15 @@ const EXPECTED = {
   "clarity-hook": ["plugins/secretary/hooks/hooks.json", "plugins/secretary/scripts/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs"],
   "xmind-editions": ["plugins/secretary/release-inventory.json", "adapters/downstream-clarity-handoff.json", "plugins/secretary/skills/clarity/SKILL.md"],
   "package-release-inventory": ["plugins/secretary/release-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json", ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"],
+  "canonical-repo-reader": ["plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json"],
+  "clarity-root-policy": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-drift.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-link.mjs", "plugins/secretary/scripts/lib/clarity-projection.mjs", "plugins/secretary/scripts/lib/clarity-root.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/scripts/lib/safe-fs.mjs"],
 };
 
-const EXPECTED_CASES = Array.from({ length: 20 }, (_, index) => `CLX-${String(index + 1).padStart(3, "0")}`);
+const EXPECTED_CASES = [
+  ...Array.from({ length: 20 }, (_, index) => `CLX-${String(index + 1).padStart(3, "0")}`),
+  ...Array.from({ length: 7 }, (_, index) => `CF-${String(index + 1).padStart(3, "0")}`),
+  ...Array.from({ length: 14 }, (_, index) => `AR-${String(index + 1).padStart(3, "0")}`),
+];
 const OLD_CONTRACTS = ["topic-save=confirm-first", "save-copy=exact-copy", "explicit-memory-request=next-turn-confirmation"];
 const COORDINATION_PATHS = new Set([INVENTORY_PATH, "adapters/downstream-clarity-handoff.json", "adapters/agentic-overlay.json", "plugins/secretary/release-inventory.json"]);
 const PRIVATE_LITERALS = ["vault/10_sources", "/Users/", "rules/copy/yasashii", "rules/styles/yasashii"];

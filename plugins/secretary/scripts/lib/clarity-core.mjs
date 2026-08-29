@@ -18,8 +18,9 @@ import {
 import { createHash } from "node:crypto";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { copyTreeNoFollow, removeSafe, safeDeletePath, safeWritePath, workingRoot, writeFileAtomicSafe } from "./safe-fs.mjs";
+import { copyTreeNoFollow, removeSafe, safeDeletePath, safeWritePath, writeFileAtomicSafe } from "./safe-fs.mjs";
 import { runExternalSync } from "./external-ops.mjs";
+import { refreshClarityRootAfterOwnedReplacement, resolveClarityRoot, revalidateClarityRoot } from "./clarity-root.mjs";
 
 export const CLARITY_SCHEMA_VERSION = 2;
 export const CLARITY_MIN_SCHEMA_VERSION = 1;
@@ -227,12 +228,14 @@ function withCanonicalWriteLock(rootValue, callback) {
 
 function rootPath(value) {
   try {
-    const root = workingRoot(value || ".");
+    const root = resolveClarityRoot(value || ".").root;
     fail(root !== dirname(root), "root-unsafe", "filesystem rootはClarity working rootにできません。");
     return root;
   } catch (error) {
     if (error instanceof ClarityError) throw error;
-    throw new ClarityError("root-unsafe", "working rootを安全に確認できません。symlink／junctionを含まない通常directoryを指定してください。");
+    const code = error?.code || "root-unsafe";
+    const message = error instanceof Error ? error.message : "working rootを安全に確認できません。";
+    throw new ClarityError(code, message, 3, { changed: false, ...(error?.details || {}) });
   }
 }
 
@@ -590,7 +593,12 @@ function jsonLines(path, validator) {
 
 function readCanonical(rootValue) {
   const root = rootPath(rootValue);
-  const clarity = safeWritePath(root, ".clarity");
+  let clarity;
+  try { clarity = safeWritePath(root, ".clarity"); }
+  catch (error) {
+    if (["symlink-boundary", "filesystem-boundary"].includes(error?.code)) throw new ClarityError("root-internal-symlink", "Repo内の.clarityが安全な通常directoryではないため、参照先を追わず停止しました。", 3, { changed: false });
+    throw error;
+  }
   fail(existsSync(clarity) && lstatSync(clarity).isDirectory() && !lstatSync(clarity).isSymbolicLink(), "clarity-not-initialized", "このRepoにはClarityが初期化されていません。");
   const projectPath = safeWritePath(root, ".clarity/project.json");
   fail(existsSync(projectPath), "project-missing", ".clarity/project.jsonがありません。");
@@ -924,7 +932,13 @@ function initializedPreview(root) {
 
 export function previewInit(rootValue) {
   const root = rootPath(rootValue);
-  if (existsSync(safeWritePath(root, ".clarity"))) return initializedPreview(root);
+  let clarityPath;
+  try { clarityPath = safeWritePath(root, ".clarity"); }
+  catch (error) {
+    if (["symlink-boundary", "filesystem-boundary"].includes(error?.code)) throw new ClarityError("root-internal-symlink", "Repo内の.clarityが安全ではないため、参照先を追わず停止しました。", 3, { changed: false });
+    throw error;
+  }
+  if (existsSync(clarityPath)) return initializedPreview(root);
   const repoIdentity = inspectRepoIdentity(root);
   const scan = scanRepository(root);
   const existingRootEntry = existsSync(safeWritePath(root, "CLARITY.md"));
@@ -996,6 +1010,7 @@ export function applyInit(rootValue) {
     writeFileSync(join(stage, "evidence.jsonl"), canonical.evidence.map((row) => JSON.stringify(row)).join("\n") + "\n", { encoding: "utf8", flag: "wx" });
     writeFileSync(join(stage, "state.json"), stableJson(canonical.state), { encoding: "utf8", flag: "wx" });
     if (process.env.CLARITY_FAIL_AT === "before-canonical") throw new ClarityError("failure-injected", "テスト用: canonical rename前に停止しました。", 4);
+    revalidateClarityRoot(root);
     renameSync(stage, target);
   } finally {
     if (existsSync(stage)) rmSync(stage, { recursive: true, force: true });
@@ -1556,6 +1571,18 @@ function findDecision(files, decision) {
   return null;
 }
 
+function rawCanonicalDigest(root) {
+  const rows = [];
+  for (const rel of [".clarity/project.json", ".clarity/events.jsonl", ".clarity/evidence.jsonl", ".clarity/state.json"]) {
+    const path = join(root, rel);
+    let stat;
+    try { stat = lstatSync(path); } catch { throw new ClarityError("clarity-root-changed", "Secretary Project更新後のClarity canonicalを再確認できません。", 3, { changed: false }); }
+    fail(stat.isFile() && !stat.isSymbolicLink(), "clarity-root-changed", "Secretary Project更新後のClarity canonical pathが安全ではありません。", { changed: false });
+    rows.push(`${rel}:${sha256(readFileSync(path))}`);
+  }
+  return sha256(rows.join("\n"));
+}
+
 export function decideGenericProject(rootValue, {
   secretaryRoot: secretaryRootValue,
   projectName,
@@ -1589,6 +1616,7 @@ export function decideGenericProject(rootValue, {
   let stored = findDecision(files, safeDecision);
   let projectDecisionChanged = false;
   if (!stored) {
+    const canonicalBeforeProjectWrite = rawCanonicalDigest(root);
     if (failAt === "decision-write") {
       throw new ClarityError("decision-partial", "Clarityには確認待ちを記録しましたが、Decision正本の書込みに失敗しました。確定表示していません。", 4, {
         operationId: opId,
@@ -1630,6 +1658,9 @@ export function decideGenericProject(rootValue, {
         decisionError: String(result.stderr || "").trim().slice(0, 300),
       });
     }
+    const canonicalAfterProjectWrite = rawCanonicalDigest(root);
+    fail(canonicalAfterProjectWrite === canonicalBeforeProjectWrite, "clarity-root-changed", "Project更新中にClarity canonicalの実体が変わったため、確定Eventを書かず停止しました。", { changed: false });
+    refreshClarityRootAfterOwnedReplacement(root);
     stored = findDecision(files, safeDecision);
     fail(stored, "decision-write-unverified", "既存Decision seam成功後の正本を再確認できませんでした。");
     projectDecisionChanged = true;

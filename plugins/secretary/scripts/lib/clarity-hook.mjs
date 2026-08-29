@@ -15,7 +15,8 @@ import {
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { attention, history } from "./clarity-core.mjs";
-import { FilesystemBoundaryError, safeWritePath, workingRoot } from "./safe-fs.mjs";
+import { FilesystemBoundaryError, safeWritePath } from "./safe-fs.mjs";
+import { resolveClarityRoot, rootPolicyFor } from "./clarity-root.mjs";
 
 const MAX_INPUT_BYTES = 1024 * 1024;
 const MAX_CONTEXT_CHARS = 3600;
@@ -105,7 +106,7 @@ function samePath(root, target) {
 }
 
 function canonicalRuntimeRoot(rootValue) {
-  const root = workingRoot(rootValue);
+  const root = resolveClarityRoot(rootValue).root;
   const clarity = join(root, ".clarity");
   let guarded;
   try { guarded = safeWritePath(root, ".clarity"); } catch {
@@ -142,22 +143,33 @@ function assertRuntimeDirectoryChain(rootValue, relativeDirectory, { allowMissin
   return { root, directory: current, missing: null };
 }
 
-export function findClarityRoot(cwdValue) {
+export function inspectClarityHookRoot(cwdValue) {
+  const requestedCwd = resolve(cwdValue || ".");
   let current;
   try {
-    current = realpathSync(resolve(cwdValue || "."));
+    current = resolveClarityRoot(requestedCwd).root;
   } catch {
     return null;
   }
   if (!isNormalDirectory(current)) return null;
   for (let depth = 0; depth < 64; depth += 1) {
     const clarity = join(current, ".clarity");
-    if (isNormalDirectory(clarity) && isNormalFile(join(clarity, "project.json")) && isNormalFile(join(clarity, "state.json"))) return current;
+    if (isNormalDirectory(clarity) && isNormalFile(join(clarity, "project.json")) && isNormalFile(join(clarity, "state.json"))) {
+      const requestedRoot = resolve(requestedCwd, ...Array.from({ length: depth }, () => ".."));
+      try {
+        const resolved = resolveClarityRoot(requestedRoot);
+        return { root: resolved.root, rootPolicy: rootPolicyFor(resolved.root) };
+      } catch { return null; }
+    }
     const parent = dirname(current);
     if (parent === current) break;
     current = parent;
   }
   return null;
+}
+
+export function findClarityRoot(cwdValue) {
+  return inspectClarityHookRoot(cwdValue)?.root || null;
 }
 
 function safeRelative(root, value) {
