@@ -502,6 +502,11 @@ Hookがmemory保存候補を意味判定したり、projects／daily／update等
 projects表示はproject lifecycleを主表示のまま保ち、Clarity mode、Attention件数、最重要項目、link healthを短く添える。
 作成、完了、再開、canonicalRepo設定はprojectsの確認境界へ従い、Clarityが代行したように表示しない。
 
+development-pointerではworkspace snapshotと正本repoの観測を分ける。正本観測は「確認できた場所／revision」「確認時刻」
+「最初に読むファイル」「Git current state」「Clarityあり／なし」「除外・未確認理由」を短く示す。local正本がmissing、unsafe、
+unreadable、またはremote-onlyで利用可能なread-only evidenceが無い場合は「正本を確認できていません」と表示し、snapshotだけから
+「最新」「問題なし」「Driftなし」と断定しない。
+
 daily morningは予定、TODO、中断点、PJ状態の後に「今日の要確認」を独立sectionで示す。eveningはDecision、実装観測、
 候補、Drift、持越しAttentionを分け、weeklyは増減とlagを示す。Clarity ItemをTODOと同じ一覧へ混ぜず、
 「タスク化して」の明示依頼時だけ既存TODO／notion-tasksへ委譲する。
@@ -512,6 +517,10 @@ linkはprepare／accept／finalizeの現在段階、双方のRepo identity、作
 sync previewは相手revision、last imported revision、新規／更新候補、conflict、authority violation、write予定pathを示す。
 applyは明示確認後だけ自Repoを更新し、「相手Repoへwriteしていない」「pushしていない」を結果に含める。
 conflictではlast-write-winsを使わず、Secretary側、Repo側、新Decision、Item分割、保留、unlinkのうち適用可能な選択を出す。
+
+Clarityのancestor alias opt-inを使った場合、表示するRepo identityはphysical／aliasで同じにする。エラーは少なくとも
+「ancestor aliasは未許可」「working root自身がsymlink」「root内symlinkがunsafe」「alias／物理rootが途中で変わった」を
+区別し、変更有無を必ず添える。host固有absolute pathを通常のlink bundleや利用者向け正本へ保存しない。
 
 ### Mermaid／Xmind
 

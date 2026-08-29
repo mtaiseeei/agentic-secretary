@@ -440,6 +440,44 @@ XV-001〜004はprimary 250とCLX 20のID／意味／割当を変更せず、2026
 
 ---
 
+# 19A. Sprint 050 Patch 003 — Canonical freshness／Ancestor root alias
+
+## Canonical freshness
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| CF-001 | Critical | development-pointerのlocal正本checkoutが利用可能 | Project statusがpointerの「最初に読むファイル」、物理Repo identity、Git current state、Clarity状態をbounded readする | observed paths／bytes、identity、Git snapshot、Clarity status |
+| CF-002 | Critical | workspace snapshotと正本repoの内容／時刻が異なる | 両根拠とobserved at／freshnessを分け、snapshotだけを最新状態へ昇格しない | status output、source revision、timestamps |
+| CF-003 | Critical | daily／weekly／Portfolioにlocal development-pointerを含む | 各surfaceが同じ正本観測意味を使い、bounded Attentionと未確認理由を保持する | surface outputs、observation digest、read limits |
+| CF-004 | Critical | remote URLだけでlocal checkoutなし | clone／fetch／pull／network 0。現在のadapterに許可済みread-only evidenceが無ければ`unavailable` | external operation log、output reason、Git／tree snapshot |
+| CF-005 | Critical | 正本repoにSecret、binary、巨大file、内部symlink | 値／本文／symlink先を読まず、excluded／uninspectedへ理由を示し、workspaceへ全文複製しない | canary、read report、workspace diff、secret scan |
+| CF-006 | Critical | 正本repoがmissing／unsafe／unreadable／stale | `source_unreachable`相当を表示し、包括的なcurrent／aligned／driftなしを断定しない | negative outputs、changed false、snapshot wording |
+| CF-007 | Critical | 全canonical observation経路 | 正本repoへのwrite／fetch／pull／push／checkout／branch／remote／network 0、dirty／staged／untracked不変 | before／after filesystem・Git、operation log |
+
+## Ancestor root alias
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| AR-001 | Critical | 一般`workingRoot`をancestor symlink経由で開く | `allowAncestorSymlinks: false`相当の既定で従来どおり拒否するnegative control | error code、changed false、before／after |
+| AR-002 | Critical | alias/workspace/repoでworkspaceだけsymlink、Clarity opt-in true | 未初期化はalias／physicalとも同じ次の`clarity-not-initialized`へ到達し、初期化済み`link-identity`は両方成功する | commands、exit、error／result、actual path |
+| AR-003 | Critical | 同一Repoをalias／physicalから識別 | Repo identity、Clarity Project ID、Git top-level identityが一致する | identity JSON、digests |
+| AR-004 | Critical | alias／physicalでinit previewとClarity-owned apply | previewは両方`changed:false`。apply fixtureは物理Repo内の宣言済み`.clarity/**`だけを変更し、alias別tree／外部rootへwriteしない | preview JSON、physical tree diff、canary |
+| AR-005 | Critical | working root自身がsymlink | opt-in trueでも`root-self-symlink`相当で拒否する | distinct error、changed false |
+| AR-006 | Critical | Repo内`.clarity`またはwrite targetが外向きsymlink | 参照先を追わず`root-internal-symlink`相当で拒否する | external canary、distinct error、tree diff 0 |
+| AR-007 | Critical | ancestor aliasがbroken | 次のClarity判定へ進まず、root解決で安全に拒否する | error、write 0、Git snapshot |
+| AR-008 | Critical | root解決後にalias target差替え／物理root identity変更 | 重要read／write直前の再確認で停止し、旧／新rootともcanonical変更0件 | failure injection、root identities、tree digests |
+| AR-009 | Critical | link prepare／accept／finalizeをalias経由で実行 | tracked link bundleのabsolute local path 0、alias／physical identity同一 | bundle scan、identity、repo scan |
+| AR-010 | Critical | dirty／staged／untracked、branch／remoteありRepoをalias経由で操作 | 全成功／失敗fixtureで内容とGit状態を保持する | index／worktree／HEAD／branch／remote snapshot |
+| AR-011 | Critical | Drift decision／implementation locatorがsymlink | root ancestor opt-inと無関係にlocator symlink拒否を維持する | comparator negative、canary、Evidence 0 |
+| AR-012 | Critical | macOS `/var`→`/private/var`、`/tmp`→`/private/tmp` | 既存platform alias正規化が回帰せず、host固有home／volume pathをhard-codeしない | macOS commands、realpath、source scan |
+| AR-013 | Critical | ancestor symlinkが通常fileまたはdirectory以外を指す | 物理rootとして採用せず副作用0件で拒否する | lstat／realpath、error、tree diff 0 |
+| AR-014 | Critical | core／link／projection／Drift／Secretary adapter／Hookの全入口 | 同じroot policyとphysical containmentを使い、ancestor可・root自身・内部unsafe・root changedのerrorを区別する | entrypoint matrix、expected／observed codes、write set |
+
+Patch専用caseは既存primary 250、CLX 20、XV 4へ数えない。関連する`ST-008`、`LK-007`、`CLX-006`、
+Git／packaging回帰は意味・Severity・初回割当を変えず直接再実行する。
+
+---
+
 # 20. 最終E2Eシナリオ
 
 ## E2E-001: StandaloneからSecretary連携

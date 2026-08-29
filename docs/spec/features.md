@@ -540,18 +540,22 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - open／closed、作成／完了／再開、PJ固有Decisionの既存契約を置き換えず、mode、Attention、最重要項目、link healthだけを短く追加する。
 - private my-vault固有の`05/02`、`vault/10_sources`、Notion routingはadapter seamだけを用意し、public sourceへ実装しない。
 - projectsは作成、open／closed、complete／reopen、`canonicalRepo`のlifecycle正本を維持し、ClarityはDecision／Execution／Validation／Attention／Driftだけを付加する。両者はinput／output／routingで協働するが所有権を交換しない。
+- `development-pointer`／`canonicalRepo`がlocal checkoutとして利用できる場合、Project statusはworkspace側snapshotに加えて正本repoを自動でbounded readする。少なくともpointerの「最初に読むファイル」、Repo identity、Gitのcurrent state、既存Clarity状態の有無を確認し、観測時刻、根拠、除外・未確認範囲を一緒に返す。
+- local checkoutが無いremote URLだけのpointerではclone／fetch等を行わない。Clarity coreがnetworkやproviderを自動起動せず、現在の用件で利用可能かつ許可済みのread-only provider evidenceがadapterから与えられた場合だけ同じ観測形式へ取り込む。それ以外は`unavailable`と理由を示す。
 
 ### F74 daily／weekly／Portfolio統合
 
 - daily morningは予定・TODO・中断点と混ぜず、`今日の要確認`を独立sectionで最大3件程度表示する。
 - eveningは新規Decision、観測実装、未処理候補、Drift、持越しAttentionを分け、weeklyはAttention増減、lag、解消Drift、長期滞留を扱う。
 - Portfolioはopen PJの最小projectionだけを集約し、closedと全Item本文を通常読込しない。
+- development-pointerを含むopen PJは、statusと同じbounded canonical observationをdaily／weekly／Portfolioで共有する。正本未確認、stale、unsafe、unreadableのときはworkspace snapshotを履歴的な参考として分離し、包括的な「現在」を断定しない。
 
 ### F75 reciprocal link handshake
 
 - prepare／accept／finalizeで両Project ID、Repo identity、link ID、digest、authorityを相互確認する。
 - Link metadataへSecret、資格情報、absolute local path、顧客本文を保存しない。
 - 既存Standalone IDを維持し、duplicate／tamper／target不一致を副作用0件で拒否する。
+- local root aliasを使っても双方のRepo identityは物理root基準で同一になり、tracked link bundleへalias／physicalのabsolute local pathを保存しない。
 
 ### F76 pull sync／authority／conflict
 
@@ -564,12 +568,16 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Decision／spec／ADR／顧客合意と、current code／commit／test／成果物Evidenceを比較する。
 - 根拠が弱い差は`possible_drift`、両根拠が揃う不一致は`drift`とし、Decision側と実装側を同時に示す。
 - Decision変更、実装修正、例外承認のいずれでも履歴を消さず、解消後はActive Attentionから外す。
+- working rootのancestor aliasを許可した場合も、Decision／implementationのsource locator自身やroot内pathのsymlinkは追わない。locatorの拒否をroot aliasの例外へ広げない。
 
 ### F78 Clarityの安全性・競合安全性・冪等性
 
 - working root、symlink／junction、path traversal、dirty／staged変更、Secret、schema破損、lock残骸を安全側に扱う。
 - concurrent hookは共有JSONのread-modify-writeへ依存せず、atomic write／lock／一意eventで破損と重複を防ぐ。
 - failed apply／migration／sync／checkpointは利用者差分を巻き戻さず、partialとretryで一つの状態へ収束する。
+- root解決契約は`allowAncestorSymlinks: false`相当を既定とし、trueはClarityのrequest-boundな明示opt-inに限る。trueでもworking root自身は通常directoryでなければ拒否し、ancestor aliasだけをrealpathで実在する通常directoryの物理rootへ固定する。
+- 以後のread、containment、Git top-level確認、canonical／runtime／projection／link／Drift／Secretary adapter／Hook writeは同じ物理rootを基準にする。root内から外向きのsymlink、壊れたalias、directory以外を指すalias、alias差替え、物理rootのidentity変更はfail closedとする。
+- macOSの既存platform aliasである`/var`→`/private/var`と`/tmp`→`/private/tmp`は回帰させず、host固有のhome／volume pathを製品規則へhard-codeしない。
 
 ### F79 public-first packagingと固定handoff
 
@@ -584,6 +592,7 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 
 - `secretary`、`projects`、`daily`、`weekly`、`notion-tasks`、`memory-care`、`build`、`update`、onboarding、workspace templates、rules、host inventory、manifest／release inventory、edition handoffを機械可読inventoryで棚卸しする。
 - 各surfaceに、Clarityを読む／書く／委譲する／触れない責務、manual／Hook入口、外部操作、正本、edition適用、必須回帰を記録する。
+- inventoryはdevelopment-pointer canonical readerとClarity root policyの適用入口も列挙し、status／daily／weekly／Portfolio間のfreshness意味、一般working rootのnegative control、Clarity core／link／projection／Drift／Secretary adapter／Hookのroot解決差をstaleにしない。
 - notion-tasks／TODOは明示依頼時だけの委譲、memory-careはDecision重複保存防止、buildはHarness state非置換、updateは自動更新なし、connectorは自動実行なしを負検査する。
 - file存在やSkill名だけで合格にせず、実内容marker、routing fixture、前後snapshot、inventory digestで旧契約再流入と対象漏れを検出する。
 

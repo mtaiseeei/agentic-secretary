@@ -854,6 +854,40 @@ Plugin更新完了、ローカルmigration完了、user-scope routing有効化�
 
 ## Project Clarity
 
+### CanonicalRepoObservation
+
+`development-pointer`／`canonicalRepo`を持つProjectのClarity-aware表示は、workspace側の`PROJECT.md` snapshotと
+正本repoの現在観測を別の根拠として扱う。`CanonicalRepoObservation`は次を持つ。
+
+- source kind: `local-checkout / supplied-read-only-provider / remote-only / unavailable`
+- availability: `available / stale / missing / unsafe / unreadable / unavailable`
+- pointer上の「最初に読むファイル」と、そのbounded確認結果
+- 物理root基準のRepo identity、Git kind／HEAD／branch／dirty・staged・untracked有無、remote identityの非機密summary
+- Clarity canonicalの`initialized / not-initialized / unsafe / unreadable`と、確認できた場合のProject ID／state revisionの最小summary
+- observed at、source revision、inspected／excluded／uninspected、freshness、利用者向けreason
+
+local checkoutが実在する通常directoryなら自動readする。remote URLだけではclone／fetchせず、Clarity coreからprovider／networkを
+起動しない。現在の用件で利用可能かつ許可済みのread-only provider evidenceがadapterへ供給された場合だけ取り込む。
+「最初に読むファイル」は物理root内の安全な相対pathである通常fileだけを読み、absolute path、traversal、symlink、missing、
+directory、上限超過は理由つきのuninspectedとする。freshnessは`current-at-observation / stale-snapshot / unknown`を区別し、
+観測時刻とsource revisionなしに`current-at-observation`へしない。
+観測はSecret、binary、巨大file、root内symlink、本文全文を追わず、workspace側へ正本内容を複製しない。
+観測できない場合は`source_unreachable`相当の根拠不足として扱い、古いsnapshotからcurrent alignmentやDriftを確定しない。
+
+### ClarityRootPolicy
+
+root policyは少なくとも`allowAncestorSymlinks`を持ち、既定は`false`である。一般filesystem処理はfalseのまま使う。
+Clarityの明示opt-inだけがtrueを渡せる。trueでも要求されたworking root自身はsymlinkであってはならず、ancestor aliasだけを
+realpathで物理rootへ固定する。物理rootは実在する通常directoryで、Git RepoではGit top-levelの実体と一致しなければならない。
+
+root observationは要求path、物理root、ancestor chain、root filesystem identity、Repo identityをrequest中だけ保持し、重要なreadと
+各write／rename直前に再確認する。alias targetまたは物理root identityが変われば`changed: false`で停止する。containment、owned path、
+canonical lock、runtime、projection、link、Drift、Secretary adapter、Hookは全て物理root基準であり、root内symlinkやsource locator
+symlinkは従来どおり拒否する。tracked Clarity data／link bundleへ要求path・物理rootのabsolute local pathを保存しない。
+
+macOSの`/var`→`/private/var`、`/tmp`→`/private/tmp`という既存platform aliasは従来の正規化を維持する。製品契約には
+特定利用者のhomeやvolume名を埋め込まない。
+
 ### ClarityProjectとMode
 
 `ClarityProject`はschema version、immutable `clarityProjectId`、名称、mode、作成時刻、Repo identity、

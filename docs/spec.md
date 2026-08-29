@@ -123,8 +123,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
 | [rubric.md](spec/rubric.md) | ゼロ許容基準、browser・OAuth・secret・実API、やさしさを含む評価方法 |
 | [editions.md](spec/editions.md) | agentic／private my-vault／yasashiiの3配布系統、共通面、限定差分、互換・同期・公開gate |
-| [clarity-acceptance.md](spec/clarity-acceptance.md) | Project Clarityのprimary 250、CLX 20、XV 4の単一割当、最終E2E／全回帰 |
-| [clarity-acceptance-cases.md](spec/clarity-acceptance-cases.md) | Project Clarityのprimary 250 case、visual provider追加case、E2E 4本を収載したrepo内の実行正本 |
+| [clarity-acceptance.md](spec/clarity-acceptance.md) | Project Clarityのprimary 250、CLX 20、XV 4、Patch専用caseの単一割当、最終E2E／全回帰 |
+| [clarity-acceptance-cases.md](spec/clarity-acceptance-cases.md) | Project Clarityのprimary 250 case、追加case、E2E 4本を収載したrepo内の実行正本 |
 
 ## スプリント
 
@@ -187,6 +187,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-049](sprints/sprint-049.md) | secretary関連全surfaceのClarity-aware協働inventoryと追加回帰 | sprint-048 |
 | [sprint-050](sprints/sprint-050.md) | 250 case全件、追加collaboration case、4 E2E、既存master全回帰の最終判定 | sprint-049 |
 | [sprint-050-patch-001](sprints/sprint-050-patch-001.md) | Sprint 050のユーザー判断をPASSと分離した固定handoff gateへ束縛する | sprint-050 done-by-user-decision |
+| [sprint-050-patch-002](sprints/sprint-050-patch-002.md) | Claude標準Hookの重複manifest宣言だけを解消する | sprint-050-patch-001 |
+| [sprint-050-patch-003](sprints/sprint-050-patch-003.md) | 開発PJの正本freshness確認とClarity限定ancestor symlink aliasを安全に成立させる | sprint-050-patch-002 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -245,3 +247,5 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 50. Markdown／Mermaid／Xmindは正本ではない。Xmindは明示ON／OFFとprovider capability／priority／selected／reasonを分け、Agentic／Yasashii既定OFF、private既定ON。ONかつMCP接続済み・必要能力ありならMCP-first、それ以外は理由とlocal対象／影響をpreviewしたうえで承認待ちとし、承認後だけlocal native `.xmind`へ切り替える。未承認／cancelはwrite 0件とする。
 51. 4象限は左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」とし、色だけでなくemoji／ラベル／意味文をXmind MCP、local `.xmind`、表現可能なMermaidで一致させる。
 51. public版を先に独立PASSし、固定SHA／digestからprivate、次にYasashiiを別Harnessで適用・評価する。publicへprivate固有path／Notionを混ぜず、release／cache／downstream liveを別stageとして報告する。
+52. `development-pointer`／`canonicalRepo`を持つClarity-aware表示は、利用可能な正本repoをboundedかつread-onlyに確認し、最初に読むファイル、Repo identity／Git current state、Clarity状態、観測時刻、未確認理由を示す。正本を確認できない場合はworkspace側のsnapshotだけで包括的な現在判断を確定しない。
+53. 一般filesystemのworking rootはancestor symlink拒否を既定のまま維持する。Clarityだけが`allowAncestorSymlinks: true`を明示した場合、root自身ではなくancestorだけを物理rootへ固定して利用できる。root自身／root内symlink、壊れたalias、差替え、実体変更、境界外writeは副作用0件で拒否する。

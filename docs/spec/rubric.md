@@ -47,7 +47,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 28. **Google Chat Cloud準備と一体型確定**: 「Google Chatを設定したい」からskill会話を開始し、Git repo root、`<repo名>-google-chat` のProject表示名／ID案、Google Workspace組織、必要API、Billing非接続を確認する。`gcloud`あり／なし／導入拒否／導入不可、未ログイン、複数組織、権限不足、Project ID衝突、CLI途中失敗、手動中断をfixtureで操作し、変更前の説明・明示確認、直接リンクへのfallback、途中再開を確認する。JSON取得後だけwizardを開き、Cloud準備画像・重複画面0件、JSON選択→別タブOAuth→自動SPACE選択を確認する。以後はスペース→間隔→安全確認→`この設定で始める` の1回で初回取り込みと自動取得設定を完了し、完了画面のprimaryは `設定を終了する`。手動のみは初回取り込みあり・schedule 0件、自動間隔は追加CTA／再選択／追加設定フロー0件とする。
 29. **Google Cloud外部変更gate**: `gcloud`のインストール、Cloud project作成、API有効化、OAuth Client作成等の外部変更は、ユーザーの明示許可と専用test資源がある場合だけlive検証する。通常評価はcommand runner／Cloud応答／公式リンクを合成fixtureで検証し、実行していない外部変更をlive成功と表現しない。live許可がないこと自体は本Patchの不合格理由にせず、外部変更0件を証跡化する。
 30. **Git所有変更とsecret検査**: 操作前に無関係なtracked／untracked／staged変更を配置する。製品管理workflow／config／historyと初回publish inventoryに、synthetic OAuth client JSON、Chatwork Token、private key、credential URL、known token field、通常のliteral assignmentを配置する。合理的な誤混入はcommit・push前に拒否され、所有pathだけがcommitされ、既存indexの内容とstage状態がbyte単位で維持されることを確認する。`${{ secrets.NAME }}` 等の正規参照、通常文書、合理的な非機密metadataも同じ実Git経路で誤拒否0件を確認する。
-31. **symlinkと削除対象**: 最終要素、途中ancestor、root自体の外向きsymlinkをNode／shellの全主要書込みで操作し、副作用0件を確認する。許可root内のsymlink削除はlinkだけが消え、外部参照先のfile／directory内容とmetadataが不変であることを確認する。
+31. **symlinkと削除対象**: 一般filesystemでは最終要素、途中ancestor、root自体の外向きsymlinkをNode／shellの全主要書込みで操作し、副作用0件を確認する。Clarityだけは`allowAncestorSymlinks: true`の明示opt-inでancestor aliasを物理rootへ固定できるが、root自身／root内symlink、壊れた／directory以外のalias、差替えは拒否する。許可root内のsymlink削除はlinkだけが消え、外部参照先のfile／directory内容とmetadataが不変であることを確認する。
 32. **loopback session防御**: Chatwork／Google Chatの全状態変更endpointへ、別Origin、Originなし、session確認値なし／不一致、誤Content-Type、GET、再送を送る。正当な同一session JSON POSTだけが成功し、拒否requestは設定、Secret、OAuth、履歴、Gitへ副作用0件であることを確認する。OAuth callbackは並行・再送でもtoken交換とSecret登録が各1回であることをassertする。
 33. **非信頼本文とrun相関**: Google Chat本文・発言者・添付名へ内部marker、HTML comment、Markdown見出し、区切り線を入れ、既存・後続blockの欠落0件と再取得の冪等性を確認する。Actionsはdispatch前run、別branch／workflow、時刻欠落／不正、失敗run＋古い成功runを含むfixtureで、今回run以外を採用しない。
 34. **0.6.0→0.7.0更新と両面rollback**: 実際の0.6.0相当plugin／workspace fixtureで診断、確認、dry-run、更新、再実行、reload、migration途中失敗、検証失敗を操作する。成功時は0.7.0整合、失敗時はworkspaceとpluginの両方が0.6.0状態へ戻るか、実行可能な旧版復元手順で戻した結果まで確認する。
@@ -114,6 +114,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 44. **pendingの一件束縛**: 保存提案への「はい」、別話題後の「はい」、「はい、ただしX」を行う。同じ話題の了承だけが1件保存、別話題後は古い候補0件、修正付き了承は修正版を同じturnで1件保存し、再確認0件となる。
 45. **topic訂正と内容retry**: 旧topicへ「XではなくY（理由）」を保存し、旧内容byte不変、訂正event 1件を確認する。同じ意味を表記違い・別operation id・再起動後に再依頼してもtopic／decision／journal／commitが0件追加で、否定・条件・確実性が異なる別内容は誤dedupeしない。
 46. **checkpoint partial**: memory本体とjournal成功後のlocal commitを失敗させ、`partial`、保存・journal各1件、commit 0件を確認する。retryは保存・journalを増やさずcommitだけ1件、再retryは全差分0件となる。
+47. **canonical freshnessとClarity root alias**: development-pointerを持つsynthetic Secretary workspaceとlocal正本repoで、status／daily／weekly／Portfolioが「最初に読むファイル」、Repo identity／Git current state、Clarity状態、観測時刻、未確認理由をbounded readすることを確認する。remote-only／missing／unsafe／unreadableではsnapshotだけの現在断定とnetworkが0件であることを確認する。別fixtureではworkspace ancestorだけをsymlinkにし、opt-in aliasとphysical pathのidentity／判定一致、preview write 0、物理`.clarity/**`限定apply、root自身／内部／broken／file向き／差替え拒否、一般working rootのnegative control、Drift locator拒否、macOS platform alias回帰を検査する。
 
 個人化された文面の完全一致はassertしない。設定の読込、許可された分岐、既定へのフォールバック、確認フローを評価する。
 
@@ -140,11 +141,11 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C17 | 既存workspace identity migration | plugin更新との状態分離、read-only診断、製品所有節、台帳、自由記述保持、local checkpoint、完全rollback、冪等性 | **5** |
 | C18 | 明示memory authorization・内容冪等性 | memory scope、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版inventory | **5** |
 | C19 | Clarity正本・状態モデル | Event／Evidence／State、Decision×Execution、AI推定非確定、4モード | **5** |
-| C20 | Attention・Clarity UX | bounded output、結論→理由→根拠→選択、Drift、未検証表示 | ≥4 |
+| C20 | Attention・Clarity UX | bounded output、結論→理由→根拠→選択、Drift、canonical freshness／未検証表示 | ≥4 |
 | C21 | Clarity Hook・host parity | 共通command router、trust／disabled、manual fallback、競合安全、host別live | **5** |
 | C22 | federated link・sync・Drift | reciprocal identity、authority、pull、conflict、cross-root write 0 | **5** |
 | C23 | projection・Xmind | deterministic Markdown／Mermaid、MCP-first provider、承認付きlocal fallback、fixed visual、proposal | ≥4 |
-| C24 | Clarity安全・統合・public-first | path／Secret／dirty、既存Skill協働、inventory、回帰、固定handoff | **5** |
+| C24 | Clarity安全・統合・public-first | 物理root封じ込め、canonical read freshness、Secret／dirty、既存Skill協働、inventory、回帰、固定handoff | **5** |
 | C25 | ユーザー判断handoff governance | PASS分離、exact source／feedback／承認束縛、失効、順序、scope、rollback | **5** |
 
 ## スコアアンカー
@@ -251,7 +252,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C20 Attention・Clarity UX
 
-- 5: 「今、人間が考える必要があるのは何か」へ最大3件程度で結論→理由→根拠→選択を返し、Drift、無承認実装、決定済み未実行を正しく優先する。idea／正常項目は畳み、推定・未検証・根拠不足・source unreachableを断定しない。
+- 5: 「今、人間が考える必要があるのは何か」へ最大3件程度で結論→理由→根拠→選択を返し、Drift、無承認実装、決定済み未実行を正しく優先する。development-pointerではworkspace snapshotと正本repoの観測・時刻・freshnessを分け、正本未確認時に現在状態を断定しない。idea／正常項目は畳み、推定・未検証・根拠不足・source unreachableを断定しない。
 - 4: 主要Attentionと選択は成立し、軽微な順序・copy改善だけが残る。
 - 3以下: 全件羅列、task一覧化、理由／根拠なし、Drift誤断定、idea優先、Attentionなし時の不安を煽る表示、またはbounded output違反。→不合格。
 
@@ -262,7 +263,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C22 federated link・sync・Drift【ゼロ許容】
 
-- 5: prepare／accept／finalizeが双方のID／Repo identity／digestを照合し、pull syncはpreview後に自Repoだけを更新する。authorityが一意で、conflict、stale、schema不一致、deleteを隠さず、last-write-wins／cross-root write／暗黙pushが0件。Driftは双方のEvidenceを示し、根拠不足はpossibleに留める。
+- 5: prepare／accept／finalizeが双方のID／Repo identity／digestを照合し、pull syncはpreview後に自Repoだけを更新する。ancestor aliasとphysical pathでRepo identityは同一、tracked link bundleのabsolute local pathは0件。authorityが一意で、conflict、stale、schema不一致、deleteを隠さず、last-write-wins／cross-root write／暗黙pushが0件。Driftは双方のEvidenceを示し、root aliasを許可してもsource locator symlinkを拒否し、根拠不足はpossibleに留める。
 - 4以下: 相手Repoへの直接write、absolute pathのtracked保存、identity改ざん受理、Primary重複、conflict消去、暗黙network／push、根拠なしDrift確定、履歴消去が1件でもある。→不合格。
 
 ### C23 projection・Xmind
@@ -274,8 +275,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C24 Clarity安全・統合・public-first【ゼロ許容】
 
-- 5: path／symlink／Secret／dirty／stage／schema／lock／retry境界が全て成立し、secretary、projects、daily、weekly、notion-tasks、memory-care、build、update、onboarding、templates、rules、host／release inventory、edition handoffの実内容inventoryと回帰が0 FAIL。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public Evaluator PASS、またはC25を満たす束縛済みユーザー判断のready前は、downstream／release／cache／external write 0件。
-- 4以下: private値のpublic混入、対象surface漏れ、file存在だけのinventory、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、正当なacceptance basisより前の下流反映、release stage混同が1件でもある。→不合格。
+- 5: 一般rootのancestor symlink拒否を維持しつつ、Clarityの明示opt-inだけがancestor aliasを物理rootへ固定する。root自身／root内symlink、broken／file向きalias、差替え／identity変更を副作用0件で拒否し、core／link／projection／Drift／Secretary adapter／Hookのcontainmentが一致する。development-pointerのlocal正本はbounded readされ、freshness／未確認理由が表示される。canonical observationは正本repoへのwrite／Git変更／network 0件、alias apply fixtureは物理rootの宣言済み`.clarity/**`だけを変更する。path／Secret／dirty／stage／schema／lock／retry境界、関連surface inventory、既存回帰が0 FAILである。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public Evaluator PASS、またはC25を満たす束縛済みユーザー判断のready前は、downstream／release／cache／external write 0件。
+- 4以下: ancestor aliasの一般既定許可、root自身／root内symlink追従、alias差替え後write、alias／physical identity不一致、tracked absolute local path、Drift locator symlink追従、stale snapshotだけの現在断定、利用可能local正本の未読、remote-onlyからの自動network、正本repo／Gitへの副作用、private値のpublic混入、対象surface漏れ、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、正当なacceptance basisより前の下流反映、release stage混同が1件でもある。→不合格。
 
 ### C25 ユーザー判断handoff governance【ゼロ許容】
 
@@ -291,6 +292,15 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - Xmind MCP caseはadapter／capability／priority／selected／reason／確認境界を必須実装とする。未接続・無効・能力不足・許可なしのreal external-liveは正直なconditional NOT-RUNでよいが、fallbackは自動writeせずpreview／confirmを評価する。外部write、local write、network、credit消費を合格のために自動実行しない。isolated fakeをreal providerのverified証拠にしない。
 - private固有case IDはpublic stageではadapter seam、private literal非混入、固定handoffを評価する。実`05/02/10_sources/Notion`と実顧客fixture／提供PDF／提供Xmindはprivate版の別Harnessで再実行し、public PASSへ偽装しない。`XM-012`／`E2E-002`のpublic評価は同構造の匿名fixtureを使う。
 - 実行command、exit code、case ID、期待／観測、fixture root、前後digest、PASS／FAIL／NOT-RUN理由、host／provider状態があれば十分とする。新しいcollector、統一attestation、実顧客data、無許可network／release／downstream writeを追加条件にしない。
+
+## Sprint 050 Patch 003の検証方法（safe harbor）
+
+- synthetic Secretary workspace、local正本Git Repo、remote-only pointer、missing／unsafe／unreadable、Secret／binary／巨大file／内部symlink fixtureでCF-001〜007を実行する。status／daily／weekly／Portfolioごとに観測source、最初に読むファイル、Repo identity／Git current state、Clarity状態、observed at、freshness、excluded／uninspected、unavailable理由を記録する。
+- alias/workspace/repoのworkspace ancestorだけをsymlinkにしたfixtureで、`allowAncestorSymlinks: false`とtrue、alias／physical、未初期化／初期化済み、preview／applyを実行する。root自身、`.clarity`外向き、broken／file向きancestor、alias差替え／物理identity変更を個別negative fixtureにする。
+- Clarity core／link／projection／Drift／Secretary adapter／Hookの各入口を直接通し、Drift source locator symlink拒否、link bundle absolute local path 0、物理`.clarity/**`以外のwrite 0、dirty／staged／untracked／HEAD／branch／remote不変を確認する。一般`workingRoot`はopt-inなしのnegative controlとする。
+- macOSでは`/var`→`/private/var`、`/tmp`→`/private/tmp`を既存platform alias回帰として確認する。他OSは同aliasを合格条件にせず、host固有home／volume名を実装へ固定していないことをsource scanで確認する。
+- 同じcandidateを通常checkout、ancestor alias経由、`.git`なしGit-free archive相当で実行し、actual path／realpath、root identity、case結果、tree digestを記録する。public Patchではsynthetic fixtureだけを使い、実顧客repoへapplyしない。
+- command、exit、case ID、expected／observed error code、requested／physical rootの一時的な比較、before／after filesystem・Git snapshot、read件数／byte上限、network／external operation log 0があれば十分とする。新しいcollector、統一attestation、実顧客data、実provider、実downstream、releaseを追加条件にしない。
 
 ## Sprint 050 Patch 001の検証方法（safe harbor）
 
