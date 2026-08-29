@@ -248,4 +248,4 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 51. 4象限は左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」とし、色だけでなくemoji／ラベル／意味文をXmind MCP、local `.xmind`、表現可能なMermaidで一致させる。
 51. public版を先に独立PASSし、固定SHA／digestからprivate、次にYasashiiを別Harnessで適用・評価する。publicへprivate固有path／Notionを混ぜず、release／cache／downstream liveを別stageとして報告する。
 52. `development-pointer`／`canonicalRepo`を持つClarity-aware表示は、利用可能な正本repoをboundedかつread-onlyに確認し、最初に読むファイル、Repo identity／Git current state、Clarity状態、観測時刻、未確認理由を示す。正本を確認できない場合はworkspace側のsnapshotだけで包括的な現在判断を確定しない。
-53. 一般filesystemのworking rootはancestor symlink拒否を既定のまま維持する。Clarityだけが`allowAncestorSymlinks: true`を明示した場合、root自身ではなくancestorだけを物理rootへ固定して利用できる。root自身／root内symlink、壊れたalias、差替え、実体変更、境界外writeは副作用0件で拒否する。
+53. 一般filesystemのworking rootはancestor symlink拒否を既定のまま維持する。Clarityの指定入口だけが内部root resolverから`allowAncestorSymlinks: true`を明示し、利用者のflag／設定なしでroot自身ではなくancestorだけを物理rootへ固定できる。この緩和を共通filesystemや他Skillへ伝播させず、root自身／root内symlink、壊れたalias、差替え、実体変更、境界外writeは副作用0件で拒否する。

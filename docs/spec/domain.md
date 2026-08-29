@@ -876,12 +876,25 @@ directory、上限超過は理由つきのuninspectedとする。freshnessは`cu
 
 ### ClarityRootPolicy
 
-root policyは少なくとも`allowAncestorSymlinks`を持ち、既定は`false`である。一般filesystem処理はfalseのまま使う。
-Clarityの明示opt-inだけがtrueを渡せる。trueでも要求されたworking root自身はsymlinkであってはならず、ancestor aliasだけを
-realpathで物理rootへ固定する。物理rootは実在する通常directoryで、Git RepoではGit top-levelの実体と一致しなければならない。
+root policyは少なくとも`allowAncestorSymlinks`を持ち、既定は`false`である。一般`workingRoot(value)`はoption省略時もfalseであり、
+共通filesystem処理と他Skillはfalseのまま使う。Clarity専用root resolverだけが、次のRepo root指定入口から呼ばれたrequestで
+`allowAncestorSymlinks: true`を内部指定する。これは利用者向けCLI flag／設定ではない。
+
+- Clarity CLIのRepo root指定
+- Clarity coreの公開操作にあるRepo root指定
+- link prepare／accept／finalize等のlocal Repo root指定
+- projectionのRepo root指定
+- DriftのRepo root指定。ただしDecision／implementation source locatorには適用しない
+- Secretary adapterの`canonicalRepo` local rootとSecretary-local Clarity root指定
+- Clarity Hookのcwd／Repo root discovery
+
+各入口の結果は、適用policyがClarity internal opt-inであり`allowAncestorSymlinks: true`だったことを識別できる情報を返す。
+trueでも要求されたworking root自身はsymlinkであってはならず、ancestor aliasだけをrealpathで物理rootへ固定する。物理rootは
+実在する通常directoryで、Git RepoではGit top-levelの実体と一致しなければならない。
 
 root observationは要求path、物理root、ancestor chain、root filesystem identity、Repo identityをrequest中だけ保持し、重要なreadと
-各write／rename直前に再確認する。alias targetまたは物理root identityが変われば`changed: false`で停止する。containment、owned path、
+各write／rename直前に再確認する。realpath文字列が同じでも物理rootの実体が差し替わった場合を含め、alias targetまたはfilesystem
+identityが変われば`changed: false`で停止する。containment、owned path、
 canonical lock、runtime、projection、link、Drift、Secretary adapter、Hookは全て物理root基準であり、root内symlinkやsource locator
 symlinkは従来どおり拒否する。tracked Clarity data／link bundleへ要求path・物理rootのabsolute local pathを保存しない。
 

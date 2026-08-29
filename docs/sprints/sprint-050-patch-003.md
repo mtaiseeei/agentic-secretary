@@ -6,7 +6,7 @@
 - 対象機能: F64, F68, F73, F74, F75, F77, F78, F80
 - Target Case IDs: CF-001〜CF-007、AR-001〜AR-014（正確な21 IDは`docs/spec/clarity-acceptance.md`の`patchCaseIds.sprint-050-patch-003`）
 - Case Definition: [clarity-acceptance-cases.md](../spec/clarity-acceptance-cases.md)
-- 主眼: development-pointerの古いworkspace snapshotだけで現在判断せず、利用可能な正本repoをread-onlyに確認する。同時に、Clarityだけが明示opt-inしたancestor symlink aliasを物理rootへ固定し、従来の内部symlink／Git／write境界を弱めない。
+- 主眼: development-pointerの古いworkspace snapshotだけで現在判断せず、利用可能な正本repoをread-onlyに確認する。同時に、Clarityの指定入口だけが内部opt-inでancestor symlink aliasを物理rootへ固定し、従来の内部symlink／Git／write境界を弱めない。
 
 ## 背景と正本判断
 
@@ -16,7 +16,7 @@
 
 一方、現在のfilesystem境界はworking rootまでの途中ancestorにsymlinkがあると拒否する。これは一般用途の安全な既定として
 維持する。ただしClarityを置くRepo自身は通常directoryでも、その上位workspaceだけが別volume等へのsymlink aliasである
-正当な配置がある。Clarityに限って明示opt-inされたときだけ、ancestor aliasを物理rootへ固定して扱う。
+正当な配置がある。Clarityの指定入口は専用root resolverで内部opt-inし、利用者へflag／設定を求めずancestor aliasを物理rootへ固定して扱う。
 
 ユーザー提供の実機baselineは次のとおりである。この観測は要件決定のupstream evidenceであり、public PatchのPASS、
 private版修正、実顧客repoへのapplyを証明しない。
@@ -33,7 +33,7 @@ private版修正、実顧客repoへのapplyを証明しない。
 
 - development-pointerのstatus、daily、weekly、Portfolioが、利用可能なlocal正本repoの現在根拠をboundedかつread-onlyに確認する。
 - workspace snapshotと正本観測の時刻・revision・freshnessが分かれ、正本未確認時に「最新」「問題なし」「Driftなし」と断定しない。
-- workspace ancestorだけがsymlinkのRepoは、Clarityの明示opt-in時にphysical pathと同じRepo identity・Clarity結果へ到達する。
+- workspace ancestorだけがsymlinkのRepoは、Clarity指定入口の内部opt-inでphysical pathと同じRepo identity・Clarity結果へ到達する。
 - root自身やRepo内部のsymlink、broken／file向きalias、途中差替えは、何も変更せず理由を区別して停止する。
 - alias経由でもwriteは物理RepoのClarity所有pathだけ、Git状態とlink bundleのportable性は不変である。
 
@@ -50,10 +50,10 @@ private版修正、実顧客repoへのapplyを証明しない。
 7. Secret、credential、binary、巨大file、transcript、顧客本文、root内symlinkを追わず、正本内容全文をworkspace、Clarity、log、Evidenceへ複製しない。
 8. remote URLだけの場合はclone／fetch／pull／checkoutしない。Clarity coreはnetwork／providerを暗黙起動しない。現在の用件で既に利用可能かつ許可済みのread-only provider evidenceがadapter入力として供給された場合だけ取り込み、それ以外は`unavailable`とする。
 
-### B. Clarity限定ancestor symlink opt-in
+### B. Clarity限定ancestor symlink内部opt-in
 
-1. root policyは`allowAncestorSymlinks: false`相当を既定とする。一般`workingRoot`、project／memory／update等の既存入口は既定拒否を維持する。
-2. trueはClarityのrequest-boundな明示opt-inに限る。呼出し元、CLI／Skill入口、Secretary canonical readerはopt-inの有無を曖昧にせず、結果へ適用policyを示す。
+1. root policyは`allowAncestorSymlinks: false`相当を既定とする。一般`workingRoot(value)`はoption省略／falseの両方で、project／memory／update等の既存入口と同じ既定拒否を維持する。
+2. trueはClarity専用root resolverだけがrequest中に内部指定する。利用者向けCLI flag／設定は増やさず、共通filesystemや他Skillへ緩和を伝播させない。結果は適用policyがClarity internal opt-inであることを識別できる情報を返す。
 3. trueでも要求されたworking root自身がsymlinkなら拒否する。許可するのはその上のancestor aliasだけである。
 4. ancestor aliasをrealpathで物理rootへ固定し、解決先が実在する通常directoryであることを確認する。Git RepoではGit top-levelの実体も物理rootと一致させる。
 5. root内のcontainment、canonical／runtime／projection／link／Drift／Secretary adapter／Hookのread・writeは、要求pathの文字列ではなく同じ物理rootを基準にする。
@@ -71,9 +71,9 @@ private版修正、実顧客repoへのapplyを証明しない。
 
 ### D. 全入口の整合
 
-1. safe filesystem、Clarity core、link、projection、Drift、Secretary adapter、Clarity Hookの各入口が同じroot policyとphysical containmentを使う。
-2. errorは少なくとも、ancestor alias未許可、root自身symlink、root内unsafe symlink、broken／directory以外のancestor、alias／physical root changedを区別する。
-3. errorは何が起きたか、`changed:false`、次に指定できる安全なpathまたはopt-inの必要性を示し、内部例外だけを利用者へ返さない。
+1. 内部opt-inを使う指定入口は、Clarity CLIのRepo root指定、Clarity core公開操作のRepo root指定、link prepare／accept／finalize等のlocal Repo root指定、projectionのRepo root指定、DriftのRepo root指定、Secretary adapterの`canonicalRepo` local root／Secretary-local Clarity root指定、Clarity Hookのcwd／Repo root discoveryである。全て同じroot policyとphysical containmentを使う。DriftのDecision／implementation source locatorは対象外である。
+2. 一般safe filesystemのerrorであるancestor alias未許可と、Clarity入口のroot自身symlink、root内unsafe symlink、broken／directory以外のancestor、alias／physical root changedを区別する。
+3. errorは何が起きたか、`changed:false`、次に指定できる安全なpathを示し、利用者へopt-in操作や内部例外だけを返さない。
 4. tracked collaboration inventoryはcanonical reader、適用surface、root policy、marker、digest、回帰を含み、stale／欠落を検出する。
 
 ## Feature／Caseの単一割当
@@ -98,7 +98,7 @@ private版修正、実顧客repoへのapplyを証明しない。
 2. local development-pointerを含むProject status、daily、weekly、Portfolioが、最初に読むファイル、Repo identity／Git current state、Clarity状態、observed at、freshness、除外・未確認理由をbounded readする。
 3. remote-only、missing、unsafe、unreadable、staleでは利用不能理由を示し、snapshotだけから包括的current／aligned／no driftを断定しない。clone／fetch／pull／checkout／networkは0件である。
 4. Secret／binary／巨大file／内部symlink先のreadと、正本本文のworkspace／Clarity／logへの複製が0件である。
-5. 一般`workingRoot`はancestor symlinkを従来どおり拒否する。Clarityの`allowAncestorSymlinks: true`だけがworkspace ancestor aliasを許可する。
+5. 一般`workingRoot`はoption省略／falseでancestor symlinkを従来どおり`working-root-unsafe`として拒否する。対応するClarity指定入口だけが内部で`allowAncestorSymlinks: true`を使い、利用者操作なしでworkspace ancestor aliasから次のClarity判定へ到達する。
 6. alias／physicalの未初期化`link-identity`は同じ次の`clarity-not-initialized`へ到達し、初期化済みは両方成功する。Repo identity、Clarity Project ID、Git top-level identityが一致する。
 7. alias／physicalのinit previewは`changed:false`で同じ対象・identityを示す。apply fixtureのwriteは物理Repo内の宣言済み`.clarity/**`だけで、workspace、alias別tree、peer Repo、外部canaryは不変である。
 8. root自身symlink、root内`.clarity`／write targetの外向きsymlink、broken／file向きancestorを固有理由で拒否し、全対象へ副作用0件である。
@@ -106,14 +106,14 @@ private版修正、実顧客repoへのapplyを証明しない。
 10. tracked link bundle／Event／Evidence／projectionのabsolute local pathは0件で、local mappingの既存gitignored境界を維持する。
 11. dirty／staged／untracked、HEAD、branch、remoteが全positive／negative fixtureで不変で、正本repoへのwrite／fetch／pull／push／checkout／branch／remote／network callが0件である。ただしAC7のsynthetic `.clarity/**` applyだけを宣言済み例外とする。
 12. Drift source locator symlink拒否、ST-008、LK-007、CLX-006、GS安全回帰、macOS platform alias、Git-free archive、existing masterの関連回帰が0 FAILである。
-13. core／link／projection／Drift／Secretary adapter／Hookのentrypoint matrixが同じroot policyを使い、ancestor可・root自身・内部unsafe・root changedのerrorを区別する。
+13. CLI／core／link／projection／Drift／Secretary adapter／Hookのentrypoint matrixが同じClarity内部root policyを使い、適用policyの由来を返し、ancestor可・root自身・内部unsafe・root changedのerrorを区別する。
 14. registryは既存274 case不変、Patch case 21件、Target ID重複0、未割当0、余分なcase 0、feature割当各1件を機械確認する。
 15. Fable静的reviewはPlanner正本完成後、最初のGenerator前に行い、意味、Severity、case／feature割当、重複、スコープを確認する。ただしreview結果は製品PASS、Evaluator証拠、state遷移へ数えない。
 
 ## 必須negative control／fixture
 
-- 一般`workingRoot`＋workspace ancestor alias、opt-inなし。
-- Clarity opt-in trueだがworking root自身がsymlink。
+- 一般`workingRoot`＋workspace ancestor alias、option省略／falseと、同じrootに対するClarity指定入口の内部opt-in。
+- Clarity指定入口が内部opt-inするがworking root自身がsymlink。
 - `.clarity`、write target、Drift locatorがそれぞれroot外を指すsymlink。
 - broken ancestor、通常file向きancestor、directory以外の実体。
 - root解決後のalias target差替え、物理rootの置換／identity変更。
@@ -140,9 +140,10 @@ filesystem／Git／external operation 0を持つ。固定summaryやsource scan�
 ## Verification scope（着手時に固定）
 
 - CF-001〜007はsynthetic Secretary workspaceとlocal／remote-only／missing／unsafe／unreadable canonical fixtureで、status／daily／weekly／Portfolioを実行する。各surfaceのread path／bytes上限、source revision、observed at、freshness、Clarity状態、unavailable理由を記録する。
-- AR-001〜014はalias/workspace/repoのworkspaceだけをsymlinkにし、一般default、Clarity opt-in、alias／physical、未初期化／初期化済み、preview／applyを組み合わせる。
+- CF-001またはAR-014には、development-pointerの`canonicalRepo`記載path自体がworkspace ancestor alias配下にある組合せfixtureを含める。
+- AR-001〜014はalias/workspace/repoのworkspaceだけをsymlinkにし、一般option省略／false、Clarity内部opt-in、alias／physical、未初期化／初期化済み、preview／applyを組み合わせる。
 - AC7のapplyはsynthetic fixtureだけで行い、宣言済み`.clarity/**`の前後diffと外部canaryを取る。実顧客repoでは実行しない。
-- core、link、projection、Drift、Secretary adapter、Hookの各入口を直接実行し、単に共有helperのunit testだけで全入口PASSとしない。
+- CLI、core、link、projection、Drift、Secretary adapter、Hookの各Repo root指定入口を直接実行し、単に共有helperのunit testだけで全入口PASSとしない。AR-011はread-onlyのDrift source locator negativeに限定し、resolve／apply／Git commitを実行しない。
 - actual path／realpath、filesystem identity、Repo identity、Clarity Project ID、Git top-level、link bundleを比較する。tracked dataへabsolute local pathを残さない。
 - dirty／staged／untracked、HEAD、branch、remoteとfilesystem treeを前後比較し、command runnerでwrite／fetch／pull／push／checkout／branch／remote／network call 0を記録する。
 - 通常checkout、ancestor alias経由、`.git`なしGit-free archive相当で同じcandidateを検査する。macOSでは`/var`／`/tmp`回帰を実行し、他OSではhost固有path hard-code 0を検査する。

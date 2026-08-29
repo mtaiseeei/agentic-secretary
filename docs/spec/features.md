@@ -575,8 +575,8 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - working root、symlink／junction、path traversal、dirty／staged変更、Secret、schema破損、lock残骸を安全側に扱う。
 - concurrent hookは共有JSONのread-modify-writeへ依存せず、atomic write／lock／一意eventで破損と重複を防ぐ。
 - failed apply／migration／sync／checkpointは利用者差分を巻き戻さず、partialとretryで一つの状態へ収束する。
-- root解決契約は`allowAncestorSymlinks: false`相当を既定とし、trueはClarityのrequest-boundな明示opt-inに限る。trueでもworking root自身は通常directoryでなければ拒否し、ancestor aliasだけをrealpathで実在する通常directoryの物理rootへ固定する。
-- 以後のread、containment、Git top-level確認、canonical／runtime／projection／link／Drift／Secretary adapter／Hook writeは同じ物理rootを基準にする。root内から外向きのsymlink、壊れたalias、directory以外を指すalias、alias差替え、物理rootのidentity変更はfail closedとする。
+- root解決契約は`allowAncestorSymlinks: false`相当を既定とする。Clarityの指定入口だけは専用root resolverがrequest中にtrueを明示し、利用者向けCLI flag／設定を増やさずancestor aliasへ自動対応する。trueでもworking root自身は通常directoryでなければ拒否し、ancestor aliasだけをrealpathで実在する通常directoryの物理rootへ固定する。
+- ClarityのCLI／core／link／projection／Drift／Secretary adapter／HookにあるRepo root指定入口は同じ内部policyを使い、適用結果へClarity internal opt-inであることを示す。以後のread、containment、Git top-level確認、canonical／runtime／projection／link／Drift／Secretary adapter／Hook writeは同じ物理rootを基準にする。root内から外向きのsymlink、壊れたalias、directory以外を指すalias、alias差替え、物理rootのidentity変更はfail closedとする。
 - macOSの既存platform aliasである`/var`→`/private/var`と`/tmp`→`/private/tmp`は回帰させず、host固有のhome／volume pathを製品規則へhard-codeしない。
 
 ### F79 public-first packagingと固定handoff

@@ -518,9 +518,10 @@ sync previewは相手revision、last imported revision、新規／更新候補�
 applyは明示確認後だけ自Repoを更新し、「相手Repoへwriteしていない」「pushしていない」を結果に含める。
 conflictではlast-write-winsを使わず、Secretary側、Repo側、新Decision、Item分割、保留、unlinkのうち適用可能な選択を出す。
 
-Clarityのancestor alias opt-inを使った場合、表示するRepo identityはphysical／aliasで同じにする。エラーは少なくとも
-「ancestor aliasは未許可」「working root自身がsymlink」「root内symlinkがunsafe」「alias／物理rootが途中で変わった」を
-区別し、変更有無を必ず添える。host固有absolute pathを通常のlink bundleや利用者向け正本へ保存しない。
+Clarityの指定入口がancestor aliasへ内部対応した場合、表示するRepo identityはphysical／aliasで同じにし、結果から
+「Clarity internal root policyを適用した」と分かるようにする。利用者へopt-in操作を求めない。一般working rootの
+「ancestor aliasは未許可」と、Clarity入口の「working root自身がsymlink」「root内symlinkがunsafe」
+「alias／物理rootが途中で変わった」を区別し、変更有無を必ず添える。host固有absolute pathを通常のlink bundleや利用者向け正本へ保存しない。
 
 ### Mermaid／Xmind
 
