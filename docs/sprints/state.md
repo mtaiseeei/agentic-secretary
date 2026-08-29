@@ -5,9 +5,9 @@
 - Current ID: sprint-050-patch-003
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 9
+- Lineage Dispatches: 10
 - Model Tier: strong
-- Rotate: model-escalation
+- Rotate: none
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -89,7 +89,7 @@
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
-| sprint-050-patch-003 | active | [contract](sprint-050-patch-003.md) | - | - |
+| sprint-050-patch-003 | awaiting-eval | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -97,6 +97,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-30: Sprint 050 Patch 003 Generator candidate `6497e09cc3fb5d52f5e282f04439fadcd25ac6b8`を固定。local canonical Repoのbounded／read-only観測、一般filesystemの既定拒否を維持するClarity専用ancestor alias resolver、物理root containment、alias／filesystem／Repo／Git identity差替え検出をCLI／core／link／projection／Drift／Secretary adapter／Hookへ実装した。専用CF 7＋AR 14は21/21、Git-free 21/21、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、inventory 19 surface／41 case VALID、通常環境Sprint 048 12/12＋wrapper 8/8、オーケストレーター再実行21/21、external write／network 0。Sprint 050 coverage-onlyのprimary digest差は開始HEAD `e75a3f2`のGit-free archiveでもactual `6c073e...`／expected `f3782f...`が同一再現し、本Patch非因果baselineとしてprogressへ分離した。Statusをawaiting-eval、Model Tier strong、Rotate none、fresh独立Evaluator予約として同一Sprint 050系譜のLineage Dispatchesを上限値10へ更新する。以後の追加dispatchはユーザー判断なしに行わない。実顧客repo、private／Yasashii、release／install／cache／remote writeは未実施。
 - 2026-08-30: development-pointerの利用可能な正本repoをstatus／daily／weekly／Portfolioでbounded・read-onlyに必ず確認し、Clarity指定入口だけが内部opt-inでRepoより上のancestor symlinkを物理rootへ固定する通常Patch `sprint-050-patch-003`を開始。Fable静的reviewはcommit `db88f66c51afe5b378de1d600128c34be4b511a7`に対して`PASS-WITH-REQUIRED-CHANGES`で、最低12テストの漏れ0と必須R1「内部opt-in主体の曖昧さ」を指摘した。Planner commit `5f0252acb8da0913a5af9012aaa165b1d1aa8aae`で、一般`workingRoot`の省略／false拒否、Clarity専用root resolverの指定入口、canonicalRepo ancestor alias組合せ、read-only Drift negativeを既存21 case内で明確化し、274 baseline／Severity／feature割当／safe harborを維持した。静的reviewを製品PASSやEvaluator証拠へ数えず、filesystem安全境界を扱うhigh-risk routingとしてModel Tier strong、Rotate model-escalation、同一Sprint 050系譜の累積Lineage Dispatches 9でfresh Generatorへ引き渡す。実顧客repo apply、private／Yasashii、release／install／cache／remote writeは本Patchの対象外。
 - 2026-08-29: Sprint 050 Patch 002はGenerator candidate `60cda8f7529950465920aa2bed5657da30cacc07`をfresh独立Evaluator commit `5556c09cf76ac3f164f6f3066385166c4a27240d`でPASS。機能完全性／動作安定性／回帰なしは全5/5、product finding 0。candidate archive／Git checkoutでhost別manifest、validator 24/24、Hook 40/40、Sprint 049 inventory 17/17＋統合20/20、Sprint 035 15/15、Codex plugin 4/4、Sprint 048 12/12、release integrity、negative、bytes不変を独立確認した。Sprint 050 coverage入口のregistry digest差はbaseline／candidate双方で同じ開始guardを再現しnonblocking verification-infra、archive上のGit command差もproduct非因果として記録。private実機証拠をpublic live PASSへ昇格せず、Statusをdone、Current IDをTBD、Retry／Spec-Issue 0、Lineage Dispatches 8、Model Tier standard、Rotate noneとする。release、push、tag、Marketplace、install、cache、workspace、downstream writeは0件。
 - 2026-08-29: Sprint 050 Patch 002 Generator candidate `60cda8f7529950465920aa2bed5657da30cacc07`を固定。Claude manifestの標準Hook重複参照だけを除き、Codex manifest参照、共通Hook、Clarity router／core／Skill／rules、inventory JSON、release inventory bytesを維持した。Sprint 048 validator 24/24、Sprint 048 12/12＋wrapper 8/8、Hook 40/40、Sprint 049 inventory 17/17＋統合20/20、Sprint 035 15/15、Codex plugin 4/4、release integrity、diff checkが0 FAIL。固定Sprint 050 coverage入口は今回未変更の既存registry meaning／severity digest差で停止したため、candidate因果をfresh独立Evaluatorへ委ねる。dispatch予約としてLineage Dispatchesを8、Statusをawaiting-eval、Model Tier standard、Rotate noneへ更新する。release、push、tag、Marketplace、install、cache、workspace、downstream writeは0件。
