@@ -7,7 +7,7 @@
 - Spec-Issue Count: 0
 - Lineage Dispatches: 5
 - Model Tier: strong
-- Rotate: model-escalation
+- Rotate: none
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -90,7 +90,7 @@
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 | sprint-050-patch-003 | done | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
-| sprint-050-patch-004 | active | [contract](sprint-050-patch-004.md) | - | - |
+| sprint-050-patch-004 | awaiting-eval | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -98,6 +98,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-31: Sprint 050 Patch 004 Generator candidate `4169c3630e184c771c75c11309e01c23bce0bd77`を固定。Harness authoritative reserved lane、state／contract／progress／feedbackの意味分離、巨大stateの128 KiB bounded section read、alias／physical決定性、Windows path／symlink／junction別capability、既存`.github/workflows/windows-recording-regression.yml`結線を実装した。local TargetはHS 12 PASS／0 FAIL／Windows専用4 NOT-RUN、Sprint 041 43/43、Patch 003 21/21、Sprint 047 25/25、Sprint 049 20/20、inventory 20/20・57 case、Git-free／構文／diff checkがgreen。実`ebino-marketing-hub` previewは`changed:false`・write 0でstateを先行観測し、注釈付き`Current ID: sprint-016（done…）`を`current-id-invalid`、bounded fallbackを`last-recorded-completion`として返した。このinvalid時にfallback Current contract／progress／feedbackをbundleしない安全側挙動がAC3／4／HS-005の期待に合うかを独立Evaluatorの具体シナリオへ渡す。Statusをawaiting-eval、Model Tier strong、Rotate noneとし、Lineage DispatchesはGenerator実dispatch数5を保持。Windows nativeは`windowsVerified=false`のまま、許可済みPR branch push／CI待ち。
 - 2026-08-31: 2 MiB一般scanよりHarness正本を先にbounded確認し、state／contract／progress／feedbackの意味を分離した包括的init候補とWindows native互換を扱う通常Patch `sprint-050-patch-004`を開始。Generator前のClaude Fable 5 read-only静的reviewは`PASS-WITH-REQUIRED-CHANGES`で、Windows external live gate、実在workflow、Fable非製品gate、F68 case割当を指摘。Plannerが既存PR branch `codex/sprint-041-project-clarity`への通常pushと因果的Windows CIだけをユーザー承認済みlive gateとして固定し、`.github/workflows/windows-recording-regression.yml`、HS-001→F68、bounded section read、symlink／junction別capabilityへ正本を修正した。reviewを製品PASS／Windows evidence／Evaluator判定へ数えず、high-risk resolverのstrong tier／Sol high、Rotate model-escalation、fresh Generator dispatch 1件を予約してLineage Dispatchesを5へ更新する。force push、merge、tag、Release、Marketplace、install、downstream、実顧客Repo writeは未許可のまま。
 - 2026-08-30: Sprint 050 Patch 003 Retry 2はGenerator candidate `51329fc05ea0e9e66f64aa5c3bf2ee2db168ed58`をfresh独立Evaluator commit `0f0407758f854633814b485b84e46af8a508044c`でPASS、35/35、blocking product finding 0。Target通常／exact Git-free各21/21、独立fixture 5/5で、F-02の正常／例外request後cleanup、request中read／write guard維持、F-01の複数alias token／dedupe／2 lease／段階cleanup／reuse、CLI／core／link／projection／Drift／Secretary adapter／Hook実入口、旧／新Repo bytes／Git不変を確認した。Sprint 041 43/43、045 35/35、046 34/34、047 25/25、inventory 19/19、049 20/20、変更11 `.mjs`構文11/11。Sprint 050既知digest差とSprint 048 wrapperのsandbox EPERM／通常環境長時間化はcandidate非因果のverification-infraとして分離し、未変更面のRetry 1証跡と変更面direct suiteで増分評価。Statusをdone、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0、Model Tier standard、Rotate noneとする。Lineage Dispatchesは承認reset後の実dispatch数4を保持。実顧客repo、private／Yasashii、release／install／cache／remote writeは未実施。
 - 2026-08-30: Sprint 050 Patch 003 Retry 2 Generator candidate `51329fc05ea0e9e66f64aa5c3bf2ee2db168ed58`を固定。Evaluator F-02に限定し、同期request scopeが所有するroot observation handleを成功・例外の両方で`finally`相当に逆順解放するよう、CLI／core／link／projection／Drift／Secretary adapter／Hookの実入口へ結線した。同一requestのnested resolveは同tokenをdedupeし、別alias tokenと全live guardはrequest中維持する。既存AR-014に正常完了反復→alias retarget→旧physical別request成功、失敗request後cleanupを追加し、AR-008の2 alias read／write fail-closed、`changed:false`、旧A／新B bytes不変、lease／reuseを維持。専用21/21、Git-free 21/21、inventory 19/19、Sprint 041 43/43、045 35/35、046 34/34、047 25/25、049 20/20、構文／diff checkがgreen。Sprint 048はsandbox EPERMと通常環境の既存master回帰長時間化をPASS扱いせずprogressへ記録。Statusをawaiting-evalとし、fresh独立Evaluator dispatchを1件予約してLineage Dispatchesを4へ更新する。仕様・契約・rubric・feedback、実顧客repo、private／Yasashii、release／install／cache／remote writeは未変更。
