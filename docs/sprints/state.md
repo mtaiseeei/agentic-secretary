@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-050-patch-004
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
+- Lineage Dispatches: 7
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -90,7 +90,7 @@
 | sprint-050-patch-001 | done | [contract](sprint-050-patch-001.md) | [progress](../progress/sprint-050-patch-001.md) | [feedback](../feedback/sprint-050-patch-001.md) |
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 | sprint-050-patch-003 | done | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
-| sprint-050-patch-004 | awaiting-eval | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | - |
+| sprint-050-patch-004 | active | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | [feedback](../feedback/sprint-050-patch-004.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -98,6 +98,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-31: Sprint 050 Patch 004初回fresh独立Evaluatorはproduct candidate `4169c3630e184c771c75c11309e01c23bce0bd77`をFAIL（`implementation-issue`）と判定し、feedback commit `af51f928538898cacc9bef154dfe357e50623abe`を記録。product 2件は、F-01 invalid Currentのbounded fallback `sprint-016`を得てもCurrent contract／progress／feedbackのpartial／inferred authoritative bundleへ使わない包括性欠落、F-02 Windows同一Git rootを8.3／long path等のlexical差で`git-root-mismatch`へ誤拒否する問題。verification-infra 1件V-01はWindows checkoutのLF／CRLF差でraw-byte inventory digestがstaleとなり必須suiteを赤くする問題。Windows run `33330012474`は14 PASS／2 FAIL、実Repoはwrite 0だがHS-005／011／016、AC1／3〜5／9／12、C1／C6／C26が未達。Retry Countを1、Status activeとし、既存Acceptance Criteria内の3根本原因だけを修正するfresh strong Generator dispatch 1件を予約してLineage Dispatchesを7へ更新。spec／rubric／case／証拠形式は拡張せず、merge／release／downstreamへ進めない。
 - 2026-08-31: 許可済みPR branch head `ee76ac4`でGitHub Actions Windows run `33330012474`／job `99306780261`を実行し、HS 14 PASS／2 FAIL／0 SKIP／0 NOT-RUN、`windowsVerified=false`を確認。HS-012 drive／日本語／CRLF、HS-013 reserved／invalid／case、HS-014 symlink／junction別capability、HS-015 workflow因果性はPASSし、symlink／junction capabilityはいずれもavailable。一方、HS-011はWindowsのGit top-levelとworking root同一性判定が`git-root-mismatch`、HS-016は`inventory-digest-stale:secretary-router`でFAILした。過去runを流用せずこのcandidate因果のproduct候補として、実`ebino-marketing-hub`の注釈付きCurrent ID fallback／bundle挙動と併せてfresh独立Evaluatorへ引き渡す。Evaluator dispatch 1件を予約しLineage Dispatchesを6へ更新。Status awaiting-eval、Retry 0、Model Tier strong、Rotate noneを維持し、merge／release／downstreamへは進めない。
 - 2026-08-31: Sprint 050 Patch 004 Generator candidate `4169c3630e184c771c75c11309e01c23bce0bd77`を固定。Harness authoritative reserved lane、state／contract／progress／feedbackの意味分離、巨大stateの128 KiB bounded section read、alias／physical決定性、Windows path／symlink／junction別capability、既存`.github/workflows/windows-recording-regression.yml`結線を実装した。local TargetはHS 12 PASS／0 FAIL／Windows専用4 NOT-RUN、Sprint 041 43/43、Patch 003 21/21、Sprint 047 25/25、Sprint 049 20/20、inventory 20/20・57 case、Git-free／構文／diff checkがgreen。実`ebino-marketing-hub` previewは`changed:false`・write 0でstateを先行観測し、注釈付き`Current ID: sprint-016（done…）`を`current-id-invalid`、bounded fallbackを`last-recorded-completion`として返した。このinvalid時にfallback Current contract／progress／feedbackをbundleしない安全側挙動がAC3／4／HS-005の期待に合うかを独立Evaluatorの具体シナリオへ渡す。Statusをawaiting-eval、Model Tier strong、Rotate noneとし、Lineage DispatchesはGenerator実dispatch数5を保持。Windows nativeは`windowsVerified=false`のまま、許可済みPR branch push／CI待ち。
 - 2026-08-31: 2 MiB一般scanよりHarness正本を先にbounded確認し、state／contract／progress／feedbackの意味を分離した包括的init候補とWindows native互換を扱う通常Patch `sprint-050-patch-004`を開始。Generator前のClaude Fable 5 read-only静的reviewは`PASS-WITH-REQUIRED-CHANGES`で、Windows external live gate、実在workflow、Fable非製品gate、F68 case割当を指摘。Plannerが既存PR branch `codex/sprint-041-project-clarity`への通常pushと因果的Windows CIだけをユーザー承認済みlive gateとして固定し、`.github/workflows/windows-recording-regression.yml`、HS-001→F68、bounded section read、symlink／junction別capabilityへ正本を修正した。reviewを製品PASS／Windows evidence／Evaluator判定へ数えず、high-risk resolverのstrong tier／Sol high、Rotate model-escalation、fresh Generator dispatch 1件を予約してLineage Dispatchesを5へ更新する。force push、merge、tag、Release、Marketplace、install、downstream、実顧客Repo writeは未許可のまま。
