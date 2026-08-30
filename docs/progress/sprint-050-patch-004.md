@@ -119,3 +119,46 @@ Plannerが記録したGenerator前Fable reviewの必須指摘に沿い、実在w
 Evaluatorはclean candidateで、まずportable Target suiteを実行しHS-001〜011／016、Patch 37、HS 16、feature単一割当、lane別coverage、Current bundle、alias／physical digestを独立確認する。続いてSprint 041、Patch 003、Sprint 047、Sprint 049 inventory／portable、Git-free current bytesを再実行する。
 
 Windows live gate後は同じcandidate SHAについて、workflow path、`windows-native` job、run ID／URL、OS／Node、command、HS-012〜015のPASS／FAIL／SKIP、symlink／junction capability理由を確認する。既存0.9.2 Windows回帰と`timeout-minutes: 10`も同runで維持されていることを確認し、別SHA／過去run／macOS上のWindows風文字列を証拠へ流用しない。4 NOT-RUNが解消され、実行可能case 0 FAILになるまではSprint PASSを宣言しない。
+
+## Retry 1 — Evaluator 3 findingの限定修正（2026-08-31）
+
+Evaluatorが記録したF-01、F-02、V-01だけを修正した。spec、contract、rubric、case ID、evidence形式、state、feedbackは変更していない。
+
+### 修正内容
+
+- F-01: `detection.kind=invalid`と`current-id-invalid`を維持し、厳格なSprint ID形式で解決した`next-planned`または`last-recorded-completion`だけをfallbackに使う。fallback先のstate／contract／progress／feedbackをreserved laneで確認し、`inferred=true`／`partial=true`のbundle、sources、lane coverage、authoritative candidateへ束ねる。traversal／unsafe IDかつ安全なfallbackなしの場合はbundle／authoritative candidateなしで停止する。
+- F-02: Git top-levelとClarity physical rootの一致をpath文字列ではなく、directoryの`dev`／`ino`というfilesystem identityで判定する。Windowsの8.3／long path、case、separatorの表記差だけを同一directoryとして扱い、identity未取得、parent／child等の別directoryは`git-root-mismatch`でfail closedする。Patch 003のroot／ancestor alias安全境界は維持する。
+- V-01: inventoryの正式content境界はCRLFだけをLFへportable正規化する。path、実contentの他のbyte、marker、missing／extra、modeは従来どおりdigest対象である。Windows checkoutで実行bitをworking treeが表現できない場合だけGit index modeをcanonical値に使い、POSIX／Git-freeはfilesystem modeを使う。LF↔CRLF positive、実content tamper negative、mode tamper negativeをHS-016へ追加した。
+
+Retry 1のGenerator所有変更fileは次の6件である。
+
+```text
+plugins/secretary/collaboration-inventory.json
+plugins/secretary/scripts/lib/clarity-core.mjs
+plugins/secretary/scripts/lib/clarity-harness-scan.mjs
+scripts/lib/sprint-049-inventory.mjs
+scripts/sprint-050-patch-004-test.mjs
+docs/progress/sprint-050-patch-004.md
+```
+
+### 実Repo read-only preview
+
+`/Users/taisei/workspace/ebino-marketing-hub`へ`--apply`なしのread-only previewを実行した。注釈付きCurrentは`detection.kind=invalid`／`reason=current-id-invalid`のまま、`fallbackSource=last-recorded-completion`、`currentId=sprint-016`、`inferred=true`となった。bundle、4 role、sources、authoritative lane、先頭authoritative candidateが存在し、contractはinspected、progress／feedbackはSecret-like contentとして本文非露出のexcluded coverageになった。preview前後でGit statusはclean、HEAD `be17ae120c274d41f9d352b688870d203b328ef7`、branch `main`、origin URLは不変で、Clarity／Git／network writeは0件だった。
+
+### Retry 1 local／Git-free結果
+
+| command | result |
+|---|---|
+| `node scripts/sprint-050-patch-004-test.mjs` | `PASS=12 FAIL=0 SKIP=0 NOT-RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false` |
+| `node scripts/sprint-041-test.mjs` | `PASS=43 FAIL=0 TOTAL=43` |
+| `node scripts/sprint-050-patch-003-test.mjs` | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+| `node scripts/sprint-047-test.mjs` | `PASS=25 FAIL=0`、critical 16／16、stress 32 CLI＋32 Hook、parse／unique／rebuild 100% |
+| `node scripts/sprint-049-test.mjs` | `PASS=20 FAIL=0`、critical 15、AC 6、side-effect violation 0 |
+| `node scripts/sprint-049-inventory.mjs validate` | `PASS=20 FAIL=0 CASES=57 MARKERS=VALID DIGESTS=VALID` |
+| Git-free current bytesでTarget／Patch 003／Sprint 049／inventory | Target `12/0/4 NOT-RUN`、Patch 003 `21/0`、Sprint 049 `20/0`、inventory `20/0` |
+| `node --check`（Retry 1変更`.mjs`） | 全件exit 0 |
+| `git diff --check` | exit 0 |
+
+### Windows再CI待ち
+
+前回Windows run `33330012474`のHS-011／HS-016失敗に対する修正であり、Retry 1 candidateのWindows native再実行はまだない。Generator環境では`windowsVerified=false`と4 NOT-RUNを維持し、Windows結果を偽装していない。push、Actions起動、run ID固定はOrchestratorがclean candidate commit後に行う。0 FAILの因果runが得られるまでWindows PASS、Evaluator PASS、release／downstream readyを宣言しない。

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { assertClosedHandoffTemplateSchema } from "../sprint-048-handoff.mjs";
@@ -42,8 +43,31 @@ function fail(code, detail = "") {
   throw new Error(`${code}${detail ? `:${detail}` : ""}`);
 }
 
-function mode(path) {
+function filesystemMode(path) {
   return lstatSync(path).mode & 0o111 ? "100755" : "100644";
+}
+
+function trackedModes(root, paths) {
+  const result = spawnSync("git", ["-C", root, "ls-files", "--stage", "-z", "--", ...paths], {
+    encoding: "utf8", shell: false, windowsHide: true, timeout: 5_000, maxBuffer: 1024 * 1024,
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0" },
+  });
+  if (result.status !== 0) return new Map();
+  const modes = new Map();
+  for (const row of String(result.stdout).split("\0").filter(Boolean)) {
+    const match = row.match(/^(100644|100755)\s+[a-f0-9]+\s+\d+\t(.+)$/u);
+    if (match) modes.set(match[2].replaceAll("\\", "/"), match[1]);
+  }
+  return modes;
+}
+
+function portableMode(path, absolute, gitModes) {
+  const observed = filesystemMode(absolute);
+  // NTFS does not materialize Git's executable bit in the working tree. The
+  // tracked index mode is therefore the portable identity on Windows. POSIX
+  // and Git-free archives keep using the observed mode, so chmod tampering is
+  // still part of the digest boundary.
+  return process.platform === "win32" && gitModes.has(path) ? gitModes.get(path) : observed;
 }
 
 function safeRelative(path) {
@@ -157,9 +181,18 @@ function productSurfaceBytes(path, absolute) {
     ["downstreamRepositories", "userDecisionPreWriteGate"]));
 }
 
+function portableProductBytes(path, absolute) {
+  // Git archives use the canonical blob bytes, while a Windows checkout may
+  // materialize the same text with CRLF. Normalize only that portable EOL
+  // representation; path, executable mode, and every other content byte stay
+  // inside the digest boundary.
+  return Buffer.from(productSurfaceBytes(path, absolute).toString("utf8").replaceAll("\r\n", "\n"));
+}
+
 export function digestSurface(rootValue, pathsValue) {
   const root = resolve(rootValue);
   const paths = [...pathsValue].sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
+  const gitModes = trackedModes(root, paths);
   const hash = createHash("sha256");
   for (const path of paths) {
     if (!safeRelative(path)) fail("inventory-path-unsafe", path);
@@ -167,7 +200,7 @@ export function digestSurface(rootValue, pathsValue) {
     if (!existsSync(absolute)) fail("inventory-path-missing", path);
     const stat = lstatSync(absolute);
     if (!stat.isFile() || stat.isSymbolicLink()) fail("inventory-path-not-regular", path);
-    hash.update(path).update("\0").update(mode(absolute)).update("\0").update(productSurfaceBytes(path, absolute)).update("\0");
+    hash.update(path).update("\0").update(portableMode(path, absolute, gitModes)).update("\0").update(portableProductBytes(path, absolute)).update("\0");
   }
   return hash.digest("hex");
 }

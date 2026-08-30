@@ -10,9 +10,9 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { applyInit, previewInit, scanRepository } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
+import { applyInit, inspectRepoIdentity, previewInit, scanRepository } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 import { classifyHarnessRelativePath } from "../plugins/secretary/scripts/lib/clarity-harness-scan.mjs";
-import { validateCollaborationInventory } from "./lib/sprint-049-inventory.mjs";
+import { expectedSurfacePaths, validateCollaborationInventory } from "./lib/sprint-049-inventory.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const requireWindows = process.argv.includes("--require-windows");
@@ -94,6 +94,29 @@ function copyTreeNoFollow(sourceRoot, destinationRoot) {
     else throw new Error(`unsupported fixture entry: ${from}`);
   }
 }
+function copyInventoryFixture(destinationRoot) {
+  const paths = new Set(["plugins/secretary/collaboration-inventory.json", ...Object.values(expectedSurfacePaths()).flat()]);
+  for (const path of paths) {
+    const target = join(destinationRoot, path);
+    mkdirSync(dirname(target), { recursive: true });
+    copyFileSync(join(ROOT, path), target);
+  }
+}
+function initializeInventoryGitFixture(root) {
+  const paths = [...new Set(Object.values(expectedSurfacePaths()).flat())];
+  run("git", ["init", "-q"], { cwd: root, expected: 0 }); run("git", ["add", "."], { cwd: root, expected: 0 });
+  let executablePaths;
+  if (existsSync(join(ROOT, ".git"))) {
+    const sourceIndex = run("git", ["ls-files", "--stage", "-z", "--", ...paths], { cwd: ROOT, expected: 0 }).stdout;
+    executablePaths = sourceIndex.split("\0").filter(Boolean).flatMap((row) => {
+      const match = row.match(/^(100755)\s+[a-f0-9]+\s+\d+\t(.+)$/u);
+      return match ? [match[2]] : [];
+    });
+  } else {
+    executablePaths = paths.filter((path) => (lstatSync(join(ROOT, path)).mode & 0o111) !== 0);
+  }
+  for (const path of executablePaths) run("git", ["update-index", "--chmod=+x", "--", path], { cwd: root, expected: 0 });
+}
 
 const cleanup = [];
 try {
@@ -141,8 +164,21 @@ try {
     assert.deepEqual({ id: scanRepository(noFallback).harness.state.currentId, source: scanRepository(noFallback).harness.state.fallbackSource }, { id: null, source: null });
     const missing = harnessFixture("clarity-hs005-missing", { state: stateText({ current: "sprint-099" }), large: false }); cleanup.push(missing);
     const missingReport = scanRepository(missing); assert.equal(missingReport.harness.detection.kind, "harness"); assert.equal(source(missingReport, "requirements").coverage, "not-found");
-    const invalid = harnessFixture("clarity-hs005-invalid", { state: stateText({ current: "../bad", next: "sprint-050-patch-004" }), large: false }); cleanup.push(invalid);
-    const invalidReport = scanRepository(invalid); assert.equal(invalidReport.harness.detection.kind, "invalid"); assert.equal(invalidReport.harness.state.fallbackSource, "next-planned");
+    const invalid = harnessFixture("clarity-hs005-invalid", { state: stateText({ current: "sprint-050-patch-004（注釈付き）", next: "sprint-050-patch-004" }), large: false }); cleanup.push(invalid);
+    const invalidReport = scanRepository(invalid);
+    assert.deepEqual(invalidReport.harness.detection, { kind: "invalid", reason: "current-id-invalid" });
+    assert.deepEqual({ id: invalidReport.harness.state.currentId, source: invalidReport.harness.state.fallbackSource, inferred: invalidReport.harness.state.inferred }, { id: "sprint-050-patch-004", source: "next-planned", inferred: true });
+    assert.equal(invalidReport.harness.bundle.currentId, "sprint-050-patch-004"); assert.equal(invalidReport.harness.bundle.inferred, true); assert.equal(invalidReport.harness.bundle.partial, true);
+    assert.deepEqual(invalidReport.harness.bundle.roles.map((row) => [row.role, row.coverage]), [["orchestrator-execution-truth", "inspected"], ["requirements", "inspected"], ["generator-self-report", "inspected"], ["evaluator-validation", "inspected"]]);
+    assert.equal(invalidReport.candidates[0].source, "harness-authoritative"); assert.equal(invalidReport.lanes.authoritative.partial, true); assert(invalidReport.harness.sources.length >= 4);
+    const lastRecorded = harnessFixture("clarity-hs005-invalid-last-done", { state: stateText({ current: "sprint-999（完了注釈）", next: "TBD" }), large: false }); cleanup.push(lastRecorded);
+    write(lastRecorded, "docs/sprints/sprint-050-patch-003.md", "# Prior requirements\n"); write(lastRecorded, "docs/progress/sprint-050-patch-003.md", "# Prior progress\n"); write(lastRecorded, "docs/feedback/sprint-050-patch-003.md", "# Prior feedback\n\nVerdict: PASS\n");
+    const lastRecordedReport = scanRepository(lastRecorded);
+    assert.deepEqual({ detection: lastRecordedReport.harness.detection.kind, id: lastRecordedReport.harness.bundle.currentId, source: lastRecordedReport.harness.bundle.fallbackSource, inferred: lastRecordedReport.harness.bundle.inferred }, { detection: "invalid", id: "sprint-050-patch-003", source: "last-recorded-completion", inferred: true });
+    assert(lastRecordedReport.harness.bundle.roles.every((row) => row.coverage === "inspected")); assert.equal(lastRecordedReport.candidates[0].source, "harness-authoritative");
+    const unsafeState = "# State\n\n- Current ID: ../../outside\n- Next Planned: ../also-outside\n\n| ID | Status |\n|---|---|\n| sprint-050-patch-004 | planned |\n";
+    const unsafe = harnessFixture("clarity-hs005-unsafe-no-fallback", { state: unsafeState, large: false }); cleanup.push(unsafe);
+    const unsafeReport = scanRepository(unsafe); assert.equal(unsafeReport.harness.detection.kind, "invalid"); assert.equal(unsafeReport.harness.state.currentId, null); assert.equal(unsafeReport.harness.bundle, undefined); assert.equal(unsafeReport.candidates.some((row) => row.source === "harness-authoritative"), false); assert.equal(unsafeReport.lanes, undefined);
   });
 
   record("HS-006", "PASS", "bounded-state-section", () => {
@@ -213,6 +249,8 @@ try {
     const root = harnessFixture("clarity-hs011", { large: false }); cleanup.push(root);
     run("git", ["init", "-q", "-b", "main"], { cwd: root, expected: 0 }); run("git", ["config", "user.email", "fixture@example.invalid"], { cwd: root, expected: 0 }); run("git", ["config", "user.name", "Fixture"], { cwd: root, expected: 0 });
     run("git", ["add", "."], { cwd: root, expected: 0 }); run("git", ["commit", "-qm", "fixture"], { cwd: root, expected: 0 }); run("git", ["remote", "add", "origin", "https://example.invalid/fixture.git"], { cwd: root, expected: 0 });
+    assert.equal(inspectRepoIdentity(root).kind, "git");
+    const nestedRoot = join(root, "nested-root"); mkdirSync(nestedRoot); assert.throws(() => inspectRepoIdentity(nestedRoot), (error) => error?.code === "git-root-mismatch");
     write(root, "dirty.txt", "dirty\n"); write(root, "staged.txt", "staged\n"); run("git", ["add", "staged.txt"], { cwd: root, expected: 0 }); write(root, "untracked.txt", "untracked\n");
     const external = mkdtempSync(join(tmpdir(), "clarity-hs011-external-")); cleanup.push(external); write(external, "canary.txt", "external-canary\n");
     const beforeTree = tree(root), head = run("git", ["rev-parse", "HEAD"], { cwd: root, expected: 0 }).stdout.trim(), branch = run("git", ["branch", "--show-current"], { cwd: root, expected: 0 }).stdout.trim(), remote = run("git", ["remote", "get-url", "origin"], { cwd: root, expected: 0 }).stdout.trim();
@@ -283,6 +321,15 @@ try {
     const patches = Object.values(registry.patchCaseIds).flat(); const hs = registry.patchCaseIds["sprint-050-patch-004"];
     assert.equal(patches.length, 37); assert.equal(hs.length, 16); assert.equal(new Set(patches).size, 37); assert(hs.every((id) => registry.patchCaseFeatureAssignments[id]));
     const inventory = validateCollaborationInventory(ROOT); assert(inventory.caseCount >= 57); assert(inventory.surfaceCount >= 20);
+    const portable = mkdtempSync(join(tmpdir(), "clarity-hs016-inventory-")); cleanup.push(portable); copyInventoryFixture(portable); initializeInventoryGitFixture(portable);
+    const eolPath = join(portable, "plugins/secretary/skills/secretary/SKILL.md"); const lf = readFileSync(eolPath, "utf8").replaceAll("\r\n", "\n"); writeFileSync(eolPath, lf.replaceAll("\n", "\r\n"));
+    assert.deepEqual(validateCollaborationInventory(portable), inventory);
+    writeFileSync(eolPath, `${readFileSync(eolPath, "utf8")}meaningful-tamper\r\n`);
+    assert.throws(() => validateCollaborationInventory(portable), /inventory-digest-stale:secretary-router/u);
+    const modeFixture = mkdtempSync(join(tmpdir(), "clarity-hs016-mode-")); cleanup.push(modeFixture); copyInventoryFixture(modeFixture); initializeInventoryGitFixture(modeFixture);
+    const executablePath = join(modeFixture, "plugins/secretary/scripts/collaboration-router.mjs"); chmodSync(executablePath, 0o644);
+    if (process.platform === "win32") run("git", ["update-index", "--chmod=-x", "--", "plugins/secretary/scripts/collaboration-router.mjs"], { cwd: modeFixture, expected: 0 });
+    assert.throws(() => validateCollaborationInventory(modeFixture), /inventory-digest-stale:secretary-router/u);
   });
 } finally {
   for (const path of cleanup.reverse()) {

@@ -206,7 +206,11 @@ export function scanHarnessAuthoritative(rootValue) {
   else if (markerPresent && state.valid && specSource.coverage === "inspected") { kind = "harness"; reason = "state-and-spec-confirmed"; }
 
   const sources = [stateSource, specSource];
-  if (kind === "harness") {
+  const hasSafeFallback = kind === "invalid"
+    && state.inferred === true
+    && currentIdPattern.test(state.currentId || "")
+    && ["next-planned", "last-recorded-completion"].includes(state.fallbackSource);
+  if (kind === "harness" || hasSafeFallback) {
     const id = state.currentId;
     if (id) {
       sources.push(inspectSource(root, `docs/sprints/${id}.md`, "requirements", lane));
@@ -239,8 +243,10 @@ export function scanHarnessAuthoritative(rootValue) {
     target.push(source);
     if (source.partial || (!["complete", "evaluation-not-yet-recorded", "not-found"].includes(source.reason) && source.coverage !== "inspected")) lane.partialReasons.push(`${source.path}:${source.reason}`);
   }
+  if (hasSafeFallback) lane.partialReasons.push(`docs/sprints/state.md:${reason}`);
+  lane.partialReasons = [...new Set(lane.partialReasons)];
   lane.partial = lane.partialReasons.length > 0;
-  const bundle = kind === "harness" && state.currentId ? {
+  const bundle = (kind === "harness" || hasSafeFallback) && state.currentId ? {
     currentId: state.currentId,
     declaredCurrentId: state.declaredCurrentId,
     currentStatus: state.currentStatus,
@@ -248,6 +254,7 @@ export function scanHarnessAuthoritative(rootValue) {
     sourceSection: state.sourceSection,
     fallbackSource: state.fallbackSource,
     inferred: state.inferred,
+    partial: lane.partial,
     roles: sourceRoles.filter((source) => ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"].includes(source.role)),
   } : null;
   const coverageDigest = stableDigest({ detection: { kind, reason }, state, sources: sourceRoles, usage: { entriesSeen: lane.entriesSeen, filesRead: lane.filesRead, bytesRead: lane.bytesRead }, partialReasons: lane.partialReasons });

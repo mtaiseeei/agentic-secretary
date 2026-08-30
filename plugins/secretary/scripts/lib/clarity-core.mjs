@@ -297,6 +297,22 @@ function safeRemoteIdentity(raw) {
   }
 }
 
+function sameFilesystemDirectory(leftPath, rightPath) {
+  try {
+    const left = statSync(leftPath, { bigint: true });
+    const right = statSync(rightPath, { bigint: true });
+    if (!left.isDirectory() || !right.isDirectory()) return false;
+    // Windows can report the same NTFS directory through 8.3 and long path
+    // spellings. dev/ino is the exact filesystem identity and does not weaken
+    // the boundary to case-folding or string-prefix matching. If the host does
+    // not expose an identity, fail closed instead of guessing from text.
+    if ((left.dev === 0n && left.ino === 0n) || (right.dev === 0n && right.ino === 0n)) return false;
+    return left.dev === right.dev && left.ino === right.ino;
+  } catch {
+    return false;
+  }
+}
+
 function inspectRepoIdentityImpl(rootValue) {
   const root = rootPath(rootValue);
   const top = optionalGit(root, ["rev-parse", "--show-toplevel"]);
@@ -305,7 +321,7 @@ function inspectRepoIdentityImpl(rootValue) {
   }
   let canonicalTop;
   try { canonicalTop = realpathSync(top); } catch { throw new ClarityError("git-root-unreadable", "Git top-levelを安全に確認できません。"); }
-  fail(relative(root, canonicalTop) === "", "git-root-mismatch", "Clarity initはGit top-levelで実行してください。親または子Repoへ書き込みません。", { gitTopLevel: basename(canonicalTop) });
+  fail(sameFilesystemDirectory(root, canonicalTop), "git-root-mismatch", "Clarity initはGit top-levelで実行してください。親または子Repoへ書き込みません。", { gitTopLevel: basename(canonicalTop) });
   return {
     kind: "git",
     rootName: basename(root),
@@ -418,7 +434,7 @@ function scanRepositoryImpl(rootValue) {
   const root = rootPath(rootValue);
   const authoritative = scanHarnessAuthoritative(root);
   const generic = scanGenericRepository(root);
-  if (authoritative.detection.kind !== "harness") {
+  if (!authoritative.bundle) {
     return {
       ...generic,
       harness: {
