@@ -478,6 +478,32 @@ Git／packaging回帰は意味・Severity・初回割当を変えず直接再実
 
 ---
 
+# 19B. Sprint 050 Patch 004 — Harness-aware comprehensive init／Windows native
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| HS-001 | Critical | `src/`／`scripts/`だけで2 MiB超になるHarness Repo。state、spec、current contract／progress／feedbackは後方のpathに置く | generic budgetに先に達してもauthoritative reserved laneが5正本群を確認し、`truncated`でも正本coverageを失わない | lane別budget／使用量、inspected paths、候補bundle、tree digest |
+| HS-002 | Critical | 同サイズの非Harness Repoと、Harness markerがpartial／invalidなRepo | 非Harnessは既存generic候補・上限・順序を維持し、partial／invalidをHarness完全検出へ昇格しない | baseline／candidate candidate set、detection reason、coverage digest |
+| HS-003 | Critical | stateのCurrent IDが有効で、contract、progress、feedbackが揃う | state=`orchestrator-execution-truth`、contract=`requirements`、progress=`generator-self-report`、feedback=`evaluator-validation`として区別し、同じCurrent Sprintの一貫したbundle／Evidenceへまとめる | candidate JSON、role fields、source locators、Item／Evidence件数 |
+| HS-004 | Critical | Current contract／progressはあるがfeedbackがまだ無い | `evaluation-not-yet-recorded`相当を返し、scan-limit／PASS／FAIL／uninspectedへ誤分類しない | coverage reason、candidate bundle、stdout／JSON |
+| HS-005 | Critical | Current IDがTBD、missing、またはinvalid。Next Planned／直近完了根拠の有無を組み合わせる | bounded fallbackだけを使い、根拠と推測を明示する。filename辞書順／mtimeだけでCurrentを確定しない | state snippets、fallback source、reason、deterministic rerun |
+| HS-006 | Critical | stateが1 file上限超、長大historyを持つがCurrent metadata／該当sectionはboundedに解決可能または解決不能 | 無制限readせずbounded sectionを使う。解決不能はpartial／uninspectedで停止し、完全coverageと表示しない | bytes read／limit、section locator、partial reason、memory／timing bound |
+| HS-007 | Critical | authoritative pathがSecret-like、binary、root内symlink、permission unreadable、missingを個別に持つ | 値／本文／link先を読まず、sourceごとにexcluded／uninspected／not-foundと固有理由を返す | secret canary、read log、external canary、coverage report |
+| HS-008 | High | authoritative laneの一部成功・一部失敗とgeneric truncationを同時に起こす | laneごとのinspected／excluded／uninspected、budget、partial理由を返し、「包括的確認済み」と誤表示しない | preview JSON／human output、counts、reason mapping |
+| HS-009 | High | 同じCurrent Sprintのstate／contract／progress／feedbackと多数の過去Sprint文書がある | 1 file 1 noisy ItemへせずCurrent bundleを安定生成し、全過去feedbackをItem化しない。同一inputでcandidate ID／順序／digestが安定する | Item／Evidence一覧、rerun digest、past-file non-selection |
+| HS-010 | Critical | Sprint 050 Patch 003のancestor alias経由とphysical pathでHS-001 fixtureをpreview | Repo identity、candidate IDs／意味／順序、coverage digestが一致し、一般rootの既定拒否とClarity内部policyを維持する | alias／physical JSON、identity／digest、AR negative controls |
+| HS-011 | Critical | dirty／staged／untracked、branch／remoteを持つfixtureでpreview、cancel、synthetic apply、failure injection | preview／cancelは`changed:false`、applyは物理Repo内の宣言済みClarity所有pathだけ。Git状態、外部canary、networkは不変 | before／after tree・Git、write set、operation log |
+| HS-012 | Critical | Windows native temp rootのdrive letter配下で、backslash、空白、日本語、CRLFを含むHarness fixtureをscan／preview／identity | POSIX separator／Bash変換なしで正本coverageとidentityが成立し、preview write 0 | Windows OS／Node、native paths、commands、coverage、Git snapshot |
+| HS-013 | Critical | Windows nativeでcase-only collision、reserved名、invalid path表現、前方一致する別rootのpath参照／入力を個別fixtureとして製品へ渡す。OS上に作成不能なreserved／invalid実fileを強制作成しない | collision／invalid／outsideをpreflightまたは安全なfilesystem観測から固有理由でfail closedし、別file／別rootを同一視しない | requested path、expected／observed error、filesystem probe、canary、changed false |
+| HS-014 | Critical | Windows nativeでsymlink作成capabilityとjunction作成capabilityを別々に観測し、各capabilityでancestor aliasとroot内boundaryを実行可能な範囲で試す | 実行可能な種類はpositive／negativeを直接評価。symlinkのDeveloper Mode／権限理由をjunctionへ流用せず、種類ごとの不足はSKIP／NOT-RUNとしてPASSやWindows全保証へ数えない | symlink probe、junction probe、種類別case status／reason、before／after |
+| HS-015 | Critical | `.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobへClarity suiteを結線し、許可済みexact candidate branch pushから既存PR CI、必要時は同candidateのworkflow dispatchを実行 | 既存0.9.2回帰と`timeout-minutes: 10`を維持し、scanner／init preview／identity／安全caseを集計する。0 FAILの因果的実runまで`windowsVerified=false`。未実行／CI不能とrunner内product failureを区別する | candidate SHA／branch／push、workflow path／job／run ID、OS／Node、command、PASS／FAIL／SKIP／NOT-RUN、classification |
+| HS-016 | Critical | 同じcandidateでmacOS／Linux portable suite、Sprint 041、Sprint 050 Patch 003、inventory／Git-free回帰を実行 | 旧bounded init、ancestor alias、Secret／symlink、generic scan、inventoryが0 product FAIL。platform固有caseを別OSへ偽装しない | commands、exit、case totals、inventory digest、not-run mapping |
+
+HS caseは既存primary 250、CLX 20、XV 4、CF／AR 21へ数えない。Windows native証拠は正式Windows runnerまたは
+同等の実Windows環境から取得し、macOS上のWindows風文字列fixtureは補助negativeにだけ使う。
+
+---
+
 # 20. 最終E2Eシナリオ
 
 ## E2E-001: StandaloneからSecretary連携

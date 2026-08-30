@@ -71,7 +71,9 @@ memory、TODO／Notion、外部Repoの正本を置き換えない。Claude Code�
 未初期化Repoではno-op、manual fallback必須、network／LLM／重い処理禁止とする。他SkillへHookを追加しない。
 Xmind integrationは明示ON／OFFとprovider能力を分け、Agentic／Yasashiiは既定OFF、private my-vaultは既定ON、
 ON時は、Xmind MCPが接続済みで必要能力を満たすときに第1優先とし、local native `.xmind`は理由・対象path・影響のpreviewと明示承認後だけ使う第2優先のfallbackとする。ON設定とprovider capability／priority／selected stateは分離し、network、sign-in、credit／課金、cloud map／local fileのcreate／updateは対象と予想影響を示した別確認なしに実行しない。通常はpublicの独立PASS後だけ固定SHA／digestを
-private my-vault、次にYasashiiの別Harnessへ渡す。Planning、push、tag、Release、marketplace、cache、downstream反映は別phaseである。
+private my-vault、次にYasashiiの別Harnessへ渡す。Planning、tag、Release、marketplace、cache、downstream反映は別phaseである。
+ただしSprint 050 Patch 004のWindows external live gateだけは、ユーザー承認済みのexact candidate branch `origin` pushと、
+そのcandidateを対象にした既存PRのWindows CI／必要時workflow dispatchを許可する。merge、release、install、downstreamへは拡張しない。
 同日、Sprint 050は製品finding 0件のまま実host liveだけを残す`verification-scope-issue`となり、ユーザーが残余リスクを引き受けて
 `done-by-user-decision`とした。さらに、exact product candidateを変えず、Evaluator PASSとは別の
 `public-user-decision-risk-accepted`としてprivate my-vault→Yasashiiへ進める例外を明示承認した。
@@ -79,6 +81,13 @@ private my-vault、次にYasashiiの別Harnessへ渡す。Planning、push、tag�
 および本例外gate自体の独立Evaluator PASSをすべて固定した場合だけ有効である。`public-evaluator-pass`へ偽装せず、
 製品候補と後続のhandoff governance commitを別identityとして保持する。release／tag／push／marketplace／cache／new session、
 実Xmind MCP、実host検証、実downstream writeは引き続き別phaseとする。
+2026-08-31に、実機のClarity init previewでancestor alias解決は成功した一方、一般scanが2 MiB上限へ先に達し、
+Harnessの`docs/sprints/state.md`、Current Sprint contract／progress／feedbackを初期候補へ含められないことを確認した。
+「包括的」は全fileの無制限読込ではなく、判断に必要な正本をboundedに取りこぼさないことと定義する。Harness構造を検出したRepoだけは
+一般scanと分離したauthoritative reserved laneを使い、stateからCurrent IDを解決してspec、current contract、Generator自己報告、
+Evaluator検証を意味別に扱う。一般fileは残余budgetで読む。併せてClarity init／scannerをWindows native対象にし、drive letter、
+backslash、空白、日本語、CRLF、case-insensitive衝突、junction／symlink権限差を安全かつ正直に扱う。Windows形式文字列をmacOSで
+模擬しただけではWindows verifiedとせず、正式Windows runnerの実行結果を別に記録する。
 
 ## ひとことで
 
@@ -110,14 +119,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G15 | 秘書名をworkspace全体で一貫させる | 初回と既存利用者の双方で英語名、stable identity、AI authorを持ち、別repo呼び出しと安全なrenameを選べる |
 | G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
 | G17 | 「覚えて」を一度で安全に完了する | memory scope、hedge分離、append-only訂正、内容冪等性、checkpoint partial、3版inventory |
-| G18 | Project Clarity | 決定×実行、Attention、Drift、4モード、Clarity専用Hook、projection、public-first固定handoff |
+| G18 | Project Clarity | 決定×実行、Attention、Drift、4モード、Clarity専用Hook、projection、Harness-aware init、public-first固定handoff |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
 | [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G18、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F80 とユーザーから見た振る舞い |
+| [features.md](spec/features.md) | F01〜F81 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -189,6 +198,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-050-patch-001](sprints/sprint-050-patch-001.md) | Sprint 050のユーザー判断をPASSと分離した固定handoff gateへ束縛する | sprint-050 done-by-user-decision |
 | [sprint-050-patch-002](sprints/sprint-050-patch-002.md) | Claude標準Hookの重複manifest宣言だけを解消する | sprint-050-patch-001 |
 | [sprint-050-patch-003](sprints/sprint-050-patch-003.md) | 開発PJの正本freshness確認とClarity限定ancestor symlink aliasを安全に成立させる | sprint-050-patch-002 |
+| [sprint-050-patch-004](sprints/sprint-050-patch-004.md) | Harness正本を予約枠で取りこぼさない包括的init scannerとWindows native互換 | sprint-050-patch-003 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

@@ -115,6 +115,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 45. **topic訂正と内容retry**: 旧topicへ「XではなくY（理由）」を保存し、旧内容byte不変、訂正event 1件を確認する。同じ意味を表記違い・別operation id・再起動後に再依頼してもtopic／decision／journal／commitが0件追加で、否定・条件・確実性が異なる別内容は誤dedupeしない。
 46. **checkpoint partial**: memory本体とjournal成功後のlocal commitを失敗させ、`partial`、保存・journal各1件、commit 0件を確認する。retryは保存・journalを増やさずcommitだけ1件、再retryは全差分0件となる。
 47. **canonical freshnessとClarity root alias**: development-pointerを持つsynthetic Secretary workspaceとlocal正本repoで、status／daily／weekly／Portfolioが「最初に読むファイル」、Repo identity／Git current state、Clarity状態、観測時刻、未確認理由をbounded readすることを確認する。remote-only／missing／unsafe／unreadableではsnapshotだけの現在断定とnetworkが0件であることを確認する。別fixtureではworkspace ancestorだけをsymlinkにし、opt-in aliasとphysical pathのidentity／判定一致、preview write 0、物理`.clarity/**`限定apply、root自身／内部／broken／file向き／差替え拒否、一般working rootのnegative control、Drift locator拒否、macOS platform alias回帰を検査する。
+48. **Harness-aware initとWindows native**: 2 MiBを超え、`src/`／`scripts/`だけで一般budgetを使い切れるHarness fixtureで、state、spec、Current contract／progress／feedbackをauthoritative reserved laneが先に確保し、意味role、coverage、feedback absent、TBD／missing／invalid／巨大state、Secret／binary／symlinkを区別することを確認する。巨大stateは1 file上限の単純拡大でなくbounded section readで扱う。同じcandidateをWindows native runnerでdrive letter、backslash、空白、日本語、CRLF、case collision、reserved／invalid path参照へ実行し、symlink／junction capabilityを別々にprobeして理由付きSKIP／NOT-RUNへ分離する。別OS上のWindows風文字列だけをnative PASSへ数えない。
 
 個人化された文面の完全一致はassertしない。設定の読込、許可された分岐、既定へのフォールバック、確認フローを評価する。
 
@@ -147,6 +148,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C23 | projection・Xmind | deterministic Markdown／Mermaid、MCP-first provider、承認付きlocal fallback、fixed visual、proposal | ≥4 |
 | C24 | Clarity安全・統合・public-first | 物理root封じ込め、canonical read freshness、Secret／dirty、既存Skill協働、inventory、回帰、固定handoff | **5** |
 | C25 | ユーザー判断handoff governance | PASS分離、exact source／feedback／承認束縛、失効、順序、scope、rollback | **5** |
+| C26 | Clarity包括scan・Windows native | Harness正本予約枠、意味分類、coverage、generic無回帰、portable path、Windows実run | **5** |
 
 ## スコアアンカー
 
@@ -275,13 +277,18 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ### C24 Clarity安全・統合・public-first【ゼロ許容】
 
-- 5: 一般rootのancestor symlink拒否を維持しつつ、Clarityの指定入口だけが内部root resolverからancestor aliasを物理rootへ固定する。適用結果はClarity internal opt-inであることを示し、利用者向けflag／設定と共通filesystemへの緩和は0件。root自身／root内symlink、broken／file向きalias、差替え／identity変更を副作用0件で拒否し、CLI／core／link／projection／Drift／Secretary adapter／Hookのcontainmentが一致する。development-pointerのlocal正本はbounded readされ、freshness／未確認理由が表示される。canonical observationは正本repoへのwrite／Git変更／network 0件、alias apply fixtureは物理rootの宣言済み`.clarity/**`だけを変更する。path／Secret／dirty／stage／schema／lock／retry境界、関連surface inventory、既存回帰が0 FAILである。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public Evaluator PASS、またはC25を満たす束縛済みユーザー判断のready前は、downstream／release／cache／external write 0件。
+- 5: 一般rootのancestor symlink拒否を維持しつつ、Clarityの指定入口だけが内部root resolverからancestor aliasを物理rootへ固定する。適用結果はClarity internal opt-inであることを示し、利用者向けflag／設定と共通filesystemへの緩和は0件。root自身／root内symlink、broken／file向きalias、差替え／identity変更を副作用0件で拒否し、CLI／core／link／projection／Drift／Secretary adapter／Hookのcontainmentが一致する。development-pointerのlocal正本はbounded readされ、freshness／未確認理由が表示される。canonical observationは正本repoへのwrite／Git変更／network 0件、alias apply fixtureは物理rootの宣言済み`.clarity/**`だけを変更する。path／Secret／dirty／stage／schema／lock／retry境界、関連surface inventory、既存回帰が0 FAILである。projects lifecycleとClarity責務が分離し、タスク化は明示委譲だけ。public Evaluator PASS、またはC25を満たす束縛済みユーザー判断のready前は、downstream／release／cache／external write 0件。ただしSprint 050 Patch 004の承認済みexact candidate branch pushと因果的Windows CI／必要時workflow dispatchだけはC26のexternal live gateとして分離する。
 - 4以下: ancestor aliasの一般既定許可、root自身／root内symlink追従、alias差替え後write、alias／physical identity不一致、tracked absolute local path、Drift locator symlink追従、stale snapshotだけの現在断定、利用可能local正本の未読、remote-onlyからの自動network、正本repo／Gitへの副作用、private値のpublic混入、対象surface漏れ、task自動作成、project lifecycleのClarity所有、memory二重保存、Harness state置換、自動connector／update、既存dirty破壊、Secret露出、正当なacceptance basisより前の下流反映、release stage混同が1件でもある。→不合格。
 
 ### C25 ユーザー判断handoff governance【ゼロ許容】
 
 - 5: `public-evaluator-pass`を回帰させず、ユーザー判断経路は`public-user-decision-risk-accepted`と`evaluatorPass=false`を保つ。accepted product sourceは`5f08d454c05576fcff8ab32c10c00887b4c15a96`と既定tree／common digest、元feedbackはcommit／path／digest／Verdictまで一致する。受容したAC3／C21と、受容していない`XM-007`／別phase残余が分かれ、承認原文は具体的文脈・scope・candidate・順序・失効条件と一体である。`acceptedSource`とPatchの`governanceSource`、private my-vault→Yasashiiの順序、common／excluded／protected path、protected digest、file-scoped rollbackが固定され、Patch評価中の実downstream／release／host／Xmind writeは0件。Patch governanceの独立Evaluator PASSを確認した入力だけがreadyになる。
 - 4以下: ユーザー判断をPASS／verifiedへ昇格、state文字列だけからready、自動推測、短い了承の文脈なし採用、別candidate／feedbackへの承認転用、source／tree／common digest／未達／順序／scope変更後もready、撤回・失効承認の再利用、governance commitによるaccepted product source置換、既存PASS経路の破壊、protected／excluded path変更、rollback不能、またはPatch中の実downstream／release／host／Xmind writeが1件でもある。→不合格。
+
+### C26 Clarity包括scan・Windows native【ゼロ許容】
+
+- 5: >2 MiB Harness Repoでもauthoritative reserved laneがstate、spec、Current contract／progress／feedbackをgeneric sourceより先にbounded確認する。state／contract／progress／feedbackの意味が分離し、feedback absent、TBD／missing／invalid／巨大state、Secret／binary／symlinkをcoverage理由へ正直に出す。巨大stateは1 file上限の単純拡大でなくbounded section readを使う。候補は1 file 1 Itemの羅列でなくCurrent状態とEvidenceへ一貫して束ねられ、非Harness generic scanは既存挙動を維持する。alias／physicalの候補とidentityが決定的に一致し、offline preview write 0、synthetic applyの所有範囲、Git／Secret／network境界を守る。`.github/workflows/windows-recording-regression.yml`の既存`windows-native` job、0.9.2回帰、`timeout-minutes: 10`を維持し、exact candidateのWindows native runでdrive／backslash／空白／日本語／CRLF／case collision／reserved path参照を直接PASSする。symlink／junction capabilityを別々にprobeし、SKIP理由を分離する。macOS／LinuxとSprint 041／050 Patch 003回帰も0 FAILである。
+- 4以下: generic budgetが正本予約枠を枯渇、progressをEvaluator PASSへ昇格、feedback missingをscan-limitと混同、partialを完全扱い、全file上限または`maxFileBytes`の単純拡大、Secret／binary／symlink読込、非Harness候補回帰、alias／physical不一致、absolute local path混入、POSIX separator／Bash依存、case collisionの黙認、別OSのWindows風文字列だけでWindows verified、symlink／junction capability混同、権限不足caseをPASS偽装、Windows native未実行のまま対応済み表示、既存Windows workflow／0.9.2回帰／timeoutの破壊、macOS／Linuxまたはancestor alias回帰が1件でもある。→不合格。
 
 ## Project Clarityの検証方法（safe harbor）
 
@@ -301,6 +308,15 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - macOSでは`/var`→`/private/var`、`/tmp`→`/private/tmp`を既存platform alias回帰として確認する。他OSは同aliasを合格条件にせず、host固有home／volume名を実装へ固定していないことをsource scanで確認する。
 - 同じcandidateを通常checkout、ancestor alias経由、`.git`なしGit-free archive相当で実行し、actual path／realpath、root identity、case結果、tree digestを記録する。public Patchではsynthetic fixtureだけを使い、実顧客repoへapplyしない。
 - command、exit、case ID、expected／observed error code、requested／physical rootの一時的な比較、before／after filesystem・Git snapshot、read件数／byte上限、network／external operation log 0があれば十分とする。新しいcollector、統一attestation、実顧客data、実provider、実downstream、releaseを追加条件にしない。
+
+## Sprint 050 Patch 004の検証方法（safe harbor）
+
+- synthetic Harness Repoで一般fileが2 MiBを超えるfixture、Current IDがvalid／TBD／missing／invalidのfixture、feedback absent、巨大state、Secret／binary／内部symlink、非Harness fixtureを使い、HS-001〜016を実行する。authoritative／generic laneのbudget、coverage、意味role、候補bundleを記録する。
+- alias path／physical pathで同じfixtureをpreviewし、候補ID／意味／coverage digest、Repo identity、`changed:false`を比較する。applyはsynthetic fixtureだけで行い、物理Repo内の宣言済みClarity所有path以外のwrite 0、dirty／staged／untracked／HEAD／branch／remote不変を確認する。
+- Windows正式runnerではNode-native commandからdrive letter、backslash、空白、日本語、CRLF、case-insensitive collision、reserved／invalid path参照、scanner／init preview／identity／安全negativeを直接実行する。symlink／junctionはcapabilityを別々に観測し、実行できたcaseと理由付きSKIP／NOT-RUNを別集計する。Windows風文字列をmacOSで渡すcaseは補助証拠に留める。
+- macOS／Linuxでは同じportable suiteと関連Sprint 041、050 Patch 003を実行する。`.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobへ今回suiteを結線し、0.9.2回帰と`timeout-minutes: 10`を維持する。Windows native PASSが得られるまでは`windowsVerified=false`である。
+- Windows external live gateは、ユーザー承認済みのexact candidate branch `origin`通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけである。未実行、認証／runner／dispatch不能、timeoutはverification-infra／`external-live-gate-unavailable`としてtruthful NOT-RUN、runner内candidate因果assertion failureはproduct findingとして分離する。どちらもPASSへ数えない。
+- command、exit、case ID、OS／Node、fixture kind、lane coverage、before／after tree・Git snapshot、PASS／FAIL／SKIP／NOT-RUN理由、offline network／external operation 0、許可済みpushのcandidate SHA／branch／run IDがあれば十分とする。新しいcollector、実顧客data、実repo apply、external provider、downstream／release／installを追加条件にしない。
 
 ## Sprint 050 Patch 001の検証方法（safe harbor）
 
@@ -388,6 +404,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 048 | 12件。PK: public packaging、manifest／inventory、clean／archive、host status、固定handoff準備 |
 | 049 | CLX追加case: 全関連Skill／router／template／rule／inventoryのClarity-aware協働と責務分離 |
 | 050 | primary 250、CLX 20、XV 4、E2E-001〜004、既存master回帰、public fixed handoffの最終判定 |
+| 050-patch-004 | HS 16件。Harness authoritative reserved lane、Current正本意味分類、coverage／partial、generic無回帰、Windows native scanner／init／path安全、041／050-patch-003回帰 |
 
 ## 差し戻し分類
 
@@ -396,6 +413,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - rubric変更はEvaluatorが提案できるが、適用はPlannerだけが行う。
 
 ## 更新履歴
+
+- 2026-08-31: Sprint 050 Patch 004としてF81、C26、検証方法48、HS-001〜016を追加。包括性を無制限scanでなくHarness正本のreserved laneと定義し、state／contract／progress／feedbackの意味分離、partial coverage、非Harness無回帰を固定した。Windowsはnative runnerのdrive／Unicode／空白／CRLF／case collision、symlink／junction別capability、承認済みcandidate branch pushに束縛したexternal live gateを必須にし、別OS文字列模擬からのverified昇格を禁止した。
 
 - 2026-08-28: Project ClarityのC19〜C24、primary 250 case単一割当、CLX 20、最終E2E／全回帰safe harborを追加。その後の最新user decisionとしてXV 4をprimaryと分けて追加し、Xmind MCP-first、自動local fallback禁止、external／localのpreview／confirm、4象限のfixed visualをC23／Sprint 043／050に反映した。Clarity専用command-only Hook、projects lifecycleとの責務分離、public-first固定handoffは維持する。
 

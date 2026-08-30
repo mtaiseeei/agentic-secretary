@@ -874,6 +874,46 @@ directory、上限超過は理由つきのuninspectedとする。freshnessは`cu
 観測はSecret、binary、巨大file、root内symlink、本文全文を追わず、workspace側へ正本内容を複製しない。
 観測できない場合は`source_unreachable`相当の根拠不足として扱い、古いsnapshotからcurrent alignmentやDriftを確定しない。
 
+### HarnessAuthoritativeScan
+
+Clarity initは一般file候補を探す`generic` laneと、Harness正本を確認する`authoritative` laneを分ける。
+Harness laneは`docs/sprints/state.md`等の構造を安全に確認できたRepoだけで有効になり、非Harness RepoへHarness意味を推測しない。
+
+`HarnessAuthoritativeScan`は少なくとも次を持つ。
+
+- detection: `harness / non-harness / partial / invalid`と根拠
+- lane別のbyte／file／entry budget、使用量、`inspected / excluded / uninspected / not-found`
+- state observation: Current ID、status、Next Planned、source section、partial／invalid理由
+- spec indexと、boundedに解決した必要spec参照
+- current contract、progress、feedbackのlocator、digest、coverage、意味role
+- root guidanceとpackage manifestのcoverage
+- fallback source、推測の有無、confidenceではなくtruthful reason
+
+意味roleは固定する。stateは`orchestrator-execution-truth`、contractは`requirements`、progressは
+`generator-self-report`、feedbackは`evaluator-validation`である。progressの完了報告をEvaluator PASSへ昇格しない。
+current feedbackが存在しない場合は`evaluation-not-yet-recorded`、pathがあるが上限や安全境界で読めない場合は
+`uninspected`または`excluded`とする。scan-limit、not-found、invalidを同じ状態へ潰さない。
+
+Current IDは最初にstateから解決する。TBD、missing、invalid、巨大stateでは、`maxFileBytes`を単純拡大せず、bounded metadata／該当section、明示された
+Next Planned、直近完了記録等の許可されたfallbackだけを使い、どの根拠を使ったかを表示する。filenameの辞書順やmtimeだけで
+currentを確定しない。巨大stateを全文無制限に読むことも、過去feedbackを全件Item化することも行わない。
+
+候補化では同じCurrent Sprintのstate、contract、progress、feedbackを1 file 1 Itemへ機械変換せず、Decision、Execution、
+ValidationとEvidence参照へ一貫して束ねる。正本本文をClarityへ複製せず、relative locator、digest、短いsummary、観測時刻を使う。
+authoritative laneの後にだけ、残余budgetでgeneric laneを実行する。
+
+pathの比較とcontainmentはhostのfilesystem意味とNodeのplatform path APIへ従う。Windowsではdrive letter、backslash、空白、
+日本語、CRLF、case-insensitive collision、reserved／invalid path、junction／symlink capabilityを区別する。作成権限がない
+symlinkとjunctionは別々にcapabilityを観測する。symlink作成のDeveloper Mode／権限理由をjunctionへ流用せず、実行不能fixtureは
+`not-run-capability`等の理由を返して別caseの成功へ数えない。alias pathとphysical pathは同一Repoで
+同じ候補bundleとcoverage digestを返し、tracked dataへabsolute local pathを保存しない。
+
+Windows external live gateは、candidate SHA固定後の`origin`同branchへの通常pushと、そのSHAをcheckoutする
+`.github/workflows/windows-recording-regression.yml`の`windows-native` job、必要時の同一SHAへの`workflow_dispatch`から成る。
+既存0.9.2回帰と`timeout-minutes: 10`を保持する。offline scan／preview／fixtureはnetwork／external write 0のままで、live gateの
+push／Actionsだけを別operation logへ記録する。gate未実行／CI利用不能は`external-live-gate-unavailable`またはverification-infra、
+runner内のcandidate因果assertion failureはproductとして分離し、いずれも`windowsVerified=false`を維持する。
+
 ### ClarityRootPolicy
 
 root policyは少なくとも`allowAncestorSymlinks`を持ち、既定は`false`である。一般`workingRoot(value)`はoption省略時もfalseであり、

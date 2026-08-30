@@ -437,7 +437,7 @@
 21. Xmind MCP、local `.xmind`、表現可能なMermaidの4象限は、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」。「赤=判断、黄=確認、青=実行、緑=安定」とemoji／ラベル／意味文を併記し、色だけに依存しない。MCPの実tool schemaでこの色／配置を保証できない場合はcapability不足と表示し、要件を弱めない。
 22. public版のSecretary-local統合はgeneric `secretary/projects/open/`と既存project seamを使う。private my-vault固有の`05/02` resolver、`vault/10_sources`、Notion property／relation、root private guidanceをpublic sourceへ持ち込まない。
 23. public `agentic-secretary`を先に完全実装・独立評価する。通常はPASSした完全SHA／digest、共通path、除外・保護path、rollbackだけを`public-evaluator-pass`のhandoff正本とする。記録済み`verification-scope-issue`をユーザーが明示受容した例外では、同じ要素と元feedback／未達／承認記録を固定し、PASSとは異なる`public-user-decision-risk-accepted`だけを使用できる。private my-vault、次にYasashiiは別Harness、別state、別Evaluatorで適用・評価し、1版の結果を他版へ昇格しない。
-24. planningとpublic実装Sprintではpush、tag、GitHub Release、marketplace公開、installed cache更新、Mac mini同期、実downstream writeを行わない。sourceのEvaluator結果／ユーザー判断basis、release、snapshot、installed cache、loaded version、downstream外部liveを別状態で報告する。
+24. planningとpublic実装Sprintでは原則としてpush、tag、GitHub Release、marketplace公開、installed cache更新、Mac mini同期、実downstream writeを行わない。唯一の例外として、ユーザーが明示許可したSprint 050 Patch 004のWindows external live gateは、exact candidate branchの既存`origin`への通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけを行える。force／別branch／remote変更／merge／release／install／downstreamへ拡張しない。sourceのEvaluator結果、Windows live、release、snapshot、installed cache、loaded version、downstream外部liveを別状態で報告する。
 25. HookはProject Clarity専用である。projects、daily、weekly、memory-care、updateその他のSkillへ独立Hookを追加せず、Hookから一般memoryの保存候補を意味判定しない。memory自然会話はSkill description、secretary router、conversation contract、回帰で扱う。connector live取得、自動更新、他の外部／確認系Skillの暗黙実行を禁止する。
 26. projectsはproject lifecycle（作成、open／closed、complete／reopen、`canonicalRepo`）を、ClarityはDecision／Execution／Validation／Attention／Driftを所有する。関連Skillのinput／output／routingはClarity-awareにするが、正本と確認境界を交換しない。タスク化は明示依頼時だけ既存TODO／notion-tasksへ委譲する。
 27. secretary、projects、daily、weekly、notion-tasks、memory-care、build、update／release inventory、onboarding、templates、rules、host inventory、edition handoffを実内容まで棚卸しする。外部connectorはClarityから自動実行しない。inventory対象漏れ、stale digest、Clarity正本の二重化、private値のpublic混入を不合格とする。
@@ -453,3 +453,18 @@
 37. 一般filesystemのworking rootは`allowAncestorSymlinks: false`相当を既定とし、option省略時もancestor symlinkを拒否する。Clarityの指定入口だけは専用root resolverがrequest中にtrueを内部指定し、working root自身がsymlinkではないことを確認したうえでancestorだけを物理rootへ固定する。これは利用者向けCLI flag／設定ではなく、共通filesystem、他Skill、tracked project／link bundleへ伝播・永続化しない。
 38. Clarity内部policyの適用時も解決先は実在する通常directoryでなければならず、containmentとwriteは物理root基準とする。root内から外向きのsymlink、root自身のsymlink、壊れた／file向きalias、Drift source locator symlink、解決後のalias差替え・物理root identity変更は副作用0件で拒否する。readとwriteの重要境界で同じroot identityを再確認する。
 39. canonical readerとancestor alias対応は正本repoへのwrite、fetch、pull、push、checkout、branch／remote変更、network callを0件に保ち、dirty／staged／untracked、HEAD、branch、remoteを保持する。applyのsynthetic fixtureでは物理repo内の宣言済み`.clarity/**`だけが変わり、alias側の別tree、workspace側、外部参照先を変更しない。
+
+## 26. Clarity init scannerの包括性・portable path境界
+
+1. scannerの包括性は、全file／全履歴の無制限読込ではなく、現在判断に必要な正本を固定した上限内で優先して確認することを意味する。global byte／file／entry上限と1 file上限を撤廃しない。
+2. Harness構造を確認できたRepoだけにauthoritative reserved laneを適用する。`src/`、`scripts/`、一般文書がgeneric budgetを先に消費しても、state、spec、Current Sprint contract／progress／feedback、root guidance、package manifest用の予約枠を失わない。
+3. stateはOrchestrator execution truth、contractはrequirements、progressはGenerator self-report、feedbackはEvaluator validationである。progressだけから独立PASSを推測せず、feedback missingをscan-limit、PASS、FAILのいずれにも偽装しない。
+4. authoritative sourceごとに`inspected`、`excluded`、`uninspected`、`not-found`と理由、使用byte／上限、partial状態を返す。巨大、invalid、Secret-like、binary、symlink、permission、case collisionを黙って成功へ丸めない。
+5. stateがTBD、missing、invalid、上限超過の場合のfallbackはboundedで、使用した根拠と推測を明示する。全過去feedbackを順番に全文走査したり、最新らしいfilenameだけを無根拠に現在正本へ昇格したりしない。
+6. `.env`／credential／Secret-like content、binary、root内symlink／junction、path traversal、absolute path injection、tracked dataへのlocal absolute path混入を引き続き拒否する。previewは`changed:false`、network／external provider／Git変更0件である。
+7. alias pathとphysical pathは同じ候補意味、Repo identity、coverage結果を返す。Sprint 050 Patch 003のancestor alias許可範囲を広げず、root自身／root内symlink、差替え、identity変更をfail closedとする。
+8. Windows pathはNodeのplatform path APIとfilesystem観測で扱い、`/`固定、文字列prefix containment、BashによるWindows path解釈へ依存しない。drive letter、backslash、空白、日本語、CRLF、case-insensitive collision、reserved／invalid表現を安全側へ分類する。
+9. Windowsのsymlinkとjunctionは作成capabilityを別々に観測する。symlinkはDeveloper Mode／権限により作成不能な場合があるが、その理由をjunctionへ流用しない。作成不能を製品PASSへ数えず、種類ごとの実行caseとSKIP／NOT-RUN理由を分離する。macOS上のWindows風文字列caseはparser補助証拠であってWindows native証拠ではない。
+10. Windows verifiedは正式なWindows native runnerで今回のClarity suiteが実行され、実行可能なscanner／init preview／identity／安全caseがPASSした場合だけ表示する。macOS／Linux回帰も同じcandidateで維持し、host固有home、drive、volume名を製品へhard-codeしない。
+11. Windows native runはexternal live gateとして、exact candidate branchの既存`origin`への通常pushと、因果的な既存PR CI／必要時workflow dispatchだけを許可する。offline preview／fixtureはnetwork／external write 0を維持し、force push、remote変更、merge、release、tag、Marketplace、install、downstream、実顧客Repo writeを禁止する。
+12. Windows gate未実行、認証／runner／dispatch不能、timeoutは`windowsVerified=false`とtruthful NOT-RUN／incompleteを維持し、verification-infra／external-live-gate未達として分類する。Windows runner内のClarity assertionがcandidate因果で失敗した場合はproduct findingとして分ける。どちらもPASSへ数えない。

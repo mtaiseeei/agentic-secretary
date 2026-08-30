@@ -470,7 +470,7 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - 会話coreの対象surfaceを追跡する機械可読なinventoryを製品正本として保つ。rules、copy、skills、templates、runtime分類、memory保存シーム、golden fixture、旧Sprint回帰を実内容まで検査し、`memory-care`／`secretary`に加えて`settings`／`daily`／`projects`等の関連surfaceを含める。Agentic、Yasashii、private my-vaultの各sourceで新契約markerの存在と、topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧markerの不在を検証する。
 - 3版のsourceとオフライン回帰を同じ契約へ揃える。push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、release後の新session確認は別phaseとし、sourceのオフラインPASSだけでloaded versionへ反映済みと表示しない。
 
-## Project Clarity（F64〜F80）
+## Project Clarity（F64〜F81）
 
 ### F64 Project Clarity identityと4モード
 
@@ -499,6 +499,7 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 ### F68 Standalone init／review／doctor／migration
 
 - Clarity未導入Repoをboundedかつread-onlyに解析し、作成予定、候補、競合、除外・未確認範囲をpreviewする。
+- Harness Repoのinit previewは、一般scanが上限へ達する大規模RepoでもF81のauthoritative reserved laneから現在判断に必要な正本coverageを先に示す。
 - 明示確認後だけ実Repo由来の初期Itemを持つClarityを作り、retryでItem／Event／commitを重複させない。
 - doctorはmode、schema、Hook、link、projection、lockを診断し、schema migrationとcleanupはpreviewとapplyを分ける。
 
@@ -596,6 +597,18 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - notion-tasks／TODOは明示依頼時だけの委譲、memory-careはDecision重複保存防止、buildはHarness state非置換、updateは自動更新なし、connectorは自動実行なしを負検査する。
 - file存在やSkill名だけで合格にせず、実内容marker、routing fixture、前後snapshot、inventory digestで旧契約再流入と対象漏れを検出する。
 
+### F81 Harness-aware comprehensive init scannerとWindows native互換
+
+- Clarity initの「包括的」は全fileを無制限に読むことではなく、判断に必要な正本をboundedに取りこぼさないこととする。Harness Repoは構造から検出し、一般scanと分離したauthoritative reserved laneで`docs/sprints/state.md`を最優先に読む。
+- stateからCurrent IDをboundedに解決し、`docs/spec.md`と必要な`docs/spec/*.md`、current contract、対応progress、対応feedback、`AGENTS.md`、`CLAUDE.md`、package manifestを一般`src/`／`scripts/`より先に確認する。stateがTBD、missing、invalid、上限超過の場合は根拠とfallbackを明示し、推測を確定表示しない。
+- stateはOrchestrator execution truth、contractはrequirements、progressはGenerator self-report、feedbackはEvaluator validationとして意味を分ける。1 fileを機械的に1 Itemへ変換せず、同じCurrent SprintのDecision／Execution／ValidationとEvidenceを一貫した候補bundleへまとめる。feedback不存在は`evaluation-not-yet-recorded`相当で扱い、scan-limitによる未確認と区別する。
+- authoritative laneとgeneric scanのbudget、inspected／excluded／uninspected、partial理由を返す。正本が巨大、Secret-like、binary、symlink、missing、invalidの場合は黙って完全扱いせず、将来stateが1 file上限を超えてもCurrent metadataと該当sectionだけをboundedに扱える契約を持つ。
+- 巨大stateは`maxFileBytes`等の1 file上限を単純拡大して扱わず、Current metadataと該当sectionだけをboundedに読む。解決不能ならpartial／uninspectedを維持する。
+- 非Harness Repoは既存generic scanの候補、上限、順序、安全意味を回帰させない。Harness正本を確保した後だけ、残余budgetで一般fileを読む。
+- WindowsではNodeのplatform path APIを使い、POSIX separatorやBashのpath解釈を前提にしない。drive letter、backslash、空白、日本語、CRLF、case-insensitive collision、reserved／invalid path、junction／symlink権限差をfail closedかつ理由付きで扱う。host固有home／volumeをhard-codeしない。
+- Windows verifiedは`.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobでscanner、init preview、identity、安全negativeを直接実行した場合だけ付与する。既存0.9.2回帰と`timeout-minutes: 10`を維持し、symlinkとjunctionのcapability／SKIP理由を別集計する。別OS上のWindows風文字列fixtureをnative PASSへ昇格せず、macOS／LinuxとSprint 041／050 Patch 003の回帰を維持する。
+- Windows runはexternal live gateであり、offline preview／fixtureのnetwork／external write 0とは分離する。許可済み操作はexact candidate branchの`origin`への通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけである。未実行／CI利用不能は`windowsVerified=false`のverification未達、runner内のcandidate因果assertion失敗はproduct findingとして区別する。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -617,4 +630,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
 | G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
 | G17 | F05 F07 F17 F19 F52 F54 F55 F56 F57 F63 |
-| G18 | F28 F51 F52 F54 F64 F65 F66 F67 F68 F69 F70 F71 F72 F73 F74 F75 F76 F77 F78 F79 F80 |
+| G18 | F28 F51 F52 F54 F64 F65 F66 F67 F68 F69 F70 F71 F72 F73 F74 F75 F76 F77 F78 F79 F80 F81 |

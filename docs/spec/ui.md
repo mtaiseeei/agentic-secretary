@@ -482,6 +482,16 @@ initはread-only previewから始め、Project名、Repo identity、推定構造
 除外・未確認範囲、作成予定path、既存file競合、Git変更予定、projection capabilityを示す。明示確認前にfile、runtime、
 journal、commitを作らない。巨大Repoでは読んだ範囲と読まなかった範囲を先に示す。
 
+Harness Repoでは「実行状態の正本」を一般file候補より先にまとめ、Current Sprint、requirements、Generator自己報告、
+Evaluator検証を別ラベルで示す。feedbackがまだ無い場合は「評価記録はまだありません」、上限や安全理由で読めない場合は
+「未確認」と理由を表示し、両者を同じcopyへしない。`truncated: true`だけで包括的と表示せず、authoritative／generic laneごとの
+確認済み、除外、未確認、使用量を短く示す。多数のHarness文書を1 file 1 Itemで羅列せず、Current Sprintの状態と根拠を一つの
+読みやすいbundleにする。
+
+Windowsでは利用者向けにPOSIX pathへ変換させない。drive letter、backslash、空白、日本語を含むpathをそのまま扱い、
+case collision、reserved／invalid path、symlink capability不足、junction capability不足は、何が確認できず、変更が0件かを別々に示す。
+native runnerで未実行のcaseを「Windows対応済み」と表示しない。
+
 ### DecisionとDrift
 
 Decision確定では、現在有効なDecision正本へ記録すること、PROJECT／Clarity projectionへの影響、partial時の残作業を示す。
