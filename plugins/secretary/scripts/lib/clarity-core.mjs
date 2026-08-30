@@ -26,6 +26,7 @@ import {
   revalidateClarityRoot,
   withClarityRootObservation,
 } from "./clarity-root.mjs";
+import { scanHarnessAuthoritative } from "./clarity-harness-scan.mjs";
 
 export const CLARITY_SCHEMA_VERSION = 2;
 export const CLARITY_MIN_SCHEMA_VERSION = 1;
@@ -304,7 +305,7 @@ function inspectRepoIdentityImpl(rootValue) {
   }
   let canonicalTop;
   try { canonicalTop = realpathSync(top); } catch { throw new ClarityError("git-root-unreadable", "Git top-levelを安全に確認できません。"); }
-  fail(canonicalTop === root, "git-root-mismatch", "Clarity initはGit top-levelで実行してください。親または子Repoへ書き込みません。", { gitTopLevel: basename(canonicalTop) });
+  fail(relative(root, canonicalTop) === "", "git-root-mismatch", "Clarity initはGit top-levelで実行してください。親または子Repoへ書き込みません。", { gitTopLevel: basename(canonicalTop) });
   return {
     kind: "git",
     rootName: basename(root),
@@ -345,7 +346,7 @@ function classifyCandidate(path, content) {
   return null;
 }
 
-function scanRepositoryImpl(rootValue) {
+function scanGenericRepository(rootValue) {
   const root = rootPath(rootValue);
   const report = {
     limits: { ...CLARITY_LIMITS },
@@ -413,6 +414,52 @@ function scanRepositoryImpl(rootValue) {
   return report;
 }
 
+function scanRepositoryImpl(rootValue) {
+  const root = rootPath(rootValue);
+  const authoritative = scanHarnessAuthoritative(root);
+  const generic = scanGenericRepository(root);
+  if (authoritative.detection.kind !== "harness") {
+    return {
+      ...generic,
+      harness: {
+        detection: authoritative.detection,
+        state: authoritative.state,
+        coverageDigest: authoritative.coverageDigest,
+      },
+    };
+  }
+  const candidates = [
+    ...authoritative.candidates,
+    ...generic.candidates.slice(0, Math.max(0, CLARITY_LIMITS.maxCandidates - authoritative.candidates.length)),
+  ];
+  return {
+    ...generic,
+    truncated: generic.truncated || authoritative.lane.partial,
+    candidates,
+    harness: {
+      detection: authoritative.detection,
+      state: authoritative.state,
+      bundle: authoritative.bundle,
+      sources: authoritative.sources,
+      coverageDigest: authoritative.coverageDigest,
+    },
+    lanes: {
+      authoritative: authoritative.lane,
+      generic: {
+        limits: generic.limits,
+        entriesSeen: generic.entriesSeen,
+        filesRead: generic.filesRead,
+        bytesRead: generic.bytesRead,
+        inspected: generic.inspected,
+        excluded: generic.excluded,
+        uninspected: generic.uninspected,
+        partial: generic.truncated,
+        partialReasons: generic.truncated ? ["scan-limit-reached"] : [],
+      },
+    },
+  };
+}
+
 function initialItem(projectId, candidate, timestamp) {
   const itemId = stableId("ci", `${projectId}:${candidate.path}:${candidate.title}`);
   return {
@@ -445,20 +492,20 @@ function initialItem(projectId, candidate, timestamp) {
       evidenceRefs: [],
       updatedAt: timestamp,
     },
-    validation: { status: "unknown", evidenceRefs: [], updatedAt: timestamp },
+    validation: { status: candidate.validationStatus || "unknown", evidenceRefs: [], updatedAt: timestamp },
     alignment: { status: "unknown", evidenceRefs: [], updatedAt: timestamp },
   };
 }
 
 function fileEvidence(projectId, item, candidate, timestamp) {
-  const type = candidate.source === "adr" ? "adr" : candidate.source === "spec" ? "spec-section" : "file-reference";
+  const type = candidate.source === "adr" ? "adr" : candidate.source === "spec" ? "spec-section" : candidate.source === "harness-authoritative" ? "agent-observation" : "file-reference";
   return {
     schemaVersion: CLARITY_SCHEMA_VERSION,
     evidenceId: stableId("ce", `${projectId}:${type}:${candidate.path}:${candidate.contentDigest}`),
     type,
     source: candidate.source,
-    locator: { path: candidate.path },
-    summary: `${candidate.kind}候補: ${candidate.title}`.slice(0, 240),
+    locator: candidate.evidenceLocator || { path: candidate.path },
+    summary: (candidate.evidenceSummary || `${candidate.kind}候補: ${candidate.title}`).slice(0, 240),
     observedAt: timestamp,
     contentDigest: candidate.contentDigest,
     sensitivity: "non-secret-reference",
@@ -983,6 +1030,7 @@ function createCanonicalFromPreview(root, preview) {
     const proof = fileEvidence(project.clarityProjectId, item, candidate, timestamp);
     item.decision.evidenceRefs = [proof.evidenceId];
     if (item.execution.status !== "not_started") item.execution.evidenceRefs = [proof.evidenceId];
+    if (item.validation.status !== "unknown") item.validation.evidenceRefs = [proof.evidenceId];
     validateItem(item);
     validateEvidence(proof);
     evidence.push(proof);
