@@ -246,4 +246,3 @@ AC実行9、PASS 8、BLOCKED 1、未実行AC 0。
 5. isolated fake、synthetic host payload、CLI versionをexternal-live／host-liveへ昇格していない。
 6. screenshotがないC23を5へ過大評価していない。
 7. ユーザーの後日実機テスト意向を現在のEvaluator evidenceや`done-by-user-decision`へ変換していない。
-
