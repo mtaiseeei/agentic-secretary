@@ -2,12 +2,12 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: TBD
+- Current ID: sprint-050-patch-005
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 8
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 9
+- Model Tier: strong
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -91,6 +91,7 @@
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 | sprint-050-patch-003 | done | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
 | sprint-050-patch-004 | done | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | [feedback](../feedback/sprint-050-patch-004.md) |
+| sprint-050-patch-005 | active | [contract](sprint-050-patch-005.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -98,6 +99,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-31: Yasashii Sprint 043 Patch 003のfresh独立Evaluatorが実source／exact detached／Git-freeの3面で、bounded `state.md`内の無害なcredential field名・placeholderをwhole-file Secretとして除外し、Current ID／4 role bundleを失うP-01を再現した。Yasashii common 3 runtime pathはpublic fixed candidateとのbyte-sync必須で版固有seamも無いため、Yasashii単独修正ではなくpublic通常high-risk Patch `sprint-050-patch-005`として上流修正する。Planner commit `c91a340`はstate構造metadataと非構造本文の分離、実Secret値／本文／raw-content digest／summary／candidate／Evidence非露出、state外strict exclusion、SR-001〜010、source／clean／Git-free／Windows Server 2025・Node 22、PR #11同branch通常pushだけのexternal live gateを契約化した。fresh strong Generator dispatchを予約しLineage Dispatches 9、Model Tier strong、Rotate model-escalation、Status activeとする。private／Yasashii source、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは未変更・未実施。
 - 2026-08-31: Sprint 050 Patch 004 Retry 1はproduct candidate `fe3eab06d4fbd0b5b26d995129156f2fb2537dd2`をfresh独立Evaluator commit `348cb1825a7f7e228e71e3799e2fdff0ea9b464e`でPASS。初回F-01／F-02／V-01は全CLOSED、新規product／verification-infra finding 0、blocking finding 0。Windows run `33330959260`／job `99309310674`はhead `98535e455d07dcddeff7ffdec378704440ab7b87`に因果し、既存0.9.2回帰12/12、Clarity HS 16/16、`WINDOWS_VERIFIED=true`、symlink／junction双方PASS、write／network 0。実`ebino-marketing-hub`はread-only previewでinvalid Currentとfallback `sprint-016`のpartial／inferred authoritative bundleを返し、Secret-like本文非露出、filesystem／Git status／HEAD／branch／remote不変。local／exact Git-free、Patch 003 21/21、Sprint 041 43/43、Sprint 047 25/25、Sprint 049 20/20、inventory 20/20も0 FAIL。AC1〜16全PASS、C1／C2／C5／C6／C19／C20／C24／C26は全5/5。ActionsのNode.js 20 deprecation annotationは製品suite Node 22の成功へ影響しない非blocking保守項目として分離する。Statusをdone、Current ID／Next PlannedをTBD、Retry／Spec-Issue Countを0、Model Tier standard、Rotate noneとし、Lineage Dispatchesは監査履歴として8を保持。merge、release、tag、install、Marketplace、private／Yasashii展開、実Repo applyは未実施。
 - 2026-08-31: 許可済みPR branch head `98535e455d07dcddeff7ffdec378704440ab7b87`でSprint 050 Patch 004 Retry 1のWindows native run `33330959260`／job `99309310674`を完了。既存0.9.2回帰は12 PASS／0 FAIL、Clarity Harness scanはHS 16 PASS／0 FAIL／0 SKIP／0 NOT-RUN、`WINDOWS_VERIFIED=true`、external write／network 0。HS-011の同一Git root、HS-012のdrive／日本語／CRLF、HS-013のreserved／invalid／case、HS-014のsymlink／junction別capability、HS-015のworkflow因果性、HS-016のportable inventoryをすべてPASSし、symlink／junctionはいずれもavailableだった。Actions全体conclusionもsuccessで、過去runは流用していない。fresh独立Evaluator dispatch 1件を予約してLineage Dispatchesを8へ更新し、Status awaiting-eval、Retry Count 1、Model Tier strong、Rotate noneを維持する。EvaluatorはGeneratorの自己評価を判定に使わず、exact candidate、Windows run、実Repo read-only preview、契約safe harborを独立検証する。merge、release、install、downstream、実Repo applyは未実施。
 - 2026-08-31: Sprint 050 Patch 004 Retry 1 Generator candidate `fe3eab06d4fbd0b5b26d995129156f2fb2537dd2`を固定。前回Evaluatorの3 findingだけを修正し、F-01は注釈付きCurrent IDを`invalid`のまま保ちながら安全なfallback `sprint-016`をpartial／inferred authoritative bundleへ使用、F-02はGit root一致をlexical path比較からexact filesystem identityへ変更して別rootはfail closed、V-01はinventoryのLF／CRLFだけをportable正規化し、実content／mode tamper検出を維持した。オーケストレーター再実行でTarget HS 12 PASS／0 FAIL／Windows専用4 NOT-RUN、Patch 003 21/21、Sprint 041 43/43を確認。実`ebino-marketing-hub`のread-only previewは`changed:false`で、invalid detection、fallback source、4 role、sources、partial lane、authoritative candidateを返し、Git status／HEAD／branch／remoteは前後不変。Statusをawaiting-eval、Retry Count 1、Lineage Dispatches 7、Model Tier strong、Rotate noneのまま、許可済みPR branchへの通常pushと同一candidate因果のWindows native再CI待ちとする。Windows PASSは未主張であり、force push、merge、release、install、downstream、実Repo applyは行わない。
