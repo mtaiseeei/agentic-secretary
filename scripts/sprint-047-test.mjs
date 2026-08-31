@@ -56,6 +56,41 @@ function registry() {
   return JSON.parse(body).primaryCaseIds["sprint-047"];
 }
 function inputFile(value, name) { const path = join(work, `${name}.json`); writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`); return path; }
+function filesystemSnapshot(directory) {
+  const entries = [];
+  const visit = (current, prefix = "") => {
+    for (const name of readdirSync(current).sort()) {
+      const absolute = join(current, name);
+      const path = prefix ? `${prefix}/${name}` : name;
+      const stat = lstatSync(absolute);
+      if (stat.isDirectory()) {
+        entries.push({ path, type: "directory", mode: stat.mode & 0o777 });
+        visit(absolute, path);
+      } else if (stat.isFile()) {
+        entries.push({ path, type: "file", mode: stat.mode & 0o777, digest: sha(readFileSync(absolute)) });
+      } else {
+        entries.push({ path, type: stat.isSymbolicLink() ? "symlink" : "other", mode: stat.mode & 0o777 });
+      }
+    }
+  };
+  visit(directory);
+  return entries;
+}
+function gitRepositorySnapshot(directory = root) {
+  const inspect = (...args) => {
+    const result = run("git", args, { cwd: directory });
+    assert.equal(result.status, 0, `git ${args.join(" ")}\n${result.stderr}`);
+    return result.stdout;
+  };
+  return {
+    head: inspect("rev-parse", "HEAD"),
+    branch: inspect("branch", "--show-current"),
+    remote: inspect("remote", "-v"),
+    status: inspect("status", "--short", "--untracked-files=all"),
+    staged: inspect("diff", "--cached", "--binary"),
+    unstaged: inspect("diff", "--binary"),
+  };
+}
 function snapshot() {
   return {
     head: git("rev-parse", "HEAD"),
@@ -174,7 +209,41 @@ try {
   await test("GS-001", "preexisting unstagedを成功／失敗後も保持", () => { assert.equal(readFileSync(join(root, "user-unstaged.txt"), "utf8"), "user unstaged change\n"); });
   await test("GS-002", "preexisting staged blobを保持", () => { assert.equal(git("show", ":user-staged.txt"), "user staged change"); });
   await test("GS-003", "明示commitはClarity所有pathだけ", () => {
-    const before = snapshot(); const preview = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--json"]); assert(preview.paths.length > 0); const committed = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--apply", "--json"]); assert(committed.committedPaths.every((path) => path.startsWith(".clarity/") || path === "CLARITY.md")); userStateEqual(snapshot(), before, { head: false }); assert.notEqual(git("rev-parse", "HEAD"), before.head);
+    const before = snapshot();
+    const beforePreviewTree = filesystemSnapshot(root);
+    const preview = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--json"]);
+    assert(preview.paths.length > 0);
+    assert.deepEqual(filesystemSnapshot(root), beforePreviewTree, "commit preview must not change the filesystem");
+    userStateEqual(snapshot(), before);
+
+    const committed = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--apply", "--json"]);
+    assert(committed.committedPaths.length > 0);
+    assert(committed.committedPaths.every((path) => path === "CLARITY.md" || (path.startsWith(".clarity/") && !path.startsWith(".clarity/runtime/"))));
+    assert.deepEqual(git("diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").split(/\r?\n/u).filter(Boolean).sort(), committed.committedPaths);
+    userStateEqual(snapshot(), before, { head: false });
+    assert.notEqual(git("rev-parse", "HEAD"), before.head);
+
+    const nestedRoot = join(root, "nested-root");
+    mkdirSync(join(nestedRoot, ".clarity"), { recursive: true });
+    writeFileSync(join(nestedRoot, "CLARITY.md"), "# Nested root negative\n");
+    const nestedTree = filesystemSnapshot(nestedRoot);
+    const nestedGit = gitRepositorySnapshot();
+    const nestedRejected = runJson(process.execPath, [cli, "commit", nestedRoot, "--message", "nested root negative", "--apply", "--json"], 3);
+    assert.equal(nestedRejected.code, "git-root-mismatch");
+    assert.deepEqual(filesystemSnapshot(nestedRoot), nestedTree);
+    assert.deepEqual(gitRepositorySnapshot(), nestedGit);
+    rmSync(nestedRoot, { recursive: true, force: true });
+
+    const nonGitRoot = join(work, "non-git-root");
+    mkdirSync(join(nonGitRoot, ".clarity"), { recursive: true });
+    writeFileSync(join(nonGitRoot, "CLARITY.md"), "# Non-Git negative\n");
+    const nonGitTree = filesystemSnapshot(nonGitRoot);
+    const mainGitBeforeNonGit = gitRepositorySnapshot();
+    const nonGitRejected = runJson(process.execPath, [cli, "commit", nonGitRoot, "--message", "non-Git negative", "--apply", "--json"], 3);
+    assert.equal(nonGitRejected.code, "clarity-commit-non-git");
+    assert.deepEqual(filesystemSnapshot(nonGitRoot), nonGitTree);
+    assert.equal(existsSync(join(nonGitRoot, ".git")), false);
+    assert.deepEqual(gitRepositorySnapshot(), mainGitBeforeNonGit);
   });
   await test("GS-004", "failed applyはuser dirtyへrollbackしない", () => {
     const before = snapshot(); const result = run(process.execPath, [cli, "drift", root, "--input-file", inputFile(comparison({ operationId: "failure-retry" }), "failure"), "--apply", "--json"], { env: { CLARITY_DRIFT_FAIL_AT: "after-evidence" } }); assert.equal(result.status, 4); userStateEqual(snapshot(), before);
