@@ -48,7 +48,7 @@ function fixture(name, options = {}) {
   write(root, "docs/sprints/state.md", options.state ?? stateText());
   write(root, "docs/sprints/sprint-050-patch-005.md", "# Requirements\n");
   write(root, "docs/progress/sprint-050-patch-005.md", "# Generator self report\n");
-  if (!options.feedbackAbsent) write(root, "docs/feedback/sprint-050-patch-005.md", "# Evaluation\n\nVerdict: **FAIL**\n");
+  if (!options.feedbackAbsent) write(root, "docs/feedback/sprint-050-patch-005.md", options.feedbackBody ?? "# Evaluation\n\nVerdict: **FAIL**\n");
   write(root, "AGENTS.md", "# Guidance\n");
   write(root, "CLAUDE.md", "# Guidance\n");
   write(root, "package.json", "{\"name\":\"fixture\"}\n");
@@ -103,10 +103,14 @@ function trackedLifecycle(root) {
   assert.equal(nextValues.length, 1, "tracked state must declare exactly one structural Next Planned");
   const declaredCurrentId = currentValues[0];
   assert.equal(declaredCurrentId === "TBD" || HARNESS_ID_PATTERN.test(declaredCurrentId), true, "tracked Current ID must be a canonical Sprint ID or final TBD");
-  const selectedRows = declaredCurrentId === "TBD"
-    ? rows.filter(({ status }) => ["done", "done-by-user-decision"].includes(status)).slice(-1)
-    : rows.filter(({ id }) => id === declaredCurrentId);
-  assert.equal(selectedRows.length, 1, "tracked state must contain exactly one row for the structurally selected Current Sprint");
+  const completionRows = rows.filter(({ status }) => ["done", "done-by-user-decision"].includes(status));
+  const fallbackId = completionRows.at(-1)?.id ?? null;
+  const selectedRows = rows.filter(({ id }) => id === (declaredCurrentId === "TBD" ? fallbackId : declaredCurrentId));
+  assert.equal(
+    selectedRows.length,
+    1,
+    "tracked state must contain exactly one row for the structurally selected Current Sprint ID; duplicate final TBD fallback rows are unsafe",
+  );
   const { id: currentId, status } = selectedRows[0];
   assert.equal(ALLOWED_CURRENT_STATUSES.has(status), true, "tracked Current status must stay in an executable or completed Harness lifecycle");
   if (declaredCurrentId === "TBD") {
@@ -134,6 +138,18 @@ function expectedEvaluatorStatus(root, currentId = TARGET_ID) {
   if (/\bVerdict:\s*\*\*FAIL\*\*|\bVerdict:\s*FAIL\b/iu.test(body)) return "failed";
   if (/verification-scope-issue/iu.test(body)) return "verification-scope-issue";
   return "recorded-unclassified";
+}
+function assertEvaluationEvidence(status, evaluatorStatus) {
+  if (status === "done") {
+    assert.equal(evaluatorStatus, "passed", "completed tracked state requires a PASS evaluation");
+  }
+  if (status === "done-by-user-decision") {
+    assert.equal(
+      ["passed", "failed", "verification-scope-issue"].includes(evaluatorStatus),
+      true,
+      "done-by-user-decision requires existing classified evaluator feedback as the acceptance basis",
+    );
+  }
 }
 function assertLifecycleReport(report, expected, evaluatorStatus = "not-recorded") {
   const { state, bundle } = report.harness;
@@ -287,23 +303,40 @@ try {
   record("SR-001", "PASS", "current-public-source-structured-state", () => {
     const expected = trackedLifecycle(ROOT);
     const evaluatorStatus = expectedEvaluatorStatus(ROOT, expected.currentId);
-    if (expected.status === "done") assert.equal(evaluatorStatus, "passed", "completed tracked state requires a PASS evaluation");
+    assertEvaluationEvidence(expected.status, evaluatorStatus);
     const preview = previewInit(ROOT); const report = preview.scan;
     assert.equal(preview.initialized, false); assert.equal(report.harness.detection.kind, "harness");
     assertLifecycleReport(report, expected, evaluatorStatus);
 
     const lifecycleFixtures = [
-      { name: "active", state: stateText({ status: "active" }), executionStatus: "in_progress", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "active", nextPlanned: "TBD", currentId: TARGET_ID },
-      { name: "awaiting", state: stateText({ status: "awaiting-eval" }), executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "awaiting-eval", nextPlanned: "TBD", currentId: TARGET_ID },
-      { name: "done-declared", state: stateText({ status: "done" }), executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
-      { name: "done-fallback", state: stateText({ current: "TBD", next: "TBD", status: "done" }), executionStatus: "implemented", fallbackSource: "last-recorded-completion", inferred: true, declaredCurrentId: "TBD", status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "active", state: stateText({ status: "active" }), evaluatorStatus: "not-recorded", executionStatus: "in_progress", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "active", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "awaiting", state: stateText({ status: "awaiting-eval" }), evaluatorStatus: "not-recorded", executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "awaiting-eval", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "done-declared", state: stateText({ status: "done" }), evaluatorStatus: "passed", executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "done-fallback", state: stateText({ current: "TBD", next: "TBD", status: "done" }), evaluatorStatus: "passed", executionStatus: "implemented", fallbackSource: "last-recorded-completion", inferred: true, declaredCurrentId: "TBD", status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
     ];
     for (const lifecycle of lifecycleFixtures) {
       assert.equal(ALLOWED_TARGET_STATUSES.has(lifecycle.status), true, "Patch 005 synthetic lifecycle must retain its contracted statuses");
       if (lifecycle.declaredCurrentId === "TBD") assert.equal(lifecycle.status, "done", "Patch 005 final TBD fixture must retain the completed target");
-      const root = fixture(`clarity-sr001-${lifecycle.name}`, { state: lifecycle.state, feedbackAbsent: true });
-      assertLifecycleReport(scanRepository(root), lifecycle);
+      const root = fixture(`clarity-sr001-${lifecycle.name}`, {
+        state: lifecycle.state,
+        feedbackAbsent: lifecycle.evaluatorStatus === "not-recorded",
+        feedbackBody: lifecycle.evaluatorStatus === "passed" ? "# Evaluation\n\nVerdict: **PASS**\n" : undefined,
+      });
+      const fixtureEvaluatorStatus = expectedEvaluatorStatus(root, lifecycle.currentId);
+      assert.equal(fixtureEvaluatorStatus, lifecycle.evaluatorStatus);
+      assertEvaluationEvidence(lifecycle.status, fixtureEvaluatorStatus);
+      assertLifecycleReport(scanRepository(root), lifecycle, fixtureEvaluatorStatus);
     }
+
+    const duplicateFallback = fixture("clarity-sr001-duplicate-tbd-fallback", {
+      state: stateText({ current: "TBD", next: "TBD", status: "done", suffix: "| sprint-050-patch-005 | done | duplicate | duplicate | duplicate |\r\n" }),
+      feedbackBody: "# Evaluation\n\nVerdict: **PASS**\n",
+    });
+    assert.throws(
+      () => trackedLifecycle(duplicateFallback),
+      /duplicate final TBD fallback rows are unsafe/u,
+      "the test oracle itself must reject duplicate rows for the final TBD fallback ID",
+    );
 
     const futureId = "sprint-051-patch-001";
     const future = fixture("clarity-sr001-future-current", {
@@ -326,6 +359,40 @@ try {
       executionStatus: "in_progress",
     });
     assertLifecycleReport(scanRepository(future), futureExpected);
+
+    const decisionId = "sprint-051-patch-002";
+    const decisionState = stateText({ current: decisionId, status: "done" }).replace(
+      "| sprint-050-patch-005 | done | x | x | x |",
+      `| sprint-050-patch-005 | done | x | x | x |\r\n| ${decisionId} | done-by-user-decision | x | x | x |`,
+    );
+    const acceptedDecision = fixture("clarity-sr001-user-decision-recorded-fail", { state: decisionState, feedbackAbsent: true });
+    write(acceptedDecision, `docs/sprints/${decisionId}.md`, "# User decision requirements\n");
+    write(acceptedDecision, `docs/progress/${decisionId}.md`, "# User decision generator self report\n");
+    write(acceptedDecision, `docs/feedback/${decisionId}.md`, "# Evaluation\n\nVerdict: **FAIL**\n");
+    const decisionExpected = trackedLifecycle(acceptedDecision);
+    const decisionEvaluatorStatus = expectedEvaluatorStatus(acceptedDecision, decisionId);
+    assert.equal(decisionEvaluatorStatus, "failed", "recorded FAIL must remain classified evidence for an explicit user decision");
+    assertEvaluationEvidence(decisionExpected.status, decisionEvaluatorStatus);
+    assertLifecycleReport(scanRepository(acceptedDecision), decisionExpected, decisionEvaluatorStatus);
+
+    const absentDecision = fixture("clarity-sr001-user-decision-feedback-absent", { state: decisionState, feedbackAbsent: true });
+    write(absentDecision, `docs/sprints/${decisionId}.md`, "# User decision requirements\n");
+    write(absentDecision, `docs/progress/${decisionId}.md`, "# User decision generator self report\n");
+    assert.throws(
+      () => assertEvaluationEvidence(trackedLifecycle(absentDecision).status, expectedEvaluatorStatus(absentDecision, decisionId)),
+      /requires existing classified evaluator feedback/u,
+      "done-by-user-decision must not be accepted without evaluator feedback",
+    );
+
+    const unclassifiedDecision = fixture("clarity-sr001-user-decision-feedback-unclassified", { state: decisionState, feedbackAbsent: true });
+    write(unclassifiedDecision, `docs/sprints/${decisionId}.md`, "# User decision requirements\n");
+    write(unclassifiedDecision, `docs/progress/${decisionId}.md`, "# User decision generator self report\n");
+    write(unclassifiedDecision, `docs/feedback/${decisionId}.md`, "# Evaluation\n\nReview recorded without a verdict.\n");
+    assert.throws(
+      () => assertEvaluationEvidence(trackedLifecycle(unclassifiedDecision).status, expectedEvaluatorStatus(unclassifiedDecision, decisionId)),
+      /requires existing classified evaluator feedback/u,
+      "done-by-user-decision must not be accepted with unclassified feedback",
+    );
 
     const invalidId = fixture("clarity-sr001-invalid-current", { state: stateText({ current: "future-current" }) });
     assert.throws(() => trackedLifecycle(invalidId), /canonical Sprint ID/u);
