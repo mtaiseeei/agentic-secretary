@@ -25,6 +25,7 @@ const hookCli = join(repo, "plugins/secretary/scripts/clarity-hook.mjs");
 const work = mkdtempSync(join(tmpdir(), "agentic-s047-"));
 const root = join(work, "drift-repo");
 const outside = join(work, "outside");
+const emptyGlobalGitConfig = join(work, "empty-global-gitconfig");
 const fixedNow = "2026-08-28T10:00:00.000Z";
 const results = [];
 const supplemental = [];
@@ -37,7 +38,9 @@ function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function json(path) { return JSON.parse(readFileSync(path, "utf8")); }
 function lines(path) { return readFileSync(path, "utf8").trim().split(/\r?\n/u).filter(Boolean).map(JSON.parse); }
 function run(command, args, options = {}) {
-  return spawnSync(command, args, { cwd: options.cwd || repo, encoding: "utf8", timeout: options.timeout || 120_000, maxBuffer: 64 * 1024 * 1024, env: { ...process.env, ...(options.env || {}) }, input: options.input });
+  const env = { ...process.env, ...(options.env || {}) };
+  for (const name of options.unsetEnv || []) delete env[name];
+  return spawnSync(command, args, { cwd: options.cwd || repo, encoding: "utf8", timeout: options.timeout || 120_000, maxBuffer: 64 * 1024 * 1024, env, input: options.input });
 }
 function runJson(command, args, expected = 0, options = {}) {
   const result = run(command, args, options);
@@ -141,6 +144,7 @@ const exact = [...Array.from({ length: 10 }, (_, index) => `DR-${String(index + 
 assert.deepEqual(expected, exact, "Sprint 047 registry must be exact 25 IDs");
 
 try {
+  writeFileSync(emptyGlobalGitConfig, "");
   mkdirSync(join(root, "docs"), { recursive: true }); mkdirSync(join(root, "src"), { recursive: true }); mkdirSync(join(root, "generated"), { recursive: true }); mkdirSync(join(root, "templates"), { recursive: true }); mkdirSync(outside);
   writeFileSync(join(root, "README.md"), "# Drift fixture\n");
   writeFileSync(join(root, "docs/decision.md"), "Approved decision: lookup by email first.\n");
@@ -149,7 +153,11 @@ try {
   writeFileSync(join(root, "templates/lookup.template"), "lookup order: email first\n");
   writeFileSync(join(root, "generated/lookup.js"), "generated lookup order: customer_id first\n");
   writeFileSync(join(root, "user-staged.txt"), "baseline staged\n"); writeFileSync(join(root, "user-unstaged.txt"), "baseline unstaged\n");
-  git("init", "-q", "-b", "main"); git("add", "."); git("commit", "-qm", "source baseline"); oldSourceCommit = git("rev-parse", "HEAD");
+  git("init", "-q", "-b", "main");
+  git("config", "--local", "user.name", "Sprint 047 Fixture");
+  git("config", "--local", "user.email", "sprint-047-fixture@example.invalid");
+  git("config", "--local", "user.useConfigOnly", "true");
+  git("add", "."); git("commit", "-qm", "source baseline"); oldSourceCommit = git("rev-parse", "HEAD");
   runJson(process.execPath, [cli, "init", root, "--apply", "--json"]); git("add", ".clarity", "CLARITY.md"); git("commit", "-qm", "clarity baseline");
   itemId = json(join(root, ".clarity/state.json")).items[0].itemId;
   runJson(process.execPath, [cli, "event", root, "--event-json", JSON.stringify({ type: "decision.confirmed", itemId, actor: "fixture-human", payload: { source: "accepted-canonical", humanConfirmed: true } }), "--json"]);
@@ -210,13 +218,25 @@ try {
   await test("GS-002", "preexisting staged blobを保持", () => { assert.equal(git("show", ":user-staged.txt"), "user staged change"); });
   await test("GS-003", "明示commitはClarity所有pathだけ", () => {
     const before = snapshot();
+    const isolatedGitOptions = {
+      env: { GIT_CONFIG_GLOBAL: emptyGlobalGitConfig, GIT_CONFIG_NOSYSTEM: "1" },
+      unsetEnv: ["GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL", "EMAIL"],
+    };
+    assert.equal(git("config", "--local", "user.name"), "Sprint 047 Fixture");
+    assert.equal(git("config", "--local", "user.email"), "sprint-047-fixture@example.invalid");
+    const isolatedGlobal = run("git", ["config", "--global", "--list"], { cwd: root, ...isolatedGitOptions });
+    assert.equal(isolatedGlobal.status, 0, isolatedGlobal.stderr);
+    assert.equal(isolatedGlobal.stdout, "");
+    const isolatedIdentity = run("git", ["var", "GIT_AUTHOR_IDENT"], { cwd: root, ...isolatedGitOptions });
+    assert.equal(isolatedIdentity.status, 0, isolatedIdentity.stderr);
+    assert.match(isolatedIdentity.stdout, /^Sprint 047 Fixture <sprint-047-fixture@example\.invalid> /u);
     const beforePreviewTree = filesystemSnapshot(root);
-    const preview = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--json"]);
+    const preview = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--json"], 0, isolatedGitOptions);
     assert(preview.paths.length > 0);
     assert.deepEqual(filesystemSnapshot(root), beforePreviewTree, "commit preview must not change the filesystem");
     userStateEqual(snapshot(), before);
 
-    const committed = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--apply", "--json"]);
+    const committed = runJson(process.execPath, [cli, "commit", root, "--message", "[clarity] drift checkpoint", "--apply", "--json"], 0, isolatedGitOptions);
     assert(committed.committedPaths.length > 0);
     assert(committed.committedPaths.every((path) => path === "CLARITY.md" || (path.startsWith(".clarity/") && !path.startsWith(".clarity/runtime/"))));
     assert.deepEqual(git("diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD").split(/\r?\n/u).filter(Boolean).sort(), committed.committedPaths);
