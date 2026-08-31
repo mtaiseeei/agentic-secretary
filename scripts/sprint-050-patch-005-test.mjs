@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { copyFileSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,8 @@ import { HARNESS_SCAN_LIMITS } from "../plugins/secretary/scripts/lib/clarity-ha
 import { validateCollaborationInventory } from "./lib/sprint-049-inventory.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const TARGET_ID = "sprint-050-patch-005";
+const ALLOWED_TARGET_STATUSES = new Set(["active", "awaiting-eval", "done"]);
 const requireWindows = process.argv.includes("--require-windows");
 const results = new Map();
 const cleanup = [];
@@ -48,6 +50,125 @@ function fixture(name, options = {}) {
   return root;
 }
 function source(report, role) { return report.harness.sources.find((row) => row.role === role); }
+function structuralStateLines(body) {
+  const lines = body.replaceAll("\r\n", "\n").split("\n");
+  const structural = [];
+  let fence = null;
+  let inComment = false;
+  for (const rawLine of lines) {
+    const fenceMatch = rawLine.match(/^\s{0,3}(`{3,}|~{3,})/u);
+    if (fence) {
+      if (fenceMatch && fenceMatch[1][0] === fence.char && fenceMatch[1].length >= fence.length) fence = null;
+      continue;
+    }
+    if (fenceMatch) {
+      fence = { char: fenceMatch[1][0], length: fenceMatch[1].length };
+      continue;
+    }
+    let line = rawLine;
+    while (line.length > 0) {
+      if (inComment) {
+        const end = line.indexOf("-->");
+        if (end < 0) { line = ""; break; }
+        line = line.slice(end + 3); inComment = false;
+        continue;
+      }
+      const start = line.indexOf("<!--");
+      if (start < 0) break;
+      const end = line.indexOf("-->", start + 4);
+      if (end < 0) { line = line.slice(0, start); inComment = true; break; }
+      line = `${line.slice(0, start)}${line.slice(end + 3)}`;
+    }
+    // Structural state fields and rows never need inline code. Ignoring such
+    // lines prevents historical examples from becoming the test oracle.
+    if (!line.includes("`") && !line.includes("~")) structural.push(line.trim());
+  }
+  return structural;
+}
+function trackedLifecycle(root) {
+  const body = readFileSync(join(root, "docs/sprints/state.md"), "utf8");
+  const lines = structuralStateLines(body);
+  const currentValues = lines.flatMap((line) => line.match(/^- Current ID:\s*(\S+)\s*$/u)?.[1] || []);
+  const nextValues = lines.flatMap((line) => line.match(/^- Next Planned:\s*(\S+)\s*$/u)?.[1] || []);
+  const targetRows = lines.flatMap((line) => {
+    const match = line.match(/^\|\s*sprint-050-patch-005\s*\|\s*([a-z-]+)\s*\|/u);
+    return match ? [match[1]] : [];
+  });
+  assert.equal(currentValues.length, 1, "tracked state must declare exactly one structural Current ID");
+  assert.equal(nextValues.length, 1, "tracked state must declare exactly one structural Next Planned");
+  assert.equal(targetRows.length, 1, "tracked state must contain exactly one target row");
+  const declaredCurrentId = currentValues[0];
+  const status = targetRows[0];
+  assert.equal([TARGET_ID, "TBD"].includes(declaredCurrentId), true, "tracked Current ID must be target or final TBD");
+  assert.equal(ALLOWED_TARGET_STATUSES.has(status), true, "target status must stay in the contracted lifecycle");
+  if (declaredCurrentId === "TBD") {
+    assert.equal(nextValues[0], "TBD", "final TBD must not infer the target from Next Planned");
+    assert.equal(status, "done", "final TBD fallback must select a completed target");
+  }
+  return {
+    declaredCurrentId,
+    currentId: TARGET_ID,
+    status,
+    nextPlanned: nextValues[0],
+    fallbackSource: declaredCurrentId === "TBD" ? "last-recorded-completion" : null,
+    inferred: declaredCurrentId === "TBD",
+    executionStatus: status === "active" ? "in_progress" : "implemented",
+  };
+}
+function expectedEvaluatorStatus(root) {
+  const path = join(root, "docs/feedback", `${TARGET_ID}.md`);
+  if (!existsSync(path)) return "not-recorded";
+  const body = readFileSync(path, "utf8");
+  if (/\bVerdict:\s*\*\*PASS\*\*|\bVerdict:\s*PASS\b/iu.test(body)) return "passed";
+  if (/\bVerdict:\s*\*\*FAIL\*\*|\bVerdict:\s*FAIL\b/iu.test(body)) return "failed";
+  if (/verification-scope-issue/iu.test(body)) return "verification-scope-issue";
+  return "recorded-unclassified";
+}
+function assertLifecycleReport(report, expected, evaluatorStatus = "not-recorded") {
+  const { state, bundle } = report.harness;
+  assert.equal(state.currentId, expected.currentId);
+  assert.equal(state.declaredCurrentId, expected.declaredCurrentId);
+  assert.equal(state.currentStatus, expected.status);
+  assert.equal(state.nextPlanned, expected.nextPlanned);
+  assert.deepEqual(state.tableRow, { id: expected.currentId, status: expected.status });
+  assert.equal(state.fallbackSource, expected.fallbackSource);
+  assert.equal(state.inferred, expected.inferred);
+  assert.equal(state.sourceSection, "sprint-table-row");
+
+  assert.equal(bundle.currentId, expected.currentId);
+  assert.equal(bundle.declaredCurrentId, expected.declaredCurrentId);
+  assert.equal(bundle.currentStatus, expected.status);
+  assert.equal(bundle.nextPlanned, expected.nextPlanned);
+  assert.equal(bundle.fallbackSource, expected.fallbackSource);
+  assert.equal(bundle.inferred, expected.inferred);
+  assert.deepEqual(bundle.roles.map(({ path, role }) => ({ path, role })), [
+    { path: "docs/sprints/state.md", role: "orchestrator-execution-truth" },
+    { path: `docs/sprints/${TARGET_ID}.md`, role: "requirements" },
+    { path: `docs/progress/${TARGET_ID}.md`, role: "generator-self-report" },
+    { path: `docs/feedback/${TARGET_ID}.md`, role: "evaluator-validation" },
+  ]);
+  assert.equal(bundle.roles[0].status, expected.status);
+  assert.equal(bundle.roles[1].status, "available");
+  assert.equal(bundle.roles[2].status, "available");
+  assert.equal(bundle.roles[3].status, evaluatorStatus);
+  if (evaluatorStatus === "not-recorded") {
+    assert.equal(bundle.roles[3].coverage, "not-found");
+    assert.equal(bundle.roles[3].reason, "evaluation-not-yet-recorded");
+  } else {
+    assert.equal(bundle.roles[3].coverage, "inspected");
+  }
+
+  const candidate = report.candidates.find((row) => row.kind === "harness-current" && row.source === "harness-authoritative");
+  assert(candidate, "authoritative Current candidate must exist");
+  assert.equal(report.candidates[0], candidate, "authoritative Current candidate must retain priority");
+  assert.equal(candidate.path, `docs/sprints/${TARGET_ID}.md`);
+  assert.equal(candidate.executionStatus, expected.executionStatus);
+  assert.equal(candidate.validationStatus, ["passed", "failed"].includes(evaluatorStatus) ? evaluatorStatus : "unknown");
+  assert.equal(candidate.evidenceLocator.path, "docs/sprints/state.md");
+  assert.equal(candidate.evidenceLocator.currentSprint, TARGET_ID);
+  assert.equal(candidate.evidenceLocator.sources, bundle.roles.map((row) => row.path).join(","));
+  assert.deepEqual(candidate.harnessBundle, bundle);
+}
 function assertCanaryAbsent(report, canary) {
   const body = JSON.stringify(report);
   assert.equal(body.includes(canary), false, "runtime canary must not be returned");
@@ -71,12 +192,23 @@ function record(id, status, reason, action = null) {
 
 try {
   record("SR-001", "PASS", "current-public-source-structured-state", () => {
+    const expected = trackedLifecycle(ROOT);
+    const evaluatorStatus = expectedEvaluatorStatus(ROOT);
+    if (expected.status === "done") assert.equal(evaluatorStatus, "passed", "completed tracked state requires a PASS evaluation");
     const preview = previewInit(ROOT); const report = preview.scan;
     assert.equal(preview.initialized, false); assert.equal(report.harness.detection.kind, "harness");
-    assert.equal(report.harness.state.currentId, "sprint-050-patch-005"); assert.equal(report.harness.state.currentStatus, "active"); assert.equal(report.harness.state.nextPlanned, "TBD");
-    assert.deepEqual(report.harness.state.tableRow, { id: "sprint-050-patch-005", status: "active" });
-    assert.deepEqual(report.harness.bundle.roles.map((row) => row.role), ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"]);
-    assert.equal(report.candidates[0].source, "harness-authoritative");
+    assertLifecycleReport(report, expected, evaluatorStatus);
+
+    const lifecycleFixtures = [
+      { name: "active", state: stateText({ status: "active" }), executionStatus: "in_progress", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "active", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "awaiting", state: stateText({ status: "awaiting-eval" }), executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "awaiting-eval", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "done-declared", state: stateText({ status: "done" }), executionStatus: "implemented", fallbackSource: null, inferred: false, declaredCurrentId: TARGET_ID, status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
+      { name: "done-fallback", state: stateText({ current: "TBD", next: "TBD", status: "done" }), executionStatus: "implemented", fallbackSource: "last-recorded-completion", inferred: true, declaredCurrentId: "TBD", status: "done", nextPlanned: "TBD", currentId: TARGET_ID },
+    ];
+    for (const lifecycle of lifecycleFixtures) {
+      const root = fixture(`clarity-sr001-${lifecycle.name}`, { state: lifecycle.state, feedbackAbsent: true });
+      assertLifecycleReport(scanRepository(root), lifecycle);
+    }
   });
 
   record("SR-002", "PASS", "placeholder-code-history-not-structural", () => {
