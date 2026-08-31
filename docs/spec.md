@@ -94,6 +94,11 @@ backslash、空白、日本語、CRLF、case-insensitive衝突、junction／syml
 boundedに抽出するauthoritative sourceとして扱う。無害なfield名・placeholder・過去説明ではCurrentを失わず、実値らしいSecretが混在しても
 値、本文、raw-content由来digest、summary、candidate、Evidenceへ漏らさない。state以外のauthoritative sourceとgeneric laneのstrict exclusionは
 維持する。public common runtimeを先に修正・独立評価し、その固定candidateからprivate my-vault、次にYasashiiを別Harnessへ同期・独立評価する。
+2026-09-01に、同じ製品／test bytesのWindows native runでSprint 047のGS-009／GS-010がPASSとFAILに分かれ、並行Hook／CLI write中の
+canonical置換が一時的な共有競合で拒否された後、Eventだけが追加されState更新が失敗して`state-mismatch`が連鎖する既存product defectを確認した。
+単なるworkflow rerunやflake扱いにはせず、Clarity canonicalの論理writeをEvent／Evidence／Stateの整合単位として扱う。Windows固有の一時競合は
+安全を再確認した限定条件だけでboundedに回復し、恒久失敗では開始前と整合するcanonicalへ戻して成功表示しない。GS-009／GS-010のID、意味、
+Severity、件数、閾値は維持し、public版の因果Windows runと独立評価をPASSした完全SHAだけをprivate my-vault、次にYasashiiへ別Harnessで渡す。
 
 ## ひとことで
 
@@ -199,6 +204,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-045](sprints/sprint-045.md) | generic Secretary-local、daily／weekly／Portfolio、既存正本回帰 | sprint-044 |
 | [sprint-046](sprints/sprint-046.md) | reciprocal link、pull sync、authority、conflict | sprint-045 |
 | [sprint-047](sprints/sprint-047.md) | Drift DetectionとGit／filesystem／Secret hardening | sprint-046 |
+| [sprint-047-patch-001](sprints/sprint-047-patch-001.md) | Windowsの一時的なcanonical置換競合をboundedに回復し、Event／Evidence／Stateの部分成功を残さない | sprint-047 |
 | [sprint-048](sprints/sprint-048.md) | public packaging、host inventory、clean／archive gate、固定handoff準備 | sprint-047 |
 | [sprint-049](sprints/sprint-049.md) | secretary関連全surfaceのClarity-aware協働inventoryと追加回帰 | sprint-048 |
 | [sprint-050](sprints/sprint-050.md) | 250 case全件、追加collaboration case、4 E2E、既存master全回帰の最終判定 | sprint-049 |

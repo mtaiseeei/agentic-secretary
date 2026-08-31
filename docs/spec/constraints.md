@@ -455,6 +455,7 @@
 37. 一般filesystemのworking rootは`allowAncestorSymlinks: false`相当を既定とし、option省略時もancestor symlinkを拒否する。Clarityの指定入口だけは専用root resolverがrequest中にtrueを内部指定し、working root自身がsymlinkではないことを確認したうえでancestorだけを物理rootへ固定する。これは利用者向けCLI flag／設定ではなく、共通filesystem、他Skill、tracked project／link bundleへ伝播・永続化しない。
 38. Clarity内部policyの適用時も解決先は実在する通常directoryでなければならず、containmentとwriteは物理root基準とする。root内から外向きのsymlink、root自身のsymlink、壊れた／file向きalias、Drift source locator symlink、解決後のalias差替え・物理root identity変更は副作用0件で拒否する。readとwriteの重要境界で同じroot identityを再確認する。
 39. canonical readerとancestor alias対応は正本repoへのwrite、fetch、pull、push、checkout、branch／remote変更、network callを0件に保ち、dirty／staged／untracked、HEAD、branch、remoteを保持する。applyのsynthetic fixtureでは物理repo内の宣言済み`.clarity/**`だけが変わり、alias側の別tree、workspace側、外部参照先を変更しない。
+40. Clarity canonicalの論理writeは、Event／Evidenceとそれらから派生するStateが互いに一致する単位で完了する。OSによる一時的な共有／置換競合は、対象・root・lock・owned tempの同一性を再確認した限定条件だけでboundedに回復し、busy loop、無制限待機、全権限errorの無差別retryをしない。同じ論理writeを重複追加せず、恒久失敗では一方だけを進めた部分成功を残さず、実状態とerror／`changed`を一致させる。cleanup／doctorは一致するowner／token／期限を持つClarity所有物だけを扱い、別processまたは利用者所有fileを削除しない。
 
 ## 26. Clarity init scannerの包括性・portable path境界
 
