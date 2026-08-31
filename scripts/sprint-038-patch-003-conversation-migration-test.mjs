@@ -58,10 +58,6 @@ function makeTarget(sandbox, name = "AGENTS.md") {
 const sandbox = mkdtempSync(join(tmpdir(), "sprint-038-patch-003 日本語-"));
 try {
   console.log(`OS=${process.platform} arch=${process.arch} node=${process.version} root=${ROOT} sandbox=${sandbox}`);
-  if (requireWindows && process.platform !== "win32") {
-    console.error("FAIL Windowsネイティブrunnerではありません");
-    process.exitCode = 1;
-  }
 
   check("修正前のslash限定basenameはWindows absolute pathを混入させるnegative", () => {
     const windowsTarget = String.raw`C:\Users\利用者\workspace 空白\secretary\AGENTS.md`;
@@ -77,7 +73,11 @@ try {
     const result = applyConversationMigration({ target, plan: planFor(before), oldSection, newSection });
     const after = readFileSync(target);
     assert.equal(dirname(result.temporaryPath), dirname(target));
-    assert.match(basename(result.temporaryPath), /^\.通常 AGENTS\.md\.conversation-migration-\d+-[a-f0-9]{16}$/u);
+    assert.equal(
+      basename(result.temporaryPath),
+      `.${basename(target)}.conversation-migration-${process.pid}-0000000000000000`,
+    );
+    assert.equal(result.temporaryCreateAttempts, 1);
     assert.doesNotMatch(basename(result.temporaryPath), /[\\/]/u);
     assert.equal(existsSync(result.temporaryPath), false);
     assert.equal(after.toString("utf8").startsWith("利用者固有の前置き\n\n"), true);
@@ -87,15 +87,33 @@ try {
     assert.equal(migrationTemps(target).length, 0);
   });
 
-  check("開始前から存在する旧temp名siblingを上書きもunlinkもしない", () => {
+  check("現行candidate temp名とのEEXIST後は別owned tempで成功し開始前fileを保持する", () => {
     const { target, before } = makeTarget(sandbox, "collision AGENTS.md");
-    const legacyTemp = join(dirname(target), `.${basename(target)}.conversation-migration-${process.pid}`);
+    const collisionTemp = join(
+      dirname(target),
+      `.${basename(target)}.conversation-migration-${process.pid}-0000000000000000`,
+    );
     const canary = Buffer.from("開始前から存在する他者所有temp\n", "utf8");
-    writeFileSync(legacyTemp, canary);
+    writeFileSync(collisionTemp, canary);
+    const fixedTime = new Date("2020-03-04T05:06:07.000Z");
+    utimesSync(collisionTemp, fixedTime, fixedTime);
+    const canaryHash = digest(canary);
+    const canaryMtime = statSync(collisionTemp).mtimeMs;
     const result = applyConversationMigration({ target, plan: planFor(before), oldSection, newSection });
-    assert.notEqual(result.temporaryPath, legacyTemp);
-    assert.deepEqual(readFileSync(legacyTemp), canary);
-    assert.equal(migrationTemps(target).filter((name) => name !== basename(legacyTemp)).length, 0);
+    assert.equal(result.changed, true);
+    assert.equal(result.temporaryCreateAttempts > 1, true, "openSync(wx)のEEXIST後にretryした");
+    assert.notEqual(result.temporaryPath, collisionTemp);
+    assert.match(basename(result.temporaryPath), /^\.collision AGENTS\.md\.conversation-migration-\d+-[a-f0-9]{16}$/u);
+    assert.equal(existsSync(result.temporaryPath), false);
+    assert.equal(digest(readFileSync(collisionTemp)), canaryHash);
+    assert.equal(statSync(collisionTemp).mtimeMs, canaryMtime);
+    assert.equal(existsSync(collisionTemp), true);
+    assert.equal(planFor(readFileSync(target)).action, "already-applied");
+    assert.equal(migrationTemps(target).filter((name) => name !== basename(collisionTemp)).length, 0);
+    console.log(
+      `EEXIST_RETRY_OBSERVED=true TEMP_CREATE_ATTEMPTS=${result.temporaryCreateAttempts} `
+      + "CANARY_HASH_UNCHANGED=true CANARY_MTIME_UNCHANGED=true OWNED_TEMP_RESIDUAL=0",
+    );
   });
 
   check("dry-runとownership conflictは対象・sibling・外部canaryを変更しない", () => {
@@ -115,7 +133,7 @@ try {
       const targetBefore = readFileSync(target);
       assert.equal(planFor(targetBefore).action, "conflict");
       assert.deepEqual(readFileSync(target), targetBefore);
-      assert.equal(migrationTemps(target).filter((name) => !name.endsWith(`-${process.pid}`)).length, 0);
+      assert.equal(migrationTemps(target).length, 0);
     }
     assert.equal(readFileSync(outside, "utf8"), "outside unchanged\n");
   });
@@ -172,8 +190,17 @@ try {
     assert.equal(migrationTemps(target).length, 0);
     applyConversationMigration({ target, plan, oldSection, newSection });
     const afterRetry = readFileSync(target);
-    assert.equal(planFor(afterRetry).action, "already-applied");
-    assert.equal(digest(readFileSync(target)), digest(afterRetry), "成功後rerunは追加write 0件");
+    const rerunPlan = planFor(afterRetry);
+    assert.equal(rerunPlan.action, "already-applied");
+    const rerunHash = digest(afterRetry);
+    const rerunMtime = statSync(target).mtimeMs;
+    const rerun = applyConversationMigration({ target, plan: rerunPlan, oldSection, newSection });
+    assert.equal(rerun.changed, false);
+    assert.equal(rerun.temporaryPath, null);
+    assert.equal(rerun.temporaryCreateAttempts, 0);
+    assert.equal(digest(readFileSync(target)), rerunHash);
+    assert.equal(statSync(target).mtimeMs, rerunMtime, "already-applied rerunはtarget write 0件");
+    assert.equal(migrationTemps(target).length, 0);
   });
 
   check("明示rollbackも完成済みsibling tempから復元し開始前collisionを保持する", () => {
@@ -191,6 +218,7 @@ try {
 
   check("Windows native実行面のpath特性を記録する", () => {
     if (process.platform !== "win32") {
+      if (requireWindows) assert.fail("Windowsネイティブrunnerではありません");
       console.log("WINDOWS_NATIVE=NOT-RUN reason=local OS is not win32");
       return;
     }

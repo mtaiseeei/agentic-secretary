@@ -3,6 +3,7 @@ import { closeSync, fsyncSync, openSync, readFileSync, renameSync, unlinkSync, w
 import { basename, dirname, join } from "node:path";
 
 const TEMP_CREATE_ATTEMPTS = 16;
+const INITIAL_TEMP_NONCE = "0000000000000000";
 
 export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -50,10 +51,10 @@ function createOwnedSiblingTemp(target, purpose) {
   const parent = dirname(target);
   const targetName = basename(target);
   for (let attempt = 0; attempt < TEMP_CREATE_ATTEMPTS; attempt += 1) {
-    const nonce = randomBytes(8).toString("hex");
+    const nonce = attempt === 0 ? INITIAL_TEMP_NONCE : randomBytes(8).toString("hex");
     const path = join(parent, `.${targetName}.${purpose}-${process.pid}-${nonce}`);
     try {
-      return { path, descriptor: openSync(path, "wx", 0o600) };
+      return { path, descriptor: openSync(path, "wx", 0o600), createAttempts: attempt + 1 };
     } catch (error) {
       if (error?.code === "EEXIST") continue;
       throw error;
@@ -104,7 +105,12 @@ function atomicReplace(target, bytes, purpose) {
 
 export function applyConversationMigration({ target, plan, oldSection, newSection, simulateFailure = null }) {
   const before = readFileSync(target);
-  if (sha256(before) !== plan.beforeHash || plan.action !== "change") throw new Error("migration-plan-stale");
+  const beforeHash = sha256(before);
+  if (beforeHash !== plan.beforeHash) throw new Error("migration-plan-stale");
+  if (plan.action === "already-applied") {
+    return { changed: false, before, afterHash: beforeHash, temporaryPath: null, temporaryCreateAttempts: 0 };
+  }
+  if (plan.action !== "change") throw new Error("migration-plan-stale");
   const beforeText = before.toString("utf8");
   if (occurrences(beforeText, oldSection) !== 1) throw new Error("migration-ownership-changed");
   const after = Buffer.from(beforeText.replace(oldSection, newSection), "utf8");
@@ -116,7 +122,13 @@ export function applyConversationMigration({ target, plan, oldSection, newSectio
     renameSync(owned.path, target);
     renamed = true;
     if (simulateFailure === "after-rename") throw new Error("simulated-after-rename");
-    return { changed: true, before, afterHash: sha256(after), temporaryPath: owned.path };
+    return {
+      changed: true,
+      before,
+      afterHash: sha256(after),
+      temporaryPath: owned.path,
+      temporaryCreateAttempts: owned.createAttempts,
+    };
   } catch (error) {
     if (!renamed) {
       try {
