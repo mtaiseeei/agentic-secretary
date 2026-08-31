@@ -303,32 +303,42 @@ try {
       const parsedCli = all.slice(0, 32).map((row) => JSON.parse(row.stdout));
       const events = lines(join(root, ".clarity/events.jsonl"));
       const hookRows = hookRuntimeRows(hookRoot);
-      assert.equal(new Set(events.map((row) => row.eventId)).size, events.length);
+      const canonicalUnique = new Set(events.map((row) => row.eventId)).size === events.length;
+      const hookUnique = new Set(hookRows.map((row) => row.eventId)).size === hookRows.length;
+      const canonicalExpectedDelta = events.length - beforeEvents;
+      const hookExpectedDelta = hookRows.length - beforeHooks;
+      const residueCount = () => {
+        const clarityNames = readdirSync(join(root, ".clarity"));
+        const runtimeNames = existsSync(join(root, ".clarity/runtime")) ? readdirSync(join(root, ".clarity/runtime")) : [];
+        return clarityNames.filter((name) => /^\.clarity-op-/u.test(name) || name === "lock.json").length
+          + runtimeNames.filter((name) => /^(?:operation-|\.tmp-)/u.test(name)).length;
+      };
+      const residueBeforeRebuild = residueCount();
+      assert.equal(canonicalUnique, true); assert.equal(hookUnique, true);
       assert.equal(events.filter((row) => row.actor === actor).length, 32);
-      assert.equal(events.length - beforeEvents, 32);
-      assert.equal(hookRows.length - beforeHooks, 32);
-      assert.equal(new Set(hookRows.map((row) => row.eventId)).size, hookRows.length);
-      const rebuild = runJson(process.execPath, [cli, "rebuild", root, "--json"]); assert(json(join(root, ".clarity/state.json"))); assert.equal(rebuild.state.source.eventCount, events.length);
-      const clarityNames = readdirSync(join(root, ".clarity"));
-      const runtimeNames = existsSync(join(root, ".clarity/runtime")) ? readdirSync(join(root, ".clarity/runtime")) : [];
-      assert.equal(clarityNames.some((name) => /^\.clarity-op-/u.test(name) || name === "lock.json"), false);
-      assert.equal(runtimeNames.some((name) => /^(?:operation-|\.tmp-)/u.test(name)), false);
+      assert.equal(canonicalExpectedDelta, 32); assert.equal(hookExpectedDelta, 32);
+      assert.equal(residueBeforeRebuild, 0);
+      const rebuild = runJson(process.execPath, [cli, "rebuild", root, "--json"]);
+      const rebuiltState = json(join(root, ".clarity/state.json"));
+      const stateRebuild = rebuild.state.source.eventCount === events.length && rebuiltState.source.eventCount === events.length;
+      const residueAfterRebuild = residueCount();
+      assert.equal(stateRebuild, true); assert.equal(residueAfterRebuild, 0);
       const metric = (name) => parsedCli.map((row) => Number(row.writeMetrics?.[name] || 0));
-      const roundMs = Date.now() - roundStarted;
-      const jobLimitMs = 10 * 60_000;
+      const roundDurationMs = Date.now() - roundStarted;
+      const roundBudgetMs = 10 * 60_000;
       const summary = {
-        round: round + 1, writers: all.length, exitsZero: all.filter((row) => row.status === 0).length,
+        round: round + 1, writers: all.length, canonicalWriterCount: 32, hookWriterCount: 32, exitsZero: all.filter((row) => row.status === 0).length,
         canonicalJsonParsed: events.length, hookJsonParsed: hookRows.length,
-        canonicalUnique: true, hookUnique: true, canonicalExpectedDelta: events.length - beforeEvents, hookExpectedDelta: hookRows.length - beforeHooks, stateRebuild: true,
-        residueCount: 0,
-        maxLockWaitMs: Math.max(...metric("lockWaitMs")), lockWaitLimitMs: Math.max(...metric("lockWaitLimitMs")),
-        minLockWaitMarginMs: Math.min(...metric("lockWaitMarginMs")), maxLeaseCriticalMs: Math.max(...metric("leaseCriticalMs")),
-        leaseLimitMs: Math.max(...metric("leaseLimitMs")), minLeaseMarginMs: Math.min(...metric("leaseMarginMs")),
+        canonicalUnique, hookUnique, canonicalExpectedDelta, hookExpectedDelta, stateRebuild,
+        residueBeforeRebuild, residueAfterRebuild,
+        maxCanonicalLockWaitMs: Math.max(...metric("lockWaitMs")), canonicalLockWaitLimitMs: Math.max(...metric("lockWaitLimitMs")),
+        minCanonicalLockWaitMarginMs: Math.min(...metric("lockWaitMarginMs")), maxCanonicalLeaseCriticalMs: Math.max(...metric("leaseCriticalMs")),
+        canonicalLeaseLimitMs: Math.max(...metric("leaseLimitMs")), minCanonicalLeaseMarginMs: Math.min(...metric("leaseMarginMs")),
         maxReplaceAttempts: Math.max(...metric("replaceAttempts")), maxReplaceRetryWaitMs: Math.max(...metric("replaceRetryWaitMs")),
         maxRollbackMs: Math.max(...metric("rollbackMs")), maxCleanupMs: Math.max(...metric("cleanupMs")),
-        roundMs, jobLimitMs, jobMarginMs: jobLimitMs - roundMs,
+        roundDurationMs, roundBudgetMs, roundMarginMs: roundBudgetMs - roundDurationMs,
       };
-      assert(summary.minLockWaitMarginMs > 0 && summary.minLeaseMarginMs > 0 && summary.jobMarginMs > 0);
+      assert(summary.minCanonicalLockWaitMarginMs > 0 && summary.minCanonicalLeaseMarginMs > 0 && summary.roundMarginMs > 0);
       windowsStressRounds.push(summary);
       process.stdout.write(`METRIC GS-009 ${JSON.stringify(summary)}\n`);
     }

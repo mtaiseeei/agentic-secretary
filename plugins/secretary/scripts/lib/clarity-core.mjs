@@ -167,6 +167,7 @@ const CANONICAL_PROGRESS_SCHEMA_VERSION = 1;
 const injectedFailureHits = new Map();
 
 function injectedFailures() {
+  if (process.env.CLARITY_TEST_MODE !== "1") return [];
   const raw = process.env.CLARITY_FS_FAILURES;
   if (!raw) return [];
   try {
@@ -195,6 +196,7 @@ function maybeInjectFilesystemFailure(point, target = null) {
 }
 
 function maybeCrash(point) {
+  if (process.env.CLARITY_TEST_MODE !== "1") return;
   if (process.env.CLARITY_CRASH_AT !== point) return;
   process.kill(process.pid, "SIGKILL");
 }
@@ -375,7 +377,7 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
         maybeInjectFilesystemFailure("lock-release-cleanup", CANONICAL_LOCK_REL);
         rmSync(path);
       } else if (!callbackError) {
-        callbackError = new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、成功扱いにしません。", 4, { changed: false, operationId, nextAction: "doctorでlock状態を確認してください" });
+        callbackError = new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、成功扱いにしません。", 4, { changed: Boolean(result?.changed), operationId, nextAction: "doctorでlock状態を確認してください" });
       }
     } catch (error) {
       if (!callbackError) callbackError = new ClarityError("canonical-release-incomplete", "canonical write後のlock release／cleanupに失敗したため、成功扱いにしません。", 4, {
@@ -1231,13 +1233,21 @@ function assertWritableCanonicalTarget(root, rel, expectedIdentity, expectedPare
   accessSync(parent, constants.W_OK);
   const stat = lstatSync(target);
   fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-target-unsafe", "canonical targetが安全な通常fileではないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
-  fail((stat.mode & 0o222) !== 0, "canonical-target-readonly", "canonical targetがread-onlyのためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  if (process.platform === "win32") {
+    try { accessSync(target, constants.W_OK); }
+    catch { throw new ClarityError("canonical-target-readonly", "canonical targetがread-onlyのためreplaceを停止しました。", 3, { changed: false, operationId: lease.operationId }); }
+  } else {
+    fail((stat.mode & 0o222) !== 0, "canonical-target-readonly", "canonical targetがread-onlyのためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  }
   const identity = filesystemIdentity(target);
   fail(!expectedIdentity || sameIdentity(identity, expectedIdentity), "canonical-target-changed", "canonical targetのidentityが試行中に変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
   if (tempRel) {
     const temp = safeWritePath(root, tempRel);
     const tempStat = lstatSync(temp);
-    fail(tempStat.isFile() && !tempStat.isSymbolicLink() && (tempStat.mode & 0o077) === 0 && (!expectedTempIdentity || sameIdentity(filesystemIdentity(temp), expectedTempIdentity)), "canonical-temp-unsafe", "自己所有tempのidentity／権限が一致しないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+    fail(tempStat.isFile() && !tempStat.isSymbolicLink() && (!expectedTempIdentity || sameIdentity(filesystemIdentity(temp), expectedTempIdentity)), "canonical-temp-unsafe", "自己所有tempのidentityが一致しないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+    if (process.platform !== "win32") {
+      fail((tempStat.mode & 0o077) === 0, "canonical-temp-unsafe", "自己所有tempの権限が一致しないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+    }
     if (expectedTempDigest) fail(sha256(readFileSync(temp)) === expectedTempDigest, "canonical-temp-changed", "自己所有tempの内容が変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
   }
   return { target, identity };
@@ -1310,6 +1320,8 @@ function recoverOperationRecordUnlocked(root, lease, record) {
   const allowedState = new Set([record.state.beforeDigest, record.state.afterDigest]);
   fail(allowedCanonical.has(canonicalDigest) && allowedState.has(stateDigest),
     "operation-progress-mismatch", "logical operation recordとcanonical実体が一致しないため、自動回復せず停止しました。", { changed: false, operationId: lease.operationId });
+  fail(!(canonicalDigest === record.canonical.beforeDigest && stateDigest === record.state.afterDigest),
+    "operation-progress-mismatch", "製品順序では到達しないState先行状態のため、自動回復せず停止しました。", { changed: false, operationId: lease.operationId });
   record.token = lease.token;
   record.expiresAt = new Date(lease.expiresAt).toISOString();
   record.stage = "recovering";
@@ -1319,11 +1331,6 @@ function recoverOperationRecordUnlocked(root, lease, record) {
     fail(existsSync(afterPath) && sha256(readFileSync(afterPath)) === record.state.afterDigest,
       "operation-progress-mismatch", "roll-forward用State artifactが一致しないため停止しました。", { changed: false, operationId: lease.operationId });
     replaceCanonicalWithRetry(root, record.state.rel, record.state.after, filesystemIdentity(safeWritePath(root, record.state.rel)), record.state.afterDigest, lease);
-  } else if (canonicalDigest === record.canonical.beforeDigest && stateDigest === record.state.afterDigest) {
-    const afterPath = safeWritePath(root, record.canonical.after);
-    fail(existsSync(afterPath) && sha256(readFileSync(afterPath)) === record.canonical.afterDigest,
-      "operation-progress-mismatch", "roll-forward用append artifactが一致しないため停止しました。", { changed: false, operationId: lease.operationId });
-    replaceCanonicalWithRetry(root, record.canonical.rel, record.canonical.after, filesystemIdentity(safeWritePath(root, record.canonical.rel)), record.canonical.afterDigest, lease);
   }
   record.stage = "recovered";
   writeOwnedOperationProgress(root, record, lease);
@@ -1416,18 +1423,24 @@ function logicalAppendUnlocked(root, lease, { canonicalRel, row, idKey, validato
     maybeInjectFilesystemFailure("event-state-between", stateRel);
     const stateIdentity = filesystemIdentity(safeWritePath(root, stateRel));
     replaceCanonicalWithRetry(root, stateRel, stateArtifacts.after, stateIdentity, record.state.afterDigest, lease);
-    record.stage = "state-replaced";
     record.stage = "committed";
     writeOwnedOperationProgress(root, record, lease);
   } catch (error) {
     if (record.stage === "canonical-replaced") {
       const rollbackStarted = Date.now();
+      let rollbackApplied = false;
       try {
         assertLeaseActive(lease);
         replaceCanonicalWithRetry(root, canonicalRel, canonicalArtifacts.before, canonicalAfterIdentity, record.canonical.beforeDigest, lease, "canonical-rollback");
+        rollbackApplied = true;
         record.stage = "rolled-back";
         writeOwnedOperationProgress(root, record, lease);
       } catch (rollbackError) {
+        if (rollbackApplied) {
+          throw new ClarityError("canonical-rollback-record-incomplete", "自己appendのrollbackは完了しましたがprogress確定に失敗したため、成功扱いにしません。", 4, {
+            changed: false, operationId: lease.operationId, stage: "rolled-back", nextAction: "doctorを確認し、clarity rebuildで自己所有artifactを回復してください",
+          });
+        }
         record.stage = "rollback-failed";
         record.failure = { code: error?.code || "write-failed", rollbackCode: rollbackError?.code || "rollback-failed" };
         try { writeOwnedOperationProgress(root, record, lease); } catch { /* durable record may already identify the operation */ }
@@ -1445,10 +1458,10 @@ function logicalAppendUnlocked(root, lease, { canonicalRel, row, idKey, validato
         });
       } finally { lease.metrics.cleanupMs += Date.now() - cleanupStarted; }
     }
-    if (["state-replaced", "committed"].includes(record.stage)) {
+    if (record.stage === "committed") {
       try { writeOwnedOperationProgress(root, { ...record, stage: "cleanup-required", failure: { code: error?.code || "write-failed", syscall: error?.syscall || "unknown" } }, lease); } catch { /* existing durable progress remains authoritative */ }
       throw new ClarityError("canonical-transaction-incomplete", "canonicalは整合状態ですがlogical operationの確定／cleanupに失敗したため、成功扱いにしません。", 4, {
-        changed: false, operationId: lease.operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown", nextAction: "doctorを確認し、同じ操作またはclarity rebuildを明示実行してください",
+        changed: true, operationId: lease.operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown", nextAction: "doctorを確認し、同じ操作またはclarity rebuildを明示実行してください",
       });
     }
     throw new ClarityError("canonical-write-failed", "canonical replaceは完了せず、安全な状態へ戻しました。", 4, {
@@ -1460,18 +1473,35 @@ function logicalAppendUnlocked(root, lease, { canonicalRel, row, idKey, validato
     cleanupOperationArtifacts(root, record, lease);
   } catch (error) {
     throw new ClarityError("canonical-cleanup-incomplete", "logical writeは整合しましたが自己所有artifactのcleanupに失敗したため、成功扱いにしません。", 4, {
-      changed: false, operationId: lease.operationId, nextAction: "doctorで自己所有artifactを確認してください",
+      changed: true, operationId: lease.operationId, nextAction: "doctorで自己所有artifactを確認してください",
     });
   } finally { lease.metrics.cleanupMs += Date.now() - cleanupStarted; }
   return { changed: true, stateChanged: sha256(beforeState) !== sha256(afterState) };
 }
 
-function rebuildStateUnlocked(rootValue, { write = true } = {}) {
+function rebuildStateUnlocked(rootValue, { write = true, lease = null } = {}) {
   const canonical = readCanonical(rootValue);
   const state = buildState(canonical.project, canonical.events, canonical.evidence);
   validateState(state);
   const bytes = stableJson(state);
-  const changed = write ? writeIfChanged(canonical.root, ".clarity/state.json", bytes) : false;
+  let changed = false;
+  if (write) {
+    fail(lease, "canonical-lease-missing", "State rebuildのwrite leaseが確認できません。", { changed: false });
+    const rel = ".clarity/state.json";
+    const target = safeWritePath(canonical.root, rel);
+    const before = readFileSync(target);
+    if (sha256(before) !== sha256(bytes)) {
+      const artifact = createOwnedArtifact(canonical.root, operationPaths(lease.operationId, rel).after, Buffer.from(bytes, "utf8"));
+      try {
+        replaceCanonicalWithRetry(canonical.root, rel, artifact.rel, filesystemIdentity(target), artifact.digest, lease, "state-rebuild-replace");
+        changed = true;
+      } catch (error) {
+        try { removeOwnedArtifact(canonical.root, artifact.rel, artifact.digest, lease); }
+        catch { /* doctorがdigest一致artifactを識別して利用者へ示す。 */ }
+        throw error;
+      }
+    }
+  }
   return { state, bytes, digest: sha256(bytes), changed };
 }
 
@@ -1480,7 +1510,7 @@ function rebuildStateImpl(rootValue, { write = true } = {}) {
   const operationId = `rebuild-${operationToken(`${Date.now()}:${process.pid}`)}`;
   return withCanonicalWriteLock(rootValue, (root, lease) => {
     const recoveries = ownedOperationRecords(root).map((record) => recoverOperationRecordUnlocked(root, lease, record));
-    return { ...rebuildStateUnlocked(root, { write: true }), recoveries };
+    return { ...rebuildStateUnlocked(root, { write: true, lease }), recoveries };
   }, { operationId });
 }
 
