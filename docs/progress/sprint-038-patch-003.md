@@ -322,3 +322,77 @@ macOS実行可能9 caseが全件PASSした。将来ID positiveは対応4 roleを
 macOS／Git-free結果はWindows native PASSへ昇格していない。補正candidateのWindows Server 2025／Node 22はNOT-RUNで、
 既存PR #11へのpushと因果CIはオーケストレーターの次段階に残す。このGenerator roundのnetwork／external service write、push、
 merge、release、tag、Marketplace、install、cache、live apply、実Xmind、private／Yasashii writeは0件である。
+
+## Fable Minor 1／2の履歴oracle厳密化
+
+### Candidateと変更範囲
+
+- candidate commit: `f64e973d0cc6ab7f8894d768e09c175129c07362`
+- candidate tree: `a480cd46de3b473340a9a49e45b0e67343a49a3d`
+- 変更file: `scripts/sprint-050-patch-005-test.mjs`、`plugins/secretary/collaboration-inventory.json`
+- 製品runtime、workflow、state、spec、contract、rubric、feedback、Case ID／意味／閾値、skip／NOT-RUNは変更していない。
+
+SR-001の既存意味を維持したまま、test oracle自身に次の境界を追加した。
+
+1. 最終`Current ID: TBD`のfallbackは、table記録順で最後の完了rowからIDを選んだ後、そのIDのrowがtable内で
+   厳密に1件であることを要求する。同じ完了IDが重複したnegativeは`trackedLifecycle()`の直接`assert.throws`で拒否し、
+   製品scannerが偶然ambiguousになることへ依存しない。
+2. `done`は従来どおりEvaluator `PASS`を必須とする。`active`／`awaiting-eval`はfeedback未記録を許可する。
+3. `done-by-user-decision`はEvaluator `PASS`を要求しないが、feedbackが実在し、`PASS`、`FAIL`、
+   `verification-scope-issue`のいずれかへ分類可能であることを必須にした。合成fixtureでは記録済み`FAIL`をpositiveとして
+   4 role bundleまで確認し、feedback absentとVerdictを分類できない文書をoracleの直接negativeとして拒否した。
+4. test bytesが宣言済み`clarity-harness-scanner` surfaceに含まれるため、正規`digestSurface`の観測値だけを
+   `cb74c7f804010928e8de4fd483ea6cc9336f7a763a24c13f3f9ef5f5c869e865`へ更新した。path、role、case、markerは不変である。
+
+### 変更前negative characterization
+
+補正前commit `6ca492a745456764c82e90a3f2e96e60d4ad293b`を`.git`なしで展開し、旧oracle sourceが
+TBD fallbackを`.slice(-1)`で1件へ縮め、Evaluator証拠を`status === "done"`のときだけ検査することを固定した上で、
+同じ式へ重複rowとfeedback absentの`done-by-user-decision`を入力した。
+
+```text
+OLD_GIT_FREE_SHA=6ca492a745456764c82e90a3f2e96e60d4ad293b
+OLD_DUPLICATE_TBD_REJECTED=false
+OLD_DBUD_ABSENT_REJECTED=false
+```
+
+これは補正前oracleの2つの漏れを示すcharacterizationであり、製品PASSとして数えていない。
+
+### 補正後source結果
+
+| Command | Result |
+|---|---|
+| `node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／1 Windows NOT-RUN、external write／network 0 |
+| `node scripts/sprint-050-patch-005-test.mjs --require-windows` | 9 PASS／0 FAIL／1 NOT-RUN、期待どおりexit 1、`WINDOWS_VERIFIED=false` |
+| `node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／4 Windows NOT-RUN、HS-016 PASS |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 PASS／0 FAIL、67 cases、markers／digests valid |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9 PASS／0 FAIL、Windows native NOT-RUN、EEXIST retry 2、canary不変、owned temp残存0 |
+| `bash scripts/sprint-038-regression.sh` | base 67／0、Patch 003 9／0、historical classifier 14／0、historical path 3／0 |
+| `node scripts/sprint-038-patch-002-windows-test.mjs` | 12 PASS／0 FAIL（darwin。Windows nativeへ昇格しない） |
+| `node --check scripts/sprint-050-patch-005-test.mjs`、`git diff --check` | exit 0 |
+
+`archive-release-gate.mjs --root .`はsource checkoutの`.git`を契約どおり拒否した。次のexact Git-free面では同じgateが
+14 PASS／0 FAILであり、source側の拒否を製品FAILまたはarchive FAILへ数えていない。
+
+### Git-free exact candidate結果
+
+`git archive f64e973d0cc6ab7f8894d768e09c175129c07362`を`.git`なしの一時directoryへ展開し、次を同じ順序で実行した。
+
+- Patch 005: 9 PASS／0 FAIL／1 Windows NOT-RUN、external write／network 0
+- Patch 004: 12 PASS／0 FAIL／4 Windows NOT-RUN、HS-016 PASS
+- inventory: 20 PASS／0 FAIL、67 cases、markers／digests valid
+- Patch 003: 9 PASS／0 FAIL、Windows native NOT-RUN
+- Sprint 038関連: 67／0、9／0、14／0、3／0
+- Patch 002: 12 PASS／0 FAIL（darwin）
+- archive release gate: 14 PASS／0 FAIL
+
+補正candidateのWindows Server 2025／Node 22実行はNOT-RUNである。macOS source／Git-freeの結果や前headのWindows結果を、
+このcandidateのWindows native PASSへ昇格していない。network、external service write、push、merge、release、tag、
+GitHub Release、Marketplace、install／update、cache、live apply、実Xmind、private／Yasashii writeは0件である。
+
+### Fable Minor 3 — 残余リスク
+
+最終`TBD` fallbackの「last recorded completion」は、時刻やSprint番号順ではなく、`state.md`のtableに記録されたrow順で
+最後の完了を選ぶ既存製品意味である。重複IDは今回fail closedになったが、table rowが非時系列に並べ替えられた場合は、
+人間が想定する最新完了と異なるIDを選ぶ余地が残る。本Patchでは製品意味、contract、runtimeを変更せず、別の仕様判断が必要な
+残余リスクとして保持する。
