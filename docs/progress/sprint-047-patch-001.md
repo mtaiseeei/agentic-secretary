@@ -1,10 +1,12 @@
 # Sprint 047 Patch 001 Generator進捗 — Windows並行writeの整合回復
 
-- 開始HEAD: `a758dad4a35c71012e02a2629a849db77e6745b8`
-- 製品candidate commit: `26f1c12985b4b752b30f7e34a599c076ed0d21eb`
-- 製品candidate tree: `8d5c0d0fade8a4547b0413cf6bee34c263972bbc`
+- 初回開始HEAD: `a758dad4a35c71012e02a2629a849db77e6745b8`
+- 初回製品candidate commit: `26f1c12985b4b752b30f7e34a599c076ed0d21eb`
+- Retry 1開始HEAD: `8999a1bddc5001fd7f808e68dbb7d1d2c5836c68`
+- Retry 1製品candidate commit: `22326598ec4ae1cfce10ea29b6ea6638a1e24e55`
+- Retry 1製品candidate tree: `53a2a014f94d03b39657af354509f2feb7c4238f`
 - 対象: `sprint-047-patch-001`（regular patch、Risk high、Model Tier strong）
-- 現在地: public source／exact clean candidate／同SHA Git-free archiveのGenerator自己検査完了。Windows Server 2025／Node 22と独立Evaluator待ち
+- 現在地: Retry 1 public source／exact clean candidate／同SHA Git-free archiveのGenerator自己検査完了。Windows Server 2025／Node 22とfresh独立Evaluator待ち
 
 ## 実装結果
 
@@ -115,3 +117,82 @@ Windowsでは同じcandidateに因果する既存workflow runだけを証拠に�
 - push／workflow dispatch／PR更新／merge／tag／release: **0件**
 - private my-vault／Yasashii／installed cache／実workspace write: **0件**
 - test writeは各suiteが削除したOS temporary fixtureだけ。Git-free archiveは`/tmp`に作成し、external product dataへ触れていない。
+
+## Retry 1 — Fable No-Go補正
+
+初回candidate `26f1c12985b4b752b30f7e34a599c076ed0d21eb` の実装履歴と上記自己検査は削除せず保持する。FableのP-1／P-2／V-1／V-2を必須修正し、同じ回復境界にあるP-3〜P-7、V-3〜V-5を限定補正した。契約、既存P001-01〜11の意味、Sprint 047の25 case、GS-009／GS-010のID・Severity・threshold、Windows 3 round×Hook 32＋CLI 32、workflowの既存stepsと`timeout-minutes: 10`は変えていない。
+
+### 補正した製品境界
+
+- P-1: canonical tempのPOSIX permission bit検査を`process.platform !== "win32"`へ限定した。Windowsではlibuvのmode複製を所有判定に使わず、root／parent／lock token、non-symlink regular file、dev／ino／kind identity、digestを毎試行再検査する。targetのread-only判定はWindowsだけ`accessSync(target, W_OK)`、POSIXは既存mode検査を維持する（`clarity-core.mjs:1236-1251`）。
+- P-2: 回復可能な組合せを、両方before、canonical after／State before、両方afterに限定した。製品順序で到達不能なcanonical before／State afterはprogressを書き換える前に`operation-progress-mismatch`で停止する（`clarity-core.mjs:1316-1339`）。
+- P-3: canonical／State commit後のprogress、artifact cleanup、lock release失敗は、実体が変更済みであることを`changed: true`で返す（`clarity-core.mjs:375-383`, `1459-1478`）。
+- P-4: rollback rename成功と、その後のprogress書込みを分けた。後者だけの失敗を`rollback-failed`／double faultと誤表示せず、`canonical-rollback-record-incomplete`、canonical before／State before、明示rebuild案内で停止する（`clarity-core.mjs:1429-1454`）。
+- P-5: 明示rebuildの最終State replaceも自己所有temp、identity／digest／parent／lease再検査、最大7回／1,000 msのbounded transient retryへ接続した。恒久失敗時はState不変で識別可能tempを回収する（`clarity-core.mjs:1481-1506`）。
+- P-6: `CLARITY_FS_FAILURES`と`CLARITY_CRASH_AT`は`CLARITY_TEST_MODE=1`のときだけ有効である。test modeはfailure発火だけをgateし、分類／retry／rollback／cleanupは同じ製品pathを通る（`clarity-core.mjs:169-201`）。
+- P-7: 破損progressは自動回復せず、doctorが`ownership-unverified`と利用者確認を返す。自動cleanupしない残余リスクは維持する。
+
+### 追加case（既存11 caseは不変）
+
+| Case | 結果 | Fable finding／実挙動 |
+|---|---:|---|
+| P001-12 | PASS | Windows／POSIX mode分岐のsource contract、test modeなしではfailure／crash envが無効。source文字列検査は補助証拠であり、Windows実挙動の判定はnative CIだけが担う |
+| P001-13 | PASS | canonical before／State afterと任意bytesの偽造after artifactを作り、rebuildが`operation-progress-mismatch`、canonical／State／progress／外部canary不変 |
+| P001-14 | PASS | `CLARITY_CRASH_AT=lock-record-before`を実child processのSIGKILLで通し、空lock、canonical不変、doctor `confirmation-required`／`ownership-unverified`、cleanup `removed: []`、利用者確認相当のunlink後に正常回復 |
+| P001-15 | PASS | rollback rename成功後のprogress永久失敗をdouble faultにせず、before／before、非成功、doctor、明示rebuild、残骸0 |
+| P001-16 | PASS | State rebuild replaceのtransient 2回後成功とpermanent上限失敗。恒久失敗時State不変、orphan 0、通常rebuildで回復 |
+| P001-17 | PASS | commit後progress永久失敗は`changed: true`、Event +1／State count一致、同一Event retryで重複0 |
+| P001-18 | PASS | JSON破損progressをdoctorが`ownership-unverified`として示し、cleanup applyでもcanonical／State／canary不変 |
+| P001-19 | PASS | commit後`lock-release-cleanup`実failureは非成功かつ`changed: true`、doctorでactive lockを保持、stale化後の明示cleanup、同一Event retry重複0 |
+
+Patch専用suiteは合計 **19/19 PASS**。P001-01〜11は削除・改名・期待変更をしていない。
+
+### GS-009表示訂正
+
+初回handoffの「macOS 1 round `2030/600000`、job margin `597970 ms`」は誤記である。1 roundの実測からGitHub Actions job全体の時間や10分marginは算出できない。履歴は上に残し、本Retry 1で次のように訂正する。
+
+- metricは`roundDurationMs`／`roundBudgetMs`／`roundMarginMs`へ改名した。これは1 roundのlocal guardであり、job timingではない。
+- job合計時間と10分上限までのmarginは、後続Windows runnerのstep／job timingだけをfresh Evaluatorが記録する。local結果から主張しない。
+- lock／lease metricsの対象はcanonical writerであるCLI 32だけとし、`canonicalWriterCount: 32`、`maxCanonicalLockWaitMs`等へ明記した。Hook 32はruntime Hook writeであり、`hookWriterCount: 32`、exit、delta、JSON parse、uniqueの別hard gateである。
+- `canonicalUnique`、`hookUnique`、`stateRebuild`、canonical／Hook delta、rebuild前後residueは実測値から組み立て、assert後の固定literalを廃止した。rebuild前にもresidue 0をassertする。
+
+Retry 1 exact clean macOS round実測は、CLI 32＋Hook 32の64/64 exit 0、canonical delta 32、Hook delta 32、parse／unique／State rebuild 100%、rebuild前後residue 0、canonical max lock wait `1085/15000 ms`、最小lock margin `13915 ms`、max lease critical `126/30000 ms`、最小lease margin `29874 ms`、round `1979 ms`である。これはWindows 3 roundまたはCI job時間の代用ではない。
+
+### negative control（Retry 1開始candidate）
+
+開始candidate `8999a1bddc5001fd7f808e68dbb7d1d2c5836c68` とRetry 1 candidateを同じsource条件で比較した。
+
+- P-1: 旧`clarity-core.mjs:1240`は`(tempStat.mode & 0o077) === 0`を無条件適用し、Windowsで全canonical replaceを拒否し得た。新candidateはplatform分岐とnegative P001-12を持つ。
+- P-2: 旧`clarity-core.mjs:1322-1327`はcanonical before／State afterからappend after artifactをroll-forwardするbranchを持った。新candidateはbranchを削除し、P001-13で任意bytes、canonical／State／progress／canary不変を実行確認した。
+- V-1: 旧`sprint-047-test.mjs:318-331`は1 roundの時間を`jobLimitMs`／`jobMarginMs`として出力した。新candidateに旧metric名は0件で、round表示とrunner job timingを分離した。
+- V-2: 旧Patch suiteで`CLARITY_CRASH_AT: "lock-record-before"`とP001-12〜19は0件だった。新P001-14はthrow mockでなく実child process SIGKILLを通す。
+
+### Retry 1検証集計
+
+| 面／command | Retry 1結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 19/19 PASS、Windows native NOT-RUN |
+| exact clean `22326598ec4ae1cfce10ea29b6ea6638a1e24e55`、同上 | 19/19 PASS、開始／終了`git status --short`空 |
+| 同SHA Git-free archive、同上 | 19/19 PASS、`.git`不存在 |
+| source／exact clean／Git-free、`node scripts/sprint-047-test.mjs` | 各25/25 PASS、Case ID／Severity／threshold不変 |
+| `node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| `node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9/9 PASS／Windows native NOT-RUN |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface／67 case、marker／実digest PASS |
+| `node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| `node --check`／`git diff --check` | exit 0 |
+
+### Retry 1残余リスク／Evaluator導線
+
+- Windows Server 2025／Node 22はGenerator環境では **NOT-RUN**。P001-12のsource contractはCI前の補助negativeであり、Windowsのmode、read-only attribute、dev／ino identity、3 roundの実挙動をPASSへ昇格しない。
+- Windows nativeは既存workflowの同一jobでPatch 19 case、Sprint 047 25 case、GS-009 3 round×Hook 32＋CLI 32、GS-010を実行し、runnerのstep／job timingから10分marginを記録する。実測で収まらなければcase削減やtimeout延長をせず`verification-scope-issue`へ戻す。
+- 破損progressや識別不能lockは意図的に自動削除しない。doctorの`confirmation-required`／`ownership-unverified`に従い、利用者が所有を確認して回復方法を選ぶ必要がある。
+- 本Retry 1もGenerator自己評価であり、fresh Fable／独立Evaluator Verdictではない。public handoff ready、private my-vault、Yasashii同期は未実施である。
+
+### Retry 1外部副作用
+
+- network／external service／GitHub API／Xmind live call: **0件**
+- push／workflow dispatch／PR更新／merge／tag／release: **0件**
+- private my-vault／Yasashii／installed plugin／cache／live workspace write: **0件**
+- source／spec／Sprint contract／state／feedback変更: **0件**
+- 一時fixtureとGit-free archiveはローカルtemporary directory内だけに作成し、終了後に削除した。
