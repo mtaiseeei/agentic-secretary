@@ -44,8 +44,8 @@ Plannerは特定のNode APIや実装式を合格条件へ固定しない。上�
 
 1. dry-runとplan作成はwrite 0件である。ownership不明、marker衝突、複数一致、stale planでは対象・一時ファイルを変更せず停止する。
 2. applyは対象と同じdirectoryの一時ファイルを経由し、完成した内容だけを対象へ置換する。利用者固有の前置き・後書きと対象外sectionをbyte単位で保持する。
-3. 一時ファイル作成後からrename前、およびrename後の失敗を注入し、rollback対象の操作では元の対象bytesを復元する。
-4. 成功、拒否、失敗のすべてで、この操作が所有する一時ファイルを残さない。開始前から存在する対象外ファイルは削除・上書きしない。
+3. 一時ファイル作成後からrename前、およびrename後の失敗を注入する。rename前は対象が未変更のためrollback目的で対象を再書込みしない。rename後に復元が必要な場合は元の対象bytesへ安全に復元し、復元途中の半端な対象を残さないatomic相当の置換とする。
+4. 成功、拒否、失敗のすべてで、cleanup対象はこの操作が排他的に作成・所有した一時ファイルだけとする。現行の一時ファイル名と衝突する開始前から存在するsibling fileを含め、他者所有または開始前から存在するファイルを削除・上書きしない。
 5. rollbackやcleanupの失敗をmigration成功と表示しない。実際の対象状態と`changed`／error結果を一致させる。
 
 ### C. 冪等性とmigration履歴保護
@@ -82,7 +82,7 @@ Plannerは特定のNode APIや実装式を合格条件へ固定しない。上�
 1. Windows nativeの通常workspaceで対象migrationが`ENOENT`なく完了し、変更対象sectionだけが1回置換され、利用者固有の前後bytesを保持する。
 2. Windows nativeで一時ファイルが対象の親directory直下にあり、ファイル名へdrive prefix、ancestor、path separatorを含めず、対象外directoryへのwriteが0件である。
 3. dry-run、ownership不明、marker衝突、複数一致、stale planは対象bytes不変、一時ファイル残存0件で停止する。
-4. rename前とrename後のfailure injectionで対象が開始前bytesへ戻り、半端な新section、欠落した旧section、残存tempが0件である。
+4. rename前のfailure injectionでは対象を再書込みせず開始前bytesのまま保ち、rename後のfailure injectionでは元bytesへatomic相当に安全復元する。どちらも半端な新section、欠落した旧section、この操作が所有する残存tempが0件である。
 5. 成功後の再実行と、失敗後のretryが同じ最終状態へ収束し、置換、marker、台帳event、tempを重複させない。
 6. macOSまたはLinuxで既存のSprint 038 migration、update関連、master／Git-free archive相当の関連回帰が0 product FAILである。
 7. 既存testの除外・skip・削除・期待値緩和が0件で、修正前の不正な一時path生成をnegativeとして検出し、修正candidateで防止する回帰がある。
@@ -97,8 +97,8 @@ Plannerは特定のNode APIや実装式を合格条件へ固定しない。上�
 - Windows nativeのdrive letter、backslash、空白、日本語を含む対象path。
 - 対象と同名に近いsibling、一時ファイル名へancestor全体を混入させる修正前挙動の再現。
 - ownership不明、marker片側だけ、旧section複数、dry-run後の対象変更。
-- 一時ファイル作成後からrename前の失敗、rename後の失敗、失敗後retry、成功後rerun。
-- 対象directory外canary、開始前からある対象外sibling、利用者固有の前後content。
+- 一時ファイル作成後からrename前の失敗（対象へのrollback再書込み0件）、rename後の失敗（元bytesへのatomic相当の安全復元）、失敗後retry、成功後rerun。
+- 対象directory外canary、現行の一時ファイル名と衝突する開始前から存在するsibling file（上書き・unlink 0件）、利用者固有の前後content。
 - POSIXの通常pathと既存Sprint 038 migration fixture。
 
 各negativeは期待するaction／error、対象before／after hash、tempの親directoryと残存件数、外部canary、
