@@ -362,7 +362,9 @@
 7. Windows対応のために、空上書き拒否、削除2段階、純追加journal、所有pathだけのcommit、push禁止、Secret非露出、macOS／Linux回帰を削除・緩和しない。
 8. Windows対応のPASSにはWindowsネイティブの実行証跡を必要とする。別OSでWindows形式path文字列を模擬した結果だけで「Windows対応済み」と表示しない。
 9. Agentic共通coreを先に独立評価し、PASSした完全SHAからだけYasashii overlayを同期する。Yasashiiは固有copy・identity・README・repo所有docsを保護した別回帰・独立評価を必要とする。
-10. `agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillは本変更の対象外とし、本Patchの対応済み表示に含めない。
+10. Sprint 038 Patch 002では、`agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillを対象外とし、当時の対応済み表示に含めない。この履歴上の範囲を遡及変更しない。
+11. Sprint 038 Patch 003では、conversation migrationの一時ファイルを実行中OSのpath規則で対象fileと同じdirectoryへ置き、atomic置換、失敗時rollback、cleanup、再実行の冪等性、POSIX無回帰を維持する。Windows形式path文字列の別OS上の模擬だけをWindows native PASSにしない。
+12. この修正はpublic Agentic common coreを先に独立評価し、PASSした40桁完全SHAからだけprivate my-vault版とYasashii版へ別々に展開する。各下流は別Harness契約・Windows native回帰・独立評価を必要とし、public PASSまたは一方の下流PASSを他版の反映済み・合格・公開へ昇格しない。
 
 ## 22. 秘書identity・名前routing・rename境界
 

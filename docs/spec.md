@@ -186,6 +186,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-037-patch-001](sprints/sprint-037-patch-001.md) | 呼び方の値をjournal／commit subjectへ再掲しない共通transaction | sprint-037 |
 | [sprint-038](sprints/sprint-038.md) | 人間らしい会話フロー: 危険に応じた確認、現在用件優先、内容依存応答、意味保存golden set、3配布系統同期、限定Notion修正、release candidate gate | sprint-037-patch-001 |
 | [sprint-038-patch-002](sprints/sprint-038-patch-002.md) | Windowsネイティブのproject／memory／TODO／settings／文書保存、安全境界・rollback／journal整合、Agentic先行→Yasashii overlay同期、`0.9.2` release準備 | sprint-038-patch-001 |
+| [sprint-038-patch-003](sprints/sprint-038-patch-003.md) | conversation migrationのWindows native sibling temp不具合修正、rollback／冪等性／POSIX無回帰、public固定SHAからprivate／Yasashiiを別評価するhandoff | sprint-038-patch-002 |
 | [sprint-039](sprints/sprint-039.md) | 秘書identity: 英語名、stable ID／AI author、name Skill、user-scope managed block、canonical resolver、安全なrename、下流handoff | sprint-038-patch-002 |
 | [sprint-039-patch-001](sprints/sprint-039-patch-001.md) | renameの所有path限定local Git checkpointと、commit失敗を含むworkspace／user-scope／Git rollback | sprint-039 |
 | [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
