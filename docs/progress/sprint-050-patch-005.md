@@ -153,3 +153,45 @@ d70610079f6c1d4812b62818b54c609a8940a9d2941419e91f2662b12871b345  plugins/secret
 Evaluatorは製品candidate SHAとtreeを固定し、source／exact clean checkout／Git-freeでSR-001〜009、inventory 67 case、common 3 path digestを独立確認する。runtime Secret fixtureは値を記録せず、redacted理由、field coverage、sanitized identity一致、本文／断片／raw digestの非露出を操作で確認する。
 
 Windowsでは同じcandidateに因果する既存workflow runで、Windows Server 2025、Node 22、Patch005 `--require-windows`、Patch004／既存0.9.2回帰、10分timeoutを確認する。SR-010が実行され0 FAILになるまでは、本progressからSprint PASSを推測しない。
+
+## Generator補正 — stateライフサイクルに追随するSR-001（2026-08-31）
+
+- 補正開始HEAD: `73ed397`
+- 補正candidate commit: `a938f792786f16acdad9877138dd76403b2c5f66`
+- 補正candidate tree: `51179ae7f1cf49de4288bc194379d37c88040582`
+- 対象: verification-infraのみ。製品runtime candidate `5ab63d6455e919fb3bb825fc1c7448d3861e609b`、common runtime 3 path、workflow、spec／contract、state、feedbackは変更していない。
+
+オーケストレーターがstateを正規に`awaiting-eval`へ進めた際、SR-001の実source assertionだけがstatusを`active`へ固定していたため、製品previewは整合しているのにsuiteが8 PASS／1 FAIL／1 Windows NOT-RUNとなった。synthetic fixtureの入力条件としての`active`は維持し、実sourceの期待値をtracked `docs/sprints/state.md`の構造行から独立に得るよう補正した。
+
+補正後は、対象rowが一意でstatusが`active`／`awaiting-eval`／`done`の許可集合にあることを先に検査する。宣言Currentが対象Sprintなら`fallbackSource=null`／`inferred=false`、最終`Current ID: TBD`なら対象rowが`done`、`Next Planned: TBD`、`fallbackSource=last-recorded-completion`／`inferred=true`であることを要求する。state／bundle／4 role pathとstatus、candidate path、Evidence locator、`executionStatus`、Evaluator role／`validationStatus`を同じtracked lifecycleへ完全一致させ、最終done時はPASS feedbackを要求する。fenced code、HTML comment、inline code内の履歴例は期待値の正本にしない。
+
+SR-001には次のtemporary lifecycle回帰を追加した。いずれも製品Repoやstateへのwriteはなく、OS一時directoryだけで実行した。
+
+- Current対象＋`active` → `in_progress`、fallbackなし
+- Current対象＋`awaiting-eval` → `implemented`、fallbackなし
+- Current対象＋`done` → `implemented`、fallbackなし
+- Current `TBD`＋対象`done` → `last-recorded-completion`、`inferred=true`
+
+`scripts/sprint-050-patch-005-test.mjs`変更に伴う`clarity-harness-scanner` inventory digestだけを正規計算値へ更新した。case数、path、marker、feature割当、製品runtime digestは変更していない。
+
+### 補正candidateの3面検証
+
+source、exact clean detached checkout、同SHAのGit-free archiveを並列化せず順番に実行し、3面とも次を確認した。
+
+```text
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+exact clean checkoutは実行前後とも`git status --short`が空で、HEAD／treeは補正candidateと一致した。Git-free面は`.git`不存在を確認した。`node --check scripts/sprint-050-patch-005-test.mjs`と`git diff --check`もexit 0。テスト一時fileは各suiteのcleanup対象だけで、external write／network callは0件である。
+
+### 残る評価境界
+
+- SR-010とPatch004のWindows専用4件はMacではNOT-RUN。Windows Server 2025／Node 22の同一candidate因果runが必要で、`windowsVerified=false`を維持する。
+- 本補正はGenerator自己検査であり、独立Evaluator Verdictではない。
+- push、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
