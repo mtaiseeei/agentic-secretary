@@ -252,7 +252,73 @@ Patch 005は現在の正本Current IDに依存するSR-001を含むため、再r
 ## 残余リスク
 
 - 補正candidateのWindows native jobはNOT-RUN。前headのPatch 003 9／9を再利用せず、inventory補正後exact headのworkflow再runが残る。
-- 現在の正本Current IDではPatch 005 SR-001が履歴固定条件と不一致になる。これは今回変更禁止のstate／case意味に属するため補正しておらず、Windows再runでも実結果を分離して扱う。
+- このinventory補正round時点では、正本Current IDとPatch 005 SR-001の履歴固定条件が不一致だった。後続の「Windows workflow向け履歴検証のライフサイクル補正」で、state／case意味を変えずに解消した。
 - CRLFの完全なbyte保持、非UTF-8入力、`MAX_PATH`近傍、Windows固有lock競合、Windows上の`0o600`実効権限は本契約の追加要件にせず、Fable Minorの残余リスクとして保持する。
 - 現行実装は既存契約どおり本文をUTF-8として読んでsection置換する。非UTF-8一般化は別scope。
 - full master gateには上記の既存baseline 3 suite未達が残る。本Patch対象suiteとGit-free archive相当は0 FAILだが、master全体PASSではない。
+
+## Windows workflow向け履歴検証のライフサイクル補正
+
+### 補正内容
+
+Windows workflow全体を再実行する前に、完了済みSprint 050 Patch 005のSR-001が、正本の`Current ID`を
+`sprint-050-patch-005`または最終`TBD`へ固定していた検証基盤の不整合を補正した。製品runtime、workflow、state、spec、
+contract、rubric、Case ID／意味／閾値は変更していない。
+
+- actual public sourceでは、fenced code／コメントを除いた構造fieldからcanonical Sprint ID、対応row、status、`Next Planned`を取得し、
+  同じIDのcontract／progress／feedbackと4 role bundleを照合する。
+- 任意文字列をCurrent IDとして受理せず、canonical Sprint ID形式、row一意性、実行中または完了のHarness status、contract／progress実在を必須にした。
+  feedback未記録だけは従来どおり`evaluation-not-yet-recorded`として検査する。
+- 将来の別Sprint IDを使うpositiveと、invalid ID、missing row、missing contract／progressのnegativeをSR-001内へ追加した。
+- Patch 005固有の`active`／`awaiting-eval`／`done`／最終`TBD`と`last-recorded-completion` fixtureは削除・skipせず、
+  対象status集合と最終`done`を明示assertして厳格に残した。
+- test自身が`clarity-harness-scanner`の宣言済み6 pathに含まれるため、path／role／case／markerを変えず、
+  正規validatorのobserved digestだけを`8ef8bbe1afb50f959afaf9d08572ea3f838095839f9dc5f8929304546b677d3b`へ同期した。
+
+変更fileは`scripts/sprint-050-patch-005-test.mjs`と`plugins/secretary/collaboration-inventory.json`の2件だけ。
+candidate commitは`6ca492a745456764c82e90a3f2e96e60d4ad293b`、treeは
+`36f3a69bed9f7e0ec18d239c669e365c6062948f`である。
+
+### negative control
+
+補正前のactual current sourceで次を実行し、SR-001だけが期待どおりFAILした。
+
+```text
+node scripts/sprint-050-patch-005-test.mjs
+FAIL SR-001 tracked Current ID must be target or final TBD
+PASS SR-002〜009
+NOT-RUN SR-010 requires-windows-native
+SPRINT050_PATCH005_PASS=8 FAIL=1 NOT_RUN=1
+```
+
+補正後はactual sourceと、candidate commit自身の`.git`なしGit-free archive相当の両方で、SR-001を含む
+macOS実行可能9 caseが全件PASSした。将来ID positiveは対応4 roleを取得し、invalid ID／missing row／missing filesの3 negativeは
+いずれも検査側で拒否された。
+
+### source checkout結果
+
+| Command | Result |
+|---|---|
+| `node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／1 Windows NOT-RUN、external write／network 0 |
+| `node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／4 Windows NOT-RUN、HS-016 PASS |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 PASS／0 FAIL、67 cases、markers／digests valid |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9 PASS／0 FAIL、Windows native NOT-RUN、EEXIST retry 2、canary不変、owned temp残存0 |
+| `bash scripts/sprint-038-regression.sh` | base 67／0、Patch 003 9／0、historical classifier 14／0、historical path 3／0 |
+| `node scripts/sprint-038-patch-002-windows-test.mjs` | 12 PASS／0 FAIL（darwin。Windows nativeへ昇格しない） |
+| `node --check scripts/sprint-050-patch-005-test.mjs`、`git diff --check` | exit 0 |
+
+### Git-free exact candidate結果
+
+`git archive 6ca492a745456764c82e90a3f2e96e60d4ad293b`を`.git`なしの一時directoryへ展開し、次を確認した。
+
+- Patch 005: 9 PASS／0 FAIL／1 Windows NOT-RUN
+- Patch 004: 12 PASS／0 FAIL／4 Windows NOT-RUN
+- inventory: 20 PASS／0 FAIL、67 cases、markers／digests valid
+- Patch 003: 9 PASS／0 FAIL、Windows native NOT-RUN
+- Sprint 038関連: 67／0、9／0、14／0、3／0
+- Patch 002: 12 PASS／0 FAIL（darwin）
+- archive release gate: 14 PASS／0 FAIL
+
+macOS／Git-free結果はWindows native PASSへ昇格していない。補正candidateのWindows Server 2025／Node 22はNOT-RUNで、
+既存PR #11へのpushと因果CIはオーケストレーターの次段階に残す。このGenerator roundのnetwork／external service write、push、
+merge、release、tag、Marketplace、install、cache、live apply、実Xmind、private／Yasashii writeは0件である。
