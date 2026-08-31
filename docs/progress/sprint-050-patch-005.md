@@ -195,3 +195,40 @@ exact clean checkoutは実行前後とも`git status --short`が空で、HEAD／
 - SR-010とPatch004のWindows専用4件はMacではNOT-RUN。Windows Server 2025／Node 22の同一candidate因果runが必要で、`windowsVerified=false`を維持する。
 - 本補正はGenerator自己検査であり、独立Evaluator Verdictではない。
 - push、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator診断補正 — Windows SR-009子suiteの安全な失敗詳細（2026-08-31）
+
+- 診断開始HEAD: `885f14c3fdce3c760226eab4e7df5c9f2ee60398`
+- 診断candidate commit: `2fe671e18e60ab7ce8e10cbcb97e2add3dd4b145`
+- 診断candidate tree: `742575b3fe3aaeda6a5df30cfe9415bff846c2cb`
+- 対象round: verification-infraのみ。製品runtime、common 3 path、workflow、spec／contract、state、feedbackの差分は0件。
+- 起点となったWindows証跡: exact remote head `6e173c5003f45036700a1ac0e7f4e197d2245c6a`、run `33367569393`、job `99411300266`。Patch005は9 PASS／1 FAILで、SR-009内の`scripts/sprint-050-patch-003-test.mjs`がstatus 1だったが、旧`runScript()`は子stdout／stderrを捨てていたため、失敗Caseと原因を分類できなかった。
+
+`runScript()`は成功時の出力を増やさず、非0終了、signal、spawn errorのときだけ、子suiteのrepo-relative path、status、signal、error、stdout、stderrを親のCI errorへ含めるようにした。stdout／stderrは各8 KiB、spawn errorは1 KiB、Case failure全体は20 KiBを上限とする。
+
+診断本文は、Secretらしい代入値／Bearer値、opaque token、40〜128桁のhex digest、Node assertのactual／expected実値をredactする。source rootとOS一時directoryの絶対pathは`<repo-root>`／`<tmp-root>`へ安定化し、制御文字を除去する。runtimeだけで生成するcanary、canaryのraw digest、低エントロピーassert値、元の絶対pathが整形後に残らないことを、既存SR-009内のhelper回帰で確認する。Case ID、registry、Acceptance Criteriaは追加していない。
+
+inventory digest更新前の意図的な不一致で、親errorが`path=scripts/sprint-050-patch-004-test.mjs`、`status=1`、`signal=none`、`error=none`、子の`HS-016`／`inventory-digest-stale:clarity-harness-scanner`まで示すことを確認した。正規digest更新後は同じ失敗を解消し、inventoryのcase数、path、marker、feature割当は変更していない。
+
+### 診断candidateの3面検証
+
+source、exact clean detached checkout、同commitのGit-free archiveを並列化せず順番に検査した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeが診断candidateと一致した。Git-free面は実行前後とも`.git`不存在だった。各面で次を個別に順次実行し、同じ結果を得た。
+
+```text
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+active／awaiting-eval／done／最終TBDの既存lifecycle回帰はSR-001で維持し、全3面でPASSした。`node --check scripts/sprint-050-patch-005-test.mjs`と`git diff --check`もexit 0。検査用一時directoryは終了後に削除した。
+
+### Windows再実行待ちと残る境界
+
+- 本candidateは、Windows失敗をskip／NOT-RUNへ落とさず、Patch003の実行を外さず、閾値やCase割当を緩和していない。次の同一candidate因果Windows runで、SR-009が失敗した場合に具体的なCF／AR Caseとassert理由を安全に得るための診断candidateである。
+- Windows Server 2025／Node 22の因果的再runは未実行。SR-010とPatch004のWindows専用4件はMacでは引き続きNOT-RUNで、`windowsVerified=false`。旧runのPASS／FAILを新candidateへ流用しない。
+- 診断結果が得られるまでは、Windows上の製品不具合かPatch003のplatform固有verification-infra不具合かを確定しない。本GeneratorはEvaluator Verdictを宣言しない。
+- push、manual workflow dispatch、network、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
