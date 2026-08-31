@@ -15,6 +15,7 @@ const base = join(work, "base");
 const results = [];
 const failureMetrics = [];
 const coreSource = readFileSync(join(repo, "plugins/secretary/scripts/lib/clarity-core.mjs"), "utf8");
+const normalizedCoreSource = coreSource.replace(/\r\n?/gu, "\n");
 
 function run(args, { env = {}, expected = 0, root = repo } = {}) {
   const result = spawnSync(process.execPath, [cli, ...args], { cwd: root, encoding: "utf8", timeout: 120_000, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, CLARITY_TEST_MODE: "1", ...env } });
@@ -214,22 +215,30 @@ try {
     assert(doctor.runtimeCleanup.preserved.some((row) => ["operation-progress-mismatch", "needs-explicit-rebuild"].includes(row.reason)));
   });
 
-  await test("P001-12", "Windows mode分岐とtest modeなしseam無効をsource contractで固定", () => {
-    assert(coreSource.includes('if (process.platform !== "win32") {\n      fail((tempStat.mode & 0o077) === 0'));
-    assert(coreSource.includes('if (process.platform === "win32") {\n    try { accessSync(target, constants.W_OK); }'));
-    assert(coreSource.includes('if (process.env.CLARITY_TEST_MODE !== "1") return [];'));
-    assert(coreSource.includes('if (process.env.CLARITY_TEST_MODE !== "1") return;'));
-    assert(!coreSource.includes("tempStat.isFile() && !tempStat.isSymbolicLink() && (tempStat.mode & 0o077) === 0"));
+  await test("P001-12", "Windows mode分岐とtest modeなしseam無効をCRLF非依存の実挙動で固定", () => {
     const root = fixture("test-mode-off");
     const before = lines(join(root, ".clarity/events.jsonl")).length;
     const out = event(root, "testmodeoff", {
       CLARITY_TEST_MODE: "0",
       CLARITY_CRASH_AT: "lock-record-before",
-      CLARITY_FS_FAILURES: JSON.stringify({ point: "canonical-replace", target: ".clarity/events.jsonl", times: 99, code: "EPERM", syscall: "rename" }),
+      CLARITY_FS_FAILURES: JSON.stringify([
+        { point: "lock-create-open", times: 99, code: "EPERM", syscall: "open" },
+        { point: "canonical-replace", target: ".clarity/events.jsonl", times: 99, code: "EPERM", syscall: "rename" },
+      ]),
     });
     assert.equal(out.json.changed, true);
     assert.equal(lines(join(root, ".clarity/events.jsonl")).length, before + 1);
     assert.deepEqual(operationResidue(root), []);
+    const assertModeStructure = (source) => {
+      const normalized = source.replace(/\r\n?/gu, "\n");
+      assert.match(normalized, /if \(process\.platform !== "win32"\) \{\n\s+fail\(\(tempStat\.mode & 0o077\) === 0/u);
+      assert.match(normalized, /if \(process\.platform === "win32"\) \{\n\s+try \{ accessSync\(target, constants\.W_OK\); \}/u);
+      assert.match(normalized, /if \(process\.env\.CLARITY_TEST_MODE !== "1"\) return \[\];/u);
+      assert.match(normalized, /if \(process\.env\.CLARITY_TEST_MODE !== "1"\) return;/u);
+      assert(!normalized.includes("tempStat.isFile() && !tempStat.isSymbolicLink() && (tempStat.mode & 0o077) === 0"));
+    };
+    assertModeStructure(normalizedCoreSource);
+    assertModeStructure(normalizedCoreSource.replace(/\n/gu, "\r\n"));
   });
 
   await test("P001-13", "State先行の偽造progressは任意appendをroll-forwardせずfail closed", () => {
@@ -378,6 +387,68 @@ try {
     assert.equal(retry.json.changed, false);
     assert.equal(lines(eventsPath).length, before + 1);
     assert.deepEqual(operationResidue(root), []);
+  });
+
+  await test("P001-20", "lock O_EXCL境界のtransient EPERMだけをbounded retryし恒久・unsafeはfail closed", () => {
+    const transientRoot = fixture("lock-open-transient");
+    const transientBefore = lines(join(transientRoot, ".clarity/events.jsonl")).length;
+    const transient = event(transientRoot, "lockopentransient", {
+      CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-create-open", times: 2, code: "EPERM", syscall: "open" }),
+    });
+    assert.equal(transient.json.changed, true);
+    assert.equal(lines(join(transientRoot, ".clarity/events.jsonl")).length, transientBefore + 1);
+    assert.equal(transient.json.writeMetrics.lockCreateFailures, 2);
+    assert.equal(transient.json.writeMetrics.lockCreateRetryAttempts, 2);
+    assert(transient.json.writeMetrics.lockCreateRetryWaitMs > 0);
+    assert(transient.json.writeMetrics.lockCreateFailures < transient.json.writeMetrics.lockCreateRetryMaxFailures);
+    assert(transient.json.writeMetrics.lockCreateRetryMarginMs > 0);
+    failureMetrics.push({ case: "P001-20-transient-lock-open", ...transient.json.writeMetrics });
+    assert.deepEqual(operationResidue(transientRoot), []);
+    assert.equal(existsSync(join(transientRoot, ".clarity/lock.json")), false);
+
+    const permanentRoot = fixture("lock-open-permanent");
+    const permanentCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(permanentRoot, ".clarity", name)));
+    const permanent = event(permanentRoot, "lockopenpermanent", {
+      CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-create-open", times: 99, code: "EPERM", syscall: "open" }),
+    }, 4);
+    assert.equal(permanent.json.code, "canonical-lock-create-failed");
+    assert.equal(permanent.json.details.errorCode, "EPERM");
+    assert.equal(permanent.json.details.syscall, "open");
+    assert.equal(permanent.json.details.lockMetrics.lockCreateFailures, permanent.json.details.lockMetrics.lockCreateRetryMaxFailures);
+    assert.equal(permanent.json.details.lockMetrics.lockCreateRetryAttempts, permanent.json.details.lockMetrics.lockCreateRetryMaxFailures - 1);
+    assert(permanent.json.details.lockMetrics.lockCreateRetryWaitMs > 0);
+    failureMetrics.push({ case: "P001-20-permanent-lock-open", ...permanent.json.details.lockMetrics });
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(permanentRoot, ".clarity", name)), permanentCanonical[index]);
+    });
+    assert.deepEqual(operationResidue(permanentRoot), []);
+    assert.equal(existsSync(join(permanentRoot, ".clarity/lock.json")), false);
+
+    const permissionRoot = fixture("lock-open-permission");
+    const permissionCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(permissionRoot, ".clarity", name)));
+    const permission = event(permissionRoot, "lockopenpermission", {
+      CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-create-open", times: 99, code: "EACCES", syscall: "open" }),
+    }, 4);
+    assert.equal(permission.json.code, "canonical-lock-create-failed");
+    assert.equal(permission.json.details.errorCode, "EACCES");
+    assert.equal(permission.json.details.syscall, "open");
+    assert.equal(permission.json.details.lockMetrics, undefined);
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(permissionRoot, ".clarity", name)), permissionCanonical[index]);
+    });
+    assert.equal(existsSync(join(permissionRoot, ".clarity/lock.json")), false);
+    assert.deepEqual(operationResidue(permissionRoot), []);
+
+    const unsafeRoot = fixture("lock-open-unsafe");
+    const unsafeCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(unsafeRoot, ".clarity", name)));
+    mkdirSync(join(unsafeRoot, ".clarity/lock.json"));
+    const unsafe = event(unsafeRoot, "lockopenunsafe", {}, 3);
+    assert.equal(unsafe.json.code, "canonical-lock-unsafe");
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(unsafeRoot, ".clarity", name)), unsafeCanonical[index]);
+    });
+    assert.equal(existsSync(join(unsafeRoot, ".clarity/lock.json")), true);
+    assert.deepEqual(operationResidue(unsafeRoot), []);
   });
 } finally {
   const failed = results.filter((row) => !row.ok);
