@@ -5,7 +5,7 @@
 - Current ID: sprint-038-patch-003
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -72,7 +72,7 @@
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
-| sprint-038-patch-003 | awaiting-eval | [contract](sprint-038-patch-003.md) | [progress](../progress/sprint-038-patch-003.md) | - |
+| sprint-038-patch-003 | active | [contract](sprint-038-patch-003.md) | [progress](../progress/sprint-038-patch-003.md) | - |
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
@@ -100,6 +100,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-01: PR #11 exact head `a75e12c18cc25b72c84efdda07b631536f965ed4`（merge ref `65ac7511fa13b8824700e917d7446b790098a5c3`）のWindows run `33414883114`／job `99563042214`で、Windows Server 2025 `10.0.26100`／Node `v22.23.2`のconversation migration専用stepは9 PASS／0 FAIL、`WINDOWS_NATIVE=RUN`、`TEMP_CREATE_ATTEMPTS=2`、canary hash／mtime不変、owned temp残存0でPASSした。既存Patch 002も12／12、製品構文もPASS。一方、同じworkflowをcontent pathに含む`clarity-harness-scanner` inventoryのdigestが旧bytesのままで、Clarity Patch 004はHS-001〜015 PASS後にHS-016 `inventory-digest-stale`だけがFAILし、Patch 005は前step停止により未実行となった。workflowの意図した変更に対するcoordination inventory設定値の更新漏れで、conversation migration／Clarity製品挙動の失敗ではない。古いWindows成功runを流用せず、Statusを`active`へ戻し、宣言path・case・thresholdを変えずobserved digestだけを同期してPatch 004／005を再確認するfresh strong Generator 1件を予約し、Lineage Dispatchesを3へ更新する。Retry CountはEvaluator前の候補整合漏れのため0を維持する。
 - 2026-09-01: Fable補正後の製品・test candidate `77e38d43b378971571b544c1200088fe5fae6360`／tree `7c0519a78f3f8c52597a4b93955e01e668222a6f`、progress commit `735be972a225d403b2679bbc9913bef28a1cc3e7`を確定した。現行形式の決定的初回tempを`wx`で排他作成し、開始前canaryとの`EEXIST`後だけrandom nonce付きowned tempへfallbackする。オーケストレーター再実行でも`TEMP_CREATE_ATTEMPTS=2`、canary hash／mtime／存在不変、owned temp残存0、専用9／9、Sprint 038関連93／93、Patch 002 12／12、構文／diff 0を確認。`already-applied` rerunは`changed=false`、temp作成0、target hash／mtime不変。macOS結果をWindows PASSへ昇格せず、Windows nativeはNOT-RUNを保持する。Statusを`awaiting-eval`へ進め、PR #11へ同一final headを通常pushしてWindows Server 2025／Node 22の因果runを取得する。run PASS前のEvaluator dispatch、public PASS、downstream同期、merge／release／installは行わない。
 - 2026-09-01: Generator candidate `18a41825b5b28d9c8519fab94360619b8a35e87a`／tree `76d2321cc67afab1347c86dc449dd52207ae39fc`、progress commit `4da124602213acd882d9870b26b36a46b4373868`を確定。専用9／9、Sprint 038関連93／93、Patch 002 12／12、Git-free archive 14／14がmacOSでPASSし、Windows nativeはNOT-RUNのまま既存Windows Server 2025 workflowへ接続した。外部push前のClaude -p Fable read-only実装レビューは製品Critical／Major 0件、test Major 1件を検出。旧形式temp canaryは修正前negativeとして有効だが、random nonce付き現行candidate名との`wx`／`EEXIST` retryを実際には通らず、契約必須negativeが未充足だった。Status／Retry Count／Model Tierを維持し、現行名collisionの因果回帰と証拠上のMinor 3点だけを補正するfresh strong Generator 1件を予約してLineage Dispatchesを2へ更新する。まだpush／Windows run／Evaluator／downstream／merge／release／installは行わない。
 - 2026-09-01: private PR #10のWindows native回帰で、public common coreのconversation migrationが対象basenameを`/`だけで分解し、Windowsの`\\` pathでは不正なsibling tempを作って`ENOENT`になる実製品不具合を確認。ユーザー承認により通常Patch `sprint-038-patch-003`としてpublic先行修正を開始する。fresh Planner commits `eee408d932eee034f6fa70c1dbf99a5d3a3f2e4f`／`f0000afd9be0ad6f6cc7ec2e625bb1daedf0d44a`がWindows native sibling temp、atomic rollback、temp所有権、再実行冪等性、POSIX無回帰、public完全SHAからprivate／Yasashiiを別Harness評価する契約を確定。Claude -p Fableのread-only敵対的レビューはCritical 0、条件付きGoで、既存temp名と衝突する開始前fileの保全、rename前の対象再書込み0、rename後のatomic相当復元を既存安全条件の具体化として契約へ反映した。high-risk resolverはstrong `gpt-5.6-sol`／`high`、fresh isolated work unit、Rotate noneを選択。Generator 1件を予約してLineage Dispatchesを1とし、private／Yasashii書込み、merge／release／tag／Marketplace／install／cache／実workspace migrationは0件のまま開始する。
