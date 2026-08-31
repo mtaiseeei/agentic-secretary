@@ -9,6 +9,7 @@ on:
       - "plugins/secretary/skills/memory-care/scripts/**"
       - "plugins/secretary/skills/**/SKILL.md"
       - "scripts/sprint-038-patch-002-windows-test.mjs"
+      - "scripts/sprint-038-patch-003-conversation-migration-test.mjs"
       - "scripts/sprint-050-patch-004-test.mjs"
       - "scripts/sprint-050-patch-005-test.mjs"
 
@@ -32,9 +33,13 @@ jobs:
           node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
           node --check plugins/secretary/scripts/project-tools.mjs
           node --check plugins/secretary/scripts/owner-name-transaction.mjs
+          node --check plugins/secretary/scripts/lib/conversation-migration.mjs
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
+      - name: Conversation migration sibling temp and rollback regression
+        shell: pwsh
+        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows
       - name: Clarity Harness scan and Windows native regression
         shell: pwsh
         run: node scripts/sprint-050-patch-004-test.mjs --require-windows
