@@ -5,7 +5,7 @@
 - Current ID: sprint-050-patch-005
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -91,7 +91,7 @@
 | sprint-050-patch-002 | done | [contract](sprint-050-patch-002.md) | [progress](../progress/sprint-050-patch-002.md) | [feedback](../feedback/sprint-050-patch-002.md) |
 | sprint-050-patch-003 | done | [contract](sprint-050-patch-003.md) | [progress](../progress/sprint-050-patch-003.md) | [feedback](../feedback/sprint-050-patch-003.md) |
 | sprint-050-patch-004 | done | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | [feedback](../feedback/sprint-050-patch-004.md) |
-| sprint-050-patch-005 | awaiting-eval | [contract](sprint-050-patch-005.md) | [progress](../progress/sprint-050-patch-005.md) | - |
+| sprint-050-patch-005 | active | [contract](sprint-050-patch-005.md) | [progress](../progress/sprint-050-patch-005.md) | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -99,6 +99,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-08-31: PR #11 exact head `c48ed1aac4863f6d104b2b81212a8107b25ea680`のWindows native run `33373492423`／job `99429641170`で、Node syntax、既存0.9.2、ancestor symlink／rollback／retry／boundary、Patch 004、Patch 003 CF-006 ACL、Patch 005 SR-001〜008／010はPASSした。SR-009内Sprint 047はGS-003だけが`clarity-commit-failed`で、直前のRepo identity判定は通過し実`git commit --only`まで到達している。fixtureの初期commit helperは`GIT_AUTHOR_*`／`GIT_COMMITTER_*`をそのprocessだけへ渡す一方、製品CLI processへは渡さず、Repo-local `user.name`／`user.email`も設定していない。global Git identityがあるMacではPASSし、global設定のないWindows runnerだけがcommitを拒否するため、製品ではなくcross-platform verification-infra不具合と分類する。Statusを`active`へ戻し、同じsynthetic RepoへRepo-local identityを明示する最小fixture補正のfresh Generatorを1件予約してLineage Dispatchesを4へ更新した。製品runtime、Repo identity安全境界、commit owned-path境界、Case ID／threshold、workflow、spec／contractは変更せず、補正後は同一exact headの新Windows因果runを取得する。過去runをPASSへ流用せず、独立Evaluator、private／Yasashii同期、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは未実施。
 - 2026-08-31: Windows GS-003製品補正candidate `76aae9fbd7fd87e32bdb9266c69258d76d1d4289`／tree `a0c5dc7930a5cb6449a6c58d15f08adbce5bc143`、progress-only commit `ab84f734b4faf52b4a45e9ed40ff11780278b81d`を確定した。`clarity-drift.mjs`のcommit入口を文字列上の`resolve(top) === root`から、Patch 004でWindows native PASS済みの`inspectRepoIdentity(root)`へ接続し、同一physical Git top-levelだけを受理する。nested rootは`git-root-mismatch`、non-Gitは`clarity-commit-non-git`、stat不能・dev／ino 0・identity不明はfail closedを維持し、prefix／lowercase／startsWith等の境界緩和は行わない。GS-003内に同一top-level positive、nested／non-Git negative、preview／拒否前後のfilesystem・Git不変を追加し、Case ID／thresholdは不変。source／exact clean／Git-freeの3面でSprint 047 25／25、Patch 003 21／21、Patch 005 9 PASS／0 FAIL／1 Windows NOT-RUN、inventory 20／20・67 case、Patch 004 12 PASS／0 FAIL／4 Windows NOT-RUN、Sprint 041 43／43、Sprint 049 20／20。オーケストレーターもSprint 047 25／25、Patch 005 9／0／1、inventory 20／20を再確認したためStatusを`awaiting-eval`へ進める。Lineage Dispatches 3を保持し、同一exact headをPR #11へ通常pushしてWindows Server 2025／Node 22の因果runを新規取得する。Windows PASSと独立Evaluator PASSは未主張で、private／Yasashii同期、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは未実施。
 - 2026-08-31: GS-003をproduct／implementation-issueと確定し、最小製品補正のfresh Generatorを1件予約してLineage Dispatchesを3へ更新した。一時Repoは同rootでgit init／add／複数commitに成功し、CLIも同rootを受け取るためfixture／cwdは正常。`clarity-drift.mjs`のcommit入口だけがGit top-levelを`resolve(top) === root`で比較し、Windowsの8.3 short／long path、case、separator差で同一NTFS directoryを`clarity-commit-non-git`へ誤拒否していた。Patch 004 HS-011でWindows PASS済みの`inspectRepoIdentity()`を再利用し、同一physical Git top-levelだけを受理する。nested rootは`git-root-mismatch`、non-Gitは`clarity-commit-non-git`、dev／ino 0・stat不能・identity不明は推測せず拒否し、prefix／lowercase／startsWith等の緩和はしない。GS-003内に同一top-level positive、nested／non-Git negativeとGit／filesystem不変を追加し、Case ID／thresholdは不変。resolverはhigh-risk retry、strong `gpt-5.6-sol`／`high`、fresh isolated work unit、Rotate none。CF-006 ACL、Patch 005 diagnostic、common 3 path、workflow、spec／contract、manual dispatch、private／Yasashii、release／install等は変更しない。
 - 2026-08-31: PR #11 exact head `cf61738c25ead736f641c020ae25d60f01c73d87`のWindows native run `33371816241`／job `99424428888`で、CF-006 ACL fixtureは解消しPatch 003が21／21 PASSした。既存Node／0.9.2／Patch 004、Patch 005 SR-001〜008／010もPASS。一方、SR-009内のSprint 047だけが24 PASS／1 FAILで、GS-003の一時Git `drift-repo`に対する`clarity commit`がexit 3／`clarity-commit-non-git`を返した。他のDrift／Git safety 24 caseはPASS、external write／network 0。現時点ではWindows上の製品Git top-level判定かSprint 047 fixture初期化のどちらが原因か未分類のため、Statusをactiveへ戻す。CF-006修正やWindows evidenceをPASSへ流用せず、GS-003のGit init／cwd／root identity／commit実入口をread-onlyで比較してから、着手時SR-009／SR-010内の最小補正へ進む。Lineage Dispatches 2、Retry Count 0を保持し、manual dispatch、private／Yasashii同期、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行わない。
