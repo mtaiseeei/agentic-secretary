@@ -5,9 +5,9 @@
 - Current ID: sprint-047-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 1
-- Lineage Dispatches: 2
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 3
+- Model Tier: strong
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
@@ -85,7 +85,7 @@
 | sprint-045 | done | [contract](sprint-045.md) | [progress](../progress/sprint-045.md) | [feedback](../feedback/sprint-045.md) |
 | sprint-046 | done | [contract](sprint-046.md) | [progress](../progress/sprint-046.md) | [feedback](../feedback/sprint-046.md) |
 | sprint-047 | done | [contract](sprint-047.md) | [progress](../progress/sprint-047.md) | [feedback](../feedback/sprint-047.md) |
-| sprint-047-patch-001 | planned | [contract](sprint-047-patch-001.md) | - | - |
+| sprint-047-patch-001 | active | [contract](sprint-047-patch-001.md) | - | - |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
@@ -101,6 +101,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-01: fresh Planner修正版commit `3ea82074ae9025fb582aaaa0c7f2602fe67be8fe`／tree `8455fc7c530e15d9136b9d1721600f30cb0cdc30`は、Planner所有の`docs/spec.md`、`docs/spec/constraints.md`、`docs/sprints/sprint-047-patch-001.md`だけを変更した。Claude -p Fableの再レビューは前回Critical 3／Major 4／Minor 3を全件Resolved、新規Critical／Major 0、非blocking Minor 2、Go。double faultを成功表示0の診断可能終端として分離し、同一owner／token／有効lease内の自己appendだけをrollback可能にし、自己所有durable progressと記録なし／不一致の改ざん疑い`state-mismatch`を区別、全待機loopのbounded化、errno単独でないtransient定義、製品filesystem境界のfailure injection、Windows step別時間と10分margin、trigger path、識別不能lock／orphan tempを契約化した。Minorはlock waitの正のmarginが最小保証に留まる点と、lease喪失後の残骸cleanupは利用者確認経路に従う境界をGenerator handoffで明示する点。未解決の製品判断はなく契約を固定する。resolverはhigh-riskによりGeneratorを`gpt-5.6-sol`／`high`、strong tier、fresh、Rotate `model-escalation`として選択したため、Statusを`active`、Model Tierを`strong`、Lineage Dispatchesを3へ更新してfresh Generator 1件を予約する。Generatorは本Patchだけを実装し、Evaluator正本やstate、downstreamへ触れない。push／Windows run／Evaluator／private／Yasashii／merge／release／installは未実施。
 - 2026-09-01: `sprint-047-patch-001` Planner契約commit `a33fe04d06b5fa8407e2bccf15c963c389b1d299`をClaude -p Fableがread-only敵対的レビューし、Critical 3／Major 4／Minor 3、No-Goと判定した。製品方向の未決定ではなく、安全契約の客観性不足としてSpec-Issue Countを1へ更新する。Criticalは、bounded recovery時間と既存lock TTL／waitの関係未定義、Event／Evidence rollbackの同一token内限定とrollback自体も失敗するdouble fault終端状態の未定義、自己所有の未完了writeと第三者改ざんが同じ`state-mismatch`に見えるためfail-closedを弱めず収束する判別要件の欠落。Major／Minorは、transientの操作的定義、製品と同じfilesystem境界を通るerrno互換failure injection、lock取得を含む全待機loopのbounded化、Windows 10分枠のstep別時間証拠、workflow trigger path、識別不能lock／canonical直下orphan tempの診断回復。Statusは`planned`、Model Tierは`standard`、Rotateは`none`を維持し、Planner所有のcontract／constraints／spec indexだけを修正するfresh Planner 1件を予約してLineage Dispatchesを2へ更新する。Generator、製品、test、workflow、inventory、progress、feedback、push、Windows run、downstream、merge／release／installは未着手。
 - 2026-09-01: public完了commit `d62a66b07c385e1d0a405a1db72bee774ed9a530`の最終Windows run `33420169869`／job `99580324118`で、SR-001は`Current ID: TBD`の完了stateをPASSし、Patch 002、conversation migration Patch 003、Clarity Patch 004も再PASSした。一方、SR-009内の既存Sprint 047 GS-009／GS-010がFAIL。64個のHook／CLI並行write中、`.clarity/state.json.tmp-*`から`state.json`へのWindows renameが`EPERM`となり、Event追加後にState更新だけ失敗して`state-mismatch`が連鎖した。同じproduct/test bytesの直前run `33418410765`はPASSしており、`e70d3b7...`から`d62a66b...`の差分はfeedback追加とstate完了だけ、`clarity-core.mjs`／`sprint-047-test.mjs`のGit blobも同一である。したがってstate遷移やconversation migrationの回帰ではなく、実タイミングで再現するWindows concurrent canonical writeの既存product defectと分類する。Sprint 038 Patch 003のEvaluator feedbackは履歴として変更せずdoneを保持するが、public fixed sourceのdownstream handoffとmerge／release／installは停止する。high-risk regular Patch `sprint-047-patch-001`「WindowsのHook／CLI並行writeでEventとStateを整合したまま完了し、transient rename競合から安全に回復する」をplannedとしてCurrentにし、fresh Planner 1件を予約してLineage Dispatchesを1へ更新する。PlannerはGS-009／GS-010の100% parse／unique／rebuild、bounded retry、partial commit／lock所有権／stale recovery、Windows因果run、POSIX無回帰、failure injectionを既存case意味を弱めず契約化する。過去run再実行だけでflake扱いして閉じず、private／Yasashiiへ不具合を持ち込まない。
 - 2026-09-01: fresh独立Evaluator commit `3077a7418c6876993b85bdae1404b3c8af8ae42b`／tree `b29ea8a12d5d56e11cae6e4241b0ef007a8a43c0`、feedback SHA-256 `e948b220a01afcbf90e1bf88febb250cab225004af2fa57f2fd034e370bd5149`でSprint 038 Patch 003はPASS。AC1〜12を全PASS、C1／C2／C3／C5／C6／C9／C10／C12／C13／C15は全て閾値達成、blocking product／verification-infra finding 0。source／exact clean detached／Git-freeでPatch 003 9／9、Sprint 038関連93／93、Patch 002 12／12、Patch 004 12／12・4 macOS NOT-RUN、Patch 005 9／9・1 macOS NOT-RUN、inventory 20／20・67 case、archive 14／14。Windows causal run `33418410765`／job `99574540666`はexact head `e70d3b7a85be5294168c3041cb0eff4ef4efe91f`でPatch 002 12／12、Patch 003 9／9・EEXIST attempts 2・canary不変・owned temp残存0、Patch 004 16／16、Patch 005 10／10、external／network 0、全step／job success。full offline masterの既知Sprint 011旧期待1件、Patch 001旧期待2件、historical timeoutは本Patchのbaseから該当bytes差分0で、対象safe harborと分離した。table記録順fallback、MAX_PATH近傍、非UTF-8、Windowsの`0o600`実効権限は契約外残余リスクとして保持する。Statusを`done`、Current ID／Next Plannedを`TBD`、Retry／Spec-Issue／Lineageを0、Model Tierを`standard`、Rotateを`none`へ戻す。このオーケストレーター完了commitをpublic fixed sourceとして、次はprivate my-vault、次にYasashiiへ完全SHAを渡し、それぞれ別Harnessで実装・Windows native・独立評価する。public PASSをdownstream PASSへ流用せず、PR #11 merge、release、tag、Marketplace、install、cache、実workspace migrationは未実施。
