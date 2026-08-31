@@ -97,8 +97,11 @@ boundedに抽出するauthoritative sourceとして扱う。無害なfield名・
 2026-09-01に、同じ製品／test bytesのWindows native runでSprint 047のGS-009／GS-010がPASSとFAILに分かれ、並行Hook／CLI write中の
 canonical置換が一時的な共有競合で拒否された後、Eventだけが追加されState更新が失敗して`state-mismatch`が連鎖する既存product defectを確認した。
 単なるworkflow rerunやflake扱いにはせず、Clarity canonicalの論理writeをEvent／Evidence／Stateの整合単位として扱う。Windows固有の一時競合は
-安全を再確認した限定条件だけでboundedに回復し、恒久失敗では開始前と整合するcanonicalへ戻して成功表示しない。GS-009／GS-010のID、意味、
-Severity、件数、閾値は維持し、public版の因果Windows runと独立評価をPASSした完全SHAだけをprivate my-vault、次にYasashiiへ別Harnessで渡す。
+root／target／parent、lock lease、owned tempを試行ごとに再確認できる限定条件だけでboundedに回復する。rollbackは同じoperationが同じowner／tokenの
+有効leaseを保持する間に自分の未完了appendだけへ行い、他writerの正当なappendや記録のない`state-mismatch`を自動修復しない。rollback／cleanupも
+失敗するdouble faultは成功扱いせず、自己所有のdurable progressからdoctor／rebuild／retryで他者を変えずに収束できる診断可能な終端とする。
+GS-009／GS-010のID、意味、Severity、32 Hook＋32 CLI、3 roundの100% thresholdは維持し、public版の因果Windows runと独立評価をPASSした
+完全SHAだけをprivate my-vault、次にYasashiiへ別Harnessで渡す。
 
 ## ひとことで
 
