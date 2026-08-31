@@ -2,11 +2,11 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-038-patch-003
+- Current ID: TBD
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
-- Model Tier: strong
+- Lineage Dispatches: 0
+- Model Tier: standard
 - Rotate: none
 - Next Planned: TBD
 
@@ -72,7 +72,7 @@
 | sprint-038 | done | [contract](sprint-038.md) | [progress](../progress/sprint-038.md) | [feedback](../feedback/sprint-038.md) |
 | sprint-038-patch-001 | done | [contract](sprint-038-patch-001.md) | [progress](../progress/sprint-038-patch-001.md) | [feedback](../feedback/sprint-038-patch-001.md) |
 | sprint-038-patch-002 | done | [contract](sprint-038-patch-002.md) | [progress](../progress/sprint-038-patch-002.md) | [feedback](../feedback/sprint-038-patch-002.md) |
-| sprint-038-patch-003 | awaiting-eval | [contract](sprint-038-patch-003.md) | [progress](../progress/sprint-038-patch-003.md) | - |
+| sprint-038-patch-003 | done | [contract](sprint-038-patch-003.md) | [progress](../progress/sprint-038-patch-003.md) | [feedback](../feedback/sprint-038-patch-003.md) |
 | sprint-039 | done | [contract](sprint-039.md) | [progress](../progress/sprint-039.md) | [feedback](../feedback/sprint-039.md) |
 | sprint-039-patch-001 | done | [contract](sprint-039-patch-001.md) | [progress](../progress/sprint-039-patch-001.md) | [feedback](../feedback/sprint-039-patch-001.md) |
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
@@ -100,6 +100,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-01: fresh独立Evaluator commit `3077a7418c6876993b85bdae1404b3c8af8ae42b`／tree `b29ea8a12d5d56e11cae6e4241b0ef007a8a43c0`、feedback SHA-256 `e948b220a01afcbf90e1bf88febb250cab225004af2fa57f2fd034e370bd5149`でSprint 038 Patch 003はPASS。AC1〜12を全PASS、C1／C2／C3／C5／C6／C9／C10／C12／C13／C15は全て閾値達成、blocking product／verification-infra finding 0。source／exact clean detached／Git-freeでPatch 003 9／9、Sprint 038関連93／93、Patch 002 12／12、Patch 004 12／12・4 macOS NOT-RUN、Patch 005 9／9・1 macOS NOT-RUN、inventory 20／20・67 case、archive 14／14。Windows causal run `33418410765`／job `99574540666`はexact head `e70d3b7a85be5294168c3041cb0eff4ef4efe91f`でPatch 002 12／12、Patch 003 9／9・EEXIST attempts 2・canary不変・owned temp残存0、Patch 004 16／16、Patch 005 10／10、external／network 0、全step／job success。full offline masterの既知Sprint 011旧期待1件、Patch 001旧期待2件、historical timeoutは本Patchのbaseから該当bytes差分0で、対象safe harborと分離した。table記録順fallback、MAX_PATH近傍、非UTF-8、Windowsの`0o600`実効権限は契約外残余リスクとして保持する。Statusを`done`、Current ID／Next Plannedを`TBD`、Retry／Spec-Issue／Lineageを0、Model Tierを`standard`、Rotateを`none`へ戻す。このオーケストレーター完了commitをpublic fixed sourceとして、次はprivate my-vault、次にYasashiiへ完全SHAを渡し、それぞれ別Harnessで実装・Windows native・独立評価する。public PASSをdownstream PASSへ流用せず、PR #11 merge、release、tag、Marketplace、install、cache、実workspace migrationは未実施。
 - 2026-09-01: PR #11 exact head `e70d3b7a85be5294168c3041cb0eff4ef4efe91f`のWindows native run `33418410765`／job `99574540666`がsuccess。Microsoft Windows Server 2025、image `windows-2025-vs2026`、Node `v22.23.2`で、既存Patch 002は12 PASS／0 FAIL、conversation migration Patch 003は9 PASS／0 FAIL・`WINDOWS_NATIVE=RUN`・`TEMP_CREATE_ATTEMPTS=2`・EEXIST retry観測・canary hash／mtime不変・owned temp残存0。Clarity Patch 004は16 PASS／0 FAIL／0 SKIP／0 NOT-RUN・`WINDOWS_VERIFIED=true`・HS-016 inventory PASS、Patch 005はSR-001〜010の10 PASS／0 FAIL／0 SKIP／0 NOT-RUN・`WINDOWS_VERIFIED=true`、external write／network 0。workflow全stepとjob全体がgreenで、旧runや別SHAを流用していない。actions/checkout@v4／setup-node@v4のNode 20 deprecation annotationは製品suiteがNode 22で0 FAILのため非blocking保守観測として分離する。Windows証拠を固定し、fresh独立Evaluatorを1件予約してLineage Dispatchesを6へ更新する。resolverのEvaluator値は`gpt-5.6-sol`／`high`、fresh isolated work unit、resume false、Rotate none。Statusは`awaiting-eval`を維持し、Evaluator PASS前にSprint done、public fixed SHA、downstream ready、merge／release／installへ昇格しない。
 - 2026-09-01: Fable Minor補正candidate `f64e973d0cc6ab7f8894d768e09c175129c07362`／tree `a480cd46de3b473340a9a49e45b0e67343a49a3d`、progress commit `ba5c59480c684ac632c36176f87cf123aa898cd2`を確定。最終TBD fallbackで選択する完了IDの重複rowをoracle自身が拒否し、`done`はPASS feedback必須、`done-by-user-decision`はPASS不要だが分類可能なfeedback必須、active／awaiting-evalはfeedback未記録を許可する境界をfixtureで固定した。補正前Git-free candidateは重複TBDとfeedback未記録user-decisionを拒否できないnegative、補正後source／Git-freeはPatch 005 9 PASS／0 FAIL／1 Windows NOT-RUN、Patch 004 12／0／4、inventory 20／20・67 case、Patch 003 9／9、Sprint 038関連93／93、Patch 002 12／12、archive 14／14、external／network 0。オーケストレーターもPatch 005 9／0／1、Patch 004 12／0／4、Patch 003 9／9、inventory 20／20を再実行した。case意味・threshold・product runtime・workflowは不変。fallbackが時系列でなくstate table記録順という既存製品意味は本Patchの残余リスクとしてprogressに分離した。Statusを`awaiting-eval`へ進め、同一final headをPR #11へ通常pushしてWindows Server 2025／Node 22の因果runを取得する。Windows PASS、Evaluator PASS、downstream、merge／release／installは未主張。
 - 2026-09-01: verification-infra補正candidate `6ca492a745456764c82e90a3f2e96e60d4ad293b`／tree `36f3a69bed9f7e0ec18d239c669e365c6062948f`、progress commit `0e51fe1b37574a843c0bcf1d9749e9e766f60baa`を確定。SR-001のactual source oracleを構造的Current ID、同IDの一意なrow、許可status、contract／progress実在、対応feedback／4 role／bundleへ追随させ、Patch 005固有のactive／awaiting-eval／done／最終TBD fixtureは維持した。将来ID positive、invalid ID／missing row／missing files negativeを追加し、source／Git-freeでPatch 005は9 PASS／0 FAIL／1 Windows NOT-RUN、Patch 004 12／0／4、inventory 20／20・67 case、Patch 003 9／9、Sprint 038関連93／93、Patch 002 12／12、archive 14／14、external／network 0。Claude -p Fableのread-only敵対的レビューはCritical／Major 0、Minor 3、Go。case意味・threshold・runtime・workflowを変えずpush可能と評価した。push前に、Minor 1の最終TBD重複rowをoracle自身でも明示拒否し、Minor 2の`done-by-user-decision`はPASS不要だが受入根拠feedbackの存在を必須化するfresh strong Generatorを1件予約してLineage Dispatchesを5へ更新する。Minor 3のfallbackが時系列でなくtable記録順という既存製品意味は本Patchの製品変更禁止範囲外のため実装せず、progressへ残余リスクとして記録する。resolverは`gpt-5.6-sol`／`high`、fresh、Rotate none。Windows native、push、Evaluator、downstream、merge／release／installは未実施。
