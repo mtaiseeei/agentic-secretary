@@ -232,3 +232,56 @@ active／awaiting-eval／done／最終TBDの既存lifecycle回帰はSR-001で維
 - Windows Server 2025／Node 22の因果的再runは未実行。SR-010とPatch004のWindows専用4件はMacでは引き続きNOT-RUNで、`windowsVerified=false`。旧runのPASS／FAILを新candidateへ流用しない。
 - 診断結果が得られるまでは、Windows上の製品不具合かPatch003のplatform固有verification-infra不具合かを確定しない。本GeneratorはEvaluator Verdictを宣言しない。
 - push、manual workflow dispatch、network、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator補正 — Windows CF-006のfile ACL fixture化（2026-08-31）
+
+- 補正開始HEAD: `9f76a6a42a3501415232348e1107797d8d3a3329`
+- 検証candidate commit: `6127b72e3df1ae23f7783c654fa3ff7f99bc85ac`
+- 検証candidate tree: `a27355881848666da3e252babaa6cdf5e03b7dbe`
+- 原因を確定したWindows証跡: exact remote head `28e00219cbf0215848c2a71015ab6cefe9cc0cf4`、run `33369618547`、job `99417486335`
+- 対象round: `verification-infra`のみ。製品runtime、common 3 path、Patch005 diagnostic test、workflow、spec／contract、state、feedbackの差分は0件。
+
+Windows runではPatch005 SR-009内の旧Patch003だけが失敗し、具体的にはCF-006が20 PASS／1 FAILの唯一のFAILだった。CF-006はsynthetic Repo directoryへ`chmodSync(0o000)`を適用してunreadableを期待していたが、WindowsではPOSIX mode bitがReadData拒否にならない。このため製品は正しく`available`を返しており、製品runtimeではなくplatform固有fixtureの欠陥と確定した。他のCF／AR 20件、既存0.9.2、Patch004、SR-001〜008／010は同runでPASSしている。
+
+CF-006だけを次のように補正した。
+
+- POSIXでは既存のdirectory `chmodSync(0o000)`によるunreadable意味を維持し、観測がthrowしても`finally`で`0o755`へ必ず復旧する。
+- WindowsではOS一時fixture内のsynthetic Repoにある`README.md` 1 fileだけを対象にする。`whoami.exe /user /fo csv /nh`を`shell:false`で実行し、usernameを使わず、`S-\d+(?:-\d+)+`に一致する一意のcurrent SIDだけを抽出する。
+- `icacls.exe`はすべて`shell:false`、`cwd=unreadableRoot`で実行する。save／deny targetは相対`README.md`、restore targetは`.`である。元DACLはRepo外かつ同fixture内のbackupへ`/save`し、denyは`*SID:(RD)`だけに限定した。directory deny、`F`／`M`／`WDAC`／`WO`／`D`、`OI`／`CI`、`/T`は使わない。
+- deny後は製品観測より先に`readFileSync(README.md)`が`EACCES`または`EPERM`になることを必須probeする。その後だけ`observeCanonicalRepo`の`availability=unreadable`、`firstFile.reason=unreadable`、`reason=first-file-unreadable`をassertする。
+- `finally`では`icacls.exe . /restore <backup> /q`を必ず実行する。restore status 0、READMEのread成功、deny前後content digest一致、backup削除をすべて必須とした。save／deny／probe／製品観測／restore／復旧read／digestのどれか一つでも失敗すればCF-006はFAILし、capability不足をSKIP／NOT-RUN／PASSへ落とさない。primary failureとrestore／cleanup failureは`AggregateError`へ併記し、restore failureを隠さない。
+- MacでもSID抽出の0件／複数件拒否、`whoami.exe`／`icacls.exe`の正確なcommand・引数、`shell:false`、relative file target、fixture内かつRepo外backup、非再帰・ReadData限定deny、primary＋restore failureの保持を純helper／構造assertで回帰する。これはWindows native PASSの代替には数えない。
+
+### 変更fileとinventory
+
+検証candidateの変更は`scripts/sprint-050-patch-003-test.mjs` 1 fileだけである。`plugins/secretary/collaboration-inventory.json`のdigest対象pathにPatch003 testは含まれないため、inventory digest更新は不要だった。case ID、registry、feature割当、Acceptance Criteriaは変更せず、inventory validatorは3面とも`DIGESTS=VALID`を維持した。
+
+製品runtimeの変更は0件で、開始HEADからcommon runtime 3 pathのdigestも不変である。
+
+```text
+61fe8a9ca207db3dd0039c1f98ea315f1c0f390a30bee69a771aa851849dc6c9  plugins/secretary/scripts/clarity.mjs
+55a5383e432ff3ba9081ff9603d7c417ab7912da441a0ab29172c5be6855f02e  plugins/secretary/scripts/lib/clarity-core.mjs
+d70610079f6c1d4812b62818b54c609a8940a9d2941419e91f2662b12871b345  plugins/secretary/scripts/lib/clarity-harness-scan.mjs
+```
+
+### 検証candidateの3面検証
+
+source、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Patch003、Patch005、inventory、Patch004、Sprint041、Sprint047、Sprint049をこの順に個別実行した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeがcandidateと一致した。Git-free面は実行前後とも`.git`不存在だった。3面とも次の結果でexit 0となった。
+
+```text
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+`node --check scripts/sprint-050-patch-003-test.mjs`、`node --check scripts/sprint-050-patch-005-test.mjs`、`git diff --check`もexit 0。各suiteが作ったOS一時fixtureと3面検査用directoryは終了後に削除した。Repo、Git、network、external providerへの製品書込みは0件である。
+
+### 新Windows因果run待ちと残る境界
+
+- 本Mac検証では新しいWindows ACL branchを実行していない。SR-010は1 NOT-RUN、Patch004のWindows専用4件もNOT-RUN、`windowsVerified=false`のままであり、Windows PASSを合成していない。
+- exact candidate `6127b72e3df1ae23f7783c654fa3ff7f99bc85ac`に因果するWindows Server 2025／Node 22の新run ID／job IDは未取得である。次のrunでCF-006のsave／deny／probe／製品観測／restore／復旧read／digest／backup cleanupがすべて実行され、0 FAILになるまでWindows境界は閉じない。
+- 本Generatorはpush、PR操作、workflow dispatch、remote変更、Evaluator判定、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindを行っていない。
