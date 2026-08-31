@@ -4,7 +4,7 @@
 
 [clarity-acceptance-cases.md](clarity-acceptance-cases.md)のprimary 250 case IDと意味を失わず、各caseを最初に評価するmain Sprintへ
 ちょうど1回だけ割り当てる正本である。CLX 20とXV 4も既存のID／意味／割当を変えない。Sprint 050 Patch 003の追加要件は
-CF-001〜007とAR-001〜014、Sprint 050 Patch 004の追加要件はHS-001〜016へ新規割当し、既存274 caseへ遡及混入させない。case本文とE2E手順のrepo内実行正本は同文書とし、
+CF-001〜007とAR-001〜014、Sprint 050 Patch 004の追加要件はHS-001〜016、Sprint 050 Patch 005の追加要件はSR-001〜010へ新規割当し、既存caseへ遡及混入させない。case本文とE2E手順のrepo内実行正本は同文書とし、
 外部添付やabsolute pathを実行正本にしない。`sprint-050`の履歴的な全件再実行と`XM-007`残余は変更しない。
 
 機械検査は、下の`clarity-acceptance-registry` JSONだけを入力とする。Markdown本文やSprint契約に再掲されたIDは
@@ -35,7 +35,7 @@ CF-001〜007とAR-001〜014、Sprint 050 Patch 004の追加要件はHS-001〜016
   "expectedPrimaryCaseCount": 250,
   "expectedCollaborationCaseCount": 20,
   "expectedVisualProviderCaseCount": 4,
-  "expectedPatchCaseCount": 37,
+  "expectedPatchCaseCount": 47,
   "primaryCaseIds": {
     "sprint-041": [
       "ST-001", "ST-002", "ST-003", "ST-004", "ST-005", "ST-006", "ST-007", "ST-008", "ST-009", "ST-010", "ST-011", "ST-012", "ST-013", "ST-014", "ST-015",
@@ -95,13 +95,17 @@ CF-001〜007とAR-001〜014、Sprint 050 Patch 004の追加要件はHS-001〜016
     "sprint-050-patch-004": [
       "HS-001", "HS-002", "HS-003", "HS-004", "HS-005", "HS-006", "HS-007", "HS-008",
       "HS-009", "HS-010", "HS-011", "HS-012", "HS-013", "HS-014", "HS-015", "HS-016"
+    ],
+    "sprint-050-patch-005": [
+      "SR-001", "SR-002", "SR-003", "SR-004", "SR-005", "SR-006", "SR-007", "SR-008", "SR-009", "SR-010"
     ]
   },
   "patchCaseFeatureAssignments": {
     "CF-001": "F73", "CF-002": "F73", "CF-003": "F74", "CF-004": "F73", "CF-005": "F73", "CF-006": "F74", "CF-007": "F80",
     "AR-001": "F78", "AR-002": "F64", "AR-003": "F68", "AR-004": "F78", "AR-005": "F78", "AR-006": "F78", "AR-007": "F78", "AR-008": "F78", "AR-009": "F75", "AR-010": "F78", "AR-011": "F77", "AR-012": "F78", "AR-013": "F78", "AR-014": "F80",
     "HS-001": "F68", "HS-002": "F81", "HS-003": "F81", "HS-004": "F81", "HS-005": "F81", "HS-006": "F81", "HS-007": "F81", "HS-008": "F81",
-    "HS-009": "F81", "HS-010": "F78", "HS-011": "F78", "HS-012": "F81", "HS-013": "F81", "HS-014": "F81", "HS-015": "F81", "HS-016": "F80"
+    "HS-009": "F81", "HS-010": "F78", "HS-011": "F78", "HS-012": "F81", "HS-013": "F81", "HS-014": "F81", "HS-015": "F81", "HS-016": "F80",
+    "SR-001": "F81", "SR-002": "F81", "SR-003": "F81", "SR-004": "F78", "SR-005": "F78", "SR-006": "F81", "SR-007": "F81", "SR-008": "F79", "SR-009": "F80", "SR-010": "F81"
   },
   "finalRecheck": {
     "sprint": "sprint-050",
@@ -132,6 +136,7 @@ CF-001〜007とAR-001〜014、Sprint 050 Patch 004の追加要件はHS-001〜016
 | sprint-043 | XV visual provider追加 | 4 |
 | sprint-050-patch-003 | CF canonical freshness 7 + AR ancestor root 14 | 21 |
 | sprint-050-patch-004 | HS Harness-aware scan／Windows native | 16 |
+| sprint-050-patch-005 | SR state structure／Secret redaction | 10 |
 
 ## CLX追加case
 
@@ -193,8 +198,22 @@ registryの機械検査は、全case IDの重複0、Patch 003の21件、各Patch
 | HS-012〜015 | 4 | F81 | Windows native path、collision、junction capability、正式runner |
 | HS-016 | 1 | F80 | portable suiteと既存Clarity回帰のinventory結線 |
 
-registryの機械検査はPatch case合計37件、HS 16件、Target ID重複0、各HS caseのfeature割当1件、
-未割当／余分なfeature割当0件を確認する。
+Patch 004当時のregistry機械検査はPatch case合計37件、HS 16件、Target ID重複0、各HS caseのfeature割当1件、
+未割当／余分なfeature割当0件を確認した。この歴史的なHS集合はPatch 005でも変更しない。
+
+## Sprint 050 Patch 005追加case
+
+完全なscenarioと必須証拠は[clarity-acceptance-cases.md](clarity-acceptance-cases.md)を正本とする。
+
+| ID範囲 | 件数 | Feature割当 | 狙い |
+|---|---:|---|---|
+| SR-001〜003、006〜007、010 | 6 | F81 | stateの構造化execution truthを保持し、無害本文とSecret本文を分離する |
+| SR-004〜005 | 2 | F78 | raw-content digest非露出とstate以外のstrict Secret exclusionを維持する |
+| SR-008 | 1 | F79 | public common 3 pathの固定candidateと下流独立評価境界を固定する |
+| SR-009 | 1 | F80 | generic／4 role／ancestor／preview／Git／network／portable回帰をinventoryへ結線する |
+
+registryの機械検査はPatch case合計47件、SR 10件、Target ID重複0、各SR caseのfeature割当1件、
+未割当／余分なfeature割当0件を確認する。Patch 004の37件と既存primary／CLX／XVの割当・意味は変更しない。
 
 ## PASS判定
 
@@ -204,6 +223,7 @@ registryの機械検査はPatch case合計37件、HS 16件、Target ID重複0、
 - sprint-050は全250件、CLX全20件、XV全4件、E2E 4件、既存master回帰を同一public candidateで実行する。
 - sprint-050-patch-003はCF-001〜007とAR-001〜014だけを新規Target Caseとし、関連するST-008、LK-007、CLX-006、GS／PK回帰を直接再実行する。既存caseの意味・Severity・初回割当を変更しない。
 - sprint-050-patch-004はHS-001〜016だけを新規Target Caseとし、ST-008、AR-001〜014、Sprint 041／050 Patch 003、portable path／inventory回帰を直接再実行する。既存primary／CLX／XV／Patch 003 caseの意味・Severity・初回割当を変更しない。
+- sprint-050-patch-005はSR-001〜010だけを新規Target Caseとし、HS-001〜016、Sprint 041／047／049／050 Patch 003／004、generic scan、ancestor alias、portable／Git-free／Windows回帰を直接再実行する。既存caseの意味・Severity・初回割当を変更しない。
 - `XM-007`等の許可・接続依存external caseは、adapterと確認境界が成立し、未実行理由を正直に記録すれば
   conditional NOT-RUNにできる。ただしMCP-first resolver、承認前local write 0、固定4象限はadapter contract／isolated fake／承認済みlocal fixtureで必ず評価し、fakeでreal external-liveをverifiedにしない。Hook両host、Critical安全caseも省略できない。
 - Sprint 050 Patch 004のGenerator前Fable静的reviewは2026-08-31に完了し、必須指摘をPlanner正本へ反映した。review自体は製品要件、case、Evidence format、PASS条件、Windows native実行のいずれにも数えない。

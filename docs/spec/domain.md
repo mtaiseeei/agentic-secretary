@@ -898,6 +898,17 @@ Current IDは最初にstateから解決する。TBD、missing、invalid、巨大
 Next Planned、直近完了記録等の許可されたfallbackだけを使い、どの根拠を使ったかを表示する。filenameの辞書順やmtimeだけで
 currentを確定しない。巨大stateを全文無制限に読むことも、過去feedbackを全件Item化することも行わない。
 
+state observationはMarkdown本文全体の安全判定と同義ではない。Current ID、Next Planned、Sprint tableのID／status等、実行状態を
+構成する既知の構造だけをboundedに認識し、履歴説明、inline code、コードblock、自由記述はexecution truthへ採用しない。
+credential field名、placeholder、過去のSecret検査説明等の非機密記述があっても、構造fieldが安全に解決できる限りCurrent ID、status、
+fallback source、4 role locatorを保持する。無害判定を特定のexact文字列だけのallowlistへ固定しない。
+
+実値らしいSecretを含むspanは構造metadataと分離し、値と周辺本文を返さない。そのsourceは必要に応じて`redacted`または`partial`とし、
+reasonと構造field単位のcoverageだけを返す。外部へ出せるdigestはredaction後の構造metadataと非機密locatorから決定的に作り、
+unredacted state bytes、Secret span、Secret値を含むwhole-file hashをcandidate／summary／Evidenceへ使わない。特に低エントロピー値の
+推測照合に使えるraw-content digestを公開しない。構造metadata自体にSecretが混入して安全に分類できない場合は、そのfieldだけを
+unresolvedとして扱い、値を補完・正規化・要約しない。
+
 候補化では同じCurrent Sprintのstate、contract、progress、feedbackを1 file 1 Itemへ機械変換せず、Decision、Execution、
 ValidationとEvidence参照へ一貫して束ねる。正本本文をClarityへ複製せず、relative locator、digest、短いsummary、観測時刻を使う。
 authoritative laneの後にだけ、残余budgetでgeneric laneを実行する。
@@ -913,6 +924,16 @@ Windows external live gateは、candidate SHA固定後の`origin`同branchへの
 既存0.9.2回帰と`timeout-minutes: 10`を保持する。offline scan／preview／fixtureはnetwork／external write 0のままで、live gateの
 push／Actionsだけを別operation logへ記録する。gate未実行／CI利用不能は`external-live-gate-unavailable`またはverification-infra、
 runner内のcandidate因果assertion failureはproductとして分離し、いずれも`windowsVerified=false`を維持する。
+
+Sprint 050 Patch 005で更新するpublic common runtimeの固定面は、少なくとも次の3 pathである。
+
+- `plugins/secretary/scripts/clarity.mjs`
+- `plugins/secretary/scripts/lib/clarity-core.mjs`
+- `plugins/secretary/scripts/lib/clarity-harness-scan.mjs`
+
+public candidateのsource／clean checkout／Git-freeでこの3 pathとstate構造抽出の意味を固定し、独立Evaluator PASS後だけ
+private my-vault、次にYasashiiへ宣言済みcommon pathとして渡す。Yasashiiのpublic fixed candidateは3 pathのbyte-syncを必要とするが、
+public PASSをYasashii PASSへ流用しない。private／Yasashiiの版固有正本、Harness state、spec、progress、feedbackを同期対象にしない。
 
 ### ClarityRootPolicy
 

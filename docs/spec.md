@@ -88,6 +88,12 @@ Harnessの`docs/sprints/state.md`、Current Sprint contract／progress／feedbac
 Evaluator検証を意味別に扱う。一般fileは残余budgetで読む。併せてClarity init／scannerをWindows native対象にし、drive letter、
 backslash、空白、日本語、CRLF、case-insensitive衝突、junction／symlink権限差を安全かつ正直に扱う。Windows形式文字列をmacOSで
 模擬しただけではWindows verifiedとせず、正式Windows runnerの実行結果を別に記録する。
+2026-08-31に、Sprint 050 Patch 004の独立PASS後、Yasashii相当の実Repoで`docs/sprints/state.md`内の無害な履歴説明
+（credential field名を含むplaceholder／コード例）がwhole-fileの`secret-like-content`として除外され、Current IDと4 role bundleが
+消えるproduct defectを確認した。stateは本文を一般文書として採用するsourceではなく、Orchestrator execution truthの構造化fieldだけを
+boundedに抽出するauthoritative sourceとして扱う。無害なfield名・placeholder・過去説明ではCurrentを失わず、実値らしいSecretが混在しても
+値、本文、raw-content由来digest、summary、candidate、Evidenceへ漏らさない。state以外のauthoritative sourceとgeneric laneのstrict exclusionは
+維持する。public common runtimeを先に修正・独立評価し、その固定candidateからprivate my-vault、次にYasashiiを別Harnessへ同期・独立評価する。
 
 ## ひとことで
 
@@ -199,6 +205,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-050-patch-002](sprints/sprint-050-patch-002.md) | Claude標準Hookの重複manifest宣言だけを解消する | sprint-050-patch-001 |
 | [sprint-050-patch-003](sprints/sprint-050-patch-003.md) | 開発PJの正本freshness確認とClarity限定ancestor symlink aliasを安全に成立させる | sprint-050-patch-002 |
 | [sprint-050-patch-004](sprints/sprint-050-patch-004.md) | Harness正本を予約枠で取りこぼさない包括的init scannerとWindows native互換 | sprint-050-patch-003 |
+| [sprint-050-patch-005](sprints/sprint-050-patch-005.md) | stateの構造化execution truthとSecret本文を分離し、無害な履歴説明でもCurrent bundleを保持する | sprint-050-patch-004 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。
@@ -259,3 +266,4 @@ sprint-007 は製品方針転換で白紙化され、旧計画と実装は `back
 51. public版を先に独立PASSし、固定SHA／digestからprivate、次にYasashiiを別Harnessで適用・評価する。publicへprivate固有path／Notionを混ぜず、release／cache／downstream liveを別stageとして報告する。
 52. `development-pointer`／`canonicalRepo`を持つClarity-aware表示は、利用可能な正本repoをboundedかつread-onlyに確認し、最初に読むファイル、Repo identity／Git current state、Clarity状態、観測時刻、未確認理由を示す。正本を確認できない場合はworkspace側のsnapshotだけで包括的な現在判断を確定しない。
 53. 一般filesystemのworking rootはancestor symlink拒否を既定のまま維持する。Clarityの指定入口だけが内部root resolverから`allowAncestorSymlinks: true`を明示し、利用者のflag／設定なしでroot自身ではなくancestorだけを物理rootへ固定できる。この緩和を共通filesystemや他Skillへ伝播させず、root自身／root内symlink、壊れたalias、差替え、実体変更、境界外writeは副作用0件で拒否する。
+54. Harness stateは構造化されたexecution truthと非構造本文を分離する。Current ID／status／Next Planned／該当table row等はboundedに抽出し、無害なplaceholder・コード例・履歴説明にcredential field名があってもCurrent／4 role bundleを失わない。実値らしいSecretが混在する場合は値・本文・raw-content由来digest・summary・candidate・Evidenceへ出さず、redacted／partial理由を返す。exact文字列allowlist、Secret検査の無効化、無制限readは禁止し、state以外のstrict exclusionを維持する。

@@ -276,6 +276,16 @@ Project Clarityはpublic `agentic-secretary`を共通coreの正本とする。pu
 Secretary-local、Linked External Repo、daily／weekly／Portfolio、Decision／Execution／Validation／Attention／Drift、
 共通command-only Hook、Markdown／Mermaid／Xmind provider、Skill／CLI、host adapter、packaging／inventoryである。
 
+Harness stateの構造化execution truthとSecret本文を分離する共通runtimeは、少なくとも次のpublic pathを固定candidate面とする。
+
+- `plugins/secretary/scripts/clarity.mjs`
+- `plugins/secretary/scripts/lib/clarity-core.mjs`
+- `plugins/secretary/scripts/lib/clarity-harness-scan.mjs`
+
+private my-vaultとYasashiiはこの3 pathを版固有にforkせず、宣言済みcommon pathとしてpublic fixed candidateとbyte-syncする。
+ただしbyte-syncは下流PASSの証明ではない。public独立PASS後にprivate my-vault、次にYasashiiの別Harnessで適用・回帰・独立評価し、
+各repo固有のspec、state、progress、feedback、README、overlay／private pathを同期しない。
+
 public sourceへ次を混ぜない。
 
 - private my-vault固有の`05/02` resolver、`vault/10_sources`、Notion TaskDB property／relation、private root guidance

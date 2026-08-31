@@ -488,6 +488,12 @@ Evaluator検証を別ラベルで示す。feedbackがまだ無い場合は「評
 確認済み、除外、未確認、使用量を短く示す。多数のHarness文書を1 file 1 Itemで羅列せず、Current Sprintの状態と根拠を一つの
 読みやすいbundleにする。
 
+stateの履歴説明にcredential field名、placeholder、コード例がある場合も、それだけで「実行状態を確認できません」に落とさず、
+安全に解決したCurrent Sprint、status、Next Planned、4 roleの確認状態を表示する。実値らしいSecretが混在する場合は値や本文を
+伏字で再掲せず、「機密らしい本文を除外し、実行状態の構造だけ確認しました」のように`redacted`／`partial`と変更0件を示す。
+raw-content digest、summary、candidate titleへSecret断片を出さない。構造field自体を安全に解決できない場合だけ、そのfieldを
+「未確認」と理由つきで表示し、Current IDやPASSを推測しない。
+
 Windowsでは利用者向けにPOSIX pathへ変換させない。drive letter、backslash、空白、日本語を含むpathをそのまま扱い、
 case collision、reserved／invalid path、symlink capability不足、junction capability不足は、何が確認できず、変更が0件かを別々に示す。
 native runnerで未実行のcaseを「Windows対応済み」と表示しない。

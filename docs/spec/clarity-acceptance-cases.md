@@ -504,6 +504,27 @@ HS caseは既存primary 250、CLX 20、XV 4、CF／AR 21へ数えない。Window
 
 ---
 
+# 19C. Sprint 050 Patch 005 — State structure／Secret redaction
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| SR-001 | Critical | current public sourceの実`docs/sprints/state.md`をread-only scanする。履歴説明にはcredential field名とplaceholderのコード例がある | Current ID／status／Next Planned／該当table rowを解決し、state・contract・progress・feedbackの4 roleとCurrent bundleを保持する。無害な履歴説明だけでwhole-fileを`secret-like-content`除外しない | command、state locator、構造field、4 role、bundle、coverage、changed false |
+| SR-002 | Critical | inline code、fenced code、過去の検査説明、複数のcredential field名、`<literal>`／`${PLACEHOLDER}`／伏字等の無害な例を別々にstateへ置く | exact文字列allowlistに依存せず、実行状態の構造と非構造本文を分ける。全positiveでCurrent／4 roleが一致し、本文をcandidateへ採用しない | fixture class、期待／観測Current、candidate IDs、rerun digest、source scan |
+| SR-003 | Critical | runtimeで生成したsynthetic Secret-like値をstateの履歴本文へ混在させる。値はtracked fixtureへ保存しない | 値と周辺本文を出力せず、Current／status／Next Planned／該当rowと4 role locatorは保持する。sourceは必要に応じて`redacted`／`partial`と理由を返し、validationを推測しない | canary non-occurrence、構造field、coverage／reason、stdout／JSON scan |
+| SR-004 | Critical | 低エントロピーを含む複数のruntime Secret候補を同じstate構造へ順に入れ、返却digest／candidate／Evidenceを比較する | unredacted whole-file／Secret span由来digestを返さず、候補辞書から値を照合できない。sanitized構造metadataが同じなら安全なcoverage／candidate digestは安定し、値の違いを外部へ漏らさない | in-memory candidate matrix、returned digest比較、raw hash不在、output scan |
+| SR-005 | Critical | contract、progress、feedback、spec reference、root guidance、package manifest、generic fileへ同じSecret-like inputを個別に置く | state専用の構造抽出を他sourceへ広げず、既存strict sensitive-name／Secret-like exclusionを維持する。値、本文、symlink先を読まず固有coverage理由を返す | sourceごとのcoverage／reason、canary、read log、external canary |
+| SR-006 | Critical | Yasashii相当のstateで無害な履歴説明とsynthetic Secret spanを128 KiB枠の先頭／中間／末尾、Current metadata／table rowの前後へ配置する。巨大stateも含む | bounded readを維持し、範囲内の安全なCurrent metadata／該当rowを決定的に解決する。範囲外・分断fieldはpartial／uninspectedとし、無制限readや完全coverageへ昇格しない | bytes read／limit、placement matrix、section locator、partial reason、timing bound |
+| SR-007 | Critical | Current ID valid／TBD／missing／invalid、Next Planned／last completion fallback、feedback absentを、無害本文／Secret本文と組み合わせる | 各state reasonとfallback sourceを維持し、安全なfallbackだけをinferred bundleへ使う。Secret本文によってCurrentをnull化せず、構造field自体がunsafeならそのfieldだけunresolvedにする | state snippets、fallback source、bundle、coverage、deterministic rerun |
+| SR-008 | Critical | public source／clean checkout／Git-free candidateでcommon runtimeを固定し、private my-vault→Yasashii handoff入力を検査する | `clarity.mjs`、`clarity-core.mjs`、`clarity-harness-scan.mjs`の3 pathとcandidate identityが固定される。下流のbyte-sync要件、保護path、順序を示すが実downstreamへwriteせず、public PASSを下流PASSへ昇格しない | candidate SHA、3 path digests、handoff scope／order、downstream write log 0 |
+| SR-009 | Critical | 同じcandidateでnon-Harness generic、4 role意味分離、ancestor alias／physical、Secret／binary／symlink、preview／cancel、dirty／staged／untracked、Git／networkを回帰する | Sprint 041／047／049／050 Patch 003／004の既存意味が0 product FAIL。previewは`changed:false`、alias identity／coverage一致、Git／external canary／network不変、inventory漏れ0 | commands、case totals、before／after tree・Git、identity／coverage digest、inventory result |
+| SR-010 | Critical | 既存PR #11のexact candidateをWindows Server 2025／Node 22の既存`windows-native` jobで実行する | SR Target、既存0.9.2回帰、HS／portable pathが0 FAILで、`timeout-minutes: 10`を維持する。別OS結果をWindows PASSへ流用せず、外部writeは同branch通常pushと因果CIだけ | candidate SHA／branch、run／job、OS／Node、command、totals、external operation log |
+
+SR caseは既存primary 250、CLX 20、XV 4、CF／AR 21、HS 16へ数えない。Secret negativeはruntime生成canaryを使い、
+実値、raw-content digest、周辺本文をtracked file、stdout、screenshot、feedbackへ残さない。public PASS後のprivate my-vault／Yasashiiは
+各repoの別Harnessと独立Evaluatorで扱い、SR-008のhandoff入力だけをPASS証拠として流用しない。
+
+---
+
 # 20. 最終E2Eシナリオ
 
 ## E2E-001: StandaloneからSecretary連携

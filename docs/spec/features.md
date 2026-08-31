@@ -602,6 +602,8 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Clarity initの「包括的」は全fileを無制限に読むことではなく、判断に必要な正本をboundedに取りこぼさないこととする。Harness Repoは構造から検出し、一般scanと分離したauthoritative reserved laneで`docs/sprints/state.md`を最優先に読む。
 - stateからCurrent IDをboundedに解決し、`docs/spec.md`と必要な`docs/spec/*.md`、current contract、対応progress、対応feedback、`AGENTS.md`、`CLAUDE.md`、package manifestを一般`src/`／`scripts/`より先に確認する。stateがTBD、missing、invalid、上限超過の場合は根拠とfallbackを明示し、推測を確定表示しない。
 - stateはOrchestrator execution truth、contractはrequirements、progressはGenerator self-report、feedbackはEvaluator validationとして意味を分ける。1 fileを機械的に1 Itemへ変換せず、同じCurrent SprintのDecision／Execution／ValidationとEvidenceを一貫した候補bundleへまとめる。feedback不存在は`evaluation-not-yet-recorded`相当で扱い、scan-limitによる未確認と区別する。
+- stateはCurrent ID、status、Next Planned、該当Sprint table row等の構造化execution truthと、履歴説明・コード例等の非構造本文を分離して扱う。credential field名、placeholder、無害な過去説明があるだけでstate全体を除外せず、Currentと4 role bundleを維持する。特定の既知文字列だけを許可するallowlistには依存しない。
+- stateに実値らしいSecretが混在する場合も、構造metadataは安全に抽出し、該当本文、値、summary、candidate、Evidence、raw-contentまたは低エントロピー推測に使えるdigestを返さない。必要なcoverageは`redacted`／`partial`と理由を正直に示し、state以外のauthoritative sourceとgeneric sourceのstrict Secret exclusionは維持する。
 - authoritative laneとgeneric scanのbudget、inspected／excluded／uninspected、partial理由を返す。正本が巨大、Secret-like、binary、symlink、missing、invalidの場合は黙って完全扱いせず、将来stateが1 file上限を超えてもCurrent metadataと該当sectionだけをboundedに扱える契約を持つ。
 - 巨大stateは`maxFileBytes`等の1 file上限を単純拡大して扱わず、Current metadataと該当sectionだけをboundedに読む。解決不能ならpartial／uninspectedを維持する。
 - 非Harness Repoは既存generic scanの候補、上限、順序、安全意味を回帰させない。Harness正本を確保した後だけ、残余budgetで一般fileを読む。
