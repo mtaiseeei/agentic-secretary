@@ -1,4 +1,5 @@
 import {
+  accessSync,
   closeSync,
   constants,
   existsSync,
@@ -13,6 +14,7 @@ import {
   rmdirSync,
   rmSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
@@ -155,18 +157,60 @@ const CANONICAL_LOCK_REL = ".clarity/lock.json";
 const CANONICAL_LOCK_OWNER = "agentic-secretary:clarity";
 const CANONICAL_LOCK_TTL_MS = 30_000;
 const CANONICAL_LOCK_WAIT_MS = 15_000;
+const CANONICAL_LOCK_POLL_MS = 10;
+const CANONICAL_LOCK_MAX_ATTEMPTS = Math.ceil(CANONICAL_LOCK_WAIT_MS / CANONICAL_LOCK_POLL_MS) + 2;
+const CANONICAL_REPLACE_MAX_ATTEMPTS = 7;
+const CANONICAL_REPLACE_MAX_WAIT_MS = 1_000;
+const CANONICAL_TRANSIENT_CODES = new Set(["EACCES", "EBUSY", "EPERM", "ETXTBSY"]);
+const CANONICAL_PROGRESS_SCHEMA_VERSION = 1;
+
+const injectedFailureHits = new Map();
+
+function injectedFailures() {
+  const raw = process.env.CLARITY_FS_FAILURES;
+  if (!raw) return [];
+  try {
+    const value = JSON.parse(raw);
+    return (Array.isArray(value) ? value : [value]).filter((row) => row && typeof row === "object");
+  } catch {
+    throw new ClarityError("failure-injection-invalid", "CLARITY_FS_FAILURESはJSON objectまたはarrayで指定してください。", 3, { changed: false });
+  }
+}
+
+function maybeInjectFilesystemFailure(point, target = null) {
+  for (const [index, rule] of injectedFailures().entries()) {
+    if (rule.point !== point || (rule.target && rule.target !== target)) continue;
+    const key = `${index}:${point}:${target || "-"}`;
+    const hit = (injectedFailureHits.get(key) || 0) + 1;
+    injectedFailureHits.set(key, hit);
+    const after = Math.max(0, Number(rule.after || 0));
+    const times = Math.max(1, Number(rule.times || 1));
+    if (hit <= after || hit > after + times) continue;
+    const error = new Error("injected canonical filesystem failure");
+    error.code = String(rule.code || "EPERM");
+    error.syscall = String(rule.syscall || (point.includes("cleanup") ? "unlink" : "rename"));
+    error.clarityInjected = true;
+    throw error;
+  }
+}
+
+function maybeCrash(point) {
+  if (process.env.CLARITY_CRASH_AT !== point) return;
+  process.kill(process.pid, "SIGKILL");
+}
 
 function sleepSync(milliseconds) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
 }
 
-function lockRecord(token) {
+function lockRecord(token, operationId = null) {
   const acquiredAt = new Date().toISOString();
   return {
     schemaVersion: 1,
     owner: CANONICAL_LOCK_OWNER,
     kind: "canonical-write",
     token,
+    operationId,
     acquiredAt,
     expiresAt: new Date(Date.parse(acquiredAt) + CANONICAL_LOCK_TTL_MS).toISOString(),
   };
@@ -191,45 +235,165 @@ function removeOwnedStaleLock(root, path, clock = Date.now()) {
   return true;
 }
 
-function withCanonicalWriteLock(rootValue, callback) {
+function filesystemIdentity(path) {
+  const stat = lstatSync(path, { bigint: true });
+  return {
+    dev: String(stat.dev),
+    ino: String(stat.ino),
+    mode: Number(stat.mode),
+    kind: stat.isFile() ? "file" : stat.isDirectory() ? "directory" : stat.isSymbolicLink() ? "symlink" : "other",
+  };
+}
+
+function sameIdentity(left, right) {
+  return Boolean(left && right && left.dev === right.dev && left.ino === right.ino && left.kind === right.kind);
+}
+
+function removeCreatedLockByIdentity(root, path, identity) {
+  try {
+    const checked = safeDeletePath(root, CANONICAL_LOCK_REL);
+    const current = filesystemIdentity(checked);
+    if (!sameIdentity(current, identity)) return false;
+    maybeInjectFilesystemFailure("lock-record-cleanup", CANONICAL_LOCK_REL);
+    unlinkSync(checked);
+    return true;
+  } catch { return false; }
+}
+
+function assertLeaseActive(lease) {
+  revalidateClarityRoot(lease.root);
+  const record = readOwnedLock(lease.path);
+  if (!record || record.token !== lease.token || record.operationId !== lease.operationId) {
+    throw new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、write／rollback／cleanupを停止しました。", 4, {
+      changed: false, operationId: lease.operationId, nextAction: "doctorで未完了operationを確認してください",
+    });
+  }
+  const expiresAt = Date.parse(record.expiresAt);
+  if (Number.isNaN(expiresAt) || expiresAt <= Date.now()) {
+    throw new ClarityError("canonical-lease-expired", "Clarity canonical lockのleaseが期限切れになったため、write／rollback／cleanupを停止しました。", 4, {
+      changed: false, operationId: lease.operationId, nextAction: "doctorで未完了operationを確認してください",
+    });
+  }
+  lease.expiresAt = expiresAt;
+  lease.metrics.leaseMarginMs = Math.max(0, expiresAt - Date.now());
+  return record;
+}
+
+function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}) {
   const root = rootPath(rootValue);
   const path = safeWritePath(root, CANONICAL_LOCK_REL);
   const token = sha256(`${process.pid}:${Date.now()}:${Math.random()}`);
   const started = Date.now();
   let acquired = false;
+  let attempts = 0;
   while (!acquired) {
+    attempts += 1;
+    if (attempts > CANONICAL_LOCK_MAX_ATTEMPTS || Date.now() - started > CANONICAL_LOCK_WAIT_MS) {
+      throw new ClarityError("canonical-lock-busy", "別のClarity書込みが進行中です。変更せず停止しました。", 4, { changed: false, nextAction: "処理完了後に再実行するか、doctorでlock状態を確認してください" });
+    }
     let descriptor = null;
+    let createdIdentity = null;
     try {
       const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
       descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
       const descriptorStat = fstatSync(descriptor);
       fail(descriptorStat.isFile(), "canonical-lock-unsafe", "Clarity canonical lockを通常fileとして作成できません。");
-      writeFileSync(descriptor, stableJson(lockRecord(token)), "utf8");
+      createdIdentity = {
+        dev: String(descriptorStat.dev), ino: String(descriptorStat.ino), mode: Number(descriptorStat.mode), kind: "file",
+      };
+      maybeCrash("lock-record-before");
+      maybeInjectFilesystemFailure("lock-record-before", CANONICAL_LOCK_REL);
+      writeFileSync(descriptor, stableJson(lockRecord(token, operationId)), "utf8");
       acquired = true;
     } catch (error) {
-      if (error?.code === "ENOENT") continue;
-      if (error?.code !== "EEXIST") throw error;
+      if (createdIdentity && !acquired) {
+        if (descriptor !== null) { closeSync(descriptor); descriptor = null; }
+        const cleaned = removeCreatedLockByIdentity(root, path, createdIdentity);
+        if (!cleaned) {
+          throw new ClarityError("canonical-lock-record-incomplete", "lock排他作成後に所有recordを確定できず、同じinodeのcleanupにも失敗しました。成功扱いにしません。", 4, {
+            changed: false, operationId, lock: CANONICAL_LOCK_REL, nextAction: "doctorで識別不能lockを確認し、利用者確認後に回復してください",
+          });
+        }
+      }
+      if (error?.code === "ENOENT") {
+        if (Date.now() - started >= CANONICAL_LOCK_WAIT_MS) throw new ClarityError("canonical-lock-parent-missing", "Clarity canonical lockの親directoryを上限内に確認できませんでした。", 4, { changed: false });
+        sleepSync(CANONICAL_LOCK_POLL_MS);
+        continue;
+      }
+      if (error?.code !== "EEXIST") {
+        throw new ClarityError("canonical-lock-create-failed", "Clarity canonical lockを安全に確定できなかったため、変更せず停止しました。", 4, {
+          changed: false, operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown",
+        });
+      }
       let stat;
       try { stat = lstatSync(path); }
-      catch (statError) { if (statError?.code === "ENOENT") continue; throw statError; }
+      catch (statError) {
+        if (statError?.code === "ENOENT") { sleepSync(CANONICAL_LOCK_POLL_MS); continue; }
+        throw statError;
+      }
       fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-lock-unsafe", "Clarity canonical lock pathが安全ではありません。");
-      if (removeOwnedStaleLock(root, path)) continue;
+      if (removeOwnedStaleLock(root, path)) { sleepSync(CANONICAL_LOCK_POLL_MS); continue; }
       if (Date.now() - started >= CANONICAL_LOCK_WAIT_MS) {
         throw new ClarityError("canonical-lock-busy", "別のClarity書込みが進行中です。変更せず停止しました。", 4, { changed: false, nextAction: "処理完了後に再実行するか、doctorでlock状態を確認してください" });
       }
-      sleepSync(10);
+      sleepSync(CANONICAL_LOCK_POLL_MS);
     } finally {
       if (descriptor !== null) closeSync(descriptor);
     }
   }
+  const lockWaitMs = Date.now() - started;
+  const lease = {
+    root, path, token, operationId, expiresAt: Date.now() + CANONICAL_LOCK_TTL_MS,
+    metrics: {
+      lockAttempts: attempts,
+      lockWaitMs,
+      lockWaitLimitMs: CANONICAL_LOCK_WAIT_MS,
+      lockWaitMarginMs: Math.max(0, CANONICAL_LOCK_WAIT_MS - lockWaitMs),
+      leaseLimitMs: CANONICAL_LOCK_TTL_MS,
+      leaseCriticalMs: 0,
+      leaseMarginMs: CANONICAL_LOCK_TTL_MS,
+      replaceAttempts: 0,
+      replaceRetryWaitMs: 0,
+      rollbackMs: 0,
+      cleanupMs: 0,
+    },
+  };
+  const criticalStarted = Date.now();
+  let result;
+  let callbackError = null;
   try {
-    return callback(root);
+    assertLeaseActive(lease);
+    result = callback(root, lease);
+  } catch (error) {
+    callbackError = error;
   } finally {
+    lease.metrics.leaseCriticalMs = Date.now() - criticalStarted;
+    lease.metrics.leaseMarginMs = Math.max(0, lease.expiresAt - Date.now());
     try {
       const record = readOwnedLock(path);
-      if (record?.token === token) rmSync(path);
-    } catch { /* doctor／cleanupが残骸を扱う。 */ }
+      if (record?.token === token && record?.operationId === operationId && Date.parse(record.expiresAt) > Date.now()) {
+        maybeInjectFilesystemFailure("lock-release-cleanup", CANONICAL_LOCK_REL);
+        rmSync(path);
+      } else if (!callbackError) {
+        callbackError = new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、成功扱いにしません。", 4, { changed: false, operationId, nextAction: "doctorでlock状態を確認してください" });
+      }
+    } catch (error) {
+      if (!callbackError) callbackError = new ClarityError("canonical-release-incomplete", "canonical write後のlock release／cleanupに失敗したため、成功扱いにしません。", 4, {
+        changed: Boolean(result?.changed), operationId, nextAction: "doctorで自己所有lockを確認し、利用者確認後にcleanupしてください", errorCode: error?.code || "unknown",
+      });
+    }
   }
+  if (callbackError) {
+    if (callbackError instanceof ClarityError) {
+      callbackError.details = { ...(callbackError.details || {}), writeMetrics: { ...lease.metrics } };
+      throw callbackError;
+    }
+    throw new ClarityError("canonical-write-failed", "Clarity canonical writeを安全に完了できなかったため、成功扱いにしません。", 4, {
+      changed: false, operationId, errorCode: callbackError?.code || "unknown", syscall: callbackError?.syscall || "unknown", writeMetrics: { ...lease.metrics },
+    });
+  }
+  if (result && typeof result === "object") result.writeMetrics = { ...lease.metrics };
+  return result;
 }
 
 function rootPath(value) {
@@ -967,6 +1131,341 @@ function writeIfChanged(root, rel, bytes) {
   return true;
 }
 
+function operationToken(value) {
+  return sha256(String(value)).slice(0, 24);
+}
+
+function operationPaths(operationId, canonicalRel) {
+  const id = operationToken(operationId);
+  const label = basename(canonicalRel).replace(/[^a-z0-9]+/giu, "-").replace(/^-|-$/gu, "");
+  return {
+    progress: `.clarity/runtime/operation-${id}.json`,
+    before: `.clarity/.clarity-op-${id}-${label}-before.tmp`,
+    after: `.clarity/.clarity-op-${id}-${label}-after.tmp`,
+  };
+}
+
+function ensureRuntimeDirectory(root) {
+  const rel = ".clarity/runtime";
+  const path = safeWritePath(root, rel);
+  if (!existsSync(path)) mkdirSync(path, { mode: 0o700 });
+  const stat = lstatSync(path);
+  fail(stat.isDirectory() && !stat.isSymbolicLink(), "runtime-unsafe", "runtime pathが安全な通常directoryではないため変更しません。", { changed: false });
+  return path;
+}
+
+function writeOwnedOperationProgress(root, record, lease = null) {
+  ensureRuntimeDirectory(root);
+  const bytes = stableJson(record);
+  const target = safeWritePath(root, record.artifacts.progress);
+  const tempRel = `.clarity/runtime/.tmp-${operationToken(`${record.operationId}:${record.stage}:${Date.now()}:${Math.random()}`)}`;
+  const temp = safeWritePath(root, tempRel);
+  writeFileSync(temp, bytes, { flag: "wx", mode: 0o600 });
+  const tempIdentity = filesystemIdentity(temp);
+  const targetIdentity = existsSync(target) ? filesystemIdentity(target) : null;
+  const started = Date.now();
+  let attempts = 0;
+  try {
+    for (;;) {
+      attempts += 1;
+      if (lease) lease.metrics.replaceAttempts += 1;
+      revalidateClarityRoot(root);
+      if (lease) assertLeaseActive(lease);
+      const runtime = safeWritePath(root, ".clarity/runtime");
+      const runtimeStat = lstatSync(runtime);
+      fail(runtimeStat.isDirectory() && !runtimeStat.isSymbolicLink(), "runtime-unsafe", "progress親directoryが安全ではないため停止しました。", { changed: false, operationId: record.operationId });
+      accessSync(runtime, constants.W_OK);
+      fail(sameIdentity(filesystemIdentity(temp), tempIdentity) && sha256(readFileSync(temp)) === sha256(bytes),
+        "operation-progress-temp-changed", "logical operation progress tempが変わったため停止しました。", { changed: false, operationId: record.operationId });
+      if (targetIdentity) {
+        fail(existsSync(target) && sameIdentity(filesystemIdentity(target), targetIdentity), "operation-progress-changed", "logical operation progressが別実体へ変わったため停止しました。", { changed: false, operationId: record.operationId });
+        let prior;
+        try { prior = JSON.parse(readFileSync(target, "utf8")); } catch { prior = null; }
+        fail(prior?.owner === CANONICAL_LOCK_OWNER && prior?.operationId === record.operationId,
+          "operation-progress-changed", "logical operation progressのowner／operationが一致しないため停止しました。", { changed: false, operationId: record.operationId });
+      } else fail(!existsSync(target), "operation-progress-changed", "logical operation progressが同時に作成されたため停止しました。", { changed: false, operationId: record.operationId });
+      try {
+        maybeInjectFilesystemFailure("progress-replace", record.artifacts.progress);
+        renameSync(temp, target);
+        return;
+      } catch (error) {
+        const elapsed = Date.now() - started;
+        if (!CANONICAL_TRANSIENT_CODES.has(error?.code) || attempts >= CANONICAL_REPLACE_MAX_ATTEMPTS || elapsed >= CANONICAL_REPLACE_MAX_WAIT_MS) throw error;
+        const wait = Math.min(10 * 2 ** (attempts - 1), 160, CANONICAL_REPLACE_MAX_WAIT_MS - elapsed);
+        if (wait <= 0) throw error;
+        sleepSync(wait);
+        if (lease) lease.metrics.replaceRetryWaitMs += wait;
+      }
+    }
+  } catch (error) {
+    try {
+      if (existsSync(temp) && sameIdentity(filesystemIdentity(temp), tempIdentity)) unlinkSync(temp);
+    } catch { /* preview cleanupが識別可能なtempを扱う。 */ }
+    throw error;
+  }
+}
+
+function readOwnedOperationProgress(root, operationId) {
+  const progressRel = operationPaths(operationId, ".clarity/state.json").progress;
+  const path = safeWritePath(root, progressRel);
+  if (!existsSync(path)) return null;
+  let record;
+  try { record = JSON.parse(readFileSync(path, "utf8")); }
+  catch { throw new ClarityError("operation-progress-invalid", "Clarity logical operation recordがJSONではないため、自動回復せず停止しました。", 4, { changed: false, operationId }); }
+  fail(record?.schemaVersion === CANONICAL_PROGRESS_SCHEMA_VERSION
+    && record.owner === CANONICAL_LOCK_OWNER
+    && record.operationId === operationId
+    && record.artifacts?.progress === progressRel,
+  "operation-progress-invalid", "Clarity logical operation recordの所有情報が一致しないため、自動回復せず停止しました。", { changed: false, operationId });
+  return record;
+}
+
+function assertWritableCanonicalTarget(root, rel, expectedIdentity, expectedParentIdentity, lease, tempRel = null, expectedTempDigest = null, expectedTempIdentity = null) {
+  revalidateClarityRoot(root);
+  assertLeaseActive(lease);
+  const target = safeWritePath(root, rel);
+  const parent = dirname(target);
+  const parentStat = lstatSync(parent);
+  fail(parentStat.isDirectory() && !parentStat.isSymbolicLink(), "canonical-parent-unsafe", "canonicalの親directoryが安全ではないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  fail(!expectedParentIdentity || sameIdentity(filesystemIdentity(parent), expectedParentIdentity), "canonical-parent-changed", "canonicalの親directory identityが試行中に変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  accessSync(parent, constants.W_OK);
+  const stat = lstatSync(target);
+  fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-target-unsafe", "canonical targetが安全な通常fileではないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  fail((stat.mode & 0o222) !== 0, "canonical-target-readonly", "canonical targetがread-onlyのためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  const identity = filesystemIdentity(target);
+  fail(!expectedIdentity || sameIdentity(identity, expectedIdentity), "canonical-target-changed", "canonical targetのidentityが試行中に変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  if (tempRel) {
+    const temp = safeWritePath(root, tempRel);
+    const tempStat = lstatSync(temp);
+    fail(tempStat.isFile() && !tempStat.isSymbolicLink() && (tempStat.mode & 0o077) === 0 && (!expectedTempIdentity || sameIdentity(filesystemIdentity(temp), expectedTempIdentity)), "canonical-temp-unsafe", "自己所有tempのidentity／権限が一致しないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+    if (expectedTempDigest) fail(sha256(readFileSync(temp)) === expectedTempDigest, "canonical-temp-changed", "自己所有tempの内容が変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  }
+  return { target, identity };
+}
+
+function createOwnedArtifact(root, rel, bytes) {
+  const path = safeWritePath(root, rel);
+  writeFileSync(path, bytes, { flag: "wx", mode: 0o600 });
+  return { rel, digest: sha256(bytes), identity: filesystemIdentity(path) };
+}
+
+function replaceCanonicalWithRetry(root, rel, tempRel, expectedTargetIdentity, expectedTempDigest, lease, point = "canonical-replace") {
+  const started = Date.now();
+  const expectedParentIdentity = filesystemIdentity(dirname(safeWritePath(root, rel)));
+  const expectedTempIdentity = filesystemIdentity(safeWritePath(root, tempRel));
+  let attempts = 0;
+  for (;;) {
+    attempts += 1;
+    lease.metrics.replaceAttempts += 1;
+    const checked = assertWritableCanonicalTarget(root, rel, expectedTargetIdentity, expectedParentIdentity, lease, tempRel, expectedTempDigest, expectedTempIdentity);
+    try {
+      maybeInjectFilesystemFailure(point, rel);
+      renameSync(safeWritePath(root, tempRel), checked.target);
+      return filesystemIdentity(checked.target);
+    } catch (error) {
+      const elapsed = Date.now() - started;
+      if (!CANONICAL_TRANSIENT_CODES.has(error?.code)
+        || attempts >= CANONICAL_REPLACE_MAX_ATTEMPTS
+        || elapsed >= CANONICAL_REPLACE_MAX_WAIT_MS) {
+        throw error;
+      }
+      const wait = Math.min(10 * 2 ** (attempts - 1), 160, CANONICAL_REPLACE_MAX_WAIT_MS - elapsed);
+      if (wait <= 0) throw error;
+      sleepSync(wait);
+      lease.metrics.replaceRetryWaitMs += wait;
+    }
+  }
+}
+
+function removeOwnedArtifact(root, rel, digest, lease) {
+  assertLeaseActive(lease);
+  const path = safeDeletePath(root, rel);
+  if (!existsSync(path)) return false;
+  const stat = lstatSync(path);
+  fail(stat.isFile() && !stat.isSymbolicLink() && sha256(readFileSync(path)) === digest,
+    "canonical-artifact-changed", "自己所有artifactが記録と一致しないため削除しません。", { changed: false, operationId: lease.operationId });
+  maybeInjectFilesystemFailure("canonical-cleanup", rel);
+  unlinkSync(path);
+  return true;
+}
+
+function cleanupOperationArtifacts(root, record, lease) {
+  for (const [rel, digest] of [
+    [record.canonical.before, record.canonical.beforeDigest],
+    [record.canonical.after, record.canonical.afterDigest],
+    [record.state.before, record.state.beforeDigest],
+    [record.state.after, record.state.afterDigest],
+  ]) removeOwnedArtifact(root, rel, digest, lease);
+  removeOwnedArtifact(root, record.artifacts.progress, sha256(stableJson(record)), lease);
+}
+
+function recoverOperationRecordUnlocked(root, lease, record) {
+  fail(record.target === record.canonical.rel
+    && [".clarity/events.jsonl", ".clarity/evidence.jsonl"].includes(record.target)
+    && record.state.rel === ".clarity/state.json",
+  "operation-progress-invalid", "logical operationのcanonical targetが許可範囲外です。", { changed: false, operationId: lease.operationId });
+  const canonicalDigest = sha256(readFileSync(safeWritePath(root, record.canonical.rel)));
+  const stateDigest = sha256(readFileSync(safeWritePath(root, record.state.rel)));
+  const allowedCanonical = new Set([record.canonical.beforeDigest, record.canonical.afterDigest]);
+  const allowedState = new Set([record.state.beforeDigest, record.state.afterDigest]);
+  fail(allowedCanonical.has(canonicalDigest) && allowedState.has(stateDigest),
+    "operation-progress-mismatch", "logical operation recordとcanonical実体が一致しないため、自動回復せず停止しました。", { changed: false, operationId: lease.operationId });
+  record.token = lease.token;
+  record.expiresAt = new Date(lease.expiresAt).toISOString();
+  record.stage = "recovering";
+  writeOwnedOperationProgress(root, record, lease);
+  if (canonicalDigest === record.canonical.afterDigest && stateDigest === record.state.beforeDigest) {
+    const afterPath = safeWritePath(root, record.state.after);
+    fail(existsSync(afterPath) && sha256(readFileSync(afterPath)) === record.state.afterDigest,
+      "operation-progress-mismatch", "roll-forward用State artifactが一致しないため停止しました。", { changed: false, operationId: lease.operationId });
+    replaceCanonicalWithRetry(root, record.state.rel, record.state.after, filesystemIdentity(safeWritePath(root, record.state.rel)), record.state.afterDigest, lease);
+  } else if (canonicalDigest === record.canonical.beforeDigest && stateDigest === record.state.afterDigest) {
+    const afterPath = safeWritePath(root, record.canonical.after);
+    fail(existsSync(afterPath) && sha256(readFileSync(afterPath)) === record.canonical.afterDigest,
+      "operation-progress-mismatch", "roll-forward用append artifactが一致しないため停止しました。", { changed: false, operationId: lease.operationId });
+    replaceCanonicalWithRetry(root, record.canonical.rel, record.canonical.after, filesystemIdentity(safeWritePath(root, record.canonical.rel)), record.canonical.afterDigest, lease);
+  }
+  record.stage = "recovered";
+  writeOwnedOperationProgress(root, record, lease);
+  cleanupOperationArtifacts(root, record, lease);
+  return { recovered: true, rolledForward: canonicalDigest !== record.canonical.beforeDigest || stateDigest !== record.state.beforeDigest };
+}
+
+function recoverOwnedOperationUnlocked(root, lease) {
+  const record = readOwnedOperationProgress(root, lease.operationId);
+  return record ? recoverOperationRecordUnlocked(root, lease, record) : { recovered: false };
+}
+
+function ownedOperationRecords(root) {
+  const runtime = safeWritePath(root, ".clarity/runtime");
+  if (!existsSync(runtime)) return [];
+  const stat = lstatSync(runtime);
+  fail(stat.isDirectory() && !stat.isSymbolicLink(), "runtime-unsafe", "runtime pathが安全な通常directoryではないため回復しません。", { changed: false });
+  const records = [];
+  for (const name of readdirSync(runtime).filter((value) => /^operation-[a-f0-9]{24}\.json$/u.test(value)).sort()) {
+    const rel = `.clarity/runtime/${name}`;
+    let record;
+    try { record = JSON.parse(readFileSync(safeWritePath(root, rel), "utf8")); }
+    catch { throw new ClarityError("operation-progress-invalid", "logical operation recordがJSONではないため回復しません。", 4, { changed: false, progress: rel }); }
+    if (record?.kind !== "canonical-logical-write") continue;
+    fail(record?.schemaVersion === CANONICAL_PROGRESS_SCHEMA_VERSION && record.owner === CANONICAL_LOCK_OWNER && record.artifacts?.progress === rel,
+      "operation-progress-invalid", "logical operation recordの所有情報が一致しないため回復しません。", { changed: false, progress: rel });
+    records.push(record);
+  }
+  return records;
+}
+
+function logicalAppendUnlocked(root, lease, { canonicalRel, row, idKey, validator, nextState }) {
+  validator(row);
+  const canonicalPath = safeWritePath(root, canonicalRel);
+  const rows = jsonLines(canonicalPath, validator);
+  if (rows.some((existing) => existing[idKey] === row[idKey])) return { changed: false, stateChanged: false };
+  const beforeCanonical = readFileSync(canonicalPath);
+  const afterCanonical = Buffer.from(`${rows.map((existing) => JSON.stringify(existing)).join("\n")}${rows.length ? "\n" : ""}${JSON.stringify(row)}\n`, "utf8");
+  const stateRel = ".clarity/state.json";
+  const beforeState = readFileSync(safeWritePath(root, stateRel));
+  const afterState = Buffer.from(stableJson(nextState), "utf8");
+  const canonicalArtifacts = operationPaths(lease.operationId, canonicalRel);
+  const stateArtifacts = operationPaths(lease.operationId, stateRel);
+  ensureRuntimeDirectory(root);
+  const created = [];
+  try {
+    created.push(createOwnedArtifact(root, canonicalArtifacts.before, beforeCanonical));
+    created.push(createOwnedArtifact(root, canonicalArtifacts.after, afterCanonical));
+    created.push(createOwnedArtifact(root, stateArtifacts.before, beforeState));
+    created.push(createOwnedArtifact(root, stateArtifacts.after, afterState));
+  } catch (error) {
+    for (const artifact of created) {
+      try {
+        if (existsSync(safeDeletePath(root, artifact.rel)) && sameIdentity(filesystemIdentity(safeDeletePath(root, artifact.rel)), artifact.identity)) unlinkSync(safeDeletePath(root, artifact.rel));
+      } catch { /* doctorが識別可能な残骸を扱う。 */ }
+    }
+    throw error;
+  }
+  const record = {
+    schemaVersion: CANONICAL_PROGRESS_SCHEMA_VERSION,
+    owner: CANONICAL_LOCK_OWNER,
+    kind: "canonical-logical-write",
+    operationId: lease.operationId,
+    token: lease.token,
+    stage: "prepared",
+    createdAt: nowIso(),
+    expiresAt: new Date(lease.expiresAt).toISOString(),
+    target: canonicalRel,
+    idKey,
+    rowId: row[idKey],
+    canonical: {
+      rel: canonicalRel, beforeDigest: sha256(beforeCanonical), afterDigest: sha256(afterCanonical),
+      before: canonicalArtifacts.before, after: canonicalArtifacts.after,
+    },
+    state: {
+      rel: stateRel, beforeDigest: sha256(beforeState), afterDigest: sha256(afterState),
+      before: stateArtifacts.before, after: stateArtifacts.after,
+    },
+    artifacts: { progress: canonicalArtifacts.progress },
+  };
+  const canonicalIdentity = filesystemIdentity(canonicalPath);
+  let canonicalAfterIdentity;
+  try {
+    writeOwnedOperationProgress(root, record, lease);
+    maybeCrash("canonical-sibling-temp-after");
+    canonicalAfterIdentity = replaceCanonicalWithRetry(root, canonicalRel, canonicalArtifacts.after, canonicalIdentity, record.canonical.afterDigest, lease);
+    record.stage = "canonical-replaced";
+    writeOwnedOperationProgress(root, record, lease);
+    maybeCrash("event-state-between");
+    maybeInjectFilesystemFailure("event-state-between", stateRel);
+    const stateIdentity = filesystemIdentity(safeWritePath(root, stateRel));
+    replaceCanonicalWithRetry(root, stateRel, stateArtifacts.after, stateIdentity, record.state.afterDigest, lease);
+    record.stage = "state-replaced";
+    record.stage = "committed";
+    writeOwnedOperationProgress(root, record, lease);
+  } catch (error) {
+    if (record.stage === "canonical-replaced") {
+      const rollbackStarted = Date.now();
+      try {
+        assertLeaseActive(lease);
+        replaceCanonicalWithRetry(root, canonicalRel, canonicalArtifacts.before, canonicalAfterIdentity, record.canonical.beforeDigest, lease, "canonical-rollback");
+        record.stage = "rolled-back";
+        writeOwnedOperationProgress(root, record, lease);
+      } catch (rollbackError) {
+        record.stage = "rollback-failed";
+        record.failure = { code: error?.code || "write-failed", rollbackCode: rollbackError?.code || "rollback-failed" };
+        try { writeOwnedOperationProgress(root, record, lease); } catch { /* durable record may already identify the operation */ }
+        throw new ClarityError("canonical-double-fault", "State writeと自己append rollbackの両方が失敗しました。成功扱いにせず、明示rebuildで回復してください。", 4, {
+          changed: false, operationId: lease.operationId, stage: record.stage, nextAction: "doctorを確認し、clarity rebuildを明示実行してください",
+        });
+      } finally { lease.metrics.rollbackMs += Date.now() - rollbackStarted; }
+    }
+    if (["prepared", "rolled-back"].includes(record.stage)) {
+      const cleanupStarted = Date.now();
+      try { cleanupOperationArtifacts(root, record, lease); }
+      catch (cleanupError) {
+        throw new ClarityError("canonical-cleanup-incomplete", "rollback後の自己所有artifact cleanupに失敗したため、成功扱いにしません。", 4, {
+          changed: false, operationId: lease.operationId, causeCode: cleanupError?.code || "cleanup-failed", nextAction: "doctorで自己所有artifactを確認してください",
+        });
+      } finally { lease.metrics.cleanupMs += Date.now() - cleanupStarted; }
+    }
+    if (["state-replaced", "committed"].includes(record.stage)) {
+      try { writeOwnedOperationProgress(root, { ...record, stage: "cleanup-required", failure: { code: error?.code || "write-failed", syscall: error?.syscall || "unknown" } }, lease); } catch { /* existing durable progress remains authoritative */ }
+      throw new ClarityError("canonical-transaction-incomplete", "canonicalは整合状態ですがlogical operationの確定／cleanupに失敗したため、成功扱いにしません。", 4, {
+        changed: false, operationId: lease.operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown", nextAction: "doctorを確認し、同じ操作またはclarity rebuildを明示実行してください",
+      });
+    }
+    throw new ClarityError("canonical-write-failed", "canonical replaceは完了せず、安全な状態へ戻しました。", 4, {
+      changed: false, operationId: lease.operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown", attempts: lease.metrics.replaceAttempts,
+    });
+  }
+  const cleanupStarted = Date.now();
+  try {
+    cleanupOperationArtifacts(root, record, lease);
+  } catch (error) {
+    throw new ClarityError("canonical-cleanup-incomplete", "logical writeは整合しましたが自己所有artifactのcleanupに失敗したため、成功扱いにしません。", 4, {
+      changed: false, operationId: lease.operationId, nextAction: "doctorで自己所有artifactを確認してください",
+    });
+  } finally { lease.metrics.cleanupMs += Date.now() - cleanupStarted; }
+  return { changed: true, stateChanged: sha256(beforeState) !== sha256(afterState) };
+}
+
 function rebuildStateUnlocked(rootValue, { write = true } = {}) {
   const canonical = readCanonical(rootValue);
   const state = buildState(canonical.project, canonical.events, canonical.evidence);
@@ -978,7 +1477,11 @@ function rebuildStateUnlocked(rootValue, { write = true } = {}) {
 
 function rebuildStateImpl(rootValue, { write = true } = {}) {
   if (!write) return rebuildStateUnlocked(rootValue, { write: false });
-  return withCanonicalWriteLock(rootValue, (root) => rebuildStateUnlocked(root, { write: true }));
+  const operationId = `rebuild-${operationToken(`${Date.now()}:${process.pid}`)}`;
+  return withCanonicalWriteLock(rootValue, (root, lease) => {
+    const recoveries = ownedOperationRecords(root).map((record) => recoverOperationRecordUnlocked(root, lease, record));
+    return { ...rebuildStateUnlocked(root, { write: true }), recoveries };
+  }, { operationId });
 }
 
 function rootEntry() {
@@ -1125,41 +1628,49 @@ function assertStoredStateValidBeforeLock(root) {
 
 function appendEventImpl(rootValue, input) {
   const preflightRoot = rootPath(rootValue);
-  readCanonical(preflightRoot);
+  const preflightCanonical = readCanonical(preflightRoot);
   assertStoredStateValidBeforeLock(preflightRoot);
-  return withCanonicalWriteLock(rootValue, (root) => {
+  const payload = structuredClone(input.payload || {});
+  const occurredAt = input.occurredAt || nowIso();
+  const eventId = input.eventId || stableId("cv", `${preflightCanonical.project.clarityProjectId}:${input.type}:${input.itemId}:${JSON.stringify(payload)}`);
+  const operationId = `event-${eventId}`;
+  return withCanonicalWriteLock(rootValue, (root, lease) => {
+    const recovery = recoverOwnedOperationUnlocked(root, lease);
     const canonical = readCanonical(root);
     assertCanonicalProjectionSafe(root, canonical);
     if (canonical.project.schemaVersion < CLARITY_SCHEMA_VERSION && ["checkpoint.recorded", "attention.resolved", "attention.override", "drift.waiver.recorded"].includes(input.type)) {
       throw new ClarityError("migration-required", "この操作の前にschema migrationが必要です。変更していません。", 3, { changed: false, nextAction: "clarity migrate previewを確認してください" });
     }
-    const payload = structuredClone(input.payload || {});
-    const occurredAt = input.occurredAt || nowIso();
     const event = {
       schemaVersion: canonical.project.schemaVersion,
-      eventId: input.eventId || stableId("cv", `${canonical.project.clarityProjectId}:${input.type}:${input.itemId}:${JSON.stringify(payload)}`),
+      eventId,
       type: input.type,
       itemId: input.itemId,
       actor: input.actor || "manual-cli",
       occurredAt,
       payload,
     };
-    const changed = appendJsonLineUnlocked(canonical.root, ".clarity/events.jsonl", event, "eventId", validateEvent);
-    const rebuilt = rebuildStateUnlocked(canonical.root, { write: true });
-    return { event, changed, stateChanged: rebuilt.changed, state: rebuilt.state };
-  });
+    validateEvent(event);
+    const nextEvents = canonical.events.some((row) => row.eventId === event.eventId) ? canonical.events : [...canonical.events, event];
+    const state = buildState(canonical.project, nextEvents, canonical.evidence);
+    const write = logicalAppendUnlocked(canonical.root, lease, { canonicalRel: ".clarity/events.jsonl", row: event, idKey: "eventId", validator: validateEvent, nextState: state });
+    return { event, ...write, state, recovered: recovery.recovered };
+  }, { operationId });
 }
 
 function appendEvidenceImpl(rootValue, input) {
   const preflightRoot = rootPath(rootValue);
-  readCanonical(preflightRoot);
+  const preflightCanonical = readCanonical(preflightRoot);
   assertStoredStateValidBeforeLock(preflightRoot);
-  return withCanonicalWriteLock(rootValue, (root) => {
+  const evidenceId = input.evidenceId || stableId("ce", `${preflightCanonical.project.clarityProjectId}:${input.type}:${input.source}:${JSON.stringify(input.locator)}:${input.contentDigest || sha256(input.summary || "")}`);
+  const operationId = `evidence-${evidenceId}`;
+  return withCanonicalWriteLock(rootValue, (root, lease) => {
+    const recovery = recoverOwnedOperationUnlocked(root, lease);
     const canonical = readCanonical(root);
     assertCanonicalProjectionSafe(root, canonical);
     const normalized = {
       schemaVersion: canonical.project.schemaVersion,
-      evidenceId: input.evidenceId || stableId("ce", `${canonical.project.clarityProjectId}:${input.type}:${input.source}:${JSON.stringify(input.locator)}:${input.contentDigest || sha256(input.summary || "")}`),
+      evidenceId,
       type: input.type,
       source: input.source,
       locator: input.locator,
@@ -1169,10 +1680,12 @@ function appendEvidenceImpl(rootValue, input) {
       sensitivity: input.sensitivity || "non-secret-reference",
       availability: input.availability || "available",
     };
-    const changed = appendJsonLineUnlocked(canonical.root, ".clarity/evidence.jsonl", normalized, "evidenceId", validateEvidence);
-    const rebuilt = rebuildStateUnlocked(canonical.root, { write: true });
-    return { evidence: normalized, changed, stateChanged: rebuilt.changed };
-  });
+    validateEvidence(normalized);
+    const nextEvidence = canonical.evidence.some((row) => row.evidenceId === normalized.evidenceId) ? canonical.evidence : [...canonical.evidence, normalized];
+    const state = buildState(canonical.project, canonical.events, nextEvidence);
+    const write = logicalAppendUnlocked(canonical.root, lease, { canonicalRel: ".clarity/evidence.jsonl", row: normalized, idKey: "evidenceId", validator: validateEvidence, nextState: state });
+    return { evidence: normalized, ...write, recovered: recovery.recovered };
+  }, { operationId });
 }
 
 function attentionImpl(rootValue, { limit = 3, clock = nowIso() } = {}) {
@@ -1375,6 +1888,51 @@ function previewRuntimeCleanupImpl(rootValue, { clock = nowIso() } = {}) {
     }
     candidates.push({ path: rel, reason: "owned-stale-runtime", expiresAt });
   }
+  function inspectLogicalOperation(rel, record) {
+    if (record.owner !== CANONICAL_LOCK_OWNER || record.kind !== "canonical-logical-write") {
+      preserved.push({ path: rel, reason: "not-owned" }); return;
+    }
+    if (record.target !== record.canonical?.rel || ![".clarity/events.jsonl", ".clarity/evidence.jsonl"].includes(record.target) || record.state?.rel !== ".clarity/state.json") {
+      preserved.push({ path: rel, reason: "operation-progress-mismatch" }); return;
+    }
+    const expiresAt = record.expiresAt;
+    let canonicalDigest;
+    let stateDigest;
+    try {
+      canonicalDigest = sha256(readFileSync(safeWritePath(canonical.root, record.canonical.rel)));
+      stateDigest = sha256(readFileSync(safeWritePath(canonical.root, record.state.rel)));
+    } catch {
+      preserved.push({ path: rel, reason: "operation-progress-mismatch" }); return;
+    }
+    const canonicalKnown = [record.canonical.beforeDigest, record.canonical.afterDigest].includes(canonicalDigest);
+    const stateKnown = [record.state.beforeDigest, record.state.afterDigest].includes(stateDigest);
+    const aligned = canonicalKnown && stateKnown
+      && ((canonicalDigest === record.canonical.beforeDigest && stateDigest === record.state.beforeDigest)
+        || (canonicalDigest === record.canonical.afterDigest && stateDigest === record.state.afterDigest));
+    if (!aligned) {
+      preserved.push({ path: rel, reason: canonicalKnown && stateKnown ? "needs-explicit-rebuild" : "operation-progress-mismatch" });
+      return;
+    }
+    if (!expiresAt || Number.isNaN(Date.parse(expiresAt)) || Date.parse(expiresAt) > new Date(clock).valueOf()) {
+      const lockPath = safeWritePath(canonical.root, CANONICAL_LOCK_REL);
+      const lock = existsSync(lockPath) ? readOwnedLock(lockPath) : null;
+      const activeLease = lock?.owner === CANONICAL_LOCK_OWNER && lock?.token === record.token && lock?.operationId === record.operationId && Date.parse(lock.expiresAt) > new Date(clock).valueOf();
+      preserved.push({ path: rel, reason: activeLease ? "active-logical-operation" : "logical-operation-without-lease" }); return;
+    }
+    candidates.push({ path: rel, reason: "owned-stale-logical-operation", expiresAt, operationId: record.operationId, kind: "record" });
+    for (const [artifactRel, digest] of [
+      [record.canonical.before, record.canonical.beforeDigest], [record.canonical.after, record.canonical.afterDigest],
+      [record.state.before, record.state.beforeDigest], [record.state.after, record.state.afterDigest],
+    ]) {
+      const artifactPath = safeWritePath(canonical.root, artifactRel);
+      if (!existsSync(artifactPath)) continue;
+      const stat = lstatSync(artifactPath);
+      if (!stat.isFile() || stat.isSymbolicLink() || sha256(readFileSync(artifactPath)) !== digest) {
+        preserved.push({ path: artifactRel, reason: "operation-artifact-mismatch" }); continue;
+      }
+      candidates.push({ path: artifactRel, reason: "owned-stale-operation-artifact", expiresAt, operationId: record.operationId, kind: "artifact", digest });
+    }
+  }
   const canonicalLock = safeWritePath(canonical.root, CANONICAL_LOCK_REL);
   if (existsSync(canonicalLock)) {
     const stat = lstatSync(canonicalLock);
@@ -1386,10 +1944,28 @@ function previewRuntimeCleanupImpl(rootValue, { clock = nowIso() } = {}) {
     for (const entry of readdirSync(runtime, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
       const rel = `.clarity/runtime/${entry.name}`;
       if (!entry.isFile() || entry.isSymbolicLink() || !ownedRuntimeName.test(entry.name)) { preserved.push({ path: rel, reason: "not-owned" }); continue; }
+      if (/^operation-[a-f0-9]{24}\.json$/u.test(entry.name)) {
+        let record;
+        try { record = JSON.parse(readFileSync(join(runtime, entry.name), "utf8")); }
+        catch { preserved.push({ path: rel, reason: "ownership-unverified" }); continue; }
+        if (record?.kind === "canonical-logical-write") { inspectLogicalOperation(rel, record); continue; }
+      }
       inspectOwnedRecord(rel, join(runtime, entry.name));
     }
   }
-  return { status: candidates.length ? "cleanup-available" : "clean", changed: false, candidates, preserved, nextAction: candidates.length ? "内容を確認し、明示的に cleanup --apply を付けてください" : "追加操作は不要です" };
+  const clarityEntries = readdirSync(safeWritePath(canonical.root, ".clarity"), { withFileTypes: true });
+  const inventoried = new Set([...candidates, ...preserved].map((row) => row.path));
+  for (const entry of clarityEntries) {
+    if (!/^\.clarity-op-[a-f0-9]{24}-.+-(?:before|after)\.tmp$/u.test(entry.name)) continue;
+    const rel = `.clarity/${entry.name}`;
+    if (!inventoried.has(rel)) preserved.push({ path: rel, reason: "ownership-unverified-orphan-temp" });
+  }
+  const requiresConfirmation = preserved.some((row) => ["needs-explicit-rebuild", "operation-progress-mismatch", "operation-artifact-mismatch", "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified"].includes(row.reason));
+  return {
+    status: candidates.length ? "cleanup-available" : requiresConfirmation ? "confirmation-required" : "clean",
+    changed: false, candidates, preserved, requiresConfirmation,
+    nextAction: candidates.length ? "内容を確認し、明示的に cleanup --apply を付けてください" : requiresConfirmation ? "所有を確認できない残骸は自動削除せず、doctorの診断後に利用者が回復方法を選んでください" : "追加操作は不要です",
+  };
 }
 
 function applyRuntimeCleanupImpl(rootValue, options = {}) {
@@ -1399,13 +1975,21 @@ function applyRuntimeCleanupImpl(rootValue, options = {}) {
     const path = resolve(root, candidate.path);
     const stat = lstatSync(path);
     fail(stat.isFile() && !stat.isSymbolicLink(), "runtime-changed", "cleanup対象がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
-    let record;
-    try { record = JSON.parse(readFileSync(path, "utf8")); } catch { record = null; }
-    fail(record?.owner === "agentic-secretary:clarity" && (record.expiresAt || record.staleAfter) === candidate.expiresAt,
-      "runtime-changed", "cleanup対象の所有情報がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
+    if (candidate.kind === "artifact") {
+      fail(sha256(readFileSync(path)) === candidate.digest, "runtime-changed", "cleanup対象artifactがpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
+    } else {
+      let record;
+      try { record = JSON.parse(readFileSync(path, "utf8")); } catch { record = null; }
+      fail(record?.owner === "agentic-secretary:clarity" && (record.expiresAt || record.staleAfter) === candidate.expiresAt,
+        "runtime-changed", "cleanup対象の所有情報がpreview後に変わったため、削除していません。", { changed: false, path: candidate.path });
+    }
   }
   const removed = [];
-  for (const candidate of preview.candidates) {
+  const orderedCandidates = [...preview.candidates].sort((left, right) => {
+    const weight = (row) => row.kind === "artifact" ? 0 : row.kind === "record" ? 2 : 1;
+    return weight(left) - weight(right) || left.path.localeCompare(right.path, "en");
+  });
+  for (const candidate of orderedCandidates) {
     if (removeSafe(root, candidate.path).removed) removed.push(candidate.path);
   }
 
@@ -1549,13 +2133,17 @@ function doctorImpl(rootValue, options = {}) {
     return rebuilt && (item.decision.humanConfirmed !== rebuilt.decision.humanConfirmed || item.decision.status !== rebuilt.decision.status);
   }));
   const cleanup = previewRuntimeCleanup(canonical.root);
+  const recoveryBlocked = cleanup.preserved.some((row) => [
+    "needs-explicit-rebuild", "operation-progress-mismatch", "operation-artifact-mismatch",
+    "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified",
+  ].includes(row.reason));
   const schemaStatus = canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION ? "current" : "migration-available";
   const projectionOk = !stored.error && storedBytes === expectedBytes;
   const hook = hookDiagnostic(canonical.root, options);
   const link = linkedProjectDiagnostic(canonical.root, canonical.project);
   const xmind = xmindDiagnostic(canonical.root);
   return {
-    ok: projectionOk && cleanup.candidates.length === 0 && !["degraded", "untrusted", "failure"].includes(hook.status) && link.healthy && xmind.status !== "broken",
+    ok: projectionOk && cleanup.candidates.length === 0 && !recoveryBlocked && !["degraded", "untrusted", "failure"].includes(hook.status) && link.healthy && xmind.status !== "broken",
     mode: canonical.project.mode,
     schemaVersion: canonical.project.schemaVersion,
     currentSchemaVersion: CLARITY_SCHEMA_VERSION,
@@ -1575,10 +2163,10 @@ function doctorImpl(rootValue, options = {}) {
       link,
       xmind,
       projection: { status: projectionOk ? "正常" : "要再構築", verified: projectionOk },
-      lock: { status: cleanup.candidates.length ? "残骸あり" : "残骸なし", verified: true },
+      lock: { status: recoveryBlocked ? "確認が必要" : cleanup.candidates.length ? "残骸あり" : "残骸なし", verified: !recoveryBlocked },
     },
     runtimeCleanup: cleanup,
-    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : !link.healthy ? "link mapping／manual bundle／manifestを確認してください" : !["supported", "verified"].includes(hook.status) ? hook.nextAction : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
+    nextAction: schemaStatus === "migration-available" ? "migrate previewを確認してください" : recoveryBlocked ? "自己所有未完了operationを確認し、clarity rebuildまたは利用者確認付きcleanupを実行してください" : cleanup.candidates.length ? "cleanup previewを確認してください" : !link.healthy ? "link mapping／manual bundle／manifestを確認してください" : !["supported", "verified"].includes(hook.status) ? hook.nextAction : projectionOk ? "追加操作は不要です" : "clarity rebuildを実行してください",
   };
 }
 

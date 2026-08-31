@@ -29,6 +29,7 @@ const emptyGlobalGitConfig = join(work, "empty-global-gitconfig");
 const fixedNow = "2026-08-28T10:00:00.000Z";
 const results = [];
 const supplemental = [];
+const windowsStressRounds = [];
 let itemId; let baseHead; let oldSourceCommit;
 
 process.env.CLARITY_NOW = fixedNow;
@@ -37,6 +38,16 @@ process.env.CC_SECRETARY_NOW = fixedNow;
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function json(path) { return JSON.parse(readFileSync(path, "utf8")); }
 function lines(path) { return readFileSync(path, "utf8").trim().split(/\r?\n/u).filter(Boolean).map(JSON.parse); }
+function hookRuntimeRows(directory) {
+  if (!existsSync(directory)) return [];
+  const rows = [];
+  for (const session of readdirSync(directory)) {
+    const sessionPath = join(directory, session);
+    if (!lstatSync(sessionPath).isDirectory() || lstatSync(sessionPath).isSymbolicLink()) continue;
+    for (const name of readdirSync(sessionPath).filter((value) => value.endsWith(".json"))) rows.push(JSON.parse(readFileSync(join(sessionPath, name), "utf8")));
+  }
+  return rows;
+}
 function run(command, args, options = {}) {
   const env = { ...process.env, ...(options.env || {}) };
   for (const name of options.unsetEnv || []) delete env[name];
@@ -278,11 +289,49 @@ try {
     for (const path of ["../outside/decision.md", join(outside, "decision.md")]) { const rejected = runJson(process.execPath, [cli, "drift", root, "--input-file", inputFile(comparison({ decisionPath: path, operationId: sha(path).slice(0, 8) }), `path-${sha(path).slice(0, 8)}`), "--json"], 3); assert.equal(rejected.code, "drift-path-invalid"); }
   });
   await test("GS-009", "concurrent Hook／CLI write後もparse・unique・rebuild 100%", async () => {
-    const cliJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [cli, "event", root, "--event-json", JSON.stringify({ type: "attention.override", itemId, actor: "stress-cli", payload: { level: "high", reason: `stress-${index}`, rank: index } }), "--json"]));
-    const hookJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [hookCli], { input: `${JSON.stringify({ hook_event_name: "PostToolUse", session_id: "s047-stress", turn_id: `turn-${index}`, tool_name: "Write", tool_input: { file_path: join(root, `src/stress-${index}.js`) }, cwd: root })}\n`, env: { PLUGIN_ROOT: join(repo, "plugins/secretary") } }));
-    const all = await Promise.all([...cliJobs, ...hookJobs]); assert(all.every((row) => row.status === 0), all.filter((row) => row.status !== 0).map((row) => row.stderr).join("\n"));
-    const events = lines(join(root, ".clarity/events.jsonl")); assert.equal(new Set(events.map((row) => row.eventId)).size, events.length); assert.equal(events.filter((row) => row.actor === "stress-cli").length, 32);
-    const rebuild = runJson(process.execPath, [cli, "rebuild", root, "--json"]); assert(json(join(root, ".clarity/state.json"))); assert.equal(rebuild.state.source.eventCount, events.length);
+    const roundCount = process.platform === "win32" ? 3 : 1;
+    for (let round = 0; round < roundCount; round += 1) {
+      const roundStarted = Date.now();
+      const actor = `stress-cli-r${round}`;
+      const beforeEvents = lines(join(root, ".clarity/events.jsonl")).length;
+      const hookRoot = join(root, ".clarity/runtime/hooks/events");
+      const beforeHooks = hookRuntimeRows(hookRoot).length;
+      const cliJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [cli, "event", root, "--event-json", JSON.stringify({ type: "attention.override", itemId, actor, payload: { level: "high", reason: `stress-${round}-${index}`, rank: index } }), "--json"]));
+      const hookJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [hookCli], { input: `${JSON.stringify({ hook_event_name: "PostToolUse", session_id: `s047-stress-r${round}`, turn_id: `turn-${index}`, tool_name: "Write", tool_input: { file_path: join(root, `src/stress-${round}-${index}.js`) }, cwd: root })}\n`, env: { PLUGIN_ROOT: join(repo, "plugins/secretary") } }));
+      const all = await Promise.all([...cliJobs, ...hookJobs]);
+      assert.equal(all.length, 64); assert(all.every((row) => row.status === 0), all.filter((row) => row.status !== 0).map((row) => row.stderr).join("\n"));
+      const parsedCli = all.slice(0, 32).map((row) => JSON.parse(row.stdout));
+      const events = lines(join(root, ".clarity/events.jsonl"));
+      const hookRows = hookRuntimeRows(hookRoot);
+      assert.equal(new Set(events.map((row) => row.eventId)).size, events.length);
+      assert.equal(events.filter((row) => row.actor === actor).length, 32);
+      assert.equal(events.length - beforeEvents, 32);
+      assert.equal(hookRows.length - beforeHooks, 32);
+      assert.equal(new Set(hookRows.map((row) => row.eventId)).size, hookRows.length);
+      const rebuild = runJson(process.execPath, [cli, "rebuild", root, "--json"]); assert(json(join(root, ".clarity/state.json"))); assert.equal(rebuild.state.source.eventCount, events.length);
+      const clarityNames = readdirSync(join(root, ".clarity"));
+      const runtimeNames = existsSync(join(root, ".clarity/runtime")) ? readdirSync(join(root, ".clarity/runtime")) : [];
+      assert.equal(clarityNames.some((name) => /^\.clarity-op-/u.test(name) || name === "lock.json"), false);
+      assert.equal(runtimeNames.some((name) => /^(?:operation-|\.tmp-)/u.test(name)), false);
+      const metric = (name) => parsedCli.map((row) => Number(row.writeMetrics?.[name] || 0));
+      const roundMs = Date.now() - roundStarted;
+      const jobLimitMs = 10 * 60_000;
+      const summary = {
+        round: round + 1, writers: all.length, exitsZero: all.filter((row) => row.status === 0).length,
+        canonicalJsonParsed: events.length, hookJsonParsed: hookRows.length,
+        canonicalUnique: true, hookUnique: true, canonicalExpectedDelta: events.length - beforeEvents, hookExpectedDelta: hookRows.length - beforeHooks, stateRebuild: true,
+        residueCount: 0,
+        maxLockWaitMs: Math.max(...metric("lockWaitMs")), lockWaitLimitMs: Math.max(...metric("lockWaitLimitMs")),
+        minLockWaitMarginMs: Math.min(...metric("lockWaitMarginMs")), maxLeaseCriticalMs: Math.max(...metric("leaseCriticalMs")),
+        leaseLimitMs: Math.max(...metric("leaseLimitMs")), minLeaseMarginMs: Math.min(...metric("leaseMarginMs")),
+        maxReplaceAttempts: Math.max(...metric("replaceAttempts")), maxReplaceRetryWaitMs: Math.max(...metric("replaceRetryWaitMs")),
+        maxRollbackMs: Math.max(...metric("rollbackMs")), maxCleanupMs: Math.max(...metric("cleanupMs")),
+        roundMs, jobLimitMs, jobMarginMs: jobLimitMs - roundMs,
+      };
+      assert(summary.minLockWaitMarginMs > 0 && summary.minLeaseMarginMs > 0 && summary.jobMarginMs > 0);
+      windowsStressRounds.push(summary);
+      process.stdout.write(`METRIC GS-009 ${JSON.stringify(summary)}\n`);
+    }
   });
   await test("GS-010", "stale owned lockをdoctorし自動回復", () => {
     writeFileSync(join(root, ".clarity/lock.json"), `${JSON.stringify({ schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "canonical-write", token: "stale-token", acquiredAt: "2000-01-01T00:00:00.000Z", expiresAt: "2000-01-01T00:00:30.000Z" })}\n`);

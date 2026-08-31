@@ -12,6 +12,8 @@ on:
       - "scripts/sprint-038-patch-003-conversation-migration-test.mjs"
       - "scripts/sprint-050-patch-004-test.mjs"
       - "scripts/sprint-050-patch-005-test.mjs"
+      - "scripts/sprint-047-test.mjs"
+      - "scripts/sprint-047-patch-001-test.mjs"
 
 permissions:
   contents: read
@@ -34,6 +36,8 @@ jobs:
           node --check plugins/secretary/scripts/project-tools.mjs
           node --check plugins/secretary/scripts/owner-name-transaction.mjs
           node --check plugins/secretary/scripts/lib/conversation-migration.mjs
+          node --check plugins/secretary/scripts/lib/clarity-core.mjs
+          node --check scripts/sprint-047-patch-001-test.mjs
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
@@ -46,3 +50,8 @@ jobs:
       - name: Clarity state structure and Secret redaction regression
         shell: pwsh
         run: node scripts/sprint-050-patch-005-test.mjs --require-windows
+      - name: Clarity logical write failure recovery regression
+        shell: pwsh
+        run: |
+          node scripts/sprint-047-patch-001-test.mjs
+          node scripts/sprint-047-test.mjs
