@@ -336,3 +336,39 @@ SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=
 - macOSではSR-010とPatch 004のWindows専用4件をtruthful NOT-RUNとし、`windowsVerified=false`を維持した。`76aae9fbd7fd87e32bdb9266c69258d76d1d4289`に因果するWindows Server 2025／Node 22の新run／jobは未取得である。
 - 次の既存PR CIでは、GS-003の同一physical top-level positive、nested／non-Git negative、commit所有範囲、前後filesystem／Git不変に加え、Patch 003、Patch 004、Patch 005、既存0.9.2が0 FAILになることを確認する。旧run `33371816241`のPASS／FAILを新candidateへ流用しない。
 - 本記録はGenerator自己検査であり、独立Evaluator Verdictではない。push、PR操作、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator検証基盤補正 — Windows Git identityのRepo-local fixture化（2026-08-31）
+
+- 補正開始HEAD: `7164f8c4b6c0bacdb0d17272c806205f40e8d312`
+- test candidate commit: `0c8aed606edb7f335710c7a4d911614e4ed4e2df`
+- test candidate tree: `e849d30bd8da18166d1a2a057c78bb6b5bd10066`
+- 原因を確定したWindows証跡: PR #11 exact head `c48ed1aac4863f6d104b2b81212a8107b25ea680`、run `33373492423`、job `99429641170`
+- 対象round: `verification-infra`のみ。製品runtime、common runtime、workflow、spec／contract、state、feedback、private my-vault／Yasashiiの変更は0件。
+
+Windows runではNode syntax、既存0.9.2、ancestor symlink／boundary、Patch 004、Patch 003、Patch 005 SR-001〜008／010がPASSし、SR-009内Sprint 047のGS-003だけがRepo identity通過後の実`git commit --only`で`clarity-commit-failed`となった。fixture準備用`git()` helperは準備commitの子processだけへ`GIT_AUTHOR_*`／`GIT_COMMITTER_*`を渡す一方、製品CLI processには渡さず、Repo-local `user.name`／`user.email`も存在しなかった。global Git identityを持つMacでだけ偶然PASSし、global設定のないWindows runnerで失敗するfixture欠陥だった。
+
+synthetic `drift-repo`の`git init`直後に、Repo-local `user.name=Sprint 047 Fixture`、`user.email=sprint-047-fixture@example.invalid`、`user.useConfigOnly=true`を設定した。名前とメールはtest-onlyの非実在値であり、global／system Git configや実Repoは変更しない。さらにGS-003 positiveのpreview／applyを、空の`GIT_CONFIG_GLOBAL`、`GIT_CONFIG_NOSYSTEM=1`、継承した`GIT_AUTHOR_*`／`GIT_COMMITTER_*`／`EMAIL`を除去した同一`runJson`環境で実行した。空のglobal config、Repo-local値、`git var GIT_AUTHOR_IDENT`の解決値を機械確認してから製品CLIのcommitを通すため、PASS根拠はRepo-local identityだけである。
+
+GS-003の同一top-level positive、nested root `git-root-mismatch`、non-Git `clarity-commit-non-git`、Clarity所有path／runtime除外、既存staged／unstaged／untracked、HEAD／branch／remote不変を維持した。Case ID 25件、Critical 16件、AC 7件、supplemental 2件、registry、threshold、feature割当は変更していない。`plugins/secretary/collaboration-inventory.json`のdigest対象にSprint 047 testは含まれないため、inventory更新は不要だった。今回のcandidate diffは検証コード1 file、製品コード0 fileであり、検証コードのみのroundである。
+
+### test candidateの3面検証
+
+source、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Sprint 047、Sprint 050 Patch 003、Sprint 050 Patch 005、Sprint 049 inventory validate、Sprint 050 Patch 004、Sprint 041、Sprint 049の順に個別実行した。clean checkoutは開始／終了ともHEAD／treeがcandidateと一致し、detachedかつ`git status --short`が空だった。Git-free面は実行前後とも`.git`不存在だった。3面すべてで次の集計が同一、exit 0となった。
+
+```text
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0 CRITICAL=16/16 AC=7/7 STRESS_CLI=32 STRESS_HOOK=32 EVENT_PARSE=100% EVENT_UNIQUE=100% STATE_REBUILD=100% SUPPLEMENTAL=2
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0 CRITICAL_PASS=15 CRITICAL_NOT_RUN=0 AC_EXECUTED=6 AC_NOT_RUN=0 SIDE_EFFECT_VIOLATIONS=0
+```
+
+`node --check scripts/sprint-047-test.mjs`と`git diff --check`もexit 0。3面検査用directoryと各suiteのOS一時fixture以外へのfilesystem writeは0件で、network／external provider／remoteへのwriteは0件である。
+
+### Windows未実行境界
+
+- macOSではSR-010を1 NOT-RUN、Patch 004のWindows専用4件をNOT-RUNとし、`windowsVerified=false`を維持した。空global／system無効化のGS-003はMacでも機械確認したが、Windows native PASSの代替には数えない。
+- candidate `0c8aed606edb7f335710c7a4d911614e4ed4e2df`に因果する新しいWindows Server 2025／Node 22 runは未実行。旧run `33373492423`の結果を新candidateへ流用しない。
+- 本Generatorはpush、PR操作、CI dispatch、Evaluator判定、downstream write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindを行っていない。
