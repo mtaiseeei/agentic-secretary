@@ -196,3 +196,53 @@ Retry 1 exact clean macOS round実測は、CLI 32＋Hook 32の64/64 exit 0、can
 - private my-vault／Yasashii／installed plugin／cache／live workspace write: **0件**
 - source／spec／Sprint contract／state／feedback変更: **0件**
 - 一時fixtureとGit-free archiveはローカルtemporary directory内だけに作成し、終了後に削除した。
+
+## Retry 2 — Windows lock排他作成の一時共有競合
+
+- Retry 2開始HEAD: `397180ba227a900bb46b68985afbaaf3f5c27ab6`
+- Retry 2製品candidate commit: `842b4bcddc422edf2655abb52de9b093bbc63f38`
+- Retry 2製品candidate tree: `b1837771c3b3bd083910b841560b8b5524e5376a`
+- 因果Windows evidence: exact head `43741c5eae212e1e8dfe899189b1e493df9e3367`、run `33430167446`、job `99613326562`、Windows Server 2025、Node `v22.23.2`
+
+因果runで実測された`EPERM`／`open`だけをlock排他作成の回復候補にした。platform名だけで結果を作るtest専用成功分岐は置かず、実`openSync(... O_EXCL ...)`直前のfailure injectionとproductionを同じ分類pathへ通す。POSIXで同じ狭い`EPERM`／`open`署名が発生した場合もbounded recoveryするが、EACCES、rename、write、未知error等の一般permission errorはretryしない。これは因果runで未観測のerrorへ対象を広げず、errno単独のblind retryを避けるためである。
+
+各lock create retry前にphysical Clarity root、lock pathとparent、parentの通常directory identityと`W_OK`、lock pathのmissingまたは通常file／non-symlink状態を再確認する。root／parent／path差替え、symlink／junction、unwritable parent、unsafe lockは即時fail closedにする。retry中にlockが現れた場合は既存`EEXIST`経路へ戻し、通常file、owner／token、active／staleを既存どおり再検査する。既存`ENOENT`の15秒上限、全lock waitのattempt上限、正のsleep、30秒lease、record前crash／empty lock／stale owned lock／他者lock境界は変更していない。
+
+lock create共有競合は最大7 failure、1,000 ms以内に限定した。成功結果と恒久停止errorへ`lockCreateFailures`、`lockCreateRetryAttempts`、`lockCreateRetryWaitMs`、上限、marginを記録する。P001-20のexact clean実測はtransientが3 open／2 failure／2 retry／30 ms wait／965 ms marginでEvent 1件・残骸0、permanentが7 failure／6 retry／470 ms wait／475 ms marginで`canonical-lock-create-failed`・canonical不変・残骸0だった。EACCES／openはretry metricsなしで即時`canonical-lock-create-failed`、directory化したunsafe lockは`canonical-lock-unsafe`でcanonical不変のまま保持した。
+
+P001-12はtest modeなしの実write成功、Event +1、残骸0を主証拠にし、mode分岐のsource検査は改行をLFへ正規化した補助構造検査へ変更した。同じ検査へLF bytesと人工CRLF bytesを渡して両方通すため、Windows checkoutのCRLFに依存しない。`CLARITY_TEST_MODE=0`では新しい`lock-create-open`を含むfailure／crash seamが無効であることも実挙動で確認した。Windows製品挙動の最終根拠はnative CIのままであり、Mac結果をWindows PASSへ昇格していない。
+
+### Retry 2変更path
+
+```text
+plugins/secretary/scripts/lib/clarity-core.mjs
+scripts/sprint-047-patch-001-test.mjs
+plugins/secretary/collaboration-inventory.json
+docs/progress/sprint-047-patch-001.md
+```
+
+workflowの`windows-2025`、Node 22、`timeout-minutes: 10`、既存step／trigger、Sprint 047のGS-009／GS-010、Windows 3 round×Hook 32＋CLI 32、Case ID／Severity／thresholdは変更していない。inventoryは`clarity-root-policy`と`clarity-harness-scanner`の実内容digestだけを追従した。
+
+### Retry 2検証集計
+
+| 面／command | Retry 2結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 20／20 PASS。P001-01〜19の意味を維持しP001-20追加。Windows native NOT-RUN |
+| exact clean candidate `842b4bcddc422edf2655abb52de9b093bbc63f38`、同上 | 20／20 PASS、開始／終了`git status --short`空 |
+| 同candidate Git-free archive、同上 | 20／20 PASS、`.git`不存在 |
+| source／exact clean／Git-free、`node scripts/sprint-047-test.mjs` | 各25／25 PASS、registry missing／duplicate／extra 0 |
+| exact clean GS-009（macOS 1 round） | Hook 32＋CLI 32の64／64 exit 0、canonical／Hook delta各32、parse／unique／State 100%、rebuild前後residue 0 |
+| exact clean GS-009時間 | max canonical lock wait `1126/15000 ms`、min margin `13874 ms`、max lease critical `192/30000 ms`、min margin `29808 ms`、round `2073 ms`。Windows 3 round／job時間の代用ではない |
+| `node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| `node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9／9 PASS／Windows native NOT-RUN |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface／67 case、marker／digest PASS |
+| `node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| `node --check`／`git diff --check` | exit 0 |
+
+### Retry 2残余リスク／Evaluator導線
+
+- Windows Server 2025／Node 22の修正candidateはGenerator環境では **NOT-RUN**。因果run `33430167446`の旧candidate FAILを修正後PASSへ読み替えていない。
+- 次のWindows native runは同一jobでPatch 20 case、Sprint 047 25 case、GS-009 3 round×Hook 32＋CLI 32、GS-010、Patch 004／005、conversation migrationを実行し、step／job timingと10分marginを記録する。1 roundでも64／64、parse／unique／State 100%、residue 0、正marginを欠けばPASSにしない。
+- 本記録はGenerator自己評価であり、fresh独立Evaluator Verdictではない。public handoff ready、private my-vault、Yasashii同期へ昇格しない。
+- push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実Xmind／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
