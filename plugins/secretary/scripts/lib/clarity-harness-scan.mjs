@@ -21,6 +21,8 @@ const secretValuePatterns = [
   /(?:password|api[_-]?key|api[_-]?token|access[_-]?token|refresh[_-]?token|client[_-]?secret|credential)\s*[:=]\s*[^\s,;]+/iu,
   /https?:\/\/[^/\s:@]+:[^/\s@]+@[^/\s]+/iu,
 ];
+const credentialAssignmentPattern = /(?:password|api[_-]?key|api[_-]?token|access[_-]?token|refresh[_-]?token|client[_-]?secret|credential)\s*[:=]\s*([^\s,;]+)/giu;
+const directSecretPatterns = secretValuePatterns.filter((_, index) => index !== 4);
 const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".gz", ".7z", ".exe", ".dll"]);
 const currentIdPattern = /^sprint-\d{3}(?:-patch-\d{3})?$/u;
 const windowsReservedPattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/iu;
@@ -29,6 +31,24 @@ function sha256(value) { return createHash("sha256").update(value).digest("hex")
 function stableDigest(value) { return sha256(JSON.stringify(value)); }
 function normalizeRelative(value) { return String(value ?? "").split("\\").join("/").replace(/^\.\//u, ""); }
 function containsSecret(value) { return secretValuePatterns.some((pattern) => pattern.test(String(value ?? ""))); }
+function placeholderValue(value) {
+  let token = String(value ?? "").trim().replace(/[),.;]+$/u, "");
+  token = token.replace(/^`+/u, "").replace(/`+$/u, "").replace(/[),.;]+$/u, "");
+  if ((token.startsWith("\"") && token.endsWith("\"")) || (token.startsWith("'") && token.endsWith("'")) || (token.startsWith("`") && token.endsWith("`"))) token = token.slice(1, -1);
+  return /^<[^<>\r\n]{1,80}>$/u.test(token)
+    || /^\$\{[A-Za-z_][A-Za-z0-9_]*\}$/u.test(token)
+    || /^\$[A-Za-z_][A-Za-z0-9_]*$/u.test(token)
+    || /^(?:[*xX•._-]){3,}$/u.test(token)
+    || /^(?:redacted|masked|placeholder|change[-_]?me|replace[-_]?me)$/iu.test(token);
+}
+function containsActualSecret(value) {
+  const content = String(value ?? "");
+  if (directSecretPatterns.some((pattern) => pattern.test(content))) return true;
+  for (const match of content.matchAll(credentialAssignmentPattern)) {
+    if (!placeholderValue(match[1])) return true;
+  }
+  return false;
+}
 function looksBinary(bytes, path) {
   if (binaryExtensions.has(extname(path).toLowerCase())) return true;
   return bytes.subarray(0, Math.min(bytes.length, 8192)).includes(0);
@@ -86,6 +106,55 @@ function boundedRead(path, limit) {
   } finally { closeSync(descriptor); }
 }
 
+function structuralState(content) {
+  const fields = { currentId: [], nextPlanned: [] };
+  const rows = [];
+  let fenced = null;
+  let inComment = false;
+  for (const original of content.replaceAll("\r\n", "\n").split("\n")) {
+    let line = original;
+    if (inComment) {
+      const end = line.indexOf("-->");
+      if (end < 0) continue;
+      line = line.slice(end + 3);
+      inComment = false;
+    }
+    for (;;) {
+      const start = line.indexOf("<!--");
+      if (start < 0) break;
+      const end = line.indexOf("-->", start + 4);
+      if (end < 0) { line = line.slice(0, start); inComment = true; break; }
+      line = `${line.slice(0, start)}${line.slice(end + 3)}`;
+    }
+    const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/u);
+    const fence = fenceMatch?.[1] || null;
+    if (fence) {
+      if (!fenced) fenced = { char: fence[0], length: fence.length };
+      else if (fence[0] === fenced.char && fence.length >= fenced.length && line.slice(fenceMatch[0].length).trim() === "") fenced = null;
+      continue;
+    }
+    if (fenced) continue;
+
+    const metadata = line.match(/^- (Current ID|Next Planned):\s*(.*?)\s*$/u);
+    if (metadata) {
+      const key = metadata[1] === "Current ID" ? "currentId" : "nextPlanned";
+      fields[key].push({ value: containsActualSecret(metadata[2]) ? null : metadata[2], unsafe: containsActualSecret(metadata[2]) });
+      continue;
+    }
+    const row = line.match(/^\|\s*(sprint-\d{3}(?:-patch-\d{3})?)\s*\|\s*([a-z-]+)\s*\|/u);
+    if (row) rows.push({ id: row[1], status: row[2] });
+  }
+  return { fields, rows };
+}
+
+function resolveStateField(entries, name) {
+  if (entries.some((entry) => entry.unsafe)) return { value: null, coverage: "unresolved", reason: `${name}-secret-redacted`, present: true };
+  const values = [...new Set(entries.map((entry) => entry.value))];
+  if (values.length === 0) return { value: null, coverage: "not-found", reason: `${name}-missing`, present: false };
+  if (values.length > 1) return { value: null, coverage: "unresolved", reason: `${name}-ambiguous`, present: true };
+  return { value: values[0], coverage: "inspected", reason: "resolved", present: true };
+}
+
 function inspectSource(root, path, role, lane, { stateSection = false, absentReason = "not-found" } = {}) {
   lane.entriesSeen += 1;
   if (lane.entriesSeen > HARNESS_SCAN_LIMITS.maxEntries || lane.filesRead >= HARNESS_SCAN_LIMITS.maxFiles || lane.bytesRead >= HARNESS_SCAN_LIMITS.maxReadBytes) {
@@ -111,6 +180,31 @@ function inspectSource(root, path, role, lane, { stateSection = false, absentRea
   lane.bytesRead += bytes.length;
   if (looksBinary(bytes, path)) return { path, role, coverage: "excluded", reason: "binary", size, bytesRead: bytes.length };
   const content = bytes.toString("utf8");
+  if (stateSection) {
+    const structure = structuralState(content);
+    const redacted = containsActualSecret(content);
+    const bounded = bytes.length < size;
+    const digestStructure = {
+      fields: Object.fromEntries(Object.entries(structure.fields).map(([key, entries]) => [key, resolveStateField(entries, key)])),
+      rows: structure.rows,
+      bounded,
+      redacted,
+    };
+    return {
+      path,
+      role,
+      coverage: "inspected",
+      reason: redacted ? (bounded ? "bounded-section-secret-redacted" : "secret-content-redacted") : bounded ? "bounded-section-read" : "complete",
+      size,
+      bytesRead: bytes.length,
+      partial: bounded || redacted,
+      bounded,
+      redacted,
+      redactionReason: redacted ? "secret-like-content" : null,
+      digest: stableDigest(digestStructure),
+      stateStructure: structure,
+    };
+  }
   if (containsSecret(content)) return { path, role, coverage: "excluded", reason: "secret-like-content", size, bytesRead: bytes.length };
   const partial = bytes.length < size;
   return {
@@ -129,32 +223,51 @@ function inspectSource(root, path, role, lane, { stateSection = false, absentRea
 
 function parseState(source) {
   if (source.coverage !== "inspected") return { currentId: null, currentStatus: null, nextPlanned: null, sourceSection: null, fallbackSource: null, inferred: false, reason: source.reason };
-  const content = source.content.replaceAll("\r\n", "\n");
-  const currentRaw = content.match(/^- Current ID:\s*(.+?)\s*$/mu)?.[1] || null;
-  const nextRaw = content.match(/^- Next Planned:\s*(.+?)\s*$/mu)?.[1] || null;
-  const rows = [...content.matchAll(/^\|\s*(sprint-\d{3}(?:-patch-\d{3})?)\s*\|\s*([a-z-]+)\s*\|/gmu)].map((match) => ({ id: match[1], status: match[2] }));
+  const currentField = resolveStateField(source.stateStructure?.fields?.currentId || [], "current-id");
+  const nextField = resolveStateField(source.stateStructure?.fields?.nextPlanned || [], "next-planned");
+  const currentRaw = currentField.value;
+  const nextRaw = nextField.value;
+  const rows = source.stateStructure?.rows || [];
   const currentValid = currentRaw === "TBD" || currentIdPattern.test(currentRaw || "");
   let resolved = currentIdPattern.test(currentRaw || "") ? currentRaw : null;
   let fallbackSource = null;
   let inferred = false;
-  if (!resolved) {
+  const currentUnsafe = currentField.coverage === "unresolved";
+  if (!resolved && !currentUnsafe) {
     if (currentIdPattern.test(nextRaw || "")) { resolved = nextRaw; fallbackSource = "next-planned"; inferred = true; }
     else {
       const lastDone = [...rows].reverse().find((row) => ["done", "done-by-user-decision"].includes(row.status));
       if (lastDone) { resolved = lastDone.id; fallbackSource = "last-recorded-completion"; inferred = true; }
     }
   }
-  const currentRow = rows.find((row) => row.id === resolved);
+  const matchingRows = rows.filter((row) => row.id === resolved);
+  const currentRow = matchingRows.length === 1 ? matchingRows[0] : null;
+  const rowAmbiguous = matchingRows.length > 1;
+  const reason = currentUnsafe ? currentField.reason
+    : !currentField.present ? "current-id-missing"
+      : !currentValid ? "current-id-invalid"
+        : rowAmbiguous ? "current-row-ambiguous"
+          : source.bounded && !currentRow ? "state-section-unresolved" : "resolved";
   return {
     currentId: resolved,
-    declaredCurrentId: currentRaw,
+    declaredCurrentId: currentValid ? currentRaw : null,
+    declaredCurrentPresent: currentField.present,
     currentStatus: currentRow?.status || null,
-    nextPlanned: nextRaw,
+    nextPlanned: nextField.coverage === "inspected" && (nextRaw === "TBD" || currentIdPattern.test(nextRaw || "")) ? nextRaw : null,
+    tableRow: currentRow ? { id: currentRow.id, status: currentRow.status } : null,
     sourceSection: currentRow ? "sprint-table-row" : currentRaw ? "metadata" : null,
     fallbackSource,
     inferred,
     valid: Boolean(currentValid && currentRaw),
-    reason: !currentRaw ? "current-id-missing" : !currentValid ? "current-id-invalid" : source.partial && !currentRow ? "state-section-unresolved" : "resolved",
+    reason,
+    redacted: Boolean(source.redacted),
+    redactionReason: source.redactionReason || null,
+    fieldCoverage: {
+      currentId: { coverage: currentField.coverage, reason: currentField.reason },
+      currentStatus: { coverage: currentRow ? "inspected" : "unresolved", reason: currentRow ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
+      nextPlanned: { coverage: nextField.coverage, reason: nextField.reason },
+      tableRow: { coverage: currentRow ? "inspected" : "unresolved", reason: currentRow ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
+    },
   };
 }
 
@@ -233,12 +346,21 @@ export function scanHarnessAuthoritative(rootValue) {
     reason: source.reason,
     status: roleStatus(source, state),
     digest: source.digest || null,
-    size: source.size ?? null,
-    bytesRead: source.bytesRead || 0,
+    size: source.redacted && source.role === "orchestrator-execution-truth" ? null : source.size ?? null,
+    bytesRead: source.redacted && source.role === "orchestrator-execution-truth" ? null : source.bytesRead || 0,
+    bytesReadAtMost: source.redacted && source.role === "orchestrator-execution-truth" ? HARNESS_SCAN_LIMITS.maxStateSectionBytes : null,
     partial: Boolean(source.partial),
+    redacted: Boolean(source.redacted),
+    redactionReason: source.redactionReason || null,
   }));
   for (const source of sources) {
     delete source.content;
+    delete source.stateStructure;
+    if (source.redacted && source.role === "orchestrator-execution-truth") {
+      delete source.size;
+      delete source.bytesRead;
+      source.bytesReadAtMost = HARNESS_SCAN_LIMITS.maxStateSectionBytes;
+    }
     const target = source.coverage === "inspected" ? lane.inspected : source.coverage === "excluded" ? lane.excluded : source.coverage === "not-found" ? lane.notFound : lane.uninspected;
     target.push(source);
     if (source.partial || (!["complete", "evaluation-not-yet-recorded", "not-found"].includes(source.reason) && source.coverage !== "inspected")) lane.partialReasons.push(`${source.path}:${source.reason}`);
@@ -246,6 +368,11 @@ export function scanHarnessAuthoritative(rootValue) {
   if (hasSafeFallback) lane.partialReasons.push(`docs/sprints/state.md:${reason}`);
   lane.partialReasons = [...new Set(lane.partialReasons)];
   lane.partial = lane.partialReasons.length > 0;
+  if (stateSource.redacted) {
+    lane.bytesRead = null;
+    lane.bytesReadAtMost = HARNESS_SCAN_LIMITS.maxReadBytes;
+    lane.redactedUsage = true;
+  }
   const bundle = (kind === "harness" || hasSafeFallback) && state.currentId ? {
     currentId: state.currentId,
     declaredCurrentId: state.declaredCurrentId,
@@ -257,7 +384,8 @@ export function scanHarnessAuthoritative(rootValue) {
     partial: lane.partial,
     roles: sourceRoles.filter((source) => ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"].includes(source.role)),
   } : null;
-  const coverageDigest = stableDigest({ detection: { kind, reason }, state, sources: sourceRoles, usage: { entriesSeen: lane.entriesSeen, filesRead: lane.filesRead, bytesRead: lane.bytesRead }, partialReasons: lane.partialReasons });
+  const digestSources = sourceRoles.map(({ size: _size, bytesRead: _bytesRead, ...source }) => source);
+  const coverageDigest = stableDigest({ detection: { kind, reason }, state, sources: digestSources, usage: { entriesSeen: lane.entriesSeen, filesRead: lane.filesRead }, partialReasons: lane.partialReasons });
   const candidates = bundle ? [{
     path: `docs/sprints/${bundle.currentId}.md`,
     title: `Harness ${bundle.currentId}`,

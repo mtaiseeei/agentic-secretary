@@ -231,7 +231,7 @@ try {
     unlinkSync(failureAlias); symlinkSync(failureD, failureAlias, "dir");
     assert.equal(previewInit(failureRepoC).initialized, false);
 
-    const reg = registry(); const ids = reg.patchCaseIds["sprint-050-patch-003"]; assert.equal(ids.length, 21); assert.equal(new Set(ids).size, 21); assert.deepEqual([...ids].sort(), tests.map((row) => row.id).sort()); assert.equal(Object.keys(reg.patchCaseFeatureAssignments).length, 37); assert(ids.every((id) => reg.patchCaseFeatureAssignments[id]));
+    const reg = registry(); const ids = reg.patchCaseIds["sprint-050-patch-003"]; assert.equal(ids.length, 21); assert.equal(new Set(ids).size, 21); assert.deepEqual([...ids].sort(), tests.map((row) => row.id).sort()); assert.equal(Object.keys(reg.patchCaseFeatureAssignments).length, 47); assert(ids.every((id) => reg.patchCaseFeatureAssignments[id]));
     const semantic = readFileSync(casesPath, "utf8"); for (const id of ids) assert(semantic.includes(`| ${id} | Critical |`), id);
   });
 

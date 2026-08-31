@@ -319,7 +319,7 @@ try {
     const registryBody = readFileSync(join(ROOT, "docs/spec/clarity-acceptance.md"), "utf8");
     const registry = JSON.parse(registryBody.match(/<!-- clarity-acceptance-registry:start -->\s*```json\s*([\s\S]*?)\s*```/u)?.[1]);
     const patches = Object.values(registry.patchCaseIds).flat(); const hs = registry.patchCaseIds["sprint-050-patch-004"];
-    assert.equal(patches.length, 37); assert.equal(hs.length, 16); assert.equal(new Set(patches).size, 37); assert(hs.every((id) => registry.patchCaseFeatureAssignments[id]));
+    assert.equal(patches.length, 47); assert.equal(hs.length, 16); assert.equal(new Set(patches).size, 47); assert(hs.every((id) => registry.patchCaseFeatureAssignments[id]));
     const inventory = validateCollaborationInventory(ROOT); assert(inventory.caseCount >= 57); assert(inventory.surfaceCount >= 20);
     const portable = mkdtempSync(join(tmpdir(), "clarity-hs016-inventory-")); cleanup.push(portable); copyInventoryFixture(portable); initializeInventoryGitFixture(portable);
     const eolPath = join(portable, "plugins/secretary/skills/secretary/SKILL.md"); const lf = readFileSync(eolPath, "utf8").replaceAll("\r\n", "\n"); writeFileSync(eolPath, lf.replaceAll("\n", "\r\n"));

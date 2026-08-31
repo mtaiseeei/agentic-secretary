@@ -362,7 +362,7 @@ function classifyCandidate(path, content) {
   return null;
 }
 
-function scanGenericRepository(rootValue) {
+function scanGenericRepository(rootValue, { excludeHarnessState = false } = {}) {
   const root = rootPath(rootValue);
   const report = {
     limits: { ...CLARITY_LIMITS },
@@ -392,6 +392,7 @@ function scanGenericRepository(rootValue) {
       report.entriesSeen += 1;
       const absolute = join(dir, entry.name);
       const rel = relativePath(root, absolute);
+      if (excludeHarnessState && rel === "docs/sprints/state.md") { reportRow(report, "excluded", { path: rel, reason: "harness-authoritative-source" }); continue; }
       if (entry.isSymbolicLink()) { reportRow(report, "excluded", { path: rel, reason: "symlink-not-followed" }); continue; }
       if (entry.isDirectory()) {
         if (excludedDirectories.has(entry.name) || entry.name.startsWith(".clarity-init-")) reportRow(report, "excluded", { path: rel, reason: "excluded-directory" });
@@ -433,7 +434,7 @@ function scanGenericRepository(rootValue) {
 function scanRepositoryImpl(rootValue) {
   const root = rootPath(rootValue);
   const authoritative = scanHarnessAuthoritative(root);
-  const generic = scanGenericRepository(root);
+  const generic = scanGenericRepository(root, { excludeHarnessState: authoritative.detection.kind !== "non-harness" });
   if (!authoritative.bundle) {
     return {
       ...generic,
