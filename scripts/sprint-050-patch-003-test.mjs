@@ -8,7 +8,7 @@ import {
   realpathSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyInit, inspectRepoIdentity, previewInit } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 import { compareDrift } from "../plugins/secretary/scripts/lib/clarity-drift.mjs";
@@ -37,6 +37,111 @@ function test(id, label, fn) { tests.push({ id, label, fn }); }
 function write(path, value) { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, value); }
 function run(command, args, options = {}) {
   return spawnSync(command, args, { cwd: options.cwd || sourceRoot, encoding: "utf8", timeout: 30_000, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, CLARITY_NOW: fixedNow, CC_SECRETARY_NOW: fixedNow, ...(options.env || {}) }, input: options.input });
+}
+function isWithin(root, path) {
+  const rel = relative(resolve(root), resolve(path));
+  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`));
+}
+function parseWindowsSid(output) {
+  const matches = [...new Set(String(output).match(/S-\d+(?:-\d+)+/g) || [])];
+  assert.equal(matches.length, 1, "whoami.exe must yield exactly one unique SID");
+  return matches[0];
+}
+function windowsAclPlan(unreadableRoot, backupPath, sid) {
+  assert.match(sid, /^S-\d+(?:-\d+)+$/);
+  return {
+    whoami: { command: "whoami.exe", args: ["/user", "/fo", "csv", "/nh"], cwd: unreadableRoot, shell: false },
+    save: { command: "icacls.exe", args: ["README.md", "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false },
+    deny: { command: "icacls.exe", args: ["README.md", "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false },
+    restore: { command: "icacls.exe", args: [".", "/restore", backupPath, "/q"], cwd: unreadableRoot, shell: false },
+  };
+}
+function assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid) {
+  assert.equal(isWithin(fixtureRoot, backupPath), true);
+  assert.equal(isWithin(unreadableRoot, backupPath), false);
+  assert.deepEqual(plan.whoami, { command: "whoami.exe", args: ["/user", "/fo", "csv", "/nh"], cwd: unreadableRoot, shell: false });
+  assert.deepEqual(plan.save, { command: "icacls.exe", args: ["README.md", "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false });
+  assert.deepEqual(plan.deny, { command: "icacls.exe", args: ["README.md", "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false });
+  assert.deepEqual(plan.restore, { command: "icacls.exe", args: [".", "/restore", backupPath, "/q"], cwd: unreadableRoot, shell: false });
+  const allArgs = Object.values(plan).flatMap((entry) => entry.args);
+  assert.equal(allArgs.some((arg) => ["/T", "(F)", "(M)", "(WDAC)", "(WO)", "(D)", "(OI)", "(CI)"].includes(arg.toUpperCase())), false);
+}
+function runWindowsCommand(spec) {
+  return spawnSync(spec.command, spec.args, {
+    cwd: spec.cwd,
+    encoding: "utf8",
+    timeout: 30_000,
+    maxBuffer: 16 * 1024 * 1024,
+    shell: false,
+  });
+}
+function commandFailure(stage, result) {
+  const detail = result.error instanceof Error ? `${result.error.name}:${result.error.message}` : `status=${String(result.status)} signal=${result.signal || "none"}`;
+  return new Error(`${stage} failed (${detail})`);
+}
+function assertCommandPassed(stage, result) {
+  if (result.error || result.status !== 0) throw commandFailure(stage, result);
+}
+function combinedFailure(primary, cleanupFailures) {
+  const failures = [...(primary ? [primary] : []), ...cleanupFailures];
+  if (failures.length === 0) return null;
+  const summary = failures.map((error, index) => `${index === 0 && primary ? "primary" : "cleanup"}: ${error instanceof Error ? error.message : String(error)}`).join("; ");
+  return new AggregateError(failures, summary);
+}
+function observeWindowsUnreadableRepo(unreadableRoot, fixtureRoot) {
+  const readmePath = join(unreadableRoot, "README.md");
+  const beforeContent = readFileSync(readmePath);
+  const beforeDigest = sha(beforeContent);
+  const backupDir = join(fixtureRoot, "windows-acl-backup");
+  const backupPath = join(backupDir, "README.acl");
+  const whoamiSpec = windowsAclPlan(unreadableRoot, backupPath, "S-1-5-21-1").whoami;
+  const whoamiResult = runWindowsCommand(whoamiSpec);
+  assertCommandPassed("whoami", whoamiResult);
+  const sid = parseWindowsSid(whoamiResult.stdout);
+  const plan = windowsAclPlan(unreadableRoot, backupPath, sid);
+  assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid);
+  mkdirSync(backupDir, { recursive: true });
+
+  let primary = null;
+  let observation = null;
+  try {
+    const save = runWindowsCommand(plan.save);
+    assertCommandPassed("icacls-save", save);
+    assert.equal(existsSync(backupPath), true, "icacls-save must create the fixture-local backup");
+
+    const deny = runWindowsCommand(plan.deny);
+    assertCommandPassed("icacls-deny-read-data", deny);
+
+    let readError = null;
+    try { readFileSync(readmePath); } catch (error) { readError = error; }
+    assert(readError, "README.md must be unreadable after the deny ACE");
+    assert(["EACCES", "EPERM"].includes(readError.code), `unexpected denied-read error: ${String(readError.code)}`);
+
+    observation = observeCanonicalRepo(pointerRecord("unreadable", unreadableRoot));
+    assert.equal(observation.availability, "unreadable");
+    assert.equal(observation.firstFile.reason, "unreadable");
+    assert.equal(observation.reason, "first-file-unreadable");
+  } catch (error) {
+    primary = error;
+  } finally {
+    const cleanupFailures = [];
+    try {
+      const restore = runWindowsCommand(plan.restore);
+      if (restore.error || restore.status !== 0) cleanupFailures.push(commandFailure("icacls-restore", restore));
+    } catch (error) {
+      cleanupFailures.push(new Error(`icacls-restore failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`));
+    }
+    let afterContent = null;
+    try { afterContent = readFileSync(readmePath); }
+    catch (error) { cleanupFailures.push(new Error(`post-restore-read failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`)); }
+    if (afterContent && sha(afterContent) !== beforeDigest) cleanupFailures.push(new Error("post-restore README.md digest changed"));
+    try { rmSync(backupDir, { recursive: true, force: true }); }
+    catch (error) { cleanupFailures.push(new Error(`ACL backup cleanup failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`)); }
+    if (existsSync(backupDir)) cleanupFailures.push(new Error("ACL backup cleanup left fixture files behind"));
+    const failure = combinedFailure(primary, cleanupFailures);
+    if (failure) throw failure;
+  }
+  return observation;
 }
 function git(root, ...args) {
   const result = run("git", args, { cwd: root, env: { GIT_AUTHOR_NAME: "Clarity Fixture", GIT_AUTHOR_EMAIL: "clarity@example.invalid", GIT_COMMITTER_NAME: "Clarity Fixture", GIT_COMMITTER_EMAIL: "clarity@example.invalid" } });
@@ -116,7 +221,22 @@ try {
   test("CF-006", "missing unsafe unreadable and stale sources remain truthful", () => {
     const missing = observeCanonicalRepo(pointerRecord("missing", join(fixture, "missing")));
     const selfLink = join(fixture, "repo-self-link"); symlinkSync(physicalRepo, selfLink, "dir"); const unsafe = observeCanonicalRepo(pointerRecord("unsafe", selfLink));
-    const unreadableRoot = makeRepo(join(fixture, "unreadable")); chmodSync(unreadableRoot, 0o000); const unreadable = observeCanonicalRepo(pointerRecord("unreadable", unreadableRoot)); chmodSync(unreadableRoot, 0o755);
+    const unreadableRoot = makeRepo(join(fixture, "unreadable"));
+    const structuralBackup = join(fixture, "windows-acl-structure", "README.acl");
+    const structuralSid = parseWindowsSid('"ignored","S-1-5-21-1"');
+    assert.throws(() => parseWindowsSid('"ignored","not-a-sid"'));
+    assert.throws(() => parseWindowsSid('"ignored","S-1-5-21-1 S-1-5-21-2"'));
+    assertWindowsAclPlan(windowsAclPlan(unreadableRoot, structuralBackup, structuralSid), fixture, unreadableRoot, structuralBackup, structuralSid);
+    const structuralFailure = combinedFailure(new Error("probe-failed"), [new Error("restore-failed")]);
+    assert(structuralFailure instanceof AggregateError); assert.equal(structuralFailure.errors.length, 2); assert(structuralFailure.message.includes("probe-failed")); assert(structuralFailure.message.includes("restore-failed"));
+    let unreadable;
+    if (process.platform === "win32") {
+      unreadable = observeWindowsUnreadableRepo(unreadableRoot, fixture);
+    } else {
+      chmodSync(unreadableRoot, 0o000);
+      try { unreadable = observeCanonicalRepo(pointerRecord("unreadable", unreadableRoot)); }
+      finally { chmodSync(unreadableRoot, 0o755); }
+    }
     const stale = observeCanonicalRepo(pointerRecord("stale-entry", aliasRepo, "missing-entry.md"));
     assert.deepEqual([missing.availability, unsafe.availability, unreadable.availability, stale.availability], ["missing", "unsafe", "unreadable", "stale"]); assert([missing, unsafe, unreadable, stale].every((row) => row.changed === false && row.freshness !== "aligned"));
   });
