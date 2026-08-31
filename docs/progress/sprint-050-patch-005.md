@@ -285,3 +285,54 @@ SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=
 - 本Mac検証では新しいWindows ACL branchを実行していない。SR-010は1 NOT-RUN、Patch004のWindows専用4件もNOT-RUN、`windowsVerified=false`のままであり、Windows PASSを合成していない。
 - exact candidate `6127b72e3df1ae23f7783c654fa3ff7f99bc85ac`に因果するWindows Server 2025／Node 22の新run ID／job IDは未取得である。次のrunでCF-006のsave／deny／probe／製品観測／restore／復旧read／digest／backup cleanupがすべて実行され、0 FAILになるまでWindows境界は閉じない。
 - 本Generatorはpush、PR操作、workflow dispatch、remote変更、Evaluator判定、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindを行っていない。
+
+## Generator製品補正 — Windows GS-003のphysical Git top-level判定（2026-08-31）
+
+- 補正開始HEAD: `b9d4f21bf674485701f2870a60dafd633584b2a1`
+- 製品candidate commit: `76aae9fbd7fd87e32bdb9266c69258d76d1d4289`
+- 製品candidate tree: `a0c5dc7930a5cb6449a6c58d15f08adbce5bc143`
+- 原因を確定したWindows証跡: PR #11 exact head `cf61738c25ead736f641c020ae25d60f01c73d87`、run `33371816241`、job `99424428888`
+- 対象round: `product`／`implementation-issue`。Windows runではCF-006／Patch 003が21／21、既存0.9.2／Patch 004、SR-001〜008／010がPASSした後、SR-009内Sprint 047のGS-003だけがexit 3／`clarity-commit-non-git`となった。
+
+一時`drift-repo`は同じrootで`git init`、`git add`、複数commitに成功し、Clarity CLIも同じrootを受け取っていた。原因は`clarity-drift.mjs`のcommit入口だけが、Gitの`--show-toplevel`とClarity rootを`resolve(top) === root`で比較していたことである。Windowsでは同一NTFS directoryが8.3 short／long path、大文字小文字、separatorの表現差を持ち得るため、同一physical Git top-levelを文字列差だけでnon-Gitとして誤拒否していた。
+
+commit入口を、Patch 004 HS-011でWindows PASS済みの既存`inspectRepoIdentity(root)`へ接続した。`repoIdentity.kind === "git"`だけを受理し、内部の`statSync(..., { bigint: true })`による`dev`／`ino`完全一致で同一physical directoryを判定する。nested rootは`git-root-mismatch`、non-Gitは`clarity-commit-non-git`、stat不能、`dev`／`ino`がともに0、identity不明は推測せずfail closedのままである。lowercase、prefix、`startsWith`、lexical relative、realpath文字列だけの比較への緩和は行っていない。
+
+GS-003はCase IDを増やさず、次を同じCase内で検査するよう補強した。
+
+- 同一Git top-levelのpreviewはfilesystem／Gitを変更せず、applyは`CLARITY.md`と`.clarity/**`のうち`.clarity/runtime/**`を除くClarity所有pathだけを`git commit --only`へ含める。
+- nested rootは`git-root-mismatch`で拒否し、前後のnested filesystem、親RepoのHEAD／branch／remote／status／index／worktree diffを完全一致させる。
+- non-Git rootは`clarity-commit-non-git`で拒否し、filesystem不変、`.git`新規作成0、main fixture RepoのGit状態不変とする。
+- 既存staged／unstaged／untracked、branch、remote、push 0の検査を維持し、registry 25 case、補助2 case、GS-003の初回割当を変更していない。
+
+### 変更fileとinventory
+
+製品candidateの変更は次の3 fileだけである。
+
+- `plugins/secretary/scripts/lib/clarity-drift.mjs`
+- `scripts/sprint-047-test.mjs`
+- `plugins/secretary/collaboration-inventory.json`
+
+inventoryは製品fileを含む`clarity-root-policy`の`contentDigest`だけを正規計算値`79ee27e50185e7e978dbfb26b88a62e0328cbc094dc309699bfadd30f98a9688`へ更新した。surface path、role、marker、tests、case数、他surface digestは変更していない。`clarity-core.mjs`、`clarity-root.mjs`、`safe-fs.mjs`、common runtime 3 path、Patch 003 ACL、Patch 005 diagnostic、workflow、spec／contract、state、feedbackは変更していない。
+
+### 製品candidateの3面検証
+
+source candidate、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Sprint 047、Patch 003、Patch 005、inventory、Patch 004、Sprint 041、Sprint 049の順に個別実行した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeがcandidateと一致した。Git-free面は実行前後とも`.git`不存在だった。3面とも次の結果でexit 0となった。
+
+```text
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+`node --check plugins/secretary/scripts/lib/clarity-drift.mjs`、`node --check scripts/sprint-047-test.mjs`、`git diff --check`もexit 0。各suiteの一時fixture以外へのfilesystem／Git／network／external provider writeは0件である。
+
+### Windows再run待ちと残る境界
+
+- macOSではSR-010とPatch 004のWindows専用4件をtruthful NOT-RUNとし、`windowsVerified=false`を維持した。`76aae9fbd7fd87e32bdb9266c69258d76d1d4289`に因果するWindows Server 2025／Node 22の新run／jobは未取得である。
+- 次の既存PR CIでは、GS-003の同一physical top-level positive、nested／non-Git negative、commit所有範囲、前後filesystem／Git不変に加え、Patch 003、Patch 004、Patch 005、既存0.9.2が0 FAILになることを確認する。旧run `33371816241`のPASS／FAILを新candidateへ流用しない。
+- 本記録はGenerator自己検査であり、独立Evaluator Verdictではない。push、PR操作、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
