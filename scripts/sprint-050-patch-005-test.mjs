@@ -14,6 +14,9 @@ import { validateCollaborationInventory } from "./lib/sprint-049-inventory.mjs";
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const TARGET_ID = "sprint-050-patch-005";
 const ALLOWED_TARGET_STATUSES = new Set(["active", "awaiting-eval", "done"]);
+const CHILD_DIAGNOSTIC_STREAM_BYTES = 8 * 1024;
+const CHILD_DIAGNOSTIC_ERROR_BYTES = 1024;
+const CASE_FAILURE_DIAGNOSTIC_BYTES = CHILD_DIAGNOSTIC_STREAM_BYTES * 2 + 4 * 1024;
 const requireWindows = process.argv.includes("--require-windows");
 const results = new Map();
 const cleanup = [];
@@ -175,9 +178,91 @@ function assertCanaryAbsent(report, canary) {
   assert.equal(body.includes(sha(canary)), false, "runtime canary raw digest must not be returned");
   for (const fragment of [canary.slice(0, 6), canary.slice(-6)]) assert.equal(body.includes(fragment), false, "runtime canary fragment must not be returned");
 }
+function replaceDiagnosticRoot(value, absolute, placeholder) {
+  const normalized = absolute.replaceAll("\\", "/");
+  const fileUrl = `file://${normalized.startsWith("/") ? "" : "/"}${normalized}`;
+  return [...new Set([absolute, normalized, fileUrl])]
+    .sort((left, right) => right.length - left.length)
+    .reduce((body, variant) => body.split(variant).join(placeholder), value);
+}
+function sanitizeDiagnosticText(value) {
+  let body = String(value ?? "").replaceAll("\r\n", "\n").replaceAll("\r", "\n");
+  body = replaceDiagnosticRoot(body, ROOT, "<repo-root>");
+  body = replaceDiagnosticRoot(body, tmpdir(), "<tmp-root>");
+  body = body.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/gu, "?");
+  body = body.replace(/\bBearer\s+[^\s,;]+/giu, "Bearer <redacted>");
+  body = body.replace(/((?:["'])?(?:api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)(?:["'])?\s*[:=]\s*)(?:"[^"\n]*"|'[^'\n]*'|[^\s,}\]]+)/giu, "$1<redacted>");
+  body = body.replace(/\b[a-f0-9]{40,128}\b/giu, "<redacted-digest>");
+  body = body.replace(/\b[A-Za-z0-9_-]{30,}\b/gu, (token) => {
+    const looksOpaque = /[A-Z]/u.test(token) && (/[a-z]/u.test(token) || /\d/u.test(token));
+    return looksOpaque && !token.startsWith("SPRINT") ? "<redacted-opaque>" : token;
+  });
+  body = body.replace(/^(\s*(?:actual|expected)\s*:).+$/gimu, "$1 <redacted-assert-value>");
+  body = body.replace(/^(\s*[+-])\s+(?:'[^'\n]*'|"[^"\n]*"|`[^`\n]*`)\s*$/gmu, "$1 <redacted-assert-value>");
+  return body;
+}
+function boundDiagnosticText(value, maxBytes) {
+  const body = sanitizeDiagnosticText(value);
+  if (Buffer.byteLength(body) <= maxBytes) return body;
+  const suffix = "\n<truncated>";
+  const bodyBudget = maxBytes - Buffer.byteLength(suffix);
+  let used = 0;
+  let prefix = "";
+  for (const character of body) {
+    const size = Buffer.byteLength(character);
+    if (used + size > bodyBudget) break;
+    prefix += character;
+    used += size;
+  }
+  return `${prefix}${suffix}`;
+}
+function childRunDiagnostic(path, result) {
+  if (result.status === 0 && !result.signal && !result.error) return null;
+  const errorCode = result.error && typeof result.error === "object" && "code" in result.error ? result.error.code : null;
+  const errorValue = result.error
+    ? `${result.error instanceof Error ? result.error.name : "Error"}${errorCode ? `(${errorCode})` : ""}: ${result.error instanceof Error ? result.error.message : String(result.error)}`
+    : "none";
+  const stdout = boundDiagnosticText(result.stdout, CHILD_DIAGNOSTIC_STREAM_BYTES) || "<empty>";
+  const stderr = boundDiagnosticText(result.stderr, CHILD_DIAGNOSTIC_STREAM_BYTES) || "<empty>";
+  return [
+    `${path} regression failed`,
+    `path=${String(path).replaceAll("\\", "/")}`,
+    `status=${result.status ?? "null"}`,
+    `signal=${result.signal ?? "none"}`,
+    `error=${boundDiagnosticText(errorValue, CHILD_DIAGNOSTIC_ERROR_BYTES)}`,
+    "stdout<<",
+    stdout,
+    ">>stdout",
+    "stderr<<",
+    stderr,
+    ">>stderr",
+  ].join("\n");
+}
+function assertChildRunDiagnosticFormatting() {
+  assert.equal(childRunDiagnostic("scripts/helper-success.mjs", { status: 0, signal: null, error: undefined, stdout: "quiet", stderr: "" }), null);
+  const canary = runtimeSecret();
+  const lowEntropyCanary = runtimeSecret(1);
+  const assertCanary = runtimeSecret(2);
+  const rawDigest = sha(canary);
+  const diagnostic = childRunDiagnostic("scripts/helper-failure.mjs", {
+    status: 1,
+    signal: "SIGTERM",
+    error: Object.assign(new Error(`failed at ${join(ROOT, "scripts/helper-failure.mjs")}`), { code: "ETEST" }),
+    stdout: `PASS helper\napi_token=${canary}\nactual: ${lowEntropyCanary}\n${rawDigest}\n${"x".repeat(CHILD_DIAGNOSTIC_STREAM_BYTES * 2)}`,
+    stderr: `at ${join(tmpdir(), "helper-fixture", "child.mjs")}\n+ '${assertCanary}'\n`,
+  });
+  assert(diagnostic);
+  for (const expected of ["path=scripts/helper-failure.mjs", "status=1", "signal=SIGTERM", "error=Error(ETEST)", "<repo-root>", "<tmp-root>", "<redacted>", "<redacted-digest>", "<redacted-assert-value>", "<truncated>"]) assert.equal(diagnostic.includes(expected), true, expected);
+  for (const excluded of [canary, lowEntropyCanary, assertCanary, rawDigest, ROOT, tmpdir()]) assert.equal(diagnostic.includes(excluded), false, "diagnostic must sanitize sensitive or unstable values");
+  const stdout = diagnostic.match(/stdout<<\n([\s\S]*?)\n>>stdout/u)?.[1] ?? "";
+  const stderr = diagnostic.match(/stderr<<\n([\s\S]*?)\n>>stderr/u)?.[1] ?? "";
+  assert.equal(Buffer.byteLength(stdout) <= CHILD_DIAGNOSTIC_STREAM_BYTES, true);
+  assert.equal(Buffer.byteLength(stderr) <= CHILD_DIAGNOSTIC_STREAM_BYTES, true);
+}
 function runScript(path, args = []) {
   const result = spawnSync(process.execPath, [join(ROOT, path), ...args], { cwd: ROOT, encoding: "utf8", shell: false, timeout: 240_000, maxBuffer: 32 * 1024 * 1024 });
-  assert.equal(result.status, 0, `${path} regression failed`);
+  const diagnostic = childRunDiagnostic(path, result);
+  if (diagnostic) throw new Error(diagnostic);
 }
 function record(id, status, reason, action = null) {
   try {
@@ -186,7 +271,7 @@ function record(id, status, reason, action = null) {
     process.stdout.write(`${status} ${id} ${reason}\n`);
   } catch (error) {
     results.set(id, { status: "FAIL", reason: error instanceof Error ? error.message : String(error) });
-    process.stderr.write(`FAIL ${id} ${error instanceof Error ? error.stack : String(error)}\n`);
+    process.stderr.write(`FAIL ${id} ${boundDiagnosticText(error instanceof Error ? error.stack : String(error), CASE_FAILURE_DIAGNOSTIC_BYTES)}\n`);
   }
 }
 
@@ -311,6 +396,7 @@ try {
   });
 
   record("SR-009", "PASS", "related-regression-and-inventory", () => {
+    assertChildRunDiagnosticFormatting();
     runScript("scripts/sprint-050-patch-004-test.mjs", process.platform === "win32" ? ["--require-windows"] : []);
     for (const path of ["scripts/sprint-050-patch-003-test.mjs", "scripts/sprint-041-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-049-test.mjs", "scripts/sprint-049-inventory.mjs"]) runScript(path, path.endsWith("sprint-049-inventory.mjs") ? ["validate"] : []);
     const inventory = validateCollaborationInventory(ROOT); assert.equal(inventory.surfaceCount, 20); assert.equal(inventory.caseCount, 67);
