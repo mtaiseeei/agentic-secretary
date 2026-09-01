@@ -450,3 +450,71 @@ Fable read-only reviewが示したCritical 1件／Major 2件を同じSprint契�
 - guard releaseの`EPERM`／`EBUSY`が局所上限まで継続した場合は、guardを期限だけで削除せず非0・doctor確認待ちになる。可用性より他writer identity非削除を優先する意図的なfail-closed終端である。
 - 本記録はGenerator自己評価であり、Fable再レビュー／独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
 - push／GitHub API／Windows CI／Evaluator／merge／release／tag／Marketplace／install／cache／live workspace／実Xmind／downstream writeは **0件**。offline fixtureのnetwork／external service writeも0件である。
+
+## 2026-09-01 Windows偽greenとP001-21起動timing依存の限定修正
+
+### 対象と原因
+
+Windows run `33497412898`／job `99822681125`はGitHub表示上successだったが、生ログでは専用suiteが`P001-21` 1件FAIL、22／23だったためWindows causal PASSへ採用しない。製品candidate `17bff277f62f86181b2b77cfd04e8ed91ac48248`のSprint 047本体は、同runでGS-009の3 roundが各Hook 32＋CLI 32、64／64、parse／unique／State rebuild 100%、guard込みresidue前後0だった。現時点のproduct findingは0件で、blocking findingは次のverification-infra 2件である。
+
+1. 旧P001-21は子processへ「100ms後にactive lock作成、1,000ms後に削除」という固定timerだけを渡し、親が子processの起動完了やactive lock bytesを同期確認しなかった。Windowsの子process起動が遅いと、最初の注入`EPERM`後に実lock／`EEXIST`を観測できず、2回目の`EPERM`も同じ1,000ms episodeへ入り`canonical-lock-create-failed`となった。
+2. workflowはP001とSprint 047を同じPowerShell `run: |`へ並べたため、P001 exit 1の後に実行されたSprint 047 exit 0がstep最終exitを上書きし、jobを偽greenにした。
+
+今回のdiffは製品code 0行で、test／workflow／inventory／progressだけのverification-infra修正である。直前のGenerator roundはClarity coreの製品修正を含むため、verification-onlyが2回連続した状態ではない。
+
+### 実装
+
+- P001-21の子processは、起動直後にready markerを実作成してから待機する。親はreadyを確認後に製品writerを非同期起動する。
+- 子processは製品writerが最初の`.clarity/lock-transition.json`を実作成したことをbarrierとして、`O_EXCL`相当の`flag: "wx"`でactive `.clarity/lock.json`を作る。親はowner／kind／token／active leaseを実bytesから同期確認し、writerが生存中であることも確認する。
+- 最初のtransition guardがreleaseされた後もactive lockをproduction poll境界を越えて保持し、親の明示release marker後だけ子processが削除する。成功時は`lockCreateFailures=2`、`lockCreateEpisodes=2`、`lockCreateMaxEpisodeFailures=1`、`lockAttempts>=4`をhard assertする。実測の`lockAttempts=6〜7`はEPERM間に実EEXIST待機が入った証拠である。
+- 既存上限は変更していない。局所上限7 failure／1,000ms、全体lock wait 15秒、lease 30秒、Case ID 23件、P001-21の意味、注入EPERM 2件を維持した。test skip、platform分岐、assert削除、単なるsleep延長は0件である。
+- Windows workflowを次の2 stepへ分離し、各stepを1 native commandだけにした。
+  - `Clarity logical write failure recovery regression (P001)` → `node scripts/sprint-047-patch-001-test.mjs`
+  - `Clarity concurrent write regression (Sprint 047)` → `node scripts/sprint-047-test.mjs`
+- P001-21自身とWindows native HS-015の両方が上記step名／単一command／旧multi-command block不在を静的assertする。HS-015はP001より前の独立したPatch 004 stepで実行されるため、旧構造が戻れば後続commandによるexit上書き前にjobが失敗する。
+- inventoryの`clarity-harness-scanner`へP001とSprint 047入口を追加し、workflow／Patch 004／005と一緒にdigest追跡する。更新後は20 surface／67 case、markers／digests validである。
+
+### 固定candidate
+
+- 製品／test／workflow candidate commit: `85a53caf0148e5de26a5e527a83f8532dabfb5e4`
+- tree: `76337d739dcfc75aae3820e88bc99d676712c8d5`
+- 開始HEAD `9111f101961b66b038f403b28f0281e4287b98dd`からの変更はworkflow、P001、Patch 004のworkflow構造回帰、inventory path／digestの5 filesだけで、Clarity製品coreは変更していない。
+- exact clean cloneと`git archive 85a53caf...`のGit-free archiveで、workflow／P001／inventoryのSHA-256がbyte一致した。exact cleanは検証前後`git status --short`空、Git-freeは`.git`不存在である。
+
+### 実行済み検証
+
+| 面／command | 結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 最終内容で3回すべて23／23 PASS。P001-21は各回failures 2、episodes 2、max episode failures 1、attempts 6〜7、1,000ms margin正、15秒margin正 |
+| source、`node scripts/sprint-047-test.mjs` | 25／25 PASS、GS-009 Hook 32＋CLI 32＝64／64、parse／unique／State rebuild 100%、residue前後0、max wait 1,346／15,000ms、max lease critical 110／30,000ms |
+| source、Patch 004 | 12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| source、Patch 005 | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source、conversation migration | 9／9 PASS／Windows native NOT-RUN |
+| source、inventory | 20 surface／67 case、marker／digest PASS |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| exact clean `85a53caf...`、P001 | 23／23 PASS、P001-21 attempts 7、failures 2、episodes 2、max episode failures 1 |
+| exact clean、Sprint 047 | 25／25 PASS、GS-009 64／64、parse／unique／State rebuild 100%、residue前後0、max wait 1,245ms、lease critical 168ms |
+| exact clean、Patch 004／005／conversation／inventory | 12／12、9／9、9／9、20 surface／67 case、0 FAIL。Windows面はNOT-RUN |
+| Git-free `85a53caf...`、P001 | 23／23 PASS、P001-21 attempts 7、failures 2、episodes 2、max episode failures 1 |
+| Git-free、Sprint 047 | 25／25 PASS、GS-009 64／64、parse／unique／State rebuild 100%、residue前後0、max wait 1,253ms、lease critical 183ms |
+| Git-free、Patch 004／005／conversation／inventory | 12／12、9／9、9／9、20 surface／67 case、0 FAIL。Windows面はNOT-RUN |
+| Git-free、`node scripts/archive-release-gate.mjs` | `ARCHIVE_RELEASE_PASS=14 ARCHIVE_RELEASE_FAIL=0` |
+| `node --check`／`git diff --check` | exit 0 |
+
+`archive-release-gate.mjs`をsource checkout直下で一度実行した13／14は、Git-free専用gateを`.git`ありrootへ誤って向けたための期待どおりの`archive root has no .git` 1件で、製品／candidate failureへ数えない。正しいGit-free入口は上記14／14である。
+
+### Windows再実行条件と期待marker
+
+Windows Server 2025／Node 22 nativeはcandidate `85a53caf...`で **NOT-RUN**。main agentがこのcommitを既存PR #11 branchへ通常pushした後だけ因果runを実行し、次を生ログで確認する。
+
+- step `Clarity logical write failure recovery regression (P001)`が独立success、`P001-01`〜`P001-23`の23 PASS／0 FAIL／platform `win32`。特にP001-21は`lockCreateFailures: 2`、`lockCreateEpisodes: 2`、`lockCreateMaxEpisodeFailures: 1`、`lockAttempts >= 4`、retry max failures 7、retry limit 1,000ms、lock wait limit 15,000msと正marginを持つ。
+- step `Clarity concurrent write regression (Sprint 047)`が独立success、`SPRINT047_TEST_PASS=25 FAIL=0`。GS-009は3 roundそれぞれwriters 64、Hook 32＋CLI 32、exit 0が64／64、parse／unique／State rebuild 100%、guard込みresidue before／after 0、wait／lease／10分margin正である。
+- 先行P001が非0なら、そのstepでjobが停止し、Sprint 047 stepの成功によってjob successへ変わらない。
+- Patch 004は16／16かつHS-015 PASS、Patch 005は10／10、conversation migrationは9／9かつ`WINDOWS_NATIVE=RUN`、job合計は`timeout-minutes: 10`未満かつ正marginを持つ。
+
+### 残余リスク／未実施事項
+
+- Windows child startup／NTFS timingでのbarrier実証は因果run待ちであり、macOS結果をWindows PASSへ読み替えない。Windows nativeが23／23になるまでpublic fixed handoff readyを発行しない。
+- 製品candidateのGS-009は直近Windows runで3 round greenだったが、今回のtest／workflow変更を含むexact candidateのWindows因果性は未証明である。
+- 本記録はGenerator自己評価であり、fresh独立Evaluator Verdict、public done、private my-vault／Yasashii ready、release readyではない。
+- push／GitHub API／Windows CI／Evaluator／downstream／merge／release／tag／Marketplace／install／cache／live workspace／実Xmindは0件。offline fixtureのnetwork／external service writeも0件である。
