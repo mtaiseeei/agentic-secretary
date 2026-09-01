@@ -20,6 +20,24 @@ const statuses = new Map();
 const capabilityStatuses = [];
 let externalWrites = 0;
 let networkCalls = 0;
+const syntaxSteps = [
+  ["Node syntax - secretary store", "node --check plugins/secretary/scripts/lib/secretary-store.mjs"],
+  ["Node syntax - workspace tools", "node --check plugins/secretary/scripts/workspace-tools.mjs"],
+  ["Node syntax - memory tools", "node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs"],
+  ["Node syntax - project tools", "node --check plugins/secretary/scripts/project-tools.mjs"],
+  ["Node syntax - owner name transaction", "node --check plugins/secretary/scripts/owner-name-transaction.mjs"],
+  ["Node syntax - conversation migration", "node --check plugins/secretary/scripts/lib/conversation-migration.mjs"],
+  ["Node syntax - Clarity core", "node --check plugins/secretary/scripts/lib/clarity-core.mjs"],
+  ["Node syntax - P001 regression", "node --check scripts/sprint-047-patch-001-test.mjs"],
+];
+const regressionSteps = [
+  ["Windows path, rollback, retry, and boundary regression", "node scripts/sprint-038-patch-002-windows-test.mjs --require-windows"],
+  ["Conversation migration sibling temp and rollback regression", "node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows"],
+  ["Clarity Harness scan and Windows native regression", "node scripts/sprint-050-patch-004-test.mjs --require-windows"],
+  ["Clarity state structure and Secret redaction regression", "node scripts/sprint-050-patch-005-test.mjs --require-windows"],
+  ["Clarity logical write failure recovery regression (P001)", "node scripts/sprint-047-patch-001-test.mjs"],
+  ["Clarity concurrent write regression (Sprint 047)", "node scripts/sprint-047-test.mjs"],
+];
 
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function run(command, args, options = {}) {
@@ -84,6 +102,38 @@ function normalizedPreview(preview) {
   };
 }
 function source(report, role) { return report.harness.sources.find((row) => row.role === role); }
+function leadingSpaces(line) { return line.length - line.trimStart().length; }
+function extractBoundedBlock(lines, header, indent, label) {
+  const indexes = lines.flatMap((line, index) => line === header ? [index] : []);
+  assert.equal(indexes.length, 1, `${label}: expected one exact header, found ${indexes.length}`);
+  const start = indexes[0];
+  let end = start + 1;
+  while (end < lines.length) {
+    const line = lines[end];
+    if (line.trim() && leadingSpaces(line) <= indent) break;
+    end += 1;
+  }
+  return { start, lines: lines.slice(start, end).filter((line) => line.trim()) };
+}
+function assertExactPwshStep(jobLines, name, command) {
+  const header = `      - name: ${name}`;
+  const step = extractBoundedBlock(jobLines, header, 6, `workflow step ${name}`);
+  assert.deepEqual(step.lines, [header, "        shell: pwsh", `        run: ${command}`], `${name}: step must contain only shell pwsh and one exact run command`);
+  assert.deepEqual(jobLines.filter((line) => line.includes(command)), [`        run: ${command}`], `${name}: command must occur once as an exact one-line run scalar`);
+  assert.equal(step.lines.some((line) => /^\s+(?:continue-on-error|if):/u.test(line)), false, `${name}: if/continue-on-error is forbidden`);
+  return step.start;
+}
+function assertWindowsWorkflowStructure() {
+  const lines = readFileSync(join(ROOT, ".github/workflows/windows-recording-regression.yml"), "utf8").replace(/\r\n?/gu, "\n").split("\n");
+  const job = extractBoundedBlock(lines, "  windows-native:", 2, "windows-native job").lines;
+  for (const requiredLine of ["    runs-on: windows-2025", "    timeout-minutes: 10"]) {
+    assert.equal(job.filter((line) => line === requiredLine).length, 1, `windows-native job must contain exact ${requiredLine.trim()}`);
+  }
+  const setup = extractBoundedBlock(job, "      - uses: actions/setup-node@v4", 6, "setup-node step");
+  assert.deepEqual(setup.lines, ["      - uses: actions/setup-node@v4", "        with:", "          node-version: \"22\""], "setup-node must pin exact Node 22 without conditional escape");
+  const stepIndexes = new Map([...syntaxSteps, ...regressionSteps].map(([name, command]) => [name, assertExactPwshStep(job, name, command)]));
+  assert(stepIndexes.get(regressionSteps[4][0]) < stepIndexes.get(regressionSteps[5][0]), "P001 workflow step must run before Sprint 047");
+}
 function copyTreeNoFollow(sourceRoot, destinationRoot) {
   mkdirSync(destinationRoot, { recursive: true });
   for (const entry of readdirSync(sourceRoot, { withFileTypes: true })) {
@@ -120,6 +170,8 @@ function initializeInventoryGitFixture(root) {
 
 const cleanup = [];
 try {
+  assertWindowsWorkflowStructure();
+  console.log("WORKFLOW_PREFLIGHT_PASS=1");
   const base = harnessFixture("clarity-hs001"); cleanup.push(base);
   const baseReport = scanRepository(base);
   record("HS-001", "PASS", "reserved-lane-before-generic", () => {
@@ -310,11 +362,7 @@ try {
       assert.deepEqual(Object.keys(capabilities).sort(), ["junction", "symlink"]); console.log(`WINDOWS_CAPABILITIES=${JSON.stringify(capabilities)}`);
     });
     record("HS-015", "PASS", "causal-windows-workflow-entry", () => {
-      const workflow = readFileSync(join(ROOT, ".github/workflows/windows-recording-regression.yml"), "utf8");
-      assert.match(workflow, /windows-native:/u); assert.match(workflow, /timeout-minutes:\s*10/u); assert.match(workflow, /sprint-038-patch-002-windows-test\.mjs --require-windows/u); assert.match(workflow, /sprint-050-patch-004-test\.mjs --require-windows/u);
-      assert.match(workflow, /- name: Clarity logical write failure recovery regression \(P001\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-patch-001-test\.mjs/u);
-      assert.match(workflow, /- name: Clarity concurrent write regression \(Sprint 047\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-test\.mjs/u);
-      assert.doesNotMatch(workflow, /run:\s*\|[\s\S]{0,240}sprint-047-patch-001-test\.mjs[\s\S]{0,240}sprint-047-test\.mjs/u);
+      assertWindowsWorkflowStructure();
     });
   }
 

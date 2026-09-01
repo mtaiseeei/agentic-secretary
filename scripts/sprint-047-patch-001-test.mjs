@@ -16,6 +16,62 @@ const results = [];
 const failureMetrics = [];
 const coreSource = readFileSync(join(repo, "plugins/secretary/scripts/lib/clarity-core.mjs"), "utf8");
 const normalizedCoreSource = coreSource.replace(/\r\n?/gu, "\n");
+const expectedCaseIds = Array.from({ length: 23 }, (_, index) => `P001-${String(index + 1).padStart(2, "0")}`);
+const syntaxSteps = [
+  ["Node syntax - secretary store", "node --check plugins/secretary/scripts/lib/secretary-store.mjs"],
+  ["Node syntax - workspace tools", "node --check plugins/secretary/scripts/workspace-tools.mjs"],
+  ["Node syntax - memory tools", "node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs"],
+  ["Node syntax - project tools", "node --check plugins/secretary/scripts/project-tools.mjs"],
+  ["Node syntax - owner name transaction", "node --check plugins/secretary/scripts/owner-name-transaction.mjs"],
+  ["Node syntax - conversation migration", "node --check plugins/secretary/scripts/lib/conversation-migration.mjs"],
+  ["Node syntax - Clarity core", "node --check plugins/secretary/scripts/lib/clarity-core.mjs"],
+  ["Node syntax - P001 regression", "node --check scripts/sprint-047-patch-001-test.mjs"],
+];
+const regressionSteps = [
+  ["Windows path, rollback, retry, and boundary regression", "node scripts/sprint-038-patch-002-windows-test.mjs --require-windows"],
+  ["Conversation migration sibling temp and rollback regression", "node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows"],
+  ["Clarity Harness scan and Windows native regression", "node scripts/sprint-050-patch-004-test.mjs --require-windows"],
+  ["Clarity state structure and Secret redaction regression", "node scripts/sprint-050-patch-005-test.mjs --require-windows"],
+  ["Clarity logical write failure recovery regression (P001)", "node scripts/sprint-047-patch-001-test.mjs"],
+  ["Clarity concurrent write regression (Sprint 047)", "node scripts/sprint-047-test.mjs"],
+];
+
+function leadingSpaces(line) {
+  return line.length - line.trimStart().length;
+}
+function extractBoundedBlock(lines, header, indent, label) {
+  const indexes = lines.flatMap((line, index) => line === header ? [index] : []);
+  assert.equal(indexes.length, 1, `${label}: expected one exact header, found ${indexes.length}`);
+  const start = indexes[0];
+  let end = start + 1;
+  while (end < lines.length) {
+    const line = lines[end];
+    if (line.trim() && leadingSpaces(line) <= indent) break;
+    end += 1;
+  }
+  return { start, lines: lines.slice(start, end).filter((line) => line.trim()) };
+}
+function assertExactPwshStep(jobLines, name, command) {
+  const header = `      - name: ${name}`;
+  const step = extractBoundedBlock(jobLines, header, 6, `workflow step ${name}`);
+  assert.deepEqual(step.lines, [header, "        shell: pwsh", `        run: ${command}`], `${name}: step must contain only shell pwsh and one exact run command`);
+  const commandOccurrences = jobLines.filter((line) => line.includes(command));
+  assert.deepEqual(commandOccurrences, [`        run: ${command}`], `${name}: command must occur once as an exact one-line run scalar`);
+  assert.equal(step.lines.some((line) => /^\s+(?:continue-on-error|if):/u.test(line)), false, `${name}: if/continue-on-error is forbidden`);
+  return step.start;
+}
+function assertWindowsWorkflowStructure() {
+  const workflowPath = join(repo, ".github/workflows/windows-recording-regression.yml");
+  const lines = readFileSync(workflowPath, "utf8").replace(/\r\n?/gu, "\n").split("\n");
+  const job = extractBoundedBlock(lines, "  windows-native:", 2, "windows-native job").lines;
+  for (const requiredLine of ["    runs-on: windows-2025", "    timeout-minutes: 10"]) {
+    assert.equal(job.filter((line) => line === requiredLine).length, 1, `windows-native job must contain exact ${requiredLine.trim()}`);
+  }
+  const setup = extractBoundedBlock(job, "      - uses: actions/setup-node@v4", 6, "setup-node step");
+  assert.deepEqual(setup.lines, ["      - uses: actions/setup-node@v4", "        with:", "          node-version: \"22\""], "setup-node must pin exact Node 22 without conditional escape");
+  const stepIndexes = new Map([...syntaxSteps, ...regressionSteps].map(([name, command]) => [name, assertExactPwshStep(job, name, command)]));
+  assert(stepIndexes.get(regressionSteps[4][0]) < stepIndexes.get(regressionSteps[5][0]), "P001 workflow step must run before Sprint 047");
+}
 
 function run(args, { env = {}, expected = 0, root = repo } = {}) {
   const result = spawnSync(process.execPath, [cli, ...args], { cwd: root, encoding: "utf8", timeout: 120_000, maxBuffer: 32 * 1024 * 1024, env: { ...process.env, CLARITY_TEST_MODE: "1", ...env } });
@@ -144,7 +200,11 @@ async function test(id, title, fn) {
   catch (error) { results.push({ id, ok: false }); process.stdout.write(`FAIL ${id} ${title}: ${error?.stack || error}\n`); }
 }
 
+let caseRunStarted = false;
 try {
+  assertWindowsWorkflowStructure();
+  process.stdout.write("WORKFLOW_PREFLIGHT_PASS=1\n");
+  caseRunStarted = true;
   mkdirSync(base);
   writeFileSync(join(base, "README.md"), "# logical write fixture\n");
   run(["init", base, "--apply", "--json"]);
@@ -571,6 +631,7 @@ try {
       readyPath: childReadyPath, lockedPath: childLockedPath, releasePath: childReleasePath,
     });
     await waitForPath(childReadyPath);
+    // 1,800ms exceeds the 1,000ms episode window, proving the second episode resets instead of sharing the first episode's failure budget.
     const failures = [
       { point: "lock-create-open", times: 1, delayMs: 300, code: "EPERM", syscall: "open" },
       { point: "lock-create-open", times: 1, delayMs: 1_800, code: "EPERM", syscall: "open" },
@@ -605,10 +666,6 @@ try {
     assert.deepEqual(operationResidue(root), []);
     assert.equal(existsSync(lockPath), false);
     for (const path of [childReadyPath, childLockedPath, childReleasePath]) unlinkSync(path);
-    const workflow = readFileSync(join(repo, ".github/workflows/windows-recording-regression.yml"), "utf8");
-    assert.match(workflow, /- name: Clarity logical write failure recovery regression \(P001\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-patch-001-test\.mjs/u);
-    assert.match(workflow, /- name: Clarity concurrent write regression \(Sprint 047\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-test\.mjs/u);
-    assert.doesNotMatch(workflow, /run:\s*\|[\s\S]{0,240}sprint-047-patch-001-test\.mjs[\s\S]{0,240}sprint-047-test\.mjs/u);
     failureMetrics.push({ case: "P001-21-lock-open-episode-reset", ...recovered.json.writeMetrics });
   });
 
@@ -888,7 +945,16 @@ try {
   });
 } finally {
   const failed = results.filter((row) => !row.ok);
+  let caseInventoryError = null;
+  if (caseRunStarted) {
+    try {
+      assert.deepEqual(results.map((row) => row.id), expectedCaseIds, "P001 case inventory must be exactly P001-01 through P001-23 in order with no duplicates or omissions");
+    } catch (error) {
+      caseInventoryError = error;
+    }
+  }
   process.stdout.write(`${JSON.stringify({ suite: "sprint-047-patch-001", cases: results.length, passed: results.length - failed.length, failed: failed.length, platform: process.platform, failureMetrics }, null, 2)}\n`);
   rmSync(work, { recursive: true, force: true });
+  if (caseInventoryError) throw caseInventoryError;
   assert.equal(failed.length, 0, `failed: ${failed.map((row) => row.id).join(", ")}`);
 }

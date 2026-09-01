@@ -27,17 +27,30 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Node-native syntax
+      - name: Node syntax - secretary store
         shell: pwsh
-        run: |
-          node --check plugins/secretary/scripts/lib/secretary-store.mjs
-          node --check plugins/secretary/scripts/workspace-tools.mjs
-          node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
-          node --check plugins/secretary/scripts/project-tools.mjs
-          node --check plugins/secretary/scripts/owner-name-transaction.mjs
-          node --check plugins/secretary/scripts/lib/conversation-migration.mjs
-          node --check plugins/secretary/scripts/lib/clarity-core.mjs
-          node --check scripts/sprint-047-patch-001-test.mjs
+        run: node --check plugins/secretary/scripts/lib/secretary-store.mjs
+      - name: Node syntax - workspace tools
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/workspace-tools.mjs
+      - name: Node syntax - memory tools
+        shell: pwsh
+        run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
+      - name: Node syntax - project tools
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/project-tools.mjs
+      - name: Node syntax - owner name transaction
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/owner-name-transaction.mjs
+      - name: Node syntax - conversation migration
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/lib/conversation-migration.mjs
+      - name: Node syntax - Clarity core
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/lib/clarity-core.mjs
+      - name: Node syntax - P001 regression
+        shell: pwsh
+        run: node --check scripts/sprint-047-patch-001-test.mjs
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
