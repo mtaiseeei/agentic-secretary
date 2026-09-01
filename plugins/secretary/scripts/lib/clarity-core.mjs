@@ -154,6 +154,7 @@ function nowIso() {
 }
 
 const CANONICAL_LOCK_REL = ".clarity/lock.json";
+const CANONICAL_LOCK_TRANSITION_REL = ".clarity/lock-transition.json";
 const CANONICAL_LOCK_OWNER = "agentic-secretary:clarity";
 const CANONICAL_LOCK_TTL_MS = 30_000;
 const CANONICAL_LOCK_WAIT_MS = 15_000;
@@ -248,29 +249,207 @@ function waitAtStaleLockRemovalBarrier(root) {
   }
 }
 
-function removeOwnedStaleLock(root, path, clock = Date.now()) {
+function removePathByIdentity(root, rel, identity) {
+  try {
+    const checked = safeDeletePath(root, rel);
+    const current = filesystemIdentity(checked);
+    if (!sameIdentity(current, identity)) return false;
+    unlinkSync(checked);
+    return true;
+  } catch { return false; }
+}
+
+function acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId = null) {
+  const path = safeWritePath(root, CANONICAL_LOCK_TRANSITION_REL);
+  const token = sha256(`${process.pid}:${Date.now()}:${Math.random()}:lock-transition`);
+  let attempts = 0;
+  while (true) {
+    attempts += 1;
+    if (attempts > CANONICAL_LOCK_MAX_ATTEMPTS || Date.now() - started > CANONICAL_LOCK_WAIT_MS) {
+      throw new ClarityError("canonical-lock-transition-busy", "別のClarity lock切替が進行中です。変更せず停止しました。", 4, {
+        changed: false, nextAction: "処理完了後に再実行するか、doctorでlock状態を確認してください",
+      });
+    }
+    revalidateClarityRoot(root);
+    const parent = dirname(path);
+    let parentIdentity;
+    try {
+      parentIdentity = filesystemIdentity(parent);
+      accessSync(parent, constants.W_OK);
+    } catch (error) {
+      throw lockInspectionError("canonical-lock-transition-parent-unavailable", "Clarity lock切替の親directoryを安全に確認できないため、変更せず停止しました。", error);
+    }
+    fail(parentIdentity.kind === "directory" && sameIdentity(parentIdentity, expectedParentIdentity),
+      "canonical-lock-parent-changed", "Clarity canonical lockの親directoryが差し替わったため、変更せず停止しました。", { changed: false });
+    let descriptor = null;
+    let identity = null;
+    try {
+      const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+      descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+      const stat = fstatSync(descriptor);
+      fail(stat.isFile(), "canonical-lock-transition-unsafe", "Clarity lock切替guardを通常fileとして作成できません。", { changed: false });
+      identity = { dev: String(stat.dev), ino: String(stat.ino), mode: Number(stat.mode), kind: "file" };
+      writeFileSync(descriptor, stableJson({
+        schemaVersion: 1,
+        owner: CANONICAL_LOCK_OWNER,
+        kind: "lock-transition",
+        token,
+        operationId,
+        acquiredAt: new Date().toISOString(),
+      }), "utf8");
+      closeSync(descriptor);
+      descriptor = null;
+      maybeCrash("lock-transition-held");
+      return { path, identity };
+    } catch (error) {
+      if (descriptor !== null) closeSync(descriptor);
+      if (identity && !removePathByIdentity(root, CANONICAL_LOCK_TRANSITION_REL, identity)) {
+        throw new ClarityError("canonical-lock-transition-record-incomplete", "Clarity lock切替guardの所有recordを確定できず、同じidentityのcleanupにも失敗しました。成功扱いにしません。", 4, { changed: false });
+      }
+      if (error?.code === "EEXIST") {
+        try {
+          const stat = lstatSync(path);
+          fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-lock-transition-unsafe", "Clarity lock切替guard pathが安全ではありません。", { changed: false });
+        } catch (inspectionError) {
+          if (inspectionError?.code !== "ENOENT") {
+            if (inspectionError instanceof ClarityError) throw inspectionError;
+            throw lockInspectionError("canonical-lock-transition-unavailable", "Clarity lock切替guardを安全に確認できないため、変更せず停止しました。", inspectionError);
+          }
+        }
+        sleepSync(CANONICAL_LOCK_POLL_MS);
+        continue;
+      }
+      if (error?.code === "ENOENT" || isRetryableLockCreateConflict(error)) {
+        sleepSync(CANONICAL_LOCK_POLL_MS);
+        continue;
+      }
+      if (error instanceof ClarityError) throw error;
+      throw lockInspectionError("canonical-lock-transition-unavailable", "Clarity lock切替guardを安全に確定できないため、変更せず停止しました。", error);
+    }
+  }
+}
+
+function waitAtLockTransitionReleaseBarrier(root) {
+  if (process.env.CLARITY_TEST_MODE !== "1" || process.env.CLARITY_LOCK_TRANSITION_RELEASE_BARRIER !== "1") return;
+  const ready = safeWritePath(root, ".clarity/.test-lock-transition-release-ready");
+  const release = safeWritePath(root, ".clarity/.test-lock-transition-release-release");
+  writeFileSync(ready, "ready\n", { encoding: "utf8", flag: "wx", mode: 0o600 });
+  const started = Date.now();
+  while (!existsSync(release)) {
+    if (Date.now() - started >= 5_000) {
+      throw new ClarityError("canonical-lock-transition-cleanup-failed", "Clarity lock切替guardのtest barrierが上限内に解放されなかったため、変更せず停止しました。", 4, {
+        changed: false, errorCode: "ETIMEDOUT", syscall: "test-barrier",
+      });
+    }
+    sleepSync(5);
+  }
+}
+
+function releaseCanonicalLockTransition(root, transition) {
+  waitAtLockTransitionReleaseBarrier(root);
+  if (removePathByIdentity(root, CANONICAL_LOCK_TRANSITION_REL, transition.identity)) return;
+  throw new ClarityError("canonical-lock-transition-cleanup-failed", "Clarity lock切替guardを同じidentityでcleanupできないため、成功扱いにしません。", 4, { changed: false });
+}
+
+function createCanonicalLockPath(root, path, expectedParentIdentity, started, operationId) {
+  const transition = acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId);
+  let descriptor = null;
+  let createdIdentity = null;
+  try {
+    const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+    maybeInjectFilesystemFailure("lock-create-open", CANONICAL_LOCK_REL);
+    descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+    const stat = fstatSync(descriptor);
+    fail(stat.isFile(), "canonical-lock-unsafe", "Clarity canonical lockを通常fileとして作成できません。");
+    createdIdentity = { dev: String(stat.dev), ino: String(stat.ino), mode: Number(stat.mode), kind: "file" };
+    releaseCanonicalLockTransition(root, transition);
+    return { descriptor, createdIdentity };
+  } catch (error) {
+    if (descriptor !== null && error?.code?.startsWith?.("canonical-lock-transition")) {
+      closeSync(descriptor);
+      descriptor = null;
+      if (createdIdentity) removeCreatedLockByIdentity(root, path, createdIdentity);
+    }
+    try { releaseCanonicalLockTransition(root, transition); }
+    catch (releaseError) {
+      if (error?.code?.startsWith?.("canonical-lock-transition")) throw error;
+      throw releaseError;
+    }
+    throw error;
+  }
+}
+
+function removeOwnedStaleLock(root, path, { token, operationId, parentIdentity, started, clock = Date.now() }) {
   const record = readOwnedLock(path);
   if (!record || Number.isNaN(Date.parse(record.expiresAt)) || Date.parse(record.expiresAt) > clock) return false;
-  const checked = safeDeletePath(root, CANONICAL_LOCK_REL);
-  const current = readOwnedLock(checked);
-  if (!current || current.token !== record.token || current.expiresAt !== record.expiresAt) return false;
+  waitAtStaleLockRemovalBarrier(root);
+  const transition = acquireCanonicalLockTransition(root, parentIdentity, started, operationId);
+  let transitionReleased = false;
+  let descriptor = null;
+  let createdIdentity = null;
   try {
-    waitAtStaleLockRemovalBarrier(root);
+    const checked = safeDeletePath(root, CANONICAL_LOCK_REL);
+    const current = readOwnedLock(checked);
+    if (!current || current.token !== record.token || current.expiresAt !== record.expiresAt
+      || Number.isNaN(Date.parse(current.expiresAt)) || Date.parse(current.expiresAt) > Date.now()) return false;
     maybeInjectFilesystemFailure("lock-stale-remove", CANONICAL_LOCK_REL);
     rmSync(checked);
-    return true;
+    const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+    const openStarted = Date.now();
+    let openFailures = 0;
+    while (true) {
+      try {
+        maybeInjectFilesystemFailure("lock-create-open", CANONICAL_LOCK_REL);
+        descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+        break;
+      } catch (error) {
+        openFailures += 1;
+        if (!isRetryableLockCreateConflict(error) || openFailures >= CANONICAL_LOCK_CREATE_MAX_FAILURES
+          || Date.now() - openStarted >= CANONICAL_LOCK_CREATE_MAX_WAIT_MS
+          || Date.now() - started >= CANONICAL_LOCK_WAIT_MS) throw error;
+        sleepSync(CANONICAL_LOCK_POLL_MS);
+      }
+    }
+    const stat = fstatSync(descriptor);
+    fail(stat.isFile(), "canonical-lock-unsafe", "Clarity canonical lockを通常fileとして作成できません。");
+    createdIdentity = { dev: String(stat.dev), ino: String(stat.ino), mode: Number(stat.mode), kind: "file" };
+    releaseCanonicalLockTransition(root, transition);
+    transitionReleased = true;
+    maybeCrash("lock-record-before");
+    try {
+      maybeInjectFilesystemFailure("lock-record-before", CANONICAL_LOCK_REL);
+      writeFileSync(descriptor, stableJson(lockRecord(token, operationId)), "utf8");
+      closeSync(descriptor);
+      descriptor = null;
+      return true;
+    } catch (error) {
+      closeSync(descriptor);
+      descriptor = null;
+      const cleaned = removeCreatedLockByIdentity(root, path, createdIdentity);
+      if (!cleaned) {
+        throw new ClarityError("canonical-lock-record-incomplete", "lock排他作成後に所有recordを確定できず、同じinodeのcleanupにも失敗しました。成功扱いにしません。", 4, {
+          changed: false, operationId, lock: CANONICAL_LOCK_REL, nextAction: "doctorで識別不能lockを確認し、利用者確認後に回復してください",
+        });
+      }
+      throw new ClarityError("canonical-lock-create-failed", "Clarity canonical lockを安全に確定できなかったため、変更せず停止しました。", 4, {
+        changed: false, operationId, ...sanitizedLockFilesystemDetails(error),
+      });
+    }
   } catch (error) {
     if (error?.code === "ENOENT") {
       try {
-        lstatSync(checked);
+        lstatSync(path);
         return false;
       } catch (inspectionError) {
-        if (inspectionError?.code === "ENOENT") return true;
+        if (inspectionError?.code === "ENOENT") return false;
         throw lockInspectionError("canonical-lock-stale-cleanup-failed", "期限切れClarity canonical lockの削除結果を安全に確認できないため、変更せず停止しました。", inspectionError);
       }
     }
     if (error instanceof ClarityError) throw error;
     throw lockInspectionError("canonical-lock-stale-cleanup-failed", "期限切れClarity canonical lockを安全に削除できないため、変更せず停止しました。", error);
+  } finally {
+    if (descriptor !== null) closeSync(descriptor);
+    if (!transitionReleased) releaseCanonicalLockTransition(root, transition);
   }
 }
 
@@ -413,15 +592,10 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
     let descriptor = null;
     let createdIdentity = null;
     try {
-      const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
-      maybeInjectFilesystemFailure("lock-create-open", CANONICAL_LOCK_REL);
-      descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+      const created = createCanonicalLockPath(root, path, parentIdentity, started, operationId);
+      descriptor = created.descriptor;
+      createdIdentity = created.createdIdentity;
       resolveLockCreateEpisode();
-      const descriptorStat = fstatSync(descriptor);
-      fail(descriptorStat.isFile(), "canonical-lock-unsafe", "Clarity canonical lockを通常fileとして作成できません。");
-      createdIdentity = {
-        dev: String(descriptorStat.dev), ino: String(descriptorStat.ino), mode: Number(descriptorStat.mode), kind: "file",
-      };
       maybeCrash("lock-record-before");
       maybeInjectFilesystemFailure("lock-record-before", CANONICAL_LOCK_REL);
       writeFileSync(descriptor, stableJson(lockRecord(token, operationId)), "utf8");
@@ -490,6 +664,7 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
           },
         });
       }
+      if (error instanceof ClarityError) throw error;
       if (error?.code !== "EEXIST") {
         throw new ClarityError("canonical-lock-create-failed", "Clarity canonical lockを安全に確定できなかったため、変更せず停止しました。", 4, {
           changed: false, operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown",
@@ -506,7 +681,10 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
         throw lockInspectionError("canonical-lock-path-unavailable", "Clarity canonical lock pathを安全に確認できないため、変更せず停止しました。", statError);
       }
       fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-lock-unsafe", "Clarity canonical lock pathが安全ではありません。");
-      if (removeOwnedStaleLock(root, path)) { sleepSync(CANONICAL_LOCK_POLL_MS); continue; }
+      if (removeOwnedStaleLock(root, path, { token, operationId, parentIdentity, started })) {
+        acquired = true;
+        continue;
+      }
       if (Date.now() - started >= CANONICAL_LOCK_WAIT_MS) {
         throw new ClarityError("canonical-lock-busy", "別のClarity書込みが進行中です。変更せず停止しました。", 4, { changed: false, nextAction: "処理完了後に再実行するか、doctorでlock状態を確認してください" });
       }
@@ -554,12 +732,17 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
     lease.metrics.leaseCriticalMs = Date.now() - criticalStarted;
     lease.metrics.leaseMarginMs = Math.max(0, lease.expiresAt - Date.now());
     try {
-      const record = readOwnedLock(path);
-      if (record?.token === token && record?.operationId === operationId && Date.parse(record.expiresAt) > Date.now()) {
-        maybeInjectFilesystemFailure("lock-release-cleanup", CANONICAL_LOCK_REL);
-        rmSync(path);
-      } else if (!callbackError) {
-        callbackError = new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、成功扱いにしません。", 4, { changed: Boolean(result?.changed), operationId, nextAction: "doctorでlock状態を確認してください" });
+      const transition = acquireCanonicalLockTransition(root, parentIdentity, Date.now(), operationId);
+      try {
+        const record = readOwnedLock(path);
+        if (record?.token === token && record?.operationId === operationId && Date.parse(record.expiresAt) > Date.now()) {
+          maybeInjectFilesystemFailure("lock-release-cleanup", CANONICAL_LOCK_REL);
+          rmSync(path);
+        } else if (!callbackError) {
+          callbackError = new ClarityError("canonical-lease-lost", "Clarity canonical lockのowner／tokenが変わったため、成功扱いにしません。", 4, { changed: Boolean(result?.changed), operationId, nextAction: "doctorでlock状態を確認してください" });
+        }
+      } finally {
+        releaseCanonicalLockTransition(root, transition);
       }
     } catch (error) {
       if (!callbackError) callbackError = new ClarityError("canonical-release-incomplete", "canonical write後のlock release／cleanupに失敗したため、成功扱いにしません。", 4, {
@@ -2151,6 +2334,19 @@ function previewRuntimeCleanupImpl(rootValue, { clock = nowIso() } = {}) {
     if (!stat.isFile() || stat.isSymbolicLink()) preserved.push({ path: CANONICAL_LOCK_REL, reason: "not-owned" });
     else inspectOwnedRecord(CANONICAL_LOCK_REL, canonicalLock);
   }
+  const transitionLock = safeWritePath(canonical.root, CANONICAL_LOCK_TRANSITION_REL);
+  if (existsSync(transitionLock)) {
+    const stat = lstatSync(transitionLock);
+    if (!stat.isFile() || stat.isSymbolicLink()) preserved.push({ path: CANONICAL_LOCK_TRANSITION_REL, reason: "not-owned" });
+    else {
+      let record;
+      try { record = JSON.parse(readFileSync(transitionLock, "utf8")); }
+      catch { record = null; }
+      if (record?.owner === CANONICAL_LOCK_OWNER && record?.kind === "lock-transition" && typeof record?.token === "string") {
+        preserved.push({ path: CANONICAL_LOCK_TRANSITION_REL, reason: "interrupted-lock-transition", operationId: record.operationId || null });
+      } else preserved.push({ path: CANONICAL_LOCK_TRANSITION_REL, reason: "ownership-unverified" });
+    }
+  }
   if (existsSync(runtime)) {
     fail(lstatSync(runtime).isDirectory() && !lstatSync(runtime).isSymbolicLink(), "runtime-unsafe", "runtime pathが安全な通常directoryではないため変更しません。");
     for (const entry of readdirSync(runtime, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name, "en"))) {
@@ -2172,7 +2368,7 @@ function previewRuntimeCleanupImpl(rootValue, { clock = nowIso() } = {}) {
     const rel = `.clarity/${entry.name}`;
     if (!inventoried.has(rel)) preserved.push({ path: rel, reason: "ownership-unverified-orphan-temp" });
   }
-  const requiresConfirmation = preserved.some((row) => ["needs-explicit-rebuild", "operation-progress-mismatch", "operation-artifact-mismatch", "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified"].includes(row.reason));
+  const requiresConfirmation = preserved.some((row) => ["needs-explicit-rebuild", "operation-progress-mismatch", "operation-artifact-mismatch", "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified", "interrupted-lock-transition"].includes(row.reason));
   return {
     status: candidates.length ? "cleanup-available" : requiresConfirmation ? "confirmation-required" : "clean",
     changed: false, candidates, preserved, requiresConfirmation,
@@ -2347,7 +2543,7 @@ function doctorImpl(rootValue, options = {}) {
   const cleanup = previewRuntimeCleanup(canonical.root);
   const recoveryBlocked = cleanup.preserved.some((row) => [
     "needs-explicit-rebuild", "operation-progress-mismatch", "operation-artifact-mismatch",
-    "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified",
+    "logical-operation-without-lease", "ownership-unverified-orphan-temp", "ownership-unverified", "interrupted-lock-transition",
   ].includes(row.reason));
   const schemaStatus = canonical.project.schemaVersion === CLARITY_SCHEMA_VERSION ? "current" : "migration-available";
   const projectionOk = !stored.error && storedBytes === expectedBytes;

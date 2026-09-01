@@ -73,6 +73,20 @@ async function waitForPath(path, timeoutMs = 5_000) {
     await new Promise((resolveWait) => setTimeout(resolveWait, 5));
   }
 }
+async function waitForActiveLock(path, excludedToken = null, timeoutMs = 5_000) {
+  const started = Date.now();
+  while (true) {
+    if (existsSync(path)) {
+      try {
+        const record = JSON.parse(readFileSync(path, "utf8"));
+        if (record.owner === "agentic-secretary:clarity" && record.kind === "canonical-write"
+          && record.token !== excludedToken && Date.parse(record.expiresAt) > Date.now()) return record;
+      } catch { /* record確定中はboundedに待つ。 */ }
+    }
+    assert(Date.now() - started < timeoutMs, `active lock was not observed within ${timeoutMs} ms`);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+  }
+}
 function operationRecord(root) {
   const runtime = join(root, ".clarity/runtime");
   const name = readdirSync(runtime).find((entry) => /^operation-[a-f0-9]{24}\.json$/u.test(entry));
@@ -82,7 +96,7 @@ function operationRecord(root) {
 }
 function operationResidue(root) {
   const clarity = join(root, ".clarity");
-  const direct = readdirSync(clarity).filter((name) => /^\.clarity-op-/u.test(name));
+  const direct = readdirSync(clarity).filter((name) => /^\.clarity-op-/u.test(name) || name === "lock-transition.json");
   const runtime = existsSync(join(clarity, "runtime")) ? readdirSync(join(clarity, "runtime")).filter((name) => /^(?:operation-|\.tmp-)/u.test(name)) : [];
   return [...direct, ...runtime];
 }
@@ -265,6 +279,7 @@ try {
       CLARITY_TEST_MODE: "0",
       CLARITY_CRASH_AT: "lock-record-before",
       CLARITY_STALE_LOCK_REMOVE_BARRIER: "1",
+      CLARITY_LOCK_TRANSITION_RELEASE_BARRIER: "1",
       CLARITY_FS_FAILURES: JSON.stringify([
         { point: "lock-create-open", times: 99, code: "EPERM", syscall: "open" },
         { point: "canonical-replace", target: ".clarity/events.jsonl", times: 99, code: "EPERM", syscall: "rename" },
@@ -286,6 +301,8 @@ try {
     assert.equal(staleOut.json.changed, true);
     assert.equal(existsSync(join(staleRoot, ".clarity/.test-stale-lock-remove-ready")), false);
     assert.equal(existsSync(join(staleRoot, ".clarity/.test-stale-lock-remove-release")), false);
+    assert.equal(existsSync(join(staleRoot, ".clarity/.test-lock-transition-release-ready")), false);
+    assert.equal(existsSync(join(staleRoot, ".clarity/.test-lock-transition-release-release")), false);
     assert.equal(existsSync(join(staleRoot, ".clarity/lock.json")), false);
     const assertModeStructure = (source) => {
       const normalized = source.replace(/\r\n?/gu, "\n");
@@ -567,7 +584,7 @@ try {
     }
   });
 
-  await test("P001-23", "stale lock削除失敗をsanitizeし同一identityの並行ENOENTを安全に収束", async () => {
+  await test("P001-23", "stale cleanupをsanitizeしactive replacementとtransition identityを保持して収束", async () => {
     const failedRoot = fixture("stale-lock-remove-failure");
     const failedLockPath = join(failedRoot, ".clarity/lock.json");
     const failedLock = `${JSON.stringify(staleLockRecord("fixture-stale-remove-failure"))}\n`;
@@ -591,11 +608,12 @@ try {
     assert.equal(readFileSync(failedLockPath, "utf8"), failedLock);
     assert.deepEqual(operationResidue(failedRoot), []);
 
-    const raceRoot = fixture("stale-lock-remove-race");
+    const raceRoot = fixture("stale-lock-active-replacement-race");
     const raceLockPath = join(raceRoot, ".clarity/lock.json");
     const readyPath = join(raceRoot, ".clarity/.test-stale-lock-remove-ready");
     const releasePath = join(raceRoot, ".clarity/.test-stale-lock-remove-release");
-    writeFileSync(raceLockPath, `${JSON.stringify(staleLockRecord("fixture-shared-stale-token"))}\n`);
+    const staleToken = "fixture-shared-stale-token";
+    writeFileSync(raceLockPath, `${JSON.stringify(staleLockRecord(staleToken))}\n`);
     const beforeEvents = lines(join(raceRoot, ".clarity/events.jsonl"));
     const beforeEvidence = lines(join(raceRoot, ".clarity/evidence.jsonl"));
     const first = spawn(process.execPath, [cli, ...eventArguments(raceRoot, "stalelockracefirst")], {
@@ -604,11 +622,30 @@ try {
       env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_STALE_LOCK_REMOVE_BARRIER: "1" },
     });
     await waitForPath(readyPath);
-    const second = event(raceRoot, "stalelockracesecond");
-    assert.equal(second.json.changed, true);
-    assert.equal(existsSync(raceLockPath), false);
+    const second = spawn(process.execPath, [cli, ...eventArguments(raceRoot, "stalelockracesecond")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        CLARITY_TEST_MODE: "1",
+        CLARITY_FS_FAILURES: JSON.stringify({
+          point: "canonical-replace", target: ".clarity/events.jsonl", times: 1,
+          delayMs: 600, code: "EPERM", syscall: "rename",
+        }),
+      },
+    });
+    const activeReplacement = await waitForActiveLock(raceLockPath, staleToken);
+    const activeReplacementBytes = readFileSync(raceLockPath);
+    assert.notEqual(activeReplacement.token, staleToken);
     writeFileSync(releasePath, "release\n");
-    const firstResult = await childResult(first);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+    assert.equal(first.exitCode, null, "first writer must wait while the replacement owner is active");
+    assert.equal(second.exitCode, null, "replacement owner must still hold the active lock");
+    assert.deepEqual(readFileSync(raceLockPath), activeReplacementBytes, "first writer must not delete or replace the active lock");
+    const [secondResult, firstResult] = await Promise.all([childResult(second), childResult(first)]);
+    assert.equal(secondResult.code, 0, secondResult.stderr);
+    assert.equal(secondResult.stderr, "");
+    assert.equal(JSON.parse(secondResult.stdout).changed, true);
     assert.equal(firstResult.code, 0, firstResult.stderr);
     assert.equal(firstResult.stderr, "");
     const firstJson = JSON.parse(firstResult.stdout);
@@ -628,6 +665,69 @@ try {
     assert.equal(run(["rebuild", raceRoot, "--json"]).json.state.source.eventCount, afterEvents.length);
     assert.equal(existsSync(raceLockPath), false);
     assert.deepEqual(operationResidue(raceRoot), []);
+
+    const crashRoot = fixture("lock-transition-crash");
+    const crashCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(crashRoot, ".clarity", name)));
+    const crashed = event(crashRoot, "locktransitioncrash", { CLARITY_CRASH_AT: "lock-transition-held" }, null);
+    assert.notEqual(crashed.result.status, 0);
+    const transitionPath = join(crashRoot, ".clarity/lock-transition.json");
+    assert.equal(existsSync(transitionPath), true);
+    const transitionRecord = JSON.parse(readFileSync(transitionPath, "utf8"));
+    assert.equal(transitionRecord.owner, "agentic-secretary:clarity");
+    assert.equal(transitionRecord.kind, "lock-transition");
+    const crashDoctor = run(["doctor", crashRoot, "--hook-state", "supported", "--json"]).json;
+    assert.equal(crashDoctor.runtimeCleanup.status, "confirmation-required");
+    assert(crashDoctor.runtimeCleanup.preserved.some((row) => row.path === ".clarity/lock-transition.json" && row.reason === "interrupted-lock-transition"));
+    const crashCleanup = run(["cleanup", crashRoot, "--apply", "--json"]).json;
+    assert.equal(crashCleanup.changed, false);
+    assert.equal(existsSync(transitionPath), true);
+    const blockedStarted = Date.now();
+    const blocked = event(crashRoot, "locktransitionblocked", {}, 4);
+    const blockedElapsed = Date.now() - blockedStarted;
+    assert.equal(blocked.json.code, "canonical-lock-transition-busy");
+    assert(blockedElapsed >= 14_000 && blockedElapsed < 25_000, `transition wait was not bounded at 15 seconds: ${blockedElapsed}ms`);
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(crashRoot, ".clarity", name)), crashCanonical[index]);
+    });
+    unlinkSync(transitionPath);
+    assert.equal(event(crashRoot, "locktransitionrecovered").json.changed, true);
+    assert.deepEqual(operationResidue(crashRoot), []);
+
+    const identityRoot = fixture("lock-transition-identity-replacement");
+    const identityTransitionPath = join(identityRoot, ".clarity/lock-transition.json");
+    const transitionReadyPath = join(identityRoot, ".clarity/.test-lock-transition-release-ready");
+    const transitionReleasePath = join(identityRoot, ".clarity/.test-lock-transition-release-release");
+    const identityCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(identityRoot, ".clarity", name)));
+    const identityWriter = spawn(process.execPath, [cli, ...eventArguments(identityRoot, "locktransitionidentity")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_LOCK_TRANSITION_RELEASE_BARRIER: "1" },
+    });
+    await waitForPath(transitionReadyPath);
+    unlinkSync(identityTransitionPath);
+    const replacementTransition = `${JSON.stringify({
+      schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "lock-transition",
+      token: "different-transition-owner", operationId: "different-operation", acquiredAt: new Date().toISOString(),
+    })}\n`;
+    writeFileSync(identityTransitionPath, replacementTransition, { flag: "wx", mode: 0o600 });
+    writeFileSync(transitionReleasePath, "release\n");
+    const identityResult = await childResult(identityWriter);
+    assert.equal(identityResult.code, 4, identityResult.stderr);
+    const identityError = JSON.parse(identityResult.stderr);
+    assert.equal(identityError.code, "canonical-lock-transition-cleanup-failed");
+    assert.equal(readFileSync(identityTransitionPath, "utf8"), replacementTransition);
+    assert.equal(existsSync(join(identityRoot, ".clarity/lock.json")), false);
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(identityRoot, ".clarity", name)), identityCanonical[index]);
+    });
+    unlinkSync(transitionReadyPath);
+    unlinkSync(transitionReleasePath);
+    const identityDoctor = run(["doctor", identityRoot, "--hook-state", "supported", "--json"]).json;
+    assert.equal(identityDoctor.runtimeCleanup.status, "confirmation-required");
+    assert(identityDoctor.runtimeCleanup.preserved.some((row) => row.path === ".clarity/lock-transition.json" && row.reason === "interrupted-lock-transition"));
+    unlinkSync(identityTransitionPath);
+    assert.equal(event(identityRoot, "locktransitionidentityrecovered").json.changed, true);
+    assert.deepEqual(operationResidue(identityRoot), []);
   });
 } finally {
   const failed = results.filter((row) => !row.ok);
