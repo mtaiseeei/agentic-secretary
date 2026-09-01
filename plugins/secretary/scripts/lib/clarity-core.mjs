@@ -190,7 +190,9 @@ function maybeInjectFilesystemFailure(point, target = null) {
     const after = Math.max(0, Number(rule.after || 0));
     const times = Math.max(1, Number(rule.times || 1));
     if (hit <= after || hit > after + times) continue;
-    const error = new Error("injected canonical filesystem failure");
+    const delayMs = Math.max(0, Math.min(2_000, Number(rule.delayMs || 0)));
+    if (delayMs > 0) sleepSync(delayMs);
+    const error = new Error(rule.message ? String(rule.message) : "injected canonical filesystem failure");
     error.code = String(rule.code || "EPERM");
     error.syscall = String(rule.syscall || (point.includes("cleanup") ? "unlink" : "rename"));
     error.clarityInjected = true;
@@ -254,12 +256,37 @@ function sameIdentity(left, right) {
   return Boolean(left && right && left.dev === right.dev && left.ino === right.ino && left.kind === right.kind);
 }
 
+function sanitizedFilesystemToken(value, pattern) {
+  const token = String(value || "unknown");
+  return pattern.test(token) ? token : "unknown";
+}
+
+function sanitizedLockFilesystemDetails(error) {
+  return {
+    errorCode: sanitizedFilesystemToken(error?.code, /^[A-Z0-9_]{1,40}$/u),
+    syscall: sanitizedFilesystemToken(error?.syscall, /^[a-z0-9_-]{1,40}$/iu),
+  };
+}
+
+function lockInspectionError(code, message, error) {
+  return new ClarityError(code, message, 4, {
+    changed: false,
+    ...sanitizedLockFilesystemDetails(error),
+  });
+}
+
 function inspectLockCreateRetryBoundary(root, expectedPath, expectedParentIdentity) {
   revalidateClarityRoot(root);
   const currentPath = safeWritePath(root, CANONICAL_LOCK_REL);
   fail(currentPath === expectedPath, "canonical-lock-path-changed", "Clarity canonical lock pathが途中で変わったため、変更せず停止しました。", { changed: false });
   const parent = dirname(currentPath);
-  const parentStat = lstatSync(parent, { bigint: true });
+  let parentStat;
+  try {
+    maybeInjectFilesystemFailure("lock-retry-parent-lstat", CANONICAL_LOCK_REL);
+    parentStat = lstatSync(parent, { bigint: true });
+  } catch (error) {
+    throw lockInspectionError("canonical-lock-parent-unavailable", "Clarity canonical lockの親directoryを安全に再確認できないため、変更せず停止しました。", error);
+  }
   const parentIdentity = {
     dev: String(parentStat.dev), ino: String(parentStat.ino), mode: Number(parentStat.mode),
     kind: parentStat.isDirectory() ? "directory" : parentStat.isSymbolicLink() ? "symlink" : "other",
@@ -271,12 +298,14 @@ function inspectLockCreateRetryBoundary(root, expectedPath, expectedParentIdenti
     throw new ClarityError("canonical-lock-parent-unwritable", "Clarity canonical lockの親directoryへ安全に書き込めないため、変更せず停止しました。", 4, { changed: false });
   }
   try {
+    maybeInjectFilesystemFailure("lock-retry-path-lstat", CANONICAL_LOCK_REL);
     const lockStat = lstatSync(currentPath);
     fail(lockStat.isFile() && !lockStat.isSymbolicLink(), "canonical-lock-unsafe", "Clarity canonical lock pathが安全ではありません。", { changed: false });
     return { lockExists: true };
   } catch (error) {
     if (error?.code === "ENOENT") return { lockExists: false };
-    throw error;
+    if (error instanceof ClarityError) throw error;
+    throw lockInspectionError("canonical-lock-path-unavailable", "Clarity canonical lock pathを安全に再確認できないため、変更せず停止しました。", error);
   }
 }
 
@@ -320,7 +349,12 @@ function assertLeaseActive(lease) {
 function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}) {
   const root = rootPath(rootValue);
   const path = safeWritePath(root, CANONICAL_LOCK_REL);
-  const parentIdentity = filesystemIdentity(dirname(path));
+  let parentIdentity;
+  try {
+    parentIdentity = filesystemIdentity(dirname(path));
+  } catch (error) {
+    throw lockInspectionError("canonical-lock-parent-unavailable", "Clarity canonical lockの親directoryを安全に確認できないため、変更せず停止しました。", error);
+  }
   fail(parentIdentity.kind === "directory", "canonical-lock-parent-unsafe", "Clarity canonical lockの親pathが通常directoryではないため、変更せず停止しました。", { changed: false });
   const token = sha256(`${process.pid}:${Date.now()}:${Math.random()}`);
   const started = Date.now();
@@ -330,6 +364,15 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
   let lockCreateFailures = 0;
   let lockCreateRetryAttempts = 0;
   let lockCreateRetryWaitMs = 0;
+  let lockCreateEpisodes = 0;
+  let lockCreateEpisodeFailures = 0;
+  let lockCreateEpisodeRetryAttempts = 0;
+  let lockCreateMaxEpisodeFailures = 0;
+  const resolveLockCreateEpisode = () => {
+    lockCreateRetryStarted = null;
+    lockCreateEpisodeFailures = 0;
+    lockCreateEpisodeRetryAttempts = 0;
+  };
   while (!acquired) {
     attempts += 1;
     if (attempts > CANONICAL_LOCK_MAX_ATTEMPTS || Date.now() - started > CANONICAL_LOCK_WAIT_MS) {
@@ -341,6 +384,7 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
       const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
       maybeInjectFilesystemFailure("lock-create-open", CANONICAL_LOCK_REL);
       descriptor = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+      resolveLockCreateEpisode();
       const descriptorStat = fstatSync(descriptor);
       fail(descriptorStat.isFile(), "canonical-lock-unsafe", "Clarity canonical lockを通常fileとして作成できません。");
       createdIdentity = {
@@ -366,15 +410,23 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
         continue;
       }
       if (isRetryableLockCreateConflict(error)) {
-        if (lockCreateRetryStarted === null) lockCreateRetryStarted = Date.now();
+        if (lockCreateRetryStarted === null) {
+          lockCreateRetryStarted = Date.now();
+          lockCreateEpisodeFailures = 0;
+          lockCreateEpisodeRetryAttempts = 0;
+          lockCreateEpisodes += 1;
+        }
+        lockCreateEpisodeFailures += 1;
         lockCreateFailures += 1;
+        lockCreateMaxEpisodeFailures = Math.max(lockCreateMaxEpisodeFailures, lockCreateEpisodeFailures);
         const boundary = inspectLockCreateRetryBoundary(root, path, parentIdentity);
         if (boundary.lockExists) {
+          resolveLockCreateEpisode();
           sleepSync(CANONICAL_LOCK_POLL_MS);
           continue;
         }
         const retryElapsedMs = Date.now() - lockCreateRetryStarted;
-        if (lockCreateFailures < CANONICAL_LOCK_CREATE_MAX_FAILURES
+        if (lockCreateEpisodeFailures < CANONICAL_LOCK_CREATE_MAX_FAILURES
           && retryElapsedMs < CANONICAL_LOCK_CREATE_MAX_WAIT_MS
           && Date.now() - started < CANONICAL_LOCK_WAIT_MS) {
           const remainingMs = Math.min(
@@ -382,7 +434,8 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
             CANONICAL_LOCK_WAIT_MS - (Date.now() - started),
           );
           if (remainingMs > 0) {
-            const delayMs = Math.max(1, Math.min(CANONICAL_LOCK_POLL_MS * (2 ** Math.min(lockCreateRetryAttempts, 4)), remainingMs));
+            const delayMs = Math.max(1, Math.min(CANONICAL_LOCK_POLL_MS * (2 ** Math.min(lockCreateEpisodeRetryAttempts, 4)), remainingMs));
+            lockCreateEpisodeRetryAttempts += 1;
             lockCreateRetryAttempts += 1;
             lockCreateRetryWaitMs += delayMs;
             sleepSync(delayMs);
@@ -394,6 +447,9 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
           lockMetrics: {
             lockAttempts: attempts,
             lockCreateFailures,
+            lockCreateEpisodes,
+            lockCreateEpisodeFailures,
+            lockCreateMaxEpisodeFailures,
             lockCreateRetryAttempts,
             lockCreateRetryWaitMs,
             lockCreateRetryMaxFailures: CANONICAL_LOCK_CREATE_MAX_FAILURES,
@@ -407,11 +463,15 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
           changed: false, operationId, errorCode: error?.code || "unknown", syscall: error?.syscall || "unknown",
         });
       }
+      resolveLockCreateEpisode();
       let stat;
-      try { stat = lstatSync(path); }
+      try {
+        maybeInjectFilesystemFailure("lock-wait-path-lstat", CANONICAL_LOCK_REL);
+        stat = lstatSync(path);
+      }
       catch (statError) {
         if (statError?.code === "ENOENT") { sleepSync(CANONICAL_LOCK_POLL_MS); continue; }
-        throw statError;
+        throw lockInspectionError("canonical-lock-path-unavailable", "Clarity canonical lock pathを安全に確認できないため、変更せず停止しました。", statError);
       }
       fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-lock-unsafe", "Clarity canonical lock pathが安全ではありません。");
       if (removeOwnedStaleLock(root, path)) { sleepSync(CANONICAL_LOCK_POLL_MS); continue; }
@@ -429,6 +489,8 @@ function withCanonicalWriteLock(rootValue, callback, { operationId = null } = {}
     metrics: {
       lockAttempts: attempts,
       lockCreateFailures,
+      lockCreateEpisodes,
+      lockCreateMaxEpisodeFailures,
       lockCreateRetryAttempts,
       lockCreateRetryWaitMs,
       lockCreateRetryMaxFailures: CANONICAL_LOCK_CREATE_MAX_FAILURES,

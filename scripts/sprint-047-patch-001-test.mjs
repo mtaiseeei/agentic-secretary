@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -32,6 +32,29 @@ function expireLock(root) {
   const lock = JSON.parse(readFileSync(path, "utf8"));
   lock.expiresAt = "2000-01-01T00:00:00.000Z";
   writeFileSync(path, `${JSON.stringify(lock)}\n`);
+}
+function activeLockRecord(token = "fixture-active-lock") {
+  const acquiredAt = new Date().toISOString();
+  return {
+    schemaVersion: 1,
+    owner: "agentic-secretary:clarity",
+    kind: "canonical-write",
+    token,
+    operationId: null,
+    acquiredAt,
+    expiresAt: new Date(Date.parse(acquiredAt) + 30_000).toISOString(),
+  };
+}
+function removePathInChild(path, delayMs) {
+  const script = "const { unlinkSync } = require('node:fs'); const [path, delay] = process.argv.slice(1); setTimeout(() => { try { unlinkSync(path); } catch (error) { console.error(error.code || 'unlink-failed'); process.exitCode = 1; } }, Number(delay));";
+  return spawn(process.execPath, ["-e", script, path, String(delayMs)], { stdio: ["ignore", "ignore", "pipe"] });
+}
+async function childResult(child) {
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => { stderr += chunk; });
+  const code = await new Promise((resolveCode) => child.once("close", resolveCode));
+  return { code, stderr };
 }
 function operationRecord(root) {
   const runtime = join(root, ".clarity/runtime");
@@ -449,6 +472,64 @@ try {
     });
     assert.equal(existsSync(join(unsafeRoot, ".clarity/lock.json")), true);
     assert.deepEqual(operationResidue(unsafeRoot), []);
+  });
+
+  await test("P001-21", "EPERM budgetを実EEXIST待機で解消し次episodeへreset", async () => {
+    const root = fixture("lock-open-episode-reset");
+    const lockPath = join(root, ".clarity/lock.json");
+    const before = lines(join(root, ".clarity/events.jsonl")).length;
+    writeFileSync(lockPath, `${JSON.stringify(activeLockRecord())}\n`);
+    const remover = removePathInChild(lockPath, 1_000);
+    const failures = [
+      { point: "lock-create-open", times: 1, code: "EPERM", syscall: "open" },
+      { point: "lock-create-open", after: 1, times: 1, delayMs: 1_800, code: "EPERM", syscall: "open" },
+    ];
+    const recovered = event(root, "lockopenepisodereset", { CLARITY_FS_FAILURES: JSON.stringify(failures) });
+    const removal = await childResult(remover);
+    assert.equal(removal.code, 0, removal.stderr);
+    assert.equal(recovered.json.changed, true);
+    assert.equal(lines(join(root, ".clarity/events.jsonl")).length, before + 1);
+    assert.equal(recovered.json.writeMetrics.lockCreateFailures, 2);
+    assert.equal(recovered.json.writeMetrics.lockCreateEpisodes, 2);
+    assert.equal(recovered.json.writeMetrics.lockCreateMaxEpisodeFailures, 1);
+    assert.equal(recovered.json.writeMetrics.lockCreateRetryAttempts, 1);
+    assert(recovered.json.writeMetrics.lockAttempts >= 4);
+    assert(recovered.json.writeMetrics.lockWaitMarginMs > 0);
+    assert.deepEqual(operationResidue(root), []);
+    assert.equal(existsSync(lockPath), false);
+    failureMetrics.push({ case: "P001-21-lock-open-episode-reset", ...recovered.json.writeMetrics });
+  });
+
+  await test("P001-22", "lock／parent lstat失敗をabsolute pathなしでsanitized fail closed", () => {
+    const cases = [
+      { name: "parent", point: "lock-retry-parent-lstat", expectedCode: "canonical-lock-parent-unavailable", existingLock: false },
+      { name: "retry-path", point: "lock-retry-path-lstat", expectedCode: "canonical-lock-path-unavailable", existingLock: false },
+      { name: "wait-path", point: "lock-wait-path-lstat", expectedCode: "canonical-lock-path-unavailable", existingLock: true },
+    ];
+    for (const row of cases) {
+      const root = fixture(`lock-lstat-sanitized-${row.name}`);
+      const lockPath = join(root, ".clarity/lock.json");
+      const canonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(root, ".clarity", name)));
+      if (row.existingLock) writeFileSync(lockPath, `${JSON.stringify(activeLockRecord(`fixture-${row.name}`))}\n`);
+      const failures = row.existingLock
+        ? [{ point: row.point, times: 1, code: "EPERM", syscall: "lstat", message: `raw lstat failure at ${lockPath}` }]
+        : [
+          { point: "lock-create-open", times: 1, code: "EPERM", syscall: "open" },
+          { point: row.point, times: 1, code: "EPERM", syscall: "lstat", message: `raw lstat failure at ${lockPath}` },
+        ];
+      const rejected = event(root, `locklstatsanitized${row.name}`, { CLARITY_FS_FAILURES: JSON.stringify(failures) }, 4);
+      assert.equal(rejected.json.code, row.expectedCode);
+      assert.equal(rejected.json.details.errorCode, "EPERM");
+      assert.equal(rejected.json.details.syscall, "lstat");
+      assert.equal(rejected.result.stderr.includes(root), false);
+      assert.equal(rejected.result.stderr.includes(work), false);
+      ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+        assert.deepEqual(readFileSync(join(root, ".clarity", name)), canonical[index]);
+      });
+      assert.deepEqual(operationResidue(root), []);
+      if (row.existingLock) unlinkSync(lockPath);
+      else assert.equal(existsSync(lockPath), false);
+    }
   });
 } finally {
   const failed = results.filter((row) => !row.ok);
