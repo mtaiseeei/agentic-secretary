@@ -56,6 +56,10 @@ function removePathInChild(path, delayMs) {
   const script = "const { unlinkSync } = require('node:fs'); const [path, delay] = process.argv.slice(1); setTimeout(() => { try { unlinkSync(path); } catch (error) { console.error(error.code || 'unlink-failed'); process.exitCode = 1; } }, Number(delay));";
   return spawn(process.execPath, ["-e", script, path, String(delayMs)], { stdio: ["ignore", "ignore", "pipe"] });
 }
+function createThenRemoveLockInChild(path, record, createDelayMs, removeDelayMs) {
+  const script = "const { writeFileSync, unlinkSync } = require('node:fs'); const [path, record, createDelay, removeDelay] = process.argv.slice(1); setTimeout(() => { writeFileSync(path, record, { flag: 'wx', mode: 0o600 }); setTimeout(() => unlinkSync(path), Number(removeDelay) - Number(createDelay)); }, Number(createDelay));";
+  return spawn(process.execPath, ["-e", script, path, `${JSON.stringify(record)}\n`, String(createDelayMs), String(removeDelayMs)], { stdio: ["ignore", "ignore", "pipe"] });
+}
 async function childResult(child) {
   let stdout = "";
   let stderr = "";
@@ -530,15 +534,14 @@ try {
     const root = fixture("lock-open-episode-reset");
     const lockPath = join(root, ".clarity/lock.json");
     const before = lines(join(root, ".clarity/events.jsonl")).length;
-    writeFileSync(lockPath, `${JSON.stringify(activeLockRecord())}\n`);
-    const remover = removePathInChild(lockPath, 1_000);
+    const contention = createThenRemoveLockInChild(lockPath, activeLockRecord(), 100, 1_000);
     const failures = [
-      { point: "lock-create-open", times: 1, code: "EPERM", syscall: "open" },
-      { point: "lock-create-open", after: 1, times: 1, delayMs: 1_800, code: "EPERM", syscall: "open" },
+      { point: "lock-create-open", times: 1, delayMs: 300, code: "EPERM", syscall: "open" },
+      { point: "lock-create-open", times: 1, delayMs: 1_800, code: "EPERM", syscall: "open" },
     ];
     const recovered = event(root, "lockopenepisodereset", { CLARITY_FS_FAILURES: JSON.stringify(failures) });
-    const removal = await childResult(remover);
-    assert.equal(removal.code, 0, removal.stderr);
+    const contentionResult = await childResult(contention);
+    assert.equal(contentionResult.code, 0, contentionResult.stderr);
     assert.equal(recovered.json.changed, true);
     assert.equal(lines(join(root, ".clarity/events.jsonl")).length, before + 1);
     assert.equal(recovered.json.writeMetrics.lockCreateFailures, 2);
@@ -585,6 +588,79 @@ try {
   });
 
   await test("P001-23", "stale cleanupをsanitizeしactive replacementとtransition identityを保持して収束", async () => {
+    const activeWaitRoot = fixture("active-lock-no-transition-churn");
+    const activeWaitLockPath = join(activeWaitRoot, ".clarity/lock.json");
+    writeFileSync(activeWaitLockPath, `${JSON.stringify(activeLockRecord("active-wait-owner"))}\n`);
+    const activeWaitWriter = spawn(process.execPath, [cli, ...eventArguments(activeWaitRoot, "activewaitnoguardchurn")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: {
+        ...process.env, CLARITY_TEST_MODE: "1",
+        CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-transition-create-open", times: 1, code: "EACCES", syscall: "open" }),
+      },
+    });
+    await new Promise((resolveWait) => setTimeout(resolveWait, 200));
+    assert.equal(activeWaitWriter.exitCode, null, "active lock待機中はguard create failureへ到達しない");
+    assert.equal(existsSync(join(activeWaitRoot, ".clarity/lock-transition.json")), false);
+    unlinkSync(activeWaitLockPath);
+    const activeWaitResult = await childResult(activeWaitWriter);
+    assert.equal(activeWaitResult.code, 4, activeWaitResult.stderr);
+    assert.equal(JSON.parse(activeWaitResult.stderr).code, "canonical-lock-transition-unavailable");
+    assert.equal(event(activeWaitRoot, "activewaitrecovered").json.changed, true);
+    assert.deepEqual(operationResidue(activeWaitRoot), []);
+
+    const guardWaitRoot = fixture("lock-transition-wait-transient");
+    const guardWaitPath = join(guardWaitRoot, ".clarity/lock-transition.json");
+    const guardWaitRecord = `${JSON.stringify({
+      schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "lock-transition",
+      token: "fixture-guard-wait", operationId: "fixture-guard-wait", acquiredAt: new Date().toISOString(),
+    })}\n`;
+    writeFileSync(guardWaitPath, guardWaitRecord, { flag: "wx", mode: 0o600 });
+    const guardWaitRemover = removePathInChild(guardWaitPath, 300);
+    const guardWaitRecovered = event(guardWaitRoot, "guardwaittransient", {
+      CLARITY_FS_FAILURES: JSON.stringify([
+        { point: "lock-transition-wait-lstat", times: 1, code: "EPERM", syscall: "lstat" },
+        { point: "lock-transition-wait-lstat", times: 1, code: "EBUSY", syscall: "lstat" },
+      ]),
+    });
+    const guardWaitRemoval = await childResult(guardWaitRemover);
+    assert.equal(guardWaitRemoval.code, 0, guardWaitRemoval.stderr);
+    assert.equal(guardWaitRecovered.json.changed, true);
+    assert.deepEqual(operationResidue(guardWaitRoot), []);
+
+    const guardWaitPermanentRoot = fixture("lock-transition-wait-permanent");
+    const guardWaitPermanentPath = join(guardWaitPermanentRoot, ".clarity/lock-transition.json");
+    const guardWaitPermanentBytes = `${JSON.stringify({
+      schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "lock-transition",
+      token: "fixture-guard-permanent", operationId: "fixture-guard-permanent", acquiredAt: new Date().toISOString(),
+    })}\n`;
+    writeFileSync(guardWaitPermanentPath, guardWaitPermanentBytes, { flag: "wx", mode: 0o600 });
+    const guardWaitPermanentStarted = Date.now();
+    const guardWaitPermanent = event(guardWaitPermanentRoot, "guardwaitpermanent", {
+      CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-transition-wait-lstat", times: 99, code: "EPERM", syscall: "lstat", message: `raw guard lstat at ${guardWaitPermanentPath}` }),
+    }, 4);
+    const guardWaitPermanentElapsed = Date.now() - guardWaitPermanentStarted;
+    assert(guardWaitPermanentElapsed > 0 && guardWaitPermanentElapsed < 3_000);
+    assert.equal(guardWaitPermanent.json.code, "canonical-lock-transition-unavailable");
+    assert.equal(guardWaitPermanent.result.stderr.includes(guardWaitPermanentRoot), false);
+    assert.equal(readFileSync(guardWaitPermanentPath, "utf8"), guardWaitPermanentBytes);
+    unlinkSync(guardWaitPermanentPath);
+
+    const guardReleaseRoot = fixture("lock-transition-release-transient");
+    const guardRelease = event(guardReleaseRoot, "guardreleasetransient", {
+      CLARITY_FS_FAILURES: JSON.stringify([
+        { point: "lock-transition-release-lstat", times: 1, code: "EPERM", syscall: "lstat" },
+        { point: "lock-transition-release-cleanup", times: 1, code: "EBUSY", syscall: "unlink" },
+      ]),
+    });
+    assert.equal(guardRelease.json.changed, true);
+    assert.deepEqual(operationResidue(guardReleaseRoot), []);
+
+    const bigintRoot = fixture("lock-transition-bigint-identity");
+    const bigint = event(bigintRoot, "bigintidentity", { CLARITY_TEST_BIGINT_IDENTITY: "1" });
+    assert.equal(bigint.json.changed, true);
+    assert.deepEqual(operationResidue(bigintRoot), []);
+
     const failedRoot = fixture("stale-lock-remove-failure");
     const failedLockPath = join(failedRoot, ".clarity/lock.json");
     const failedLock = `${JSON.stringify(staleLockRecord("fixture-stale-remove-failure"))}\n`;
@@ -607,6 +683,30 @@ try {
     });
     assert.equal(readFileSync(failedLockPath, "utf8"), failedLock);
     assert.deepEqual(operationResidue(failedRoot), []);
+
+    const staleReleaseRoot = fixture("stale-lock-transition-release-permanent");
+    const staleReleaseLockPath = join(staleReleaseRoot, ".clarity/lock.json");
+    const staleReleaseTransitionPath = join(staleReleaseRoot, ".clarity/lock-transition.json");
+    writeFileSync(staleReleaseLockPath, `${JSON.stringify(staleLockRecord("stale-release-owner"))}\n`);
+    const staleReleaseCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(staleReleaseRoot, ".clarity", name)));
+    const staleReleaseStarted = Date.now();
+    const staleRelease = event(staleReleaseRoot, "stalereleasepermanent", {
+      CLARITY_FS_FAILURES: JSON.stringify({ point: "lock-transition-release-cleanup", times: 99, code: "EPERM", syscall: "unlink", message: `raw guard unlink at ${staleReleaseTransitionPath}` }),
+    }, 4);
+    const staleReleaseElapsed = Date.now() - staleReleaseStarted;
+    assert(staleReleaseElapsed > 0 && staleReleaseElapsed < 3_000);
+    assert.equal(staleRelease.json.code, "canonical-lock-transition-cleanup-failed");
+    assert.equal(staleRelease.result.stderr.includes(staleReleaseRoot), false);
+    assert.equal(existsSync(staleReleaseLockPath), false, "record未書込のempty canonical lockだけを同identity cleanupする");
+    assert.equal(existsSync(staleReleaseTransitionPath), true, "release不能guardは期限だけで削除しない");
+    const staleReleaseTransitionBytes = readFileSync(staleReleaseTransitionPath, "utf8");
+    assert.equal(JSON.parse(staleReleaseTransitionBytes).kind, "lock-transition");
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(staleReleaseRoot, ".clarity", name)), staleReleaseCanonical[index]);
+    });
+    unlinkSync(staleReleaseTransitionPath);
+    assert.equal(event(staleReleaseRoot, "stalereleaserecovered").json.changed, true);
+    assert.deepEqual(operationResidue(staleReleaseRoot), []);
 
     const raceRoot = fixture("stale-lock-active-replacement-race");
     const raceLockPath = join(raceRoot, ".clarity/lock.json");

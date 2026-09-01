@@ -310,7 +310,7 @@ try {
       const residueCount = () => {
         const clarityNames = readdirSync(join(root, ".clarity"));
         const runtimeNames = existsSync(join(root, ".clarity/runtime")) ? readdirSync(join(root, ".clarity/runtime")) : [];
-        return clarityNames.filter((name) => /^\.clarity-op-/u.test(name) || name === "lock.json").length
+        return clarityNames.filter((name) => /^\.clarity-op-/u.test(name) || name === "lock.json" || name === "lock-transition.json").length
           + runtimeNames.filter((name) => /^(?:operation-|\.tmp-)/u.test(name)).length;
       };
       const residueBeforeRebuild = residueCount();
