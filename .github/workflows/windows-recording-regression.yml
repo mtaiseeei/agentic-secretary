@@ -32,7 +32,7 @@ jobs:
         run: node --check plugins/secretary/scripts/lib/secretary-store.mjs
       - name: Node syntax - workspace tools
         shell: pwsh
-        run: node --check plugins/secretary/scripts/workspace-tools.mjs
+        run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
       - name: Node syntax - memory tools
         shell: pwsh
         run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
@@ -69,3 +69,17 @@ jobs:
       - name: Clarity concurrent write regression (Sprint 047)
         shell: pwsh
         run: node scripts/sprint-047-test.mjs
+      - name: Preserve exact reviewed candidate (no worktree or Git credentials)
+        if: always()
+        shell: pwsh
+        run: |
+          git archive --format=zip --output="$env:RUNNER_TEMP/clarity-review-candidate.zip" HEAD
+          if ($LASTEXITCODE -ne 0) { throw "candidate-archive-failed" }
+      - name: Upload candidate for independent diagnosis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clarity-review-candidate-${{ github.run_id }}
+          path: ${{ runner.temp }}/clarity-review-candidate.zip
+          retention-days: 3
+          if-no-files-found: error
