@@ -18,6 +18,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { rebuildState } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cli = join(repo, "plugins/secretary/scripts/clarity.mjs");
@@ -37,6 +38,7 @@ process.env.CC_SECRETARY_NOW = fixedNow;
 
 function sha(value) { return createHash("sha256").update(value).digest("hex"); }
 function json(path) { return JSON.parse(readFileSync(path, "utf8")); }
+function normalizedJson(value) { return `${JSON.stringify(value, null, 2)}\n`; }
 function lines(path) { return readFileSync(path, "utf8").trim().split(/\r?\n/u).filter(Boolean).map(JSON.parse); }
 function hookRuntimeRows(directory) {
   if (!existsSync(directory)) return [];
@@ -318,18 +320,30 @@ try {
       assert.equal(events.filter((row) => row.actor === actor).length, 32);
       assert.equal(canonicalExpectedDelta, 32); assert.equal(hookExpectedDelta, 32);
       assert.equal(residueBeforeRebuild, 0);
+      const statePath = join(root, ".clarity/state.json");
+      const storedStateBeforeRebuild = readFileSync(statePath);
+      const oracleFilesystemBefore = filesystemSnapshot(root);
+      const readOnlyRebuild = rebuildState(root, { write: false });
+      const oracleFilesystemAfter = filesystemSnapshot(root);
+      assert.equal(readOnlyRebuild.changed, false);
+      assert.equal(readOnlyRebuild.bytes, normalizedJson(JSON.parse(storedStateBeforeRebuild)));
+      assert.equal(storedStateBeforeRebuild.compare(readFileSync(statePath)), 0);
+      assert.deepEqual(oracleFilesystemAfter, oracleFilesystemBefore);
       const rebuild = runJson(process.execPath, [cli, "rebuild", root, "--json"]);
-      const rebuiltState = json(join(root, ".clarity/state.json"));
-      const stateRebuild = rebuild.state.source.eventCount === events.length && rebuiltState.source.eventCount === events.length;
+      const storedStateAfterRebuild = readFileSync(statePath);
+      const rebuiltState = JSON.parse(storedStateAfterRebuild);
+      const rebuildNoop = rebuild.changed === false && storedStateBeforeRebuild.compare(storedStateAfterRebuild) === 0;
+      const preRebuildFullState = readOnlyRebuild.bytes === normalizedJson(rebuiltState);
+      const stateRebuild = preRebuildFullState && rebuildNoop && rebuild.state.source.eventCount === events.length && rebuiltState.source.eventCount === events.length;
       const residueAfterRebuild = residueCount();
-      assert.equal(stateRebuild, true); assert.equal(residueAfterRebuild, 0);
+      assert.equal(preRebuildFullState, true); assert.equal(rebuildNoop, true); assert.equal(stateRebuild, true); assert.equal(residueAfterRebuild, 0);
       const metric = (name) => parsedCli.map((row) => Number(row.writeMetrics?.[name] || 0));
       const roundDurationMs = Date.now() - roundStarted;
       const roundBudgetMs = 10 * 60_000;
       const summary = {
         round: round + 1, writers: all.length, canonicalWriterCount: 32, hookWriterCount: 32, exitsZero: all.filter((row) => row.status === 0).length,
         canonicalJsonParsed: events.length, hookJsonParsed: hookRows.length,
-        canonicalUnique, hookUnique, canonicalExpectedDelta, hookExpectedDelta, stateRebuild,
+        canonicalUnique, hookUnique, canonicalExpectedDelta, hookExpectedDelta, stateRebuild, preRebuildFullState, rebuildNoop,
         residueBeforeRebuild, residueAfterRebuild,
         maxCanonicalLockWaitMs: Math.max(...metric("lockWaitMs")), canonicalLockWaitLimitMs: Math.max(...metric("lockWaitLimitMs")),
         minCanonicalLockWaitMarginMs: Math.min(...metric("lockWaitMarginMs")), maxCanonicalLeaseCriticalMs: Math.max(...metric("leaseCriticalMs")),
@@ -341,6 +355,39 @@ try {
       assert(summary.minCanonicalLockWaitMarginMs > 0 && summary.minCanonicalLeaseMarginMs > 0 && summary.roundMarginMs > 0);
       windowsStressRounds.push(summary);
       process.stdout.write(`METRIC GS-009 ${JSON.stringify(summary)}\n`);
+    }
+
+    const statePath = join(root, ".clarity/state.json");
+    const originalStateBytes = readFileSync(statePath);
+    const originalState = JSON.parse(originalStateBytes);
+    const expectedEventCount = lines(join(root, ".clarity/events.jsonl")).length;
+    const negativeState = structuredClone(originalState);
+    negativeState.generatedAt = "2099-01-01T00:00:00.000Z";
+    negativeState.source.eventCount = originalState.source.eventCount;
+    try {
+      writeFileSync(statePath, normalizedJson(negativeState));
+      const corruptedStateBytes = readFileSync(statePath);
+      const negativeFilesystemBefore = filesystemSnapshot(root);
+      const negativeReadOnly = rebuildState(root, { write: false });
+      const negativeFilesystemAfter = filesystemSnapshot(root);
+      const eventCountEqual = negativeState.source.eventCount === negativeReadOnly.state.source.eventCount;
+      const fullStateMismatch = normalizedJson(negativeState) !== negativeReadOnly.bytes;
+      assert.equal(eventCountEqual, true);
+      assert.equal(fullStateMismatch, true);
+      assert.equal(negativeReadOnly.changed, false);
+      assert.equal(corruptedStateBytes.compare(readFileSync(statePath)), 0);
+      assert.deepEqual(negativeFilesystemAfter, negativeFilesystemBefore);
+
+      const repaired = runJson(process.execPath, [cli, "rebuild", root, "--json"]);
+      const repairedState = json(statePath);
+      const legacyEventCountOnly = repaired.changed === true
+        && repaired.state.source.eventCount === expectedEventCount
+        && repairedState.source.eventCount === expectedEventCount;
+      assert.equal(legacyEventCountOnly, true);
+      assert.equal(normalizedJson(repairedState), negativeReadOnly.bytes);
+      process.stdout.write(`STATE_ORACLE_NEGATIVE=CONFIRMED eventCountEqual=true fullStateMismatch=true repairBeforeLegacyCheck=true legacyEventCountOnlyGreen=true readOnlyChanged=false\n`);
+    } finally {
+      writeFileSync(statePath, originalStateBytes);
     }
   });
   await test("GS-010", "stale owned lockをdoctorし自動回復", () => {
