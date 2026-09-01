@@ -295,3 +295,51 @@ clean cloneとGit-free archiveは製品candidate `b48060f555278ec6ca14d2019025e4
 - delete-pending等でparent／lock identityを安全に確認できない場合は、raw errorを出さず非0でfail closedする。Windows nativeでこの安全停止が反復して可用性を満たさない場合は、閾値やroundを弱めずproduct findingとして扱う。
 - 本記録はGenerator自己評価であり、独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
 - push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
+
+## 利用者承認の追加Retry — stale lock削除境界のsanitized収束
+
+- 追加Retry開始HEAD: `135210f233218da648cc721cbd600caf545d3484`
+- 製品candidate commit: `59ac895b32a434b03ba748b895e26e2911bff8e8`
+- 製品candidate tree: `45a3da59700dc83e302c5e7b238600d6b0675c33`
+- dispatch: fresh isolated Generator、期待metadata `gpt-5.6-sol`／`high`
+
+Fableが直前candidate `b48060f555278ec6ca14d2019025e48c6c5166a1`で実filesystem再現したproduct Major 1件だけを補正した。`removeOwnedStaleLock()`の`rmSync(checked)`境界を局所的に捕捉し、CLI top-level catch全体、doctor／cleanup全般、前回のepisode reset／`lstat` sanitize、全体15秒／1502 attempts／30秒lease、owner／token、root／parent identity、`W_OK`、symlink／junction／permission境界は変更していない。workflow、Case ID、Severity、threshold、Windows 3 round×Hook 32＋CLI 32、`timeout-minutes: 10`も不変である。
+
+### 補正した製品境界
+
+- `rmSync`の非`ENOENT` failureはraw `error.message`を再throwせず、`canonical-lock-stale-cleanup-failed`へ変換する。外向けdetailsは既存allowlist helperを通した`errorCode`／`syscall`と`changed: false`だけで、absolute local pathを含めない。
+- 競合`ENOENT`は、直前にClarity owner／kind、期限切れ、同一token／expiresAtを2回照合済みであり、catch後の`lstat`でもpath不在を確認できた場合だけ「別processが既に削除済み」としてacquire loopを継続する。pathが存在する場合は成功扱いせず、再確認自体が非`ENOENT`で失敗した場合はsanitized errorでfail closedする。
+- 決定的race用のbarrierは`CLARITY_TEST_MODE=1`かつ専用envが明示された場合だけ有効で、同一stale identityの照合後・`rmSync`直前に限定した。5秒で必ず停止し、本番または`CLARITY_TEST_MODE=0`ではfile作成・待機とも0件である。
+- inventoryは`clarity-root-policy`と`clarity-harness-scanner`の実内容digestだけを追従した。
+
+### P001-23 決定的fixture
+
+1. 非`ENOENT`削除失敗: stale lockの`rmSync`直前に、fixture absolute lock pathをraw messageへ含む`EACCES`／`unlink`を注入した。exit 4、code `canonical-lock-stale-cleanup-failed`、detailsは`changed: false`／`EACCES`／`unlink`だけで、stdout／stderr／JSON／detailsのpath・raw message露出0、Event／Evidence／State変更0、stale lock保持、operation／temp residue 0だった。
+2. 同一identity並行削除: process Aを同一owner／token／expiresAtのstale lock照合後にbarrierで停止し、process Bが実filesystemで同lockを削除してEvent writeとlock releaseをexit 0で完了した。lock path不在をfixture側で確認後にAを再開し、Aの実`rmSync`を`ENOENT`へ到達させた。Aもexit 0でacquire loopへ収束し、Event delta +2、両Event ID各1件・全ID unique、Evidence delta 0、State eventCount一致、rebuild一致、lock／operation／temp residue 0だった。
+3. `CLARITY_TEST_MODE=0`ではstale lock削除failure注入とbarrier envを同時に与えても通常回復し、barrier file 0、Event 1件、lock residue 0である。既存P001-01〜22、GS-010のstale owned lock回復、active／unsafe／ownership不明を自動成功へ昇格しない境界は維持した。
+
+Patch専用suiteは合計 **23／23 PASS**。P001-01〜22のID、期待、意味を変更していない。
+
+### 追加Retry検証集計
+
+| 面／command | 結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 23／23 PASS、Windows native NOT-RUN |
+| exact clean candidate、同上 | 23／23 PASS、開始／終了`git status --short`空 |
+| 同candidate Git-free archive、同上 | 23／23 PASS、`.git`不存在 |
+| source／exact clean／Git-free、`node scripts/sprint-047-test.mjs` | 各25／25 PASS。GS-009は各面Hook 32＋CLI 32の64／64 exit 0、parse／unique／State rebuild 100%、rebuild前後residue 0。Windows 3 roundの代用ではない |
+| source／exact clean／Git-free、`node scripts/sprint-050-patch-004-test.mjs` | 各12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-050-patch-005-test.mjs` | 各9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 各9／9 PASS／Windows native NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-049-inventory.mjs validate` | 各20 surface／67 case、marker／digest PASS |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| source／exact clean／Git-free、`node --check`。source／exact clean、`git diff --check` | exit 0 |
+
+起動URLはないCLI製品である。Evaluatorの再現入口は`node scripts/sprint-047-patch-001-test.mjs`、基礎回帰は`node scripts/sprint-047-test.mjs`、配布面の回帰は上表のPatch 004／005、conversation migration、inventory、archive gateである。
+
+### 追加Retry残余リスク／外部副作用
+
+- Windows Server 2025／Node 22はGenerator環境で **NOT-RUN**。macOSのsource／clean／Git-free結果をWindows PASSへ読み替えない。次のWindows native同一jobではPatch 23 case、Sprint 047 25 case、GS-009 3 round×Hook 32＋CLI 32、GS-010、Patch 004／005、conversation migration、step／job timing、10分marginをfresh独立Evaluatorが確認する必要がある。
+- `ENOENT`収束は同一stale identityの事前照合とcatch後path不在に限定したが、Windows固有delete-pending／共有挙動の最終可用性はnative実測待ちである。identityを確認できない場合は意図的にfail closedする。
+- 本記録はGenerator自己評価であり、Fable再レビュー／独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
+- push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
