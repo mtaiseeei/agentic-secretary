@@ -5,7 +5,7 @@
 - Current ID: sprint-047-patch-003
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 19
+- Lineage Dispatches: 20
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -103,6 +103,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-02: Sprint 047 Patch 003のPR head `94258ed6b7df248299f098cc008f43112084b2df`に因果するWindows run `33532495145`／job `99938800797`を生ログまで監査し、Windows Server 2025／Node 22.23.2で299／600秒のPASSを確認した。Patch 005内包SR-009、P001 23／23、P002 12／12、Sprint 047 25／25が全step success。正式GS-009の3 roundは各Hook 32＋CLI 32の64／64、parse／unique／delta／State rebuild 100%、`preRebuildFullState:true`、`rebuildNoop:true`、residue 0。eventCount同値の`generatedAt`破損は`STATE_ORACLE_NEGATIVE=CONFIRMED`で、repair前full mismatch、新oracle検出、旧repair後eventCount-only greenを実証した。max wait 7,620／15,000ms、max lease 1,635／30,000ms、Git/root timeout・transition/canonical busy 0件。Windows 8.3は引き続き`NOT-RUN:8dot3-unavailable`で昇格しない。fresh独立Evaluator予約としてLineage Dispatchesを20へ積み増し、Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`、Status `awaiting-eval`を維持する。Evaluatorはverification candidate `c9ca65e608819a40bfced9f2de495b0b2edda550`、Windows head／raw result、product code／workflow差分0を固定して判定する。
 - 2026-09-02: Sprint 047 Patch 003のverification candidate `c9ca65e608819a40bfced9f2de495b0b2edda550`／tree `9f9fb641411812e480366f4009c49f2bba87964d`、progress HEAD `5ddc4f6265142837f1396f61b8b570e7ac47e970`／tree `d809950cc71989bde8d53b7c9a6dde69fc9e1b06`を確定した。製品code／workflow差分0のまま、各GS-009 roundでwriter直後のstored Stateを`rebuildState(root,{write:false})`の全State bytesと比較し、oracle前後の一時Repo filesystem snapshot不変を確認する。既存writeful rebuildは`changed:false`かつState bytes no-opを必須化。eventCount同値のまま`generatedAt`だけを壊す負例で、旧eventCount-only oracleはrepair後greenになり得る一方、新oracleはrepair前のfull mismatchを検出する`STATE_ORACLE_NEGATIVE=CONFIRMED`を固定した。Generatorとオーケストレーター独立再実行でSprint 047 25／25・GS-009 64／64・preRebuildFullState／rebuildNoop true、P001 23／23、P002 12／12、root／alias 21／21、inventory 20／67、構文／YAML／diffが0 FAIL。local max wait 1,106／15,000ms、max lease 146／30,000ms、residue 0。Windows Server 2025／Node 22の3 roundとfresh EvaluatorはNOT-RUNのためStatusを`awaiting-eval`へ進めるがPASS／doneへ昇格しない。Retry／Spec-Issue 0、Lineage 19、Model Tier `strong`、Rotate `none`を保持する。
 - 2026-09-02: fresh Plannerがverification-only通常Patch `sprint-047-patch-003`をcommit `722fa9c9473391103ba2bea6581311c09aa90707`／tree `62c297bd15b46eb0cb77ccb01a67845ba146edb3`で契約化した。各GS-009 roundのwriter直後／writeful rebuild前にstored Stateとread-only再構築Stateを全field比較し、eventCount同値の内容不一致negativeをrepair前に検出する。正常時は既存rebuildが`changed:false`かつbytes no-opであることも確認する。product code、仕様、rubric、registry、workflow、32＋32、Windows 3 round、15秒／30秒／10分は不変。未解決の製品／利用者判断0件。fresh Generator予約としてLineage Dispatchesを19へ積み増し、Currentを`sprint-047-patch-003`、Statusを`active`、Next PlannedをTBDとする。
 - 2026-09-02: PR #11に残るState oracle P2を、製品code・受入threshold・並行数・round・上限へ触れない限定verification Patch `sprint-047-patch-003`として計画する。目的はGS-009 writer直後のstored Stateをwrite前のread-only再構築結果と全体比較し、意図的なeventCount同値／内容不一致を旧writeful rebuildが隠すnegativeを検出すること。既存GS-009 ID／意味／Severity、Windows 3 round×64、P001／P002、15秒／30秒／10分、State rebuild後の回帰は維持する。fresh Planner予約としてLineage Dispatchesを18へ積み増し、Current IDはTBD、Next Plannedを`sprint-047-patch-003`とする。private／Yasashii、merge、release、installは引き続き未実施。
