@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-047-patch-002
-- Retry Count: 1
+- Retry Count: 2
 - Spec-Issue Count: 0
-- Lineage Dispatches: 15
+- Lineage Dispatches: 16
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -86,7 +86,7 @@
 | sprint-046 | done | [contract](sprint-046.md) | [progress](../progress/sprint-046.md) | [feedback](../feedback/sprint-046.md) |
 | sprint-047 | done | [contract](sprint-047.md) | [progress](../progress/sprint-047.md) | [feedback](../feedback/sprint-047.md) |
 | sprint-047-patch-001 | done | [contract](sprint-047-patch-001.md) | [progress](../progress/sprint-047-patch-001.md) | [feedback](../feedback/sprint-047-patch-001.md) |
-| sprint-047-patch-002 | awaiting-eval | [contract](sprint-047-patch-002.md) | [progress](../progress/sprint-047-patch-002.md) | - |
+| sprint-047-patch-002 | active | [contract](sprint-047-patch-002.md) | [progress](../progress/sprint-047-patch-002.md) | - |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
@@ -102,6 +102,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-02: Sprint 047 Patch 002 Retry 1 exact public HEAD `e8d53e3bfa6d5fc2023349947991b8f34df46b4c`のpull_request Windows run `33528106290`／job `99924026435`は2分44秒でFAIL。前回と同じPatch 005内包GS-009で64 writer中9件が非0となり、内訳は`canonical-lock-transition-busy` 6件、`canonical-lock-busy` 3件。後続P001／P002／正式3 roundは未実行で、Git identity timeoutは0件。Retry 1でlock内full revalidationを62→35へ減らしても解消しなかったため、主因をroot検査量ではなくtransition guardのconvoyと確定する。canonical lockが既に現れた後も、先にtransition待ちへ入ったprocessがguardを順番に取得してから`EEXIST`を知る構造が15秒budgetを消費している。Retry 2は、create専用transition待機中にcanonical lockを検出した時点で既存canonical waitへ戻し、stale takeover／releaseのtransition意味は変えない限定修正とする。併せてPR独立レビューのP1であるtransition releaseのowner／kind／token／operationId照合を同じ安全境界で閉じる。timeout／lock／lease／job上限、parallelism、round、test schedulingは不変。Retry Count 2、Lineage 16、Model Tier `strong`、Rotate `none`、Status `active`。3回目のWindows product failureなら追加実装を止めて利用者へ選択肢を返す。
 - 2026-09-02: Sprint 047 Patch 002 Retry 1の製品candidate `f8e1a1c4b510c4ac3700c3aab33b3076ae833696`／tree `c63b734e2fef1453b492f6bb820bbec549150c4b`、progress HEAD `0fa6f8a5b9e1360c29c558faa19d871a8a23c23d`を確定した。実event writer計測でfull root／Git revalidationが78回、canonical lock内62回反復していた。ancestor marker走査だけを短縮する案はcritical平均13.55ms→13.75msで効果がなく不採用。filesystem mutation 1件ごとの同期scopeを導入し、scope入口でfull再検証、write／rename／unlink直後の`finally`で失効させ、nested scope、mkdir＋write、複数rename、retry間、request間の共有を拒否した。最終計測は合計51回／lock内35回（lock内43.5%減）、critical平均10.95ms。timeout 5秒、lock wait 15秒、lease 30秒、job 10分、32＋32、3 round、fail-closed境界は不変。Generatorとオーケストレーター再実行でP002 12／12、root／alias 21／21、P001 23／23、Sprint 047 25／25、local GS-009 64／64・max lock wait 1,203／15,000ms・max lease 172／30,000ms、inventory 20／67、構文／YAML／diffが0 FAIL。Windows Server 2025／Node 22のRetry 1、8.3、3 round、fresh EvaluatorはNOT-RUNのためRetry Count 1、Lineage 15を保持してStatusを`awaiting-eval`へ進める。transition guard owner-tokenとState rebuild oracleは別follow-upであり、本Retryへ混在させていない。
 - 2026-09-02: Sprint 047 Patch 002 exact public HEAD `e9b5f1f9d95c3463205f2acfb417a4fd075436f9`のWindows workflow_dispatch run `33525750026`／job `99916020064`は2分34秒でFAIL。syntax、Windows path、conversation migration、Clarity scanはPASSしたが、Patch 005のSR-009が内包実行する変更なしSprint 047 GS-009で64 writer中2件が`canonical-lock-busy`となり、後続P001／P002／正式3 roundは未実行。Git identity timeout、malformed output、Secret露出、partial writeを示すログは0件で、test誤判定ではなく既存15秒内に全canonical writerがlockを取得できないproduct failureと分類する。root revalidationの追加安全検査が各`safeWritePath()` guardで反復され、canonical critical sectionのWindows競合を増幅した可能性を最小仮説とする。timeout／lock wait／lease／job上限、32＋32、3 round、stagger／batch禁止を維持したまま、request内の検査重複とcritical sectionを短縮するRetry 1へ戻す。Retry Count 1、Lineage Dispatches 15、Model Tier `strong`、Rotate `none`、Status `active`。ユーザー指示によりLineage上限は停止条件にしないが監査値は保持する。private／Yasashii、Evaluator、merge、release、installは未実行。
 - 2026-09-02: Sprint 047 Patch 002のpublic Generator candidate `c22ccc3919279b590e4d91ed1b5c7063ed92b98c`／progress HEAD `4b9698b4c84c1c187817fa75e1b83808aea7e3de`を確定し、別AgentがPR #11へ追加したread-only診断履歴3 commitを上書きせずmerge commit `409965d`で統合した。root identity discoveryは1 requestあたり2回のNode runner＋Git起動を、top-level／Git dir／common Git dirを返す1回の5秒bounded read-only probeへ集約した。timeout延長、retry、stagger、batch、prewarmは0件。現在の`.git`／commondir binding、worktree config、filesystem identityをwrite前に再確認し、Windowsのlong path／8.3 pathは文字列でなく物理directory identityとして扱う。オーケストレーター独立再実行でPatch 002 11／11（macOSの8.3は`NOT-RUN:not-win32`）、root／alias 21／21、Patch 001 23／23、Sprint 047 25／25・Hook 32＋CLI 32・64／64・parse／unique／rebuild 100%・residue 0、inventory 20 surface／67 case、構文／YAML／diff checkが0 FAIL。PR追加レビューのGit binding P1は本candidateで直接negative化し、transition guard所有token P1は別製品Patch、State oracle P2は限定verification PatchとしてCurrent Patch完了後に順番に扱う。Windows Server 2025／Node 22の3 round、8.3実行、job 10分margin、fresh独立EvaluatorはまだNOT-RUNのためStatusを`awaiting-eval`へ進めるがPASS／doneへは昇格しない。private／Yasashii、merge、release、install、cache、live workspace、Xmind、connectorは未実行。
