@@ -398,3 +398,55 @@ Evaluatorが再現した、stale identity確認後のprocess Aを停止し、pro
 - guard crashは安全側へ停止するため、利用者確認付きcleanupまでwrite可用性が戻らない。これはactive replacement誤削除を避ける意図的なfail-closedで、doctor証拠と回復fixtureを追加済みである。OS外部からguard inodeを確認直後に直接置換する非協調processまではfilesystem APIだけで完全に排除できないが、製品の全canonical lock遷移は同protocolへ統一した。
 - 本記録はGenerator自己評価であり、独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
 - push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実Xmind／downstream writeは **0件**。network／connector／GitHub API callも0件である。
+
+## Fable guard retry差し戻し — active wait churn停止とBigInt identity統一
+
+- Retry開始HEAD: `b7cabd6fdd0551daa70b89dfcea21cc9795f1fad`
+- 直前製品candidate: `4a28f6b57ea31a842f7144d23ce15fca2daa2f0d`
+- 製品candidate commit: `17bff277f62f86181b2b77cfd04e8ed91ac48248`
+- 製品candidate tree: `ffc694949f9cf1c137293389506d6d7a15027954`
+- dispatch: fresh isolated Generator、期待metadata `gpt-5.6-sol`／`high`
+
+Fable read-only reviewが示したCritical 1件／Major 2件を同じSprint契約内で修正した。guard TTLによる自動削除、permission全般へのretry拡大、Case ID／Severity／threshold／process数／3 round／timeout変更は行っていない。
+
+### 補正した製品境界
+
+- canonical `lock.json`が通常fileとして見えている間は`lock-transition.json`を取得せず、既存のactive lock待機へ直接進む。active writerが明らかに存在する通常待機で、10msごとのguard create／unlink churnを発生させない。canonicalがmissingになった後だけguardを取得し、missing→create、stale recheck→remove→create、releaseのidentity-bound protocolを維持する。
+- guard `EEXIST`後の`lstat`とguard releaseの`lstat`／`unlink`だけ、既存Windows因果に対応する`EPERM`／`EBUSY`へ限定して最大7 failure／1,000ms、全体15秒内、正のbackoffで再試行する。`EACCES`、未知error、identity違い、root／parent差替えはretryせずfail closedにする。
+- guard／canonical lock作成時の全`fstatSync`を`{ bigint: true }`へ統一し、`filesystemIdentity()`と同じ変換関数で`dev`／`ino`／`kind`を比較する。`CLARITY_TEST_MODE=1`限定のlarge identity seamで`2^60`超相当へ持ち上げても、productionの作成・照合・release・cleanup経路が成功することを固定した。
+- stale takeoverで旧lock削除後に新しい0-byte lockを`O_EXCL`作成し、guard releaseが恒久失敗した場合は、所有record未書込かつ作成時と同じBigInt identityのlockだけをcleanupする。cleanup不能なら`canonical-lock-record-incomplete`で停止し、別identityは削除しない。release不能guardは期限だけで削除せずdoctor確認待ちにする。
+- `GS-009`のresidue hard gateへ`lock-transition.json`を追加し、State rebuild前後とも実値0を要求する。inventoryは変更したcoreを含む2 surfaceのdigestだけを更新した。
+
+### P001-23内の決定的fixture
+
+1. active lockを実fileとして保持したままwriterを起動し、200ms後もwriter実行中かつtransition guard不存在を確認した。active lock解放後だけguard create failure seamへ到達し、回復再実行は成功・residue 0となった。
+2. 既存guard待機中の`lstat`へ`EPERM`、続いて`EBUSY`を注入し、同じproduction acquire loopが有限retry後に成功した。99回継続する`EPERM`は3秒未満で非0、guard bytes保持、absolute path／raw message非露出となった。
+3. guard releaseの`lstat`へ`EPERM`、`unlink`へ`EBUSY`を順に注入し、同じproduction releaseが成功・residue 0となった。
+4. stale takeoverのguard `unlink`へ恒久`EPERM`を注入し、非0・成功表示0、Event／Evidence／State不変、0-byte canonical lock 0件、guard保持を確認した。利用者確認相当でguardを除いた後は通常writeが成功した。
+5. large BigInt identity seam、既存active replacement実process、guard SIGKILL、別identity guard release保持を同じP001-23で通し、P001のCase ID総数は23件のまま維持した。
+
+最初の専用suiteではP001-21だけ22／23だった。active waitでguardへ入らない新構造により、旧fixtureの1回目EPERMがactive待機中には消費されなくなったためである。Caseの意味を弱めず、missing→EPERM中に実processがactive lockを作成→EEXIST待機→release→新episode EPERMとなる実filesystem fixtureへ直し、以後23／23でgreenになった。
+
+### 実行済み検証
+
+| 面／command | 結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 23／23 PASS、Windows native NOT-RUN |
+| source、`node scripts/sprint-047-test.mjs` | 25／25 PASS、GS-009 Hook 32＋CLI 32＝64／64、parse／unique／State rebuild 100%、guard込みrebuild前後residue 0。最大lock wait 1350／15000ms、lease critical 202／30000ms |
+| source、`node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| source、`node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source、`node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9／9 PASS／Windows native NOT-RUN |
+| source、`node scripts/sprint-049-inventory.mjs validate` | 20 surface／67 case、marker／digest PASS |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| exact clean `17bff277...`、Patch／Sprint／Patch 004／005／conversation／inventory | 同件数で全green、開始／終了`git status --short`空。GS-009最大wait 1160ms、rebuild前後residue 0 |
+| Git-free archive `17bff277...`、同suite | 同件数で全green、`.git`不存在。GS-009最大wait 1285ms、rebuild前後residue 0 |
+| `node --check`／`git diff --check` | exit 0 |
+
+起動URLはないCLI／filesystem製品である。Evaluatorの主入口は`node scripts/sprint-047-patch-001-test.mjs`のP001-23、基礎回帰は`node scripts/sprint-047-test.mjs`、配布面はPatch 004／005、conversation migration、inventory、archive gateである。
+
+### 残余リスク／未実施事項
+
+- Windows Server 2025／Node 22 nativeはこのcandidateで **NOT-RUN**。source／exact clean／Git-freeのmacOS結果をWindows PASSへ読み替えない。次の因果Windows jobではPatch 23件、Sprint 047 25件、GS-009 3 round×Hook 32＋CLI 32、guard込みrebuild前後residue 0、Patch 004／005、conversation migration、step／job timing、10分marginを確認する必要がある。
+- guard releaseの`EPERM`／`EBUSY`が局所上限まで継続した場合は、guardを期限だけで削除せず非0・doctor確認待ちになる。可用性より他writer identity非削除を優先する意図的なfail-closed終端である。
+- 本記録はGenerator自己評価であり、Fable再レビュー／独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
+- push／GitHub API／Windows CI／Evaluator／merge／release／tag／Marketplace／install／cache／live workspace／実Xmind／downstream writeは **0件**。offline fixtureのnetwork／external service writeも0件である。
