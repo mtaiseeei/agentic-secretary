@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readlinkSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, parse, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, parse, relative, resolve, sep } from "node:path";
 import {
   FilesystemBoundaryError,
   registerWorkingRootGuard,
@@ -15,6 +15,16 @@ import { runExternalSync } from "./external-ops.mjs";
 const observations = new Map();
 let observationSequence = 0;
 let activeRequestScope = null;
+let gitProbeRunner = runExternalSync;
+
+const GIT_IDENTITY_TIMEOUT_MS = 5_000;
+const GIT_IDENTITY_MAX_BUFFER = 1024 * 1024;
+const GIT_DISCOVERY_ENV_KEYS = [
+  "GIT_COMMON_DIR",
+  "GIT_DIR",
+  "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+  "GIT_WORK_TREE",
+];
 
 function sha256(value) {
   return createHash("sha256").update(String(value ?? "")).digest("hex");
@@ -34,55 +44,264 @@ function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.kind === right.kind;
 }
 
-function git(root, args) {
-  const result = runExternalSync("git", ["-C", root, ...args], {
-    encoding: "utf8",
-    timeoutMs: 5_000,
-    maxBuffer: 1024 * 1024,
-    allowFailure: true,
-    label: "Clarity root Git identity inspection",
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0" },
-  });
-  return result.status === 0 ? String(result.stdout).trim() : null;
+function directoryIdentity(path) {
+  const identity = filesystemIdentity(path);
+  if (identity.kind !== "directory") {
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identityが通常directoryではないため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+  return identity;
 }
 
-function gitConfigDigest(gitDir) {
-  const path = join(gitDir, "config");
-  if (!existsSync(path)) return null;
-  const stat = lstatSync(path);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 1024 * 1024) return null;
-  return sha256(readFileSync(path));
+function resolveGitDirectory(path) {
+  try {
+    const physical = realpathSync(path);
+    return { path: physical, identity: directoryIdentity(physical) };
+  } catch (error) {
+    if (error instanceof FilesystemBoundaryError) throw error;
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identityを安全に確認できないため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+}
+
+function samePhysicalDirectory(leftPath, rightPath) {
+  const left = resolveGitDirectory(leftPath);
+  const right = resolveGitDirectory(rightPath);
+  return sameIdentity(left.identity, right.identity);
+}
+
+function readGitControlFile(path, label) {
+  try {
+    const stat = lstatSync(path);
+    if (!stat.isFile() || stat.isSymbolicLink() || stat.size <= 0 || stat.size > 64 * 1024) {
+      throw new FilesystemBoundaryError(`Clarity rootの${label}が不正なため、変更せず停止しました。`, "clarity-git-path-unsafe", { changed: false });
+    }
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    if (error instanceof FilesystemBoundaryError) throw error;
+    throw new FilesystemBoundaryError(`Clarity rootの${label}を安全に確認できないため、変更せず停止しました。`, "clarity-git-path-unsafe", { changed: false });
+  }
+}
+
+function assertGitDirectoryRelationship(top, gitDir, commonGitDir) {
+  const marker = join(top, ".git");
+  let markerStat;
+  try { markerStat = lstatSync(marker); }
+  catch {
+    throw new FilesystemBoundaryError("Clarity rootのGit top-level identityを安全に確認できないため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+  if (markerStat.isSymbolicLink()) {
+    throw new FilesystemBoundaryError("Clarity rootのGit top-level markerがsymlinkのため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+  if (markerStat.isDirectory()) {
+    if (!samePhysicalDirectory(marker, gitDir) || !samePhysicalDirectory(gitDir, commonGitDir)) {
+      throw new FilesystemBoundaryError("Clarity rootのGit directory identityが一致しないため、変更せず停止しました。", "clarity-git-identity-mismatch", { changed: false });
+    }
+    return;
+  }
+  const body = readGitControlFile(marker, "Git top-level marker").replaceAll("\r\n", "\n");
+  const match = body.match(/^gitdir: ([^\n\r]+)\n?$/u);
+  if (!match) {
+    throw new FilesystemBoundaryError("Clarity rootのGit top-level markerが不正なため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+  const declaredGitDir = resolve(top, match[1]);
+  if (!samePhysicalDirectory(declaredGitDir, gitDir)) {
+    throw new FilesystemBoundaryError("Clarity rootのGit directory identityが一致しないため、変更せず停止しました。", "clarity-git-identity-mismatch", { changed: false });
+  }
+  const commonControl = join(gitDir, "commondir");
+  const declaredCommon = existsSync(commonControl)
+    ? resolve(gitDir, readGitControlFile(commonControl, "Git common directory marker").trim())
+    : gitDir;
+  if (!samePhysicalDirectory(declaredCommon, commonGitDir)) {
+    throw new FilesystemBoundaryError("Clarity rootのGit common directory identityが一致しないため、変更せず停止しました。", "clarity-git-identity-mismatch", { changed: false });
+  }
+}
+
+function gitConfigFileIdentity(path) {
+  try {
+    if (!existsSync(path)) return { state: "missing" };
+    const stat = lstatSync(path);
+    const identity = filesystemIdentity(path, { follow: false });
+    if (stat.isSymbolicLink()) {
+      return { state: "symlink", identity, targetDigest: sha256(readlinkSync(path)) };
+    }
+    if (!stat.isFile()) return { state: "non-file", identity };
+    if (stat.size > GIT_IDENTITY_MAX_BUFFER) return { state: "oversized", identity, size: stat.size };
+    return { state: "file", identity, size: stat.size, contentDigest: sha256(readFileSync(path)) };
+  } catch (error) {
+    if (error instanceof FilesystemBoundaryError) throw error;
+    throw new FilesystemBoundaryError("Clarity rootのGit config identityを安全に確認できないため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+}
+
+function gitConfigDigest(gitDir, commonGitDir) {
+  const candidates = [
+    ["common-config", join(commonGitDir, "config")],
+    ["worktree-config", join(gitDir, "config.worktree")],
+  ];
+  const seen = new Set();
+  const rows = [];
+  for (const [label, path] of candidates) {
+    const canonical = resolve(path);
+    if (seen.has(canonical)) continue;
+    seen.add(canonical);
+    rows.push([label, gitConfigFileIdentity(canonical)]);
+  }
+  return sha256(JSON.stringify(rows));
+}
+
+function gitDiscoveryEnvironmentDigest() {
+  return sha256(JSON.stringify(GIT_DISCOVERY_ENV_KEYS.map((key) => [key, process.env[key] ?? null])));
+}
+
+function gitMarkerSnapshot(root) {
+  try {
+    const rows = [];
+    let cursor = resolve(root);
+    let level = 0;
+    while (true) {
+      const marker = join(cursor, ".git");
+      if (!existsSync(marker)) rows.push({ level, state: "missing" });
+      else {
+        const stat = lstatSync(marker);
+        const identity = filesystemIdentity(marker, { follow: false });
+        if (stat.isSymbolicLink()) rows.push({ level, state: "symlink", identity, targetDigest: sha256(readlinkSync(marker)) });
+        else if (stat.isFile()) {
+          rows.push({ level, state: "file", identity, size: stat.size, contentDigest: stat.size <= 64 * 1024 ? sha256(readFileSync(marker)) : null });
+        } else rows.push({ level, state: stat.isDirectory() ? "directory" : "other", identity });
+      }
+      const parent = dirname(cursor);
+      if (parent === cursor) break;
+      cursor = parent;
+      level += 1;
+    }
+    return rows;
+  } catch (error) {
+    if (error instanceof FilesystemBoundaryError) throw error;
+    throw new FilesystemBoundaryError("Clarity rootのGit marker identityを安全に確認できないため、変更せず停止しました。", "clarity-git-path-unsafe", { changed: false });
+  }
+}
+
+function gitMarkerDigest(root) {
+  return sha256(JSON.stringify(gitMarkerSnapshot(root)));
+}
+
+function hasRepositoryMarker(root) {
+  return gitMarkerSnapshot(root).some((row) => row.state !== "missing");
+}
+
+function hasGitDiscoveryOverride() {
+  return GIT_DISCOVERY_ENV_KEYS.some((key) => process.env[key] !== undefined && process.env[key] !== "");
+}
+
+function parseGitIdentityOutput(stdout) {
+  const normalized = String(stdout ?? "").replaceAll("\r\n", "\n");
+  if (!normalized.endsWith("\n") || normalized.includes("\r") || normalized.includes("\0")) {
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identity出力が不正なため、変更せず停止しました。", "clarity-git-output-invalid", { changed: false });
+  }
+  const rows = normalized.slice(0, -1).split("\n");
+  if (rows.length !== 3 || rows.some((row) => row.length === 0 || row.length > 32 * 1024 || !isAbsolute(row))) {
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identity出力が不正なため、変更せず停止しました。", "clarity-git-output-invalid", { changed: false });
+  }
+  return rows;
+}
+
+function probeGitIdentity(root) {
+  let result;
+  try {
+    result = gitProbeRunner("git", [
+      "-C", root,
+      "rev-parse",
+      "--path-format=absolute",
+      "--show-toplevel",
+      "--absolute-git-dir",
+      "--git-common-dir",
+    ], {
+      encoding: "utf8",
+      timeoutMs: GIT_IDENTITY_TIMEOUT_MS,
+      maxBuffer: GIT_IDENTITY_MAX_BUFFER,
+      allowFailure: true,
+      label: "Clarity root Git identity inspection",
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0" },
+    });
+  } catch (error) {
+    if (error?.code === "timeout") {
+      throw new FilesystemBoundaryError("Clarity rootのRepo／Git identity確認が時間切れになったため、後続処理を行わず停止しました。", "timeout", { changed: false, timeoutMs: GIT_IDENTITY_TIMEOUT_MS });
+    }
+    if (error?.code === "max-buffer") {
+      throw new FilesystemBoundaryError("Clarity rootのRepo／Git identity出力が上限を超えたため、変更せず停止しました。", "clarity-git-output-invalid", { changed: false });
+    }
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identityを安全に確認できないため、変更せず停止しました。", "clarity-git-identity-unavailable", { changed: false });
+  }
+  if (result.status !== 0) {
+    if (!hasRepositoryMarker(root) && !hasGitDiscoveryOverride()) return null;
+    throw new FilesystemBoundaryError("Clarity rootのRepo／Git identityを安全に確認できないため、変更せず停止しました。", "clarity-git-identity-unavailable", { changed: false });
+  }
+  return parseGitIdentityOutput(result.stdout);
 }
 
 function gitIdentity(root, reference = null) {
+  const markerDigest = gitMarkerDigest(root);
+  const discoveryEnvironmentDigest = gitDiscoveryEnvironmentDigest();
   if (reference?.kind === "git") {
-    const gitDir = realpathSync(reference.gitDir);
-    const top = realpathSync(reference.top);
+    const topResult = resolveGitDirectory(reference.top);
+    const gitDirResult = resolveGitDirectory(reference.gitDir);
+    const commonGitDirResult = resolveGitDirectory(reference.commonGitDir);
+    assertGitDirectoryRelationship(topResult.path, gitDirResult.path, commonGitDirResult.path);
     return {
       kind: "git",
-      top,
-      topIdentity: filesystemIdentity(top),
-      gitDir,
-      gitDirIdentity: filesystemIdentity(gitDir),
-      remoteDigest: gitConfigDigest(gitDir),
+      top: topResult.path,
+      topIdentity: topResult.identity,
+      gitDir: gitDirResult.path,
+      gitDirIdentity: gitDirResult.identity,
+      commonGitDir: commonGitDirResult.path,
+      commonGitDirIdentity: commonGitDirResult.identity,
+      remoteDigest: gitConfigDigest(gitDirResult.path, commonGitDirResult.path),
+      markerDigest,
+      discoveryEnvironmentDigest,
     };
   }
-  if (reference?.kind === "non-git" && !existsSync(join(root, ".git"))) {
-    return { kind: "non-git", top: null, topIdentity: null, gitDir: null, gitDirIdentity: null, remoteDigest: null };
+  if (reference?.kind === "non-git") {
+    return {
+      kind: "non-git", top: null, topIdentity: null, gitDir: null, gitDirIdentity: null,
+      commonGitDir: null, commonGitDirIdentity: null, remoteDigest: null, markerDigest, discoveryEnvironmentDigest,
+    };
   }
-  const top = git(root, ["rev-parse", "--show-toplevel"]);
-  if (!top) return { kind: "non-git", top: null, topIdentity: null, gitDir: null, gitDirIdentity: null, remoteDigest: null };
-  const physicalTop = realpathSync(top);
-  const gitDirRaw = git(root, ["rev-parse", "--absolute-git-dir"]);
-  const gitDir = gitDirRaw ? realpathSync(gitDirRaw) : null;
+  const probe = probeGitIdentity(root);
+  if (!probe) {
+    return {
+      kind: "non-git", top: null, topIdentity: null, gitDir: null, gitDirIdentity: null,
+      commonGitDir: null, commonGitDirIdentity: null, remoteDigest: null, markerDigest, discoveryEnvironmentDigest,
+    };
+  }
+  const [topRaw, gitDirRaw, commonGitDirRaw] = probe;
+  const topResult = resolveGitDirectory(topRaw);
+  const gitDirResult = resolveGitDirectory(gitDirRaw);
+  const commonGitDirResult = resolveGitDirectory(commonGitDirRaw);
+  assertGitDirectoryRelationship(topResult.path, gitDirResult.path, commonGitDirResult.path);
   return {
     kind: "git",
-    top: physicalTop,
-    topIdentity: filesystemIdentity(physicalTop),
-    gitDir,
-    gitDirIdentity: gitDir ? filesystemIdentity(gitDir) : null,
-    remoteDigest: gitDir ? gitConfigDigest(gitDir) : null,
+    top: topResult.path,
+    topIdentity: topResult.identity,
+    gitDir: gitDirResult.path,
+    gitDirIdentity: gitDirResult.identity,
+    commonGitDir: commonGitDirResult.path,
+    commonGitDirIdentity: commonGitDirResult.identity,
+    remoteDigest: gitConfigDigest(gitDirResult.path, commonGitDirResult.path),
+    markerDigest,
+    discoveryEnvironmentDigest,
   };
+}
+
+function sameGitIdentity(left, right) {
+  return left.kind === right.kind
+    && left.remoteDigest === right.remoteDigest
+    && left.markerDigest === right.markerDigest
+    && left.discoveryEnvironmentDigest === right.discoveryEnvironmentDigest
+    && Boolean(left.topIdentity) === Boolean(right.topIdentity)
+    && (!left.topIdentity || sameIdentity(left.topIdentity, right.topIdentity))
+    && Boolean(left.gitDirIdentity) === Boolean(right.gitDirIdentity)
+    && (!left.gitDirIdentity || sameIdentity(left.gitDirIdentity, right.gitDirIdentity))
+    && Boolean(left.commonGitDirIdentity) === Boolean(right.commonGitDirIdentity)
+    && (!left.commonGitDirIdentity || sameIdentity(left.commonGitDirIdentity, right.commonGitDirIdentity));
 }
 
 function aliasChain(requested) {
@@ -204,12 +423,7 @@ function revalidate(observation) {
   })) {
     return rootChanged("Clarity working rootのancestor aliasが差し替わったため、旧・新rootとも変更せず停止しました。", observation, current);
   }
-  if (observation.git.kind !== current.git.kind || observation.git.top !== current.git.top
-    || observation.git.remoteDigest !== current.git.remoteDigest
-    || Boolean(observation.git.topIdentity) !== Boolean(current.git.topIdentity)
-    || (observation.git.topIdentity && !sameIdentity(observation.git.topIdentity, current.git.topIdentity))
-    || Boolean(observation.git.gitDirIdentity) !== Boolean(current.git.gitDirIdentity)
-    || (observation.git.gitDirIdentity && !sameIdentity(observation.git.gitDirIdentity, current.git.gitDirIdentity))) {
+  if (!sameGitIdentity(observation.git, current.git)) {
     return rootChanged("Clarity working rootのRepo／Git identityが変わったため、変更せず停止しました。", observation, current);
   }
   return current;
@@ -256,6 +470,15 @@ export function withClarityRootRequest(callback) {
   }
 }
 
+export function withClarityGitProbeRunnerForTest(runner, callback) {
+  if (process.env.CLARITY_TEST_MODE !== "1") throw new Error("Clarity Git probe test runner requires CLARITY_TEST_MODE=1");
+  if (typeof runner !== "function" || typeof callback !== "function") throw new TypeError("Clarity Git probe test runner and callback are required");
+  const previous = gitProbeRunner;
+  gitProbeRunner = runner;
+  try { return callback(); }
+  finally { gitProbeRunner = previous; }
+}
+
 export function withClarityRootObservation(value, callback) {
   return withClarityRootRequest(() => callback(resolveClarityRoot(value)));
 }
@@ -290,12 +513,7 @@ export function refreshClarityRootAfterOwnedReplacement(rootValue) {
     })) {
       return rootChanged("Clarity working rootのancestor aliasが差し替わったため、旧・新rootとも変更せず停止しました。", previous, current);
     }
-    if (previous.git.kind !== current.git.kind || previous.git.top !== current.git.top
-      || previous.git.remoteDigest !== current.git.remoteDigest
-      || Boolean(previous.git.topIdentity) !== Boolean(current.git.topIdentity)
-      || (previous.git.topIdentity && !sameIdentity(previous.git.topIdentity, current.git.topIdentity))
-      || Boolean(previous.git.gitDirIdentity) !== Boolean(current.git.gitDirIdentity)
-      || (previous.git.gitDirIdentity && !sameIdentity(previous.git.gitDirIdentity, current.git.gitDirIdentity))) {
+    if (!sameGitIdentity(previous.git, current.git)) {
       return rootChanged("Clarity working rootのRepo／Git identityが変わったため、変更せず停止しました。", previous, current);
     }
     entry.observation = current;
