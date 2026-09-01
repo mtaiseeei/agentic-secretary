@@ -32,7 +32,7 @@ jobs:
         run: node --check plugins/secretary/scripts/lib/secretary-store.mjs
       - name: Node syntax - workspace tools
         shell: pwsh
-        run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
+        run: node --check plugins/secretary/scripts/workspace-tools.mjs
       - name: Node syntax - memory tools
         shell: pwsh
         run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
@@ -56,7 +56,7 @@ jobs:
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
       - name: Conversation migration sibling temp and rollback regression
         shell: pwsh
-        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows
+        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs
       - name: Clarity Harness scan and Windows native regression
         shell: pwsh
         run: node scripts/sprint-050-patch-004-test.mjs --require-windows
