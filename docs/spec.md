@@ -102,6 +102,11 @@ root／target／parent、lock lease、owned tempを試行ごとに再確認で�
 失敗するdouble faultは成功扱いせず、自己所有のdurable progressからdoctor／rebuild／retryで他者を変えずに収束できる診断可能な終端とする。
 GS-009／GS-010のID、意味、Severity、32 Hook＋32 CLI、3 roundの100% thresholdは維持し、public版の因果Windows runと独立評価をPASSした
 完全SHAだけをprivate my-vault、次にYasashiiへ別Harnessで渡す。
+同日、そのpublic PASSをprivate my-vaultへ適用したWindows native `private-CW-019`で、同じ3 round×（Hook 32＋CLI 32）のburst中に
+Clarity rootのGit identity確認が5秒timeoutとなるproduct defectを3回再現した。最新runは64 process中6件がtimeoutし、public／privateの
+root resolver、Clarity core、external process境界、stress本体はbyte／意味が一致する。testのstagger／batch／prewarm、失敗の握りつぶし、
+古いidentity再利用、lock wait／lease／job上限の引上げでは閉じず、public共通root identity discoveryを安全境界のままboundedに完了させる。
+publicのfresh独立Evaluator PASS後だけ固定candidateをprivate my-vault、次にYasashiiの別Harnessへ渡す。
 
 ## ひとことで
 
@@ -208,6 +213,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-046](sprints/sprint-046.md) | reciprocal link、pull sync、authority、conflict | sprint-045 |
 | [sprint-047](sprints/sprint-047.md) | Drift DetectionとGit／filesystem／Secret hardening | sprint-046 |
 | [sprint-047-patch-001](sprints/sprint-047-patch-001.md) | Windowsの一時的なcanonical置換競合をboundedに回復し、Event／Evidence／Stateの部分成功を残さない | sprint-047 |
+| [sprint-047-patch-002](sprints/sprint-047-patch-002.md) | Windows並行burstでClarity rootのGit identity確認を安全かつboundedに完了する | sprint-047-patch-001 |
 | [sprint-048](sprints/sprint-048.md) | public packaging、host inventory、clean／archive gate、固定handoff準備 | sprint-047 |
 | [sprint-049](sprints/sprint-049.md) | secretary関連全surfaceのClarity-aware協働inventoryと追加回帰 | sprint-048 |
 | [sprint-050](sprints/sprint-050.md) | 250 case全件、追加collaboration case、4 E2E、既存master全回帰の最終判定 | sprint-049 |

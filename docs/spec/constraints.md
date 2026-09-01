@@ -460,6 +460,7 @@
 42. retry可能なtransientはerrno名だけで決めない。各試行前にphysical root、targetとparentの存在・書込み可能性・read-only状態、symlink／junction／identity不変、lock owner／token、temp ownershipを再確認でき、他の安全違反がなく、有限上限内に解消した共有／利用中競合だけをtransientとする。permission、read-only、missing parent、schema破損、所有不明、境界差替え、上限まで継続する競合は成功候補へ広げない。
 43. logical writeは、operation identity、対象canonical、進行段階、owner／tokenを他writerと区別できるClarity所有のdurable progressを持つ。同じ記録と実残骸が一致する自己所有の未完了operationだけをretry／doctor／rebuildで決定的に収束させる。記録がない、または対象・段階・owner／tokenが一致しない`state-mismatch`は第三者変更の可能性があるため既存どおりfail closedとし、自動rollback／自動rebuildしない。
 44. 通常成功、通常拒否、rollback成功ではEvent／Evidence／State不整合とowned残骸を0件にする。State確定に加えてrollbackまたはcleanupも失敗するdouble faultは、成功／部分成功を表示せず、自己所有の未完了operationと残ったcanonical状態をdoctorが識別でき、利用者確認を伴うrecoveryで他者所有物を変えずに収束できる診断可能な終端にする。lock fileの排他作成後に所有recordを書けない識別不能lockと、canonical直下を含むorphan tempも同じinventoryへ含め、PID／時刻だけで所有を推定して削除しない。
+45. Clarity rootのRepo／Git identity確認は、対応Windowsの既存並行Hook／CLI burstでも全processが有限時間内に同じ現在identityを確認できるようにする。速度のためにGit／filesystem identity、Git top-level、Git dir、config由来identityの変更検知を省略せず、古い観測をrequest境界の外で再利用しない。malformed output、実timeout、directory以外、identity変更、root／symlink／junction境界違反はfail closedとし、Git prompt／network、Secret露出、dirty／staged／untracked、HEAD／branch／remote変更を0件に保つ。
 
 ## 26. Clarity init scannerの包括性・portable path境界
 
