@@ -343,3 +343,58 @@ Patch専用suiteは合計 **23／23 PASS**。P001-01〜22のID、期待、意味
 - `ENOENT`収束は同一stale identityの事前照合とcatch後path不在に限定したが、Windows固有delete-pending／共有挙動の最終可用性はnative実測待ちである。identityを確認できない場合は意図的にfail closedする。
 - 本記録はGenerator自己評価であり、Fable再レビュー／独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
 - push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
+
+## 利用者承認のatomic takeover Retry — active replacement非削除
+
+- Retry開始HEAD: `e683b438cf810979a83326acd633ade7fec2a9b6`
+- 製品candidate commit: `4a28f6b57ea31a842f7144d23ce15fca2daa2f0d`
+- 製品candidate tree: `56971d6f6b75ea7b0740e92d5819b4f76a01afa3`
+
+Evaluatorが再現した、stale identity確認後のprocess Aを停止し、process Bが回復して別owner／tokenのactive lockを保持した後にAを再開するとAがBのlockを削除できるTOCTOUを補正した。owner／token／active／stale／lease、全体15秒、1502 attempts、30秒lease、root／target／parent identity、writability／read-only、symlink／junction／ancestor alias／permission、absolute path／Secret非露出、他者所有物非変更の既存契約は維持した。
+
+### 実装したidentity-bound protocol
+
+- `.clarity/lock-transition.json`を`O_CREAT | O_EXCL`で作る短命の切替guardとし、canonical `lock.json`のmissing→create、stale recheck→remove→同一操作のcreate、active leaseを伴うreleaseを同じguard内へ直列化した。guard取得後にcanonical lockのidentityを再確認するため、guard外で確認した古いidentityを根拠に削除しない。
+- Aがstale確認後に停止している間にBが回復・active lockを取得した場合、AはBのguard／active leaseが解放されるまで既存のbounded waitを使う。Aがguardを得た時点の再確認ではstale identityが一致しないため、Bのactive replacementを削除できない。
+- guard releaseはrecordのowner／kind／token／operationIdに加えてfile identity（`dev`／`ino`）を照合し、別identityへ置き換わっていれば削除せず`canonical-lock-transition-cleanup-failed`で非0終了する。
+- guard保有processがkill／crashした場合、guardを期限だけで自動削除しない。後続writeは既存15秒上限で`canonical-lock-transition-busy`となり、doctorは`interrupted-lock-transition`／利用者確認必須として保存する。recursiveなstale guard takeoverを新設しないfail-closed設計であり、確認後の回復後は通常成功・residue 0へ戻る。
+- test barrierとcrash injectionは`CLARITY_TEST_MODE=1`かつ専用envのときだけ有効で、production result専用分岐やsleepだけの再現ではない。
+- inventoryは変更したproduct sourceのdigestだけを追従した。workflowのpath／Case ID／threshold／process数／3 round／timeoutは変更不要で、既存値を維持した。
+
+### P001-23へ追加した決定的product negative
+
+1. process Aをstale owner／token／expiresAt確認後に停止し、process Bを実CLIで起動した。Bがstale回復後の別token active lockを保持している間にAを再開し、100ms後も両processが実行中で、canonical `lock.json`のbytesがBのactive lockと同一であることを確認した。最終的にA／Bともexit 0／`changed: true`、Event delta +2・ID unique、Evidence不変、State count／rebuild一致、owned residue 0だった。
+2. guard保有直後にprocessを実SIGKILLした。doctorがconfirmation-required、`cleanup --apply`がguard非削除、次writeが約15秒内にexit 4／`canonical-lock-transition-busy`、canonical不変であることを確認した。利用者確認相当のfixture回復後はwrite成功・residue 0だった。
+3. guard release直前に別token／別inodeのguardへ置換した。writerはexit 4／`canonical-lock-transition-cleanup-failed`、replacement bytesを保持、canonical不変、doctor confirmation-requiredとなった。確認後の回復では成功・residue 0だった。
+4. stale cleanupの非`ENOENT` sanitize、既存P001-01〜22のID／期待／意味も保持し、Patch専用suiteは合計 **23／23 PASS** のままである。
+
+### 変更path
+
+- `plugins/secretary/scripts/lib/clarity-core.mjs`
+- `scripts/sprint-047-patch-001-test.mjs`
+- `plugins/secretary/collaboration-inventory.json`
+- `docs/progress/sprint-047-patch-001.md`
+
+### 実行済み検証
+
+| 面／command | 結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 23／23 PASS、Windows native NOT-RUN |
+| source、`node scripts/sprint-047-test.mjs` | 25／25 PASS、GS-009 Hook 32＋CLI 32＝64／64、parse／unique／State rebuild 100%、residue 0。観測最大lock wait 1470ms／15000ms、lease critical 121ms／30000ms |
+| source、`node scripts/sprint-050-patch-004-test.mjs` | 12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| source、`node scripts/sprint-050-patch-005-test.mjs` | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source、`node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9／9 PASS／Windows native NOT-RUN |
+| source、`node scripts/sprint-049-inventory.mjs validate` | 20 surface／67 case、marker／digest PASS |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| exact clean candidate、上記Patch／Sprint／migration／inventory suite | sourceと同件数で全green、開始／終了`git status --short`空。GS-009最大wait 1430ms、lease 196ms |
+| 同candidate Git-free archive、上記Patch／Sprint／migration／inventory suite | sourceと同件数で全green、`.git`不存在。GS-009最大wait 1497ms、lease 99ms |
+| `node --check`／`git diff --check` | exit 0 |
+
+起動URLはないCLI製品である。Evaluatorは製品candidate `4a28f6b57ea31a842f7144d23ce15fca2daa2f0d`を固定し、`node scripts/sprint-047-patch-001-test.mjs`のP001-23をTOCTOU negativeの入口として、基礎回帰、Patch 004／005、conversation migration、inventory、archive gateを独立実行する。
+
+### 残余リスク／未実施事項
+
+- Windows Server 2025／Node 22 nativeはGenerator環境で **NOT-RUN**。macOSのsource／exact clean／Git-free結果をWindows PASSへ読み替えない。次のWindows同一jobでPatch 23件、Sprint 047 25件、GS-009 3 round×Hook 32＋CLI 32、Patch 004／005、conversation migration、inventory、step／job timing、10分marginをfresh独立Evaluatorが確認する必要がある。
+- guard crashは安全側へ停止するため、利用者確認付きcleanupまでwrite可用性が戻らない。これはactive replacement誤削除を避ける意図的なfail-closedで、doctor証拠と回復fixtureを追加済みである。OS外部からguard inodeを確認直後に直接置換する非協調processまではfilesystem APIだけで完全に排除できないが、製品の全canonical lock遷移は同protocolへ統一した。
+- 本記録はGenerator自己評価であり、独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
+- push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実Xmind／downstream writeは **0件**。network／connector／GitHub API callも0件である。
