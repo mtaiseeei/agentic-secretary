@@ -45,16 +45,33 @@ function activeLockRecord(token = "fixture-active-lock") {
     expiresAt: new Date(Date.parse(acquiredAt) + 30_000).toISOString(),
   };
 }
+function staleLockRecord(token = "fixture-stale-lock") {
+  return {
+    ...activeLockRecord(token),
+    acquiredAt: "2000-01-01T00:00:00.000Z",
+    expiresAt: "2000-01-01T00:00:30.000Z",
+  };
+}
 function removePathInChild(path, delayMs) {
   const script = "const { unlinkSync } = require('node:fs'); const [path, delay] = process.argv.slice(1); setTimeout(() => { try { unlinkSync(path); } catch (error) { console.error(error.code || 'unlink-failed'); process.exitCode = 1; } }, Number(delay));";
   return spawn(process.execPath, ["-e", script, path, String(delayMs)], { stdio: ["ignore", "ignore", "pipe"] });
 }
 async function childResult(child) {
+  let stdout = "";
   let stderr = "";
+  child.stdout?.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
+  child.stdout?.on("data", (chunk) => { stdout += chunk; });
   child.stderr.on("data", (chunk) => { stderr += chunk; });
   const code = await new Promise((resolveCode) => child.once("close", resolveCode));
-  return { code, stderr };
+  return { code, stdout, stderr };
+}
+async function waitForPath(path, timeoutMs = 5_000) {
+  const started = Date.now();
+  while (!existsSync(path)) {
+    assert(Date.now() - started < timeoutMs, `path was not created within ${timeoutMs} ms`);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+  }
 }
 function operationRecord(root) {
   const runtime = join(root, ".clarity/runtime");
@@ -69,10 +86,13 @@ function operationResidue(root) {
   const runtime = existsSync(join(clarity, "runtime")) ? readdirSync(join(clarity, "runtime")).filter((name) => /^(?:operation-|\.tmp-)/u.test(name)) : [];
   return [...direct, ...runtime];
 }
-function event(root, id, env = {}, expected = 0) {
+function eventArguments(root, id) {
   const itemId = JSON.parse(readFileSync(join(root, ".clarity/state.json"), "utf8")).items[0].itemId;
   const eventId = `cv_${createHash("sha256").update(id).digest("hex").slice(0, 20)}`;
-  return run(["event", root, "--event-json", JSON.stringify({ eventId, type: "attention.override", itemId, actor: "patch-fixture", occurredAt: "2026-09-01T00:00:00.000Z", payload: { level: "high", reason: `fixture-${id}`, rank: 1 } }), "--json"], { env, expected });
+  return ["event", root, "--event-json", JSON.stringify({ eventId, type: "attention.override", itemId, actor: "patch-fixture", occurredAt: "2026-09-01T00:00:00.000Z", payload: { level: "high", reason: `fixture-${id}`, rank: 1 } }), "--json"];
+}
+function event(root, id, env = {}, expected = 0) {
+  return run(eventArguments(root, id), { env, expected });
 }
 async function test(id, title, fn) {
   try { await fn(); results.push({ id, ok: true }); process.stdout.write(`PASS ${id} ${title}\n`); }
@@ -244,6 +264,7 @@ try {
     const out = event(root, "testmodeoff", {
       CLARITY_TEST_MODE: "0",
       CLARITY_CRASH_AT: "lock-record-before",
+      CLARITY_STALE_LOCK_REMOVE_BARRIER: "1",
       CLARITY_FS_FAILURES: JSON.stringify([
         { point: "lock-create-open", times: 99, code: "EPERM", syscall: "open" },
         { point: "canonical-replace", target: ".clarity/events.jsonl", times: 99, code: "EPERM", syscall: "rename" },
@@ -252,6 +273,20 @@ try {
     assert.equal(out.json.changed, true);
     assert.equal(lines(join(root, ".clarity/events.jsonl")).length, before + 1);
     assert.deepEqual(operationResidue(root), []);
+    const staleRoot = fixture("test-mode-off-stale-lock");
+    writeFileSync(join(staleRoot, ".clarity/lock.json"), `${JSON.stringify(staleLockRecord("test-mode-off-stale"))}\n`);
+    const staleOut = event(staleRoot, "testmodeoffstale", {
+      CLARITY_TEST_MODE: "0",
+      CLARITY_STALE_LOCK_REMOVE_BARRIER: "1",
+      CLARITY_FS_FAILURES: JSON.stringify({
+        point: "lock-stale-remove", times: 1, code: "EACCES", syscall: "unlink",
+        message: `raw stale lock failure at ${join(staleRoot, ".clarity/lock.json")}`,
+      }),
+    });
+    assert.equal(staleOut.json.changed, true);
+    assert.equal(existsSync(join(staleRoot, ".clarity/.test-stale-lock-remove-ready")), false);
+    assert.equal(existsSync(join(staleRoot, ".clarity/.test-stale-lock-remove-release")), false);
+    assert.equal(existsSync(join(staleRoot, ".clarity/lock.json")), false);
     const assertModeStructure = (source) => {
       const normalized = source.replace(/\r\n?/gu, "\n");
       assert.match(normalized, /if \(process\.platform !== "win32"\) \{\n\s+fail\(\(tempStat\.mode & 0o077\) === 0/u);
@@ -530,6 +565,69 @@ try {
       if (row.existingLock) unlinkSync(lockPath);
       else assert.equal(existsSync(lockPath), false);
     }
+  });
+
+  await test("P001-23", "stale lock削除失敗をsanitizeし同一identityの並行ENOENTを安全に収束", async () => {
+    const failedRoot = fixture("stale-lock-remove-failure");
+    const failedLockPath = join(failedRoot, ".clarity/lock.json");
+    const failedLock = `${JSON.stringify(staleLockRecord("fixture-stale-remove-failure"))}\n`;
+    writeFileSync(failedLockPath, failedLock);
+    const failedCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(failedRoot, ".clarity", name)));
+    const rejected = event(failedRoot, "stalelockremovefailure", {
+      CLARITY_FS_FAILURES: JSON.stringify({
+        point: "lock-stale-remove", times: 1, code: "EACCES", syscall: "unlink",
+        message: `raw stale lock removal failure at ${failedLockPath}`,
+      }),
+    }, 4);
+    assert.equal(rejected.json.code, "canonical-lock-stale-cleanup-failed");
+    assert.deepEqual(rejected.json.details, { changed: false, errorCode: "EACCES", syscall: "unlink" });
+    const exposedOutput = `${rejected.result.stdout}\n${rejected.result.stderr}\n${JSON.stringify(rejected.json)}`;
+    assert.equal(exposedOutput.includes(failedRoot), false);
+    assert.equal(exposedOutput.includes(failedLockPath), false);
+    assert.equal(exposedOutput.includes("raw stale lock removal failure"), false);
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(failedRoot, ".clarity", name)), failedCanonical[index]);
+    });
+    assert.equal(readFileSync(failedLockPath, "utf8"), failedLock);
+    assert.deepEqual(operationResidue(failedRoot), []);
+
+    const raceRoot = fixture("stale-lock-remove-race");
+    const raceLockPath = join(raceRoot, ".clarity/lock.json");
+    const readyPath = join(raceRoot, ".clarity/.test-stale-lock-remove-ready");
+    const releasePath = join(raceRoot, ".clarity/.test-stale-lock-remove-release");
+    writeFileSync(raceLockPath, `${JSON.stringify(staleLockRecord("fixture-shared-stale-token"))}\n`);
+    const beforeEvents = lines(join(raceRoot, ".clarity/events.jsonl"));
+    const beforeEvidence = lines(join(raceRoot, ".clarity/evidence.jsonl"));
+    const first = spawn(process.execPath, [cli, ...eventArguments(raceRoot, "stalelockracefirst")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_STALE_LOCK_REMOVE_BARRIER: "1" },
+    });
+    await waitForPath(readyPath);
+    const second = event(raceRoot, "stalelockracesecond");
+    assert.equal(second.json.changed, true);
+    assert.equal(existsSync(raceLockPath), false);
+    writeFileSync(releasePath, "release\n");
+    const firstResult = await childResult(first);
+    assert.equal(firstResult.code, 0, firstResult.stderr);
+    assert.equal(firstResult.stderr, "");
+    const firstJson = JSON.parse(firstResult.stdout);
+    assert.equal(firstJson.changed, true);
+    unlinkSync(readyPath);
+    unlinkSync(releasePath);
+
+    const afterEvents = lines(join(raceRoot, ".clarity/events.jsonl"));
+    const afterEvidence = lines(join(raceRoot, ".clarity/evidence.jsonl"));
+    const state = JSON.parse(readFileSync(join(raceRoot, ".clarity/state.json"), "utf8"));
+    assert.equal(afterEvents.length, beforeEvents.length + 2);
+    assert.equal(afterEvidence.length, beforeEvidence.length);
+    assert.equal(new Set(afterEvents.map((row) => row.eventId)).size, afterEvents.length);
+    assert.equal(afterEvents.filter((row) => row.eventId === `cv_${createHash("sha256").update("stalelockracefirst").digest("hex").slice(0, 20)}`).length, 1);
+    assert.equal(afterEvents.filter((row) => row.eventId === `cv_${createHash("sha256").update("stalelockracesecond").digest("hex").slice(0, 20)}`).length, 1);
+    assert.equal(state.source.eventCount, afterEvents.length);
+    assert.equal(run(["rebuild", raceRoot, "--json"]).json.state.source.eventCount, afterEvents.length);
+    assert.equal(existsSync(raceLockPath), false);
+    assert.deepEqual(operationResidue(raceRoot), []);
   });
 } finally {
   const failed = results.filter((row) => !row.ok);

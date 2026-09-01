@@ -232,14 +232,46 @@ function readOwnedLock(path) {
   } catch { return null; }
 }
 
+function waitAtStaleLockRemovalBarrier(root) {
+  if (process.env.CLARITY_TEST_MODE !== "1" || process.env.CLARITY_STALE_LOCK_REMOVE_BARRIER !== "1") return;
+  const ready = safeWritePath(root, ".clarity/.test-stale-lock-remove-ready");
+  const release = safeWritePath(root, ".clarity/.test-stale-lock-remove-release");
+  writeFileSync(ready, "ready\n", { encoding: "utf8", flag: "wx", mode: 0o600 });
+  const started = Date.now();
+  while (!existsSync(release)) {
+    if (Date.now() - started >= 5_000) {
+      throw new ClarityError("canonical-lock-stale-cleanup-failed", "期限切れClarity canonical lockのtest barrierが上限内に解放されなかったため、変更せず停止しました。", 4, {
+        changed: false, errorCode: "ETIMEDOUT", syscall: "test-barrier",
+      });
+    }
+    sleepSync(5);
+  }
+}
+
 function removeOwnedStaleLock(root, path, clock = Date.now()) {
   const record = readOwnedLock(path);
   if (!record || Number.isNaN(Date.parse(record.expiresAt)) || Date.parse(record.expiresAt) > clock) return false;
   const checked = safeDeletePath(root, CANONICAL_LOCK_REL);
   const current = readOwnedLock(checked);
   if (!current || current.token !== record.token || current.expiresAt !== record.expiresAt) return false;
-  rmSync(checked);
-  return true;
+  try {
+    waitAtStaleLockRemovalBarrier(root);
+    maybeInjectFilesystemFailure("lock-stale-remove", CANONICAL_LOCK_REL);
+    rmSync(checked);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      try {
+        lstatSync(checked);
+        return false;
+      } catch (inspectionError) {
+        if (inspectionError?.code === "ENOENT") return true;
+        throw lockInspectionError("canonical-lock-stale-cleanup-failed", "期限切れClarity canonical lockの削除結果を安全に確認できないため、変更せず停止しました。", inspectionError);
+      }
+    }
+    if (error instanceof ClarityError) throw error;
+    throw lockInspectionError("canonical-lock-stale-cleanup-failed", "期限切れClarity canonical lockを安全に削除できないため、変更せず停止しました。", error);
+  }
 }
 
 function filesystemIdentity(path) {
