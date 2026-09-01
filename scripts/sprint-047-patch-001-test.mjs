@@ -56,9 +56,29 @@ function removePathInChild(path, delayMs) {
   const script = "const { unlinkSync } = require('node:fs'); const [path, delay] = process.argv.slice(1); setTimeout(() => { try { unlinkSync(path); } catch (error) { console.error(error.code || 'unlink-failed'); process.exitCode = 1; } }, Number(delay));";
   return spawn(process.execPath, ["-e", script, path, String(delayMs)], { stdio: ["ignore", "ignore", "pipe"] });
 }
-function createThenRemoveLockInChild(path, record, createDelayMs, removeDelayMs) {
-  const script = "const { writeFileSync, unlinkSync } = require('node:fs'); const [path, record, createDelay, removeDelay] = process.argv.slice(1); setTimeout(() => { writeFileSync(path, record, { flag: 'wx', mode: 0o600 }); setTimeout(() => unlinkSync(path), Number(removeDelay) - Number(createDelay)); }, Number(createDelay));";
-  return spawn(process.execPath, ["-e", script, path, `${JSON.stringify(record)}\n`, String(createDelayMs), String(removeDelayMs)], { stdio: ["ignore", "ignore", "pipe"] });
+function createBarrierLockInChild({ path, transitionPath, record, readyPath, lockedPath, releasePath }) {
+  const script = `
+    const { existsSync, writeFileSync, unlinkSync } = require("node:fs");
+    const [path, transitionPath, record, readyPath, lockedPath, releasePath] = process.argv.slice(1);
+    const deadline = Date.now() + 10_000;
+    const fail = (message) => { console.error(message); process.exit(1); };
+    const poll = (predicate, onReady, label) => {
+      if (predicate()) return onReady();
+      if (Date.now() >= deadline) return fail(\`timeout:\${label}\`);
+      setTimeout(() => poll(predicate, onReady, label), 2);
+    };
+    writeFileSync(readyPath, "ready\\n", { flag: "wx" });
+    poll(() => existsSync(transitionPath), () => {
+      try { writeFileSync(path, record, { flag: "wx", mode: 0o600 }); }
+      catch (error) { return fail(error.code || "lock-create-failed"); }
+      writeFileSync(lockedPath, "locked\\n", { flag: "wx" });
+      poll(() => existsSync(releasePath), () => {
+        try { unlinkSync(path); }
+        catch (error) { return fail(error.code || "lock-remove-failed"); }
+      }, "release");
+    }, "transition");
+  `;
+  return spawn(process.execPath, ["-e", script, path, transitionPath, `${JSON.stringify(record)}\n`, readyPath, lockedPath, releasePath], { stdio: ["ignore", "ignore", "pipe"] });
 }
 async function childResult(child) {
   let stdout = "";
@@ -74,6 +94,13 @@ async function waitForPath(path, timeoutMs = 5_000) {
   const started = Date.now();
   while (!existsSync(path)) {
     assert(Date.now() - started < timeoutMs, `path was not created within ${timeoutMs} ms`);
+    await new Promise((resolveWait) => setTimeout(resolveWait, 5));
+  }
+}
+async function waitForPathAbsent(path, timeoutMs = 5_000) {
+  const started = Date.now();
+  while (existsSync(path)) {
+    assert(Date.now() - started < timeoutMs, `path was not removed within ${timeoutMs} ms`);
     await new Promise((resolveWait) => setTimeout(resolveWait, 5));
   }
 }
@@ -533,15 +560,40 @@ try {
   await test("P001-21", "EPERM budgetを実EEXIST待機で解消し次episodeへreset", async () => {
     const root = fixture("lock-open-episode-reset");
     const lockPath = join(root, ".clarity/lock.json");
+    const transitionPath = join(root, ".clarity/lock-transition.json");
+    const childReadyPath = join(root, ".clarity/.test-p00121-child-ready");
+    const childLockedPath = join(root, ".clarity/.test-p00121-child-locked");
+    const childReleasePath = join(root, ".clarity/.test-p00121-child-release");
     const before = lines(join(root, ".clarity/events.jsonl")).length;
-    const contention = createThenRemoveLockInChild(lockPath, activeLockRecord(), 100, 1_000);
+    const contentionRecord = activeLockRecord("p00121-active-child");
+    const contention = createBarrierLockInChild({
+      path: lockPath, transitionPath, record: contentionRecord,
+      readyPath: childReadyPath, lockedPath: childLockedPath, releasePath: childReleasePath,
+    });
+    await waitForPath(childReadyPath);
     const failures = [
       { point: "lock-create-open", times: 1, delayMs: 300, code: "EPERM", syscall: "open" },
       { point: "lock-create-open", times: 1, delayMs: 1_800, code: "EPERM", syscall: "open" },
     ];
-    const recovered = event(root, "lockopenepisodereset", { CLARITY_FS_FAILURES: JSON.stringify(failures) });
+    const writer = spawn(process.execPath, [cli, ...eventArguments(root, "lockopenepisodereset")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_FS_FAILURES: JSON.stringify(failures) },
+    });
+    await waitForPath(childLockedPath);
+    assert.deepEqual(await waitForActiveLock(lockPath), contentionRecord);
+    assert.equal(writer.exitCode, null, "writer exited before the active child lock was observed");
+    await waitForPathAbsent(transitionPath);
+    // The production loop waits 10ms after observing the real lock. Keep the
+    // child lock across that boundary so the next acquisition attempt must
+    // observe a real EEXIST; the final lockAttempts assertion proves it did.
+    await new Promise((resolveWait) => setTimeout(resolveWait, 50));
+    writeFileSync(childReleasePath, "release\n", { flag: "wx" });
     const contentionResult = await childResult(contention);
     assert.equal(contentionResult.code, 0, contentionResult.stderr);
+    const writerResult = await childResult(writer);
+    assert.equal(writerResult.code, 0, writerResult.stderr);
+    const recovered = { result: writerResult, json: JSON.parse(writerResult.stdout) };
     assert.equal(recovered.json.changed, true);
     assert.equal(lines(join(root, ".clarity/events.jsonl")).length, before + 1);
     assert.equal(recovered.json.writeMetrics.lockCreateFailures, 2);
@@ -552,6 +604,11 @@ try {
     assert(recovered.json.writeMetrics.lockWaitMarginMs > 0);
     assert.deepEqual(operationResidue(root), []);
     assert.equal(existsSync(lockPath), false);
+    for (const path of [childReadyPath, childLockedPath, childReleasePath]) unlinkSync(path);
+    const workflow = readFileSync(join(repo, ".github/workflows/windows-recording-regression.yml"), "utf8");
+    assert.match(workflow, /- name: Clarity logical write failure recovery regression \(P001\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-patch-001-test\.mjs/u);
+    assert.match(workflow, /- name: Clarity concurrent write regression \(Sprint 047\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-test\.mjs/u);
+    assert.doesNotMatch(workflow, /run:\s*\|[\s\S]{0,240}sprint-047-patch-001-test\.mjs[\s\S]{0,240}sprint-047-test\.mjs/u);
     failureMetrics.push({ case: "P001-21-lock-open-episode-reset", ...recovered.json.writeMetrics });
   });
 

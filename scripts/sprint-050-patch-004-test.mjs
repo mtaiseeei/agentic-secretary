@@ -312,6 +312,9 @@ try {
     record("HS-015", "PASS", "causal-windows-workflow-entry", () => {
       const workflow = readFileSync(join(ROOT, ".github/workflows/windows-recording-regression.yml"), "utf8");
       assert.match(workflow, /windows-native:/u); assert.match(workflow, /timeout-minutes:\s*10/u); assert.match(workflow, /sprint-038-patch-002-windows-test\.mjs --require-windows/u); assert.match(workflow, /sprint-050-patch-004-test\.mjs --require-windows/u);
+      assert.match(workflow, /- name: Clarity logical write failure recovery regression \(P001\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-patch-001-test\.mjs/u);
+      assert.match(workflow, /- name: Clarity concurrent write regression \(Sprint 047\)\r?\n\s+shell: pwsh\r?\n\s+run: node scripts\/sprint-047-test\.mjs/u);
+      assert.doesNotMatch(workflow, /run:\s*\|[\s\S]{0,240}sprint-047-patch-001-test\.mjs[\s\S]{0,240}sprint-047-test\.mjs/u);
     });
   }
 

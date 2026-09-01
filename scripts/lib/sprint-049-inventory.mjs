@@ -26,7 +26,7 @@ const EXPECTED = {
   "package-release-inventory": ["plugins/secretary/release-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json", ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"],
   "canonical-repo-reader": ["plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json"],
   "clarity-root-policy": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-drift.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-link.mjs", "plugins/secretary/scripts/lib/clarity-projection.mjs", "plugins/secretary/scripts/lib/clarity-root.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/scripts/lib/safe-fs.mjs"],
-  "clarity-harness-scanner": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
+  "clarity-harness-scanner": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-047-patch-001-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
 };
 
 const EXPECTED_CASES = [

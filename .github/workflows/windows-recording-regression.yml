@@ -50,8 +50,9 @@ jobs:
       - name: Clarity state structure and Secret redaction regression
         shell: pwsh
         run: node scripts/sprint-050-patch-005-test.mjs --require-windows
-      - name: Clarity logical write failure recovery regression
+      - name: Clarity logical write failure recovery regression (P001)
         shell: pwsh
-        run: |
-          node scripts/sprint-047-patch-001-test.mjs
-          node scripts/sprint-047-test.mjs
+        run: node scripts/sprint-047-patch-001-test.mjs
+      - name: Clarity concurrent write regression (Sprint 047)
+        shell: pwsh
+        run: node scripts/sprint-047-test.mjs
