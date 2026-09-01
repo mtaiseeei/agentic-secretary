@@ -1,257 +1,275 @@
-# Sprint 047 Patch 001 独立評価
+# Sprint 047 Patch 001 最終独立評価
 
 ## 判定
 
-- Verdict: **FAIL**
-- Failure kind: **implementation-issue**
-- Escalation Recommendation: **strongを維持**
+- Verdict: **PASS**
+- Failure kind: **該当なし**
 - 対象: `sprint-047-patch-001`（regular patch / high risk）
 - 評価role: fresh独立Evaluator
 - dispatchで宣言された期待metadata: `gpt-5.6-sol` / `high`
-- Product findings: **1件（blocking 1）**
-- Verification-infra findings: **0件**
-- Blocking findings: **1件**
+- Product findings: **0件**
+- Verification-infra findings: **3件（すべてnonblocking Minor）**
+- Blocking findings: **0件**
 
-Windows nativeの通常stress、Patch専用23 case、Sprint 047、関連Patch、conversation migration、inventory、portable 3面はすべてgreenだった。
-しかし、契約が明示的に禁止する「別processのactive replacement lock削除」を、既存の決定的test seamと実process 2件を使った独立negativeで再現した。
+前回FAILだった「stale identity確認後から削除までのactive replacement race」は、実process 2件を使うP001-23で直接再確認した。
+先行processは別owner／tokenのactive lockを保持し、両processは正直にexit 0、Eventは+2、IDはunique、State rebuild一致、residue 0となった。
 
-期限切れlockの同一identity確認後から`rmSync()`までの間に、別processがそのstale lockを回復して新しいowner／tokenのactive lockを取得すると、
-先行processは置換後lockを削除して`exit 0 / changed: true`になり、実際にlockを保持していたprocessは`exit 4 / canonical-cleanup-incomplete`になった。
-したがってAC 4、9、10、C1、C3、C5、C6、C19、C21、C24が既存閾値を満たさず、本Patchは不合格である。
+契約にあるsource、exact clean candidate、Git-free archive、Windows native raw logの各面を独立に確認した。
+P001-01〜23、episode reset、transition guardの一時／恒久失敗、BigInt、空lock、Sprint 047同時書込を含め、
+適用rubricの全閾値を満たしたためPASSとする。
 
-## Candidateと因果境界
+## Candidateとincremental evaluation
 
 | 役割 | commit | tree | 独立確認 |
 |---|---|---|---|
-| stale lock製品candidate | `59ac895b32a434b03ba748b895e26e2911bff8e8` | `45a3da59700dc83e302c5e7b238600d6b0675c33` | 製品、Patch test、inventory変更を含む |
-| progress head | `5253d1d11b95e2939da78b9a3e585a5da436be0a` | `5a8f5e00b26fbdf7669d52df39c027e544be0e07` | `59ac895`との差分はprogress 1 fileのみ |
-| Windows causal head | `5b225696741f6482c2b827bf9c507e1c5d0cb1f7` | `fdfd346205fc12b75d692c554727a0609f1d6329` | `5253d1d`との差分はstate 1 fileのみ |
-| 評価開始/current HEAD | `b8628096d6a8aabef59e9e3f512dc269c82ca3da` | `8e18bc68d961f049b4a47f53a7f11a8c81b1a06e` | `5b225696`との差分はstate 1 fileのみ |
+| 製品candidate | `17bff277f62f86181b2b77cfd04e8ed91ac48248` | `ffc694949f9cf1c137293389506d6d7a15027954` | active replacement修正を含む製品正本 |
+| verification candidate | `536afcde9000e095944411d6c8beb2f90f1c91d5` | `ec2401ae5134af79e6aa2737ab04b7f46432dfef` | exact clean／Git-freeの評価対象 |
+| Windows final head | `16eceab5fcacf02eb0b9b1f1cd725eeab1b56cca` | `df0d11ad725363f70524dfb3efe294c7d7664eed` | PR #11 native Windows runのhead |
+| 評価開始時local HEAD | `05ac28ec5686c71e6999b231ddaf3870b1a3dff1` | `f92d209be0689b61fce7767efab0c0bcdd1bed71` | Windows final head後のstate-only commit |
 
-ancestryは`59ac895 -> 5253d1d -> 5b225696 -> b862809`である。
+ancestryは `17bff277 -> 536afcde -> 16eceab5 -> 05ac28ec` である。
 
-```text
-git diff --name-status 59ac895..5b225696
-M docs/progress/sprint-047-patch-001.md
-M docs/sprints/state.md
-
-git diff --name-status 5b225696..b862809
-M docs/sprints/state.md
-```
-
-次の製品／test／workflow／inventory scopeはいずれも`git diff --exit-code`で差分0だった。
+実diffを次のcommandで確認した。
 
 ```text
-plugins/secretary/**
-scripts/**
-.github/workflows/**
-plugins/secretary/collaboration-inventory.json
+git diff --name-status 17bff277f62f86181b2b77cfd04e8ed91ac48248..536afcde9000e095944411d6c8beb2f90f1c91d5
+git diff --stat 17bff277f62f86181b2b77cfd04e8ed91ac48248..536afcde9000e095944411d6c8beb2f90f1c91d5 --
+  .github/workflows/windows-recording-regression.yml
+  plugins/secretary/collaboration-inventory.json
+  scripts/lib/sprint-049-inventory.mjs
+  scripts/sprint-047-patch-001-test.mjs
+  scripts/sprint-050-patch-004-test.mjs
+git diff --check 17bff277f62f86181b2b77cfd04e8ed91ac48248..536afcde9000e095944411d6c8beb2f90f1c91d5
 ```
 
-workflow blobもcurrent sourceとWindows causal headで同一の
-`cf9483bdd01cb76c2b8f69da538f76b0bc06bc53`だった。
-したがってWindows runの製品／test証拠はcurrent HEADへ継承できる。state-only差分を製品差分として扱っていない。
+結果はverification変更5 pathで213 insertions／25 deletions、`git diff --check` exit 0だった。
+`536afcde..16eceab5`はprogress／stateのみ、`16eceab5..05ac28ec`はstateのみであり、製品candidateを変更しない。
+product coreが`17bff277`からverification candidateまで同一であることも確認した。
 
-## 独立実行結果
+same-candidate証跡のcarry forwardは、feedback編集前に次を満たした状態でのみ行った。
 
-評価開始時のsource worktreeはcleanだった。exact candidate `59ac895`のlocal cloneをdetached checkoutしたclean面と、
-`git archive 59ac895`から作った`.git`不存在のGit-free面を別々に実行した。
+- source worktree: clean
+- exact candidate local clone: detached `536afcde`、clean
+- Git-free archive: `.git`不存在
+- 3面すべてのhanded-over regression: green
+- Windows final headとの差分: progress／stateのみ
 
-| command / suite | source current HEAD | exact clean `59ac895` | Git-free `59ac895` |
-|---|---|---|---|
-| `node scripts/sprint-047-patch-001-test.mjs` | exit 0、23 PASS / 0 FAIL | exit 0、23 / 0 | exit 0、23 / 0 |
-| `node scripts/sprint-047-test.mjs` | exit 0、25 / 0、Critical 16/16、AC 7/7 | 同左 | 同左 |
-| Sprint 047 GS-009 | Hook 32＋CLI 32、64/64 exit 0、parse／unique／rebuild 100%、residue 0 | 同左 | 同左 |
-| `node scripts/sprint-050-patch-004-test.mjs` | 12 PASS / 0 FAIL / 4 Windows NOT-RUN | 同左 | 同左 |
-| `node scripts/sprint-050-patch-005-test.mjs` | 9 PASS / 0 FAIL / 1 Windows NOT-RUN | 同左 | 同左 |
-| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 9 / 9、Windows NOT-RUN | 同左 | 同左 |
-| `node scripts/sprint-049-inventory.mjs validate` | 20 / 20、67 cases、markers／digests valid | 同左 | 同左 |
-| `node scripts/agentic-archive-gate.mjs` | exit 0、`PASS=9 FAIL=0 CLARITY_REGRESSION=25` | source gateが同じcandidate bytesのarchiveを検査 | source gateが同じcandidate bytesのarchiveを検査 |
+## 独立CLI実行
 
-source GS-009の実測は次のとおりだった。
+### Source current HEAD
 
-- writers 64、Hook 32、CLI 32、exit 0は64/64
-- canonical／Hook JSON parse 100%、ID unique true
-- expected deltaは各32、State rebuild true
-- rebuild前後residue 0
-- max lock wait `1258 / 15000 ms`
-- max lease critical `172 / 30000 ms`
-- round `2603 / 600000 ms`
-
-exact cleanではmax wait `1105 ms`、lease `156 ms`、round `2147 ms`、Git-freeではmax wait `1118 ms`、lease `106 ms`、round `2024 ms`だった。
-
-追加の静的整合は次をすべてexit 0で確認した。
-
-```text
-git diff --check
-node --check plugins/secretary/scripts/lib/clarity-core.mjs
-node --check scripts/sprint-047-patch-001-test.mjs
-```
-
-## Windows native raw log
-
-GitHub Actionsをread-onlyで独立確認した。
-
-| 項目 | 観測 |
+| command | exit / result |
 |---|---|
-| Workflow | `Windows recording regression` |
-| Run / conclusion | `33477548460` / success |
-| Job / conclusion | `99759871060` (`windows-native`) / success |
-| Event / branch | `pull_request` / `codex/sprint-041-project-clarity` |
-| head SHA | `5b225696741f6482c2b827bf9c507e1c5d0cb1f7` |
-| Runner | Microsoft Windows Server 2025 |
-| Image | `windows-2025-vs2026` |
-| Node / platform | `v22.23.2` / `win32 x64` |
-| Job time | 06:25:42Z〜06:30:14Z、4分32秒（272秒） |
-| 10分margin | 328秒 |
+| `node scripts/sprint-047-patch-001-test.mjs` | exit 0、`WORKFLOW_PREFLIGHT_PASS=1`、P001 **23/23** |
+| `node scripts/sprint-047-test.mjs` | exit 0、Sprint 047 **25/25**、Critical 16/16、AC 7/7 |
+| `node scripts/sprint-050-patch-004-test.mjs` | exit 0、12/12、Windows専用4件はtruthful NOT-RUN |
+| `node scripts/sprint-050-patch-005-test.mjs` | exit 0、9/9、Windows専用1件はtruthful NOT-RUN |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | exit 0、9/9、Windows面はtruthful NOT-RUN |
+| `node scripts/sprint-049-inventory.mjs validate` | exit 0、20 surface／67 case、markers／digests valid |
+| `node scripts/agentic-archive-gate.mjs` | exit 0、`AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| 8本の個別 `node --check` | すべてexit 0 |
+| `git diff --check` | exit 0 |
 
-raw logの集計は次のとおりだった。
+個別syntax checkは次の8 fileを、まとめたshell成功ではなく各commandのexitで確認した。
 
-- P001-01〜23: **23 PASS / 0 FAIL / platform win32**。P001-23実行行を確認。
-- conversation migration: **9 / 9**、`WINDOWS_NATIVE=RUN`。
-- Patch 004: **16 PASS / 0 FAIL / 0 SKIP / 0 NOT-RUN**、`WINDOWS_VERIFIED=true`、external write 0、network 0。
-- Patch 005: **10 PASS / 0 FAIL / 0 SKIP / 0 NOT-RUN**、`WINDOWS_VERIFIED=true`、external write 0、network 0。
-- Sprint 047: **25 / 25**、Critical 16/16、AC 7/7、registry missing／duplicate／extra 0。
-
-GS-009の3 roundはすべて各64 writer（Hook 32＋CLI 32）、64/64 exit 0、expected delta各32、parse／unique／State rebuild true、
-residue before／after 0だった。
-
-| round | max lock wait / 15s | wait margin | max lease critical / 30s | round duration / 10分 |
-|---:|---:|---:|---:|---:|
-| 1 | 7080 ms | 7920 ms | 1016 ms | 13934 ms |
-| 2 | 6404 ms | 8596 ms | 1164 ms | 14743 ms |
-| 3 | 5368 ms | 9632 ms | 993 ms | 12982 ms |
-
-Actionsの`actions/checkout@v4`／`actions/setup-node@v4`にNode 20 deprecation warningと、action内部の`punycode` warningがある。
-製品suiteはNode `v22.23.2`で実行され、全step／jobはsuccessだったため、これは製品／test failureではないnonblocking platform warningとして分離する。
-
-## Blocking product finding
-
-### P1: stale identity確認後のactive replacement lockを削除して先行writeを成功させる
-
-- 分類: **product**
-- Blocking: **yes**
-- 影響AC: 4、9、10
-- 影響rubric: C1、C3、C5、C6、C19、C21、C24
-
-`removeOwnedStaleLock()`は期限切れrecordを読み、`safeDeletePath()`後にtoken／expiresAtを再確認する。
-しかし、その最終確認後にtest barrierとfailure injectionを通ってから`rmSync(checked)`するまで、対象identityをlock deleteと結び付けていない。
-その間に別processが旧stale lockを回復し、新owner／tokenのactive lockを取得しても、先行processは同じpathを削除できる。
-
-独立negativeはrepo内testや製品を変更せず、temporary fixtureだけで次を実行した。
-
-1. 同じClarity-owned／token／expiresAtの期限切れlockを配置した。
-2. process Aを、製品に既存の`CLARITY_TEST_MODE=1`用barrierで、stale identity確認後・`rmSync`直前に停止した。
-3. process Bを実製品CLIのEvent writeとして起動した。Bは旧stale lockを回復し、別token／operation IDのactive lockを実取得した。
-4. Bをproduction canonical replace境界の既存failure injectionで有限時間保持した。
-5. Bのactive lock bytesとactive leaseを確認してからAのbarrierを解除した。
-
-期待結果は、Aがowner／token／active変更を検出してreplacement lockを保持し、待機またはfail closedすることだった。
-実結果は次のとおりだった。
-
-```json
-{
-  "activeReplacementPreservedWhileSecondRuns": false,
-  "firstExit": 0,
-  "secondExit": 4,
-  "firstChanged": true,
-  "secondErrorCode": "canonical-cleanup-incomplete",
-  "finalLockExists": false
-}
+```text
+plugins/secretary/scripts/lib/secretary-store.mjs
+plugins/secretary/scripts/lib/workspace-tools.mjs
+plugins/secretary/scripts/lib/memory-tools.mjs
+plugins/secretary/scripts/lib/project-tools.mjs
+plugins/secretary/scripts/lib/owner-name-transaction.mjs
+plugins/secretary/scripts/lib/conversation-migration.mjs
+plugins/secretary/scripts/lib/clarity-core.mjs
+scripts/sprint-047-patch-001-test.mjs
 ```
 
-単なるlock recordの手書きだけでも同じ境界を再現し、Aは`exit 0 / changed: true`、replacement lockは不存在となった。
-上記の主証拠はさらに実process Bがそのactive lockを保持している間の結果である。
+source P001-21の観測値はlock attempts 7、failures 2、episodes 2、max episode failures 1、
+retry attempts 1、max wait 2205/15000 ms、max lease 12/30000 msだった。
+permanent lock createは7回の失敗後に非0で停止した。
 
-これはtest専用の成功分岐で結果を作ったものではない。barrierは契約どおりidentity確認後・実`rmSync`直前の競合を決定的にするだけで、
-両processのlock取得、canonical replace、cleanup、exitは製品の実filesystem経路を通った。
-通常Windows 3 roundがgreenでも、この順序を踏まなかったことはactive replacement保持の証明にならない。
+source GS-009はHook 32＋CLI 32の64 writerが64/64 exit 0、
+canonical／Hook JSON parse 100%、ID unique、expected delta各32、State rebuild一致、residue before／after 0、
+max wait 1141/15000 ms、max lease 216/30000 msだった。
 
-契約はactiveな別process lock、owner／token不一致lock、回復中lockの横取り、同時正当owner、別process lock削除を明示的に0件要求する。
-このfindingは新しい証拠schemaや契約外基準ではなく、着手時のAC 4／9／10と必須negative controlそのものに対する失敗である。
+### Exact clean verification candidate
+
+`/tmp/sprint-p001-eval.GMuVxG/exact`へlocal cloneし、detached `536afcde9000e095944411d6c8beb2f90f1c91d5`を確認した。
+開始時／終了時とも`git status --short`は空だった。
+
+| command | exit / result |
+|---|---|
+| `node scripts/sprint-047-patch-001-test.mjs` | exit 0、preflight 1、23/23 |
+| `node scripts/sprint-047-test.mjs` | exit 0、25/25、GS-009 64/64、parse／unique／rebuild 100%、residue 0 |
+| `node scripts/sprint-050-patch-004-test.mjs` | exit 0、12/12 |
+| `node scripts/sprint-050-patch-005-test.mjs` | exit 0、9/9 |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | exit 0、9/9 |
+| `node scripts/sprint-049-inventory.mjs validate` | exit 0、20 surface／67 case |
+| `git diff --check` | exit 0 |
+
+P001-21はattempts 7、failures 2、episodes 2、max episode failures 1、retry attempts 1。
+GS-009はmax wait 1199 ms、max lease 237 msだった。
+
+### Git-free archive
+
+`git archive 536afcde9000e095944411d6c8beb2f90f1c91d5`から
+`/tmp/sprint-p001-eval.GMuVxG/archive`を作成し、`.git`不存在を確認した。
+
+| command | exit / result |
+|---|---|
+| `node scripts/sprint-047-patch-001-test.mjs` | exit 0、preflight 1、23/23 |
+| `node scripts/sprint-047-test.mjs` | exit 0、25/25、GS-009 64/64、parse／unique／rebuild 100%、residue 0 |
+| `node scripts/sprint-050-patch-004-test.mjs` | exit 0、12/12 |
+| `node scripts/sprint-050-patch-005-test.mjs` | exit 0、9/9 |
+| `node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | exit 0、9/9 |
+| `node scripts/sprint-049-inventory.mjs validate` | exit 0、20 surface／67 case |
+| `node scripts/archive-release-gate.mjs` | exit 0、`ARCHIVE_RELEASE_PASS=14 FAIL=0` |
+
+P001-21はattempts 6、failures 2、episodes 2、max episode failures 1、retry attempts 1。
+GS-009はmax wait 1172 ms、max lease 216 msだった。
+
+## 今回変更面の直接確認
+
+P001 workflow preflightは`WORKFLOW_PREFLIGHT_PASS=1`で、P001-01〜P001-23を欠番／重複なしの順序で全件実行した。
+単にsuite合計だけを見ず、次を個別に観測した。
+
+- active lock中はtransition guardを不要に作り直さず、注入した`EACCES`ではfail closed
+- guard waitの`EPERM`／`EBUSY`一時失敗は回復
+- 99回の`EPERM`恒久失敗は3秒未満で非0停止し、guardを保持
+- guard releaseの`lstat EPERM`／`unlink EBUSY`一時失敗は回復
+- `CLARITY_TEST_BIGINT_IDENTITY=1`で巨大値／BigInt identityが成功し、residue 0
+- stale takeover後の恒久guard releaseでは、same-identityかつunrecorded 0-byteのcanonical lockだけを除去し、guardを保持
+- 空lock／識別不能lockを安全側で扱い、別owner lockを横取りしない
+- guard crash／kill後はdoctorがconfirmation-required、automatic cleanup false、次writeは約15秒の有限待機、明示fixture recovery後に成功
+- guard identity replacementは保持してfail closed、doctorはconfirmation-required
+
+前回のblocking面だったactive replacement raceは、A／Bの実processを使って直接確認した。
+Bのactive lock bytesをAが削除せず、両process exit 0、Event +2、ID unique、State／rebuild一致、residue 0だった。
+
+P001-21 episode resetは「一時失敗→成功→次episodeの一時失敗」で累積failureを誤用せず、
+attempts、failures、episodes、maxEpisode、retryAttemptsをそれぞれ独立に出力した。
+source／exact／Git-free／Windowsの全てでfailures 2、episodes 2、maxEpisode 1、retryAttempts 1だった。
+
+## Windows native raw log監査
+
+GitHub Actionsのbadgeだけでなく、run `33502132768`、job `99837670641`のmetadataとraw logをread-onlyで監査した。
+
+```text
+gh api repos/mtaiseeei/agentic-secretary/actions/runs/33502132768/jobs --paginate
+gh api repos/mtaiseeei/agentic-secretary/actions/jobs/99837670641/logs
+```
+
+両commandはread-only権限でexit 0。最初のsandbox内network試行だけは接続制限で失敗したため、同じread-only commandを承認済み経路で再実行した。
+これは製品またはverification infrastructureの失敗ではなく、Evaluator実行環境のnetwork制限として分離した。
+
+- URL: https://github.com/mtaiseeei/agentic-secretary/actions/runs/33502132768
+- workflow: `Windows recording regression`
+- event／branch: `pull_request` / `codex/sprint-041-project-clarity`
+- head SHA: `16eceab5fcacf02eb0b9b1f1cd725eeab1b56cca`
+- conclusion: success
+- runner: Microsoft Windows Server 2025
+- image: `windows-2025-vs2026`
+- Node／platform: `v22.23.2` / `win32 x64`
+- job time: 2026-09-01 11:22:16Z〜11:27:39Z、323秒、10分上限まで277秒margin
+
+8本のsyntax stepは各stepが独立にsuccessし、所要0〜1秒だった。
+raw logから次のnative結果を照合した。
+
+| suite | Windows native結果 |
+|---|---|
+| Patch 002 | 12/12 |
+| conversation migration | 9/9、`WINDOWS_NATIVE=RUN` |
+| Patch 004 | 16/16、HS-015 PASS、symlink／junction capability 2/2、`WORKFLOW_PREFLIGHT_PASS=1` |
+| Patch 005 | 10/10 |
+| P001 | P001-01〜23の完全inventory、23/23、`WORKFLOW_PREFLIGHT_PASS=1` |
+| Sprint 047 | 25/25、Critical 16/16、AC 7/7 |
+
+Windows P001-21はlockAttempts 9、failures 2、episodes 2、maxEpisode 1、
+retryAttempts 1、retry margin 1000 ms、max wait 2245/15000 ms、max lease 67/30000 msだった。
+
+Windows GS-009は3 roundすべてで各64 writer、64/64 exit 0、Hook 32＋CLI 32、
+canonical／Hook parse 100%、unique 100%、State rebuild 100%、residue before／after 0だった。
+
+| round | max wait / 15秒 | wait margin | max lease / 30秒 | duration |
+|---:|---:|---:|---:|---:|
+| 1 | 10553 ms | 4447 ms | 1691 ms | 17317 ms |
+| 2 | 10430 ms | 4570 ms | 1118 ms | 16716 ms |
+| 3 | 12486 ms | 2514 ms | 1313 ms | 20120 ms |
+
+最大waitは15秒未満、最大leaseは30秒未満で、正のmarginがある。
+各stepを個別successとして照合しており、後続stepだけのgreenやjob badgeで代替していない。
 
 ## Acceptance Criteria
 
 | AC | 判定 | 根拠 |
 |---:|---|---|
-| 1 | PASS | Sprint 047 25/25、GS-009 32＋32、GS-010意味維持 |
-| 2 | PASS | Windows 3 roundが各64/64、parse／unique／rebuild、residue、wait／lease／round marginを満たす |
-| 3 | PASS | Windows native実canonical pathと決定的failure injectionを分離して確認 |
-| 4 | **FAIL** | stale identity確認後のreplacement owner／tokenを削除直前に保持できず、実active lockを削除した |
-| 5 | PASS | permanent／permission failureは有限非0、成功表示0、P001-02／20／23の既存証拠成立 |
-| 6 | PASS | 置換前・Event／Evidence後・State前のrollback suiteはgreen |
-| 7 | PASS | double fault、durable progress、doctor／rebuild／cleanup suiteはgreen |
-| 8 | PASS | progress一致／不一致state-mismatchのfail-closed suiteはgreen |
-| 9 | **FAIL** | owner／token不一致の別process active lockをAが削除したため、別process lock変更0件を満たさない |
-| 10 | **FAIL** | active replacementでowner／token変更を即停止できず、Bのactive lockをAが横取りした |
-| 11 | PASS | record前failure、識別不能lock、orphan tempの既存negativeはgreen |
-| 12 | PASS | 3 crash／kill地点とownership区別の既存negativeはgreen |
-| 13 | PASS | P001-23非ENOENT errorのpath／raw message非露出、canonical不変、Git／Secret境界成立 |
-| 14 | PASS | source／exact clean／Git-freeの対象関連gateが0 product FAIL。archive gate 9/9 |
-| 15 | PASS | Case ID／Severity／件数／3 round／threshold緩和0、単なるrerunだけで判定していない |
-| 16 | PASS | Windows causal runはexact product/test bytes、4分32秒、正margin、0 FAIL |
-| 17 | PASS | workflow pathsにSprint 047本体とPatch入口があり、inventory digest valid |
-| 18 | PASS | offline fixtureのnetwork／external write 0、評価中のGitHub操作はread-only log確認だけ |
-| 19 | PASS | handoff ready未発行、private／Yasashiiへ未反映 |
+| 1 | PASS | Sprint 047 25/25、GS-009 32＋32、GS-010の意味維持 |
+| 2 | PASS | Windows 3 round各64/64、parse／unique／rebuild、residue、wait／lease／job margin成立 |
+| 3 | PASS | Windows native実canonical pathと決定的failure injectionを分離確認 |
+| 4 | PASS | active replacementを実process 2件で保持し、両write／canonical／State整合を確認 |
+| 5 | PASS | transition guardの一時失敗は回復、恒久失敗は有限非0、成功表示0 |
+| 6 | PASS | 置換前、Event／Evidence後、State前のrollback suiteがgreen |
+| 7 | PASS | double fault、durable progress、doctor／rebuild／cleanup suiteがgreen |
+| 8 | PASS | progress一致／不一致、state-mismatchのfail-closed suiteがgreen |
+| 9 | PASS | owner／token不一致の別process active lockを削除せず、同時正当owner 0 |
+| 10 | PASS | active replacementでowner／token変更を保持し、横取り0 |
+| 11 | PASS | record前failure、空／識別不能lock、orphan tempのnegativeがgreen |
+| 12 | PASS | 3 crash／kill地点とownership区別のnegativeがgreen |
+| 13 | PASS | 非ENOENT errorのpath／raw message非露出、canonical不変、Git／Secret境界成立 |
+| 14 | PASS | source／exact clean／Git-freeの対象gateが0 product FAIL |
+| 15 | PASS | Case ID／Severity／件数／3 round／閾値緩和0、単なるrerunで判定していない |
+| 16 | PASS | Windows exact product bytes、323秒、正margin、0 FAIL |
+| 17 | PASS | workflow preflight、P001-01〜23完全inventory、inventory digest valid |
+| 18 | PASS | fixtureはnetwork／external write 0。評価中のGitHub操作はread-only log監査のみ |
+| 19 | PASS | public fixed handoff未発行、private／Yasashiiへ未反映 |
 | 20 | PASS | merge／release／tag／Marketplace／install／cache／live workspace／実Xmind／downstream write 0 |
-
-1件でも既存閾値未達ならFAILという契約に従い、AC 4／9／10の3件未達で不合格とする。
 
 ## Rubric scores
 
 | 軸 | Score | 閾値 | 判定 | 根拠 |
 |---|---:|---:|---|---|
-| C1 完成度 | **3/5** | 4 | FAIL | Windows通常面を含む多くの成果は成立したが、必須AC 4／9／10が未達 |
-| C2 構文・整合 | **5/5** | 5 | PASS | Node構文、registry、workflow trigger、inventory marker／digest、candidate系譜が整合 |
-| C3 機能の実証 | **3/5** | 4 | FAIL | 通常suiteはgreenだが、必須のactive replacement実process negativeが失敗 |
-| C5 安全・規律 | **4/5** | 5 | FAIL | 別process owner／tokenのactive lockを削除する安全違反が1件 |
-| C6 無回帰 | **4/5** | 5 | FAIL | handed-over suiteは全greenだが、着手時契約の必須negative controlでproduct failureを再現 |
-| C19 Clarity正本・状態モデル | **4/5** | 5 | FAIL | Aが成功、Bがcleanup不完了となり、owner／tokenによるlogical write排他が成立しない |
-| C21 Clarity Hook・host parity | **4/5** | 5 | FAIL | Windows通常3 roundは成立したが、共通concurrent canonical lockのreplacement順序で破綻 |
-| C24 Clarity安全・統合・public-first | **4/5** | 5 | FAIL | public-first／portable／Secret境界は成立したが、lock／retry安全にproduct違反1件 |
+| C1 完成度 | **5/5** | 4 | PASS | AC 1〜20を全て満たし、前回blocking raceも直接解消確認 |
+| C2 構文・整合 | **5/5** | 5 | PASS | 8 syntax step、registry、workflow preflight、inventory、candidate系譜が整合 |
+| C3 機能の実証 | **5/5** | 4 | PASS | 3面実CLI、実process race、Windows raw logで変更面を直接実証 |
+| C5 安全・規律 | **5/5** | 5 | PASS | fail-closed、別owner保持、Secret／Git／external write境界が成立 |
+| C6 無回帰 | **5/5** | 5 | PASS | handed-over regressionがsource／exact／Git-free／Windowsでgreen |
+| C19 Clarity正本・状態モデル | **5/5** | 5 | PASS | Event／Evidence／State、logical write、rebuild、residueが一致 |
+| C21 Clarity Hook・host parity | **5/5** | 5 | PASS | Hook 32＋CLI 32、macOS portable面とWindows native 3 roundが成立 |
+| C24 Clarity安全・統合・public-first | **5/5** | 5 | PASS | lock／retry／doctor安全、public-first境界、portable archiveを満たす |
 
-C2以外のゼロ許容軸を、通常suiteやWindows runの高い実数で相殺していない。
+1軸でも閾値未達ならFAILというrubricを適用し、全軸が閾値を満たしたことを確認した。
 
-## Findings集計
+## Findings
 
-### Product findings
+### Product
 
-- **1件（blocking）**: stale identity確認後のactive replacement lock削除。上記P1。
+- **0件**。blocking／nonblockingともなし。
 
-### Verification-infra findings
+### Verification-infra
 
-- **0件**。
-- 既存P001-23は同一stale identityの競合`ENOENT`収束を正しく検証するが、active replacement順序を通さない。
-  これは今回、着手時契約のproduct negativeを実行した結果であり、handed-over suite実行不能や新証拠schema要求ではない。
+1. **Minor V1（nonblocking）**: P001-21はchild ready後にwriterを起動するが、極端に遅いrunnerで300 ms内にscheduleされない場合はspurious FAILになり得る。false PASSにはならず、現Windows runではattempts 9、2 episodesを実観測した。
+2. **Minor V7（nonblocking）**: workflow preflightは現在のstepを強く検証するが、将来追加される任意のjob-level keyを一般化して完全拒否するものではない。現workflowを独立確認し、job-level `if`、`continue-on-error`、checkout `ref`は存在せず、checkoutは通常の`actions/checkout@v4`、全step successだった。現在のfalse PASS／blockerではない。
+3. **Minor platform warning（nonblocking）**: raw logにcheckout／setup-node actionのNode 20 runtime deprecation、action runtimeがNode 24へ強制移行された表示、action内部の`punycode` warningがある。製品suiteは明示したNode v22.23.2で走り、各stepは独立successのため、product findingではない。
 
-### Blocking findings
-
-- **1件**。P1が解消され、同じactive replacement順序で別process lock保持、両writeの正直な終端、canonical／State整合、residue 0を再評価するまでPASS不可。
+verification-infraだけのblockingはなく、`verification-scope-issue`には該当しない。
 
 ## UI／screenshot
 
-本Patchはserver、browser UI、DOM、responsive画面を持たないCLI／filesystem変更である。
-契約の適用軸にもC8、C23等のvisual採点は含まれないためscreenshotは非該当。
-実CLI、実filesystem、実process、Git 3面、Windows native Actions raw logを操作証拠とした。
+本Patchはbrowser UI、DOM、responsive画面を持たないCLI／filesystem変更である。
+契約の適用rubricにvisual軸はなく、safe harborは実CLI、実filesystem、実process、Git portable面、Windows native raw logである。
+したがってUI screenshotは非該当であり、未添付を欠証拠として扱っていない。
 
-## NOT-RUNとNon-scope
+## NOT-RUN、未実施面、残余リスク
 
-- macOSのPatch 004 Windows専用4件、Patch 005 Windows専用1件、conversation migration Windows面はtruthful NOT-RUNで、macOS PASSへ数えていない。Windows因果runだけで対応するnative結果を確認した。
-- 実Xmind MCP／local `.xmind` apply、実顧客data、実provider、実Claude／Codex host installは本PatchのNon-scope／conditional NOT-RUNでありPASSへ数えていない。
+- macOSのPatch 004 Windows専用4件、Patch 005 Windows専用1件、conversation migration Windows面はtruthful NOT-RUNで、macOS PASSへ数えていない。対応するnative結果はWindows exact runで確認した。
+- 実Xmind MCP／local `.xmind` apply、実顧客data、実provider、実Claude／Codex host installは本PatchのNon-scope／conditional NOT-RUNであり、PASSへ数えていない。
 - Windows network share全般、全UNC、WSL変換、Clarity以外のatomic write再設計はNon-scopeのまま。
-- Node 20／punycode warningはActions platform保守警告で、製品／test findingへ昇格していない。
-
-## Residual risks
-
-- 通常Windows 3 roundがgreenでも、stale確認直後に別writerがactive lockを取得する狭い順序は未保護である。
-- 今回の決定的reproductionでは先行Aが成功表示し、Bがcleanup不完了になった。高並行Hook／CLIで発生すると、可用性低下だけでなく同時owner状態とpartial operation診断へ波及する可能性がある。
-- `ENOENT`後にpathが存在する場合は現行コードが`false`を返し、再確認不能はsanitized errorでfail closedする。問題はその前段、最終identity確認後から`rmSync`までに別identityへ置換された場合である。
-- 前回のepisode reset、parent／lock `lstat` sanitize、15秒／1502 attempts、30秒lease、P001-01〜22はgreenであり、それらをfindingの原因としていない。
+- V1は極端なscheduler遅延でfalse negativeになり得るが、false positiveではない。V7は将来workflow拡張時の予防的gapで、現在workflowに該当keyはない。
+- Actions runtime warningは今後の保守対象だが、今回の製品candidateとWindows native結果を無効化しない。
 
 ## Release／downstream状態
 
-- public Sprint完了: **未達**
-- public fixed handoff: **未発行**
+- public Sprint評価: **PASS**
+- public fixed handoff: **Evaluator対象外／未発行**
 - private my-vault同期／評価: **未実施**
 - Yasashii同期／評価: **未実施**
 - merge／release／tag／GitHub Release／Marketplace: **未実施**
@@ -259,11 +277,13 @@ C2以外のゼロ許容軸を、通常suiteやWindows runの高い実数で相�
 - live workspace／実Xmind／Mac mini: **未実施**
 - push: Evaluatorは**未実施**
 
+これらを本PatchのPASSや外部live PASSへ昇格していない。次のstate更新／handoff判断はOrchestratorの所有範囲である。
+
 ## 自己レビュー
 
-- Generator progress、Fable Go、stateのWindows PASS記録をVerdictへ流用せず、契約、rubric、実diff、3面の実CLI、Actions metadata／raw log、追加の実process negativeから独立判定した。
+- Generatorの自己評価、FableのGo、GitHub badgeをVerdictへ流用せず、契約、rubric、実diff、3面の実CLI、Windows metadata／raw logから独立判定した。
+- safe harborにない統一attestation、collector、追加schema、実providerを合否条件にしていない。
 - Windows結果をmacOSへ置換せず、macOS NOT-RUNをPASSへ数えていない。
-- 契約に無いcollector、attestation、追加schema、実providerを合否条件にしていない。
-- findingを`product`へ分類し、verification-infra単独でFAILにしていない。
-- code、test、fixture、inventory、workflow、spec、contract、progress、stateを変更していない。Evaluator所有の本feedbackだけをrepoへ追加した。
-- Windows通常runがgreenである事実と、active replacement順序のblocking product defectを両方そのまま記録し、片方で他方を隠していない。
+- findingをproduct／verification-infraに分類し、verification-infra Minorをproduct failureへ混同していない。
+- product、test、workflow、inventory、spec、contract、progress、stateを変更していない。Evaluator所有の本feedbackだけを変更した。
+- feedback編集前のclean worktreeでsame-candidate証跡を確認した。
