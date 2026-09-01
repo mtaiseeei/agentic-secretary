@@ -15,7 +15,9 @@ import { runExternalSync } from "./external-ops.mjs";
 const observations = new Map();
 let observationSequence = 0;
 let activeRequestScope = null;
+let activeRevalidationScope = null;
 let gitProbeRunner = runExternalSync;
+let revalidationObserver = null;
 
 const GIT_IDENTITY_TIMEOUT_MS = 5_000;
 const GIT_IDENTITY_MAX_BUFFER = 1024 * 1024;
@@ -354,7 +356,10 @@ function latestEntry(bucket) {
 function revalidateAll(physicalRoot) {
   const bucket = observationBucket(physicalRoot);
   if (!bucket) return;
+  if (activeRevalidationScope?.root === physicalRoot && activeRevalidationScope.validated) return;
+  revalidationObserver?.({ physicalRoot });
   for (const entry of bucket.byToken.values()) revalidate(entry.observation);
+  if (activeRevalidationScope?.root === physicalRoot) activeRevalidationScope.validated = true;
 }
 
 function registerObservation(observation) {
@@ -470,6 +475,23 @@ export function withClarityRootRequest(callback) {
   }
 }
 
+// Share one full root/Git revalidation only across the synchronous checks for
+// one filesystem mutation. Callers must end the scope immediately after that
+// write/rename/unlink so the next mutation starts from a fresh observation.
+export function withClarityRootRevalidationScope(rootValue, callback) {
+  if (typeof callback !== "function") throw new TypeError("Clarity root revalidation callback is required");
+  const physical = resolve(typeof rootValue === "object" && rootValue?.root ? rootValue.root : rootValue);
+  if (activeRevalidationScope) throw new Error("Clarity root revalidation scopes must not be nested");
+  const previous = activeRevalidationScope;
+  activeRevalidationScope = { root: physical, validated: false };
+  try {
+    revalidateAll(physical);
+    return callback();
+  } finally {
+    activeRevalidationScope = previous;
+  }
+}
+
 export function withClarityGitProbeRunnerForTest(runner, callback) {
   if (process.env.CLARITY_TEST_MODE !== "1") throw new Error("Clarity Git probe test runner requires CLARITY_TEST_MODE=1");
   if (typeof runner !== "function" || typeof callback !== "function") throw new TypeError("Clarity Git probe test runner and callback are required");
@@ -477,6 +499,15 @@ export function withClarityGitProbeRunnerForTest(runner, callback) {
   gitProbeRunner = runner;
   try { return callback(); }
   finally { gitProbeRunner = previous; }
+}
+
+export function withClarityRootRevalidationObserverForTest(observer, callback) {
+  if (process.env.CLARITY_TEST_MODE !== "1") throw new Error("Clarity root revalidation observer requires CLARITY_TEST_MODE=1");
+  if (typeof observer !== "function" || typeof callback !== "function") throw new TypeError("Clarity root revalidation observer and callback are required");
+  const previous = revalidationObserver;
+  revalidationObserver = observer;
+  try { return callback(); }
+  finally { revalidationObserver = previous; }
 }
 
 export function withClarityRootObservation(value, callback) {

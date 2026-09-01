@@ -27,6 +27,7 @@ import {
   resolveClarityRoot,
   revalidateClarityRoot,
   withClarityRootObservation,
+  withClarityRootRevalidationScope,
 } from "./clarity-root.mjs";
 import { scanHarnessAuthoritative } from "./clarity-harness-scan.mjs";
 
@@ -1630,10 +1631,13 @@ function ensureRuntimeDirectory(root) {
 function writeOwnedOperationProgress(root, record, lease = null) {
   ensureRuntimeDirectory(root);
   const bytes = stableJson(record);
-  const target = safeWritePath(root, record.artifacts.progress);
   const tempRel = `.clarity/runtime/.tmp-${operationToken(`${record.operationId}:${record.stage}:${Date.now()}:${Math.random()}`)}`;
-  const temp = safeWritePath(root, tempRel);
-  writeFileSync(temp, bytes, { flag: "wx", mode: 0o600 });
+  const { target, temp } = withClarityRootRevalidationScope(root, () => {
+    const nextTarget = safeWritePath(root, record.artifacts.progress);
+    const nextTemp = safeWritePath(root, tempRel);
+    writeFileSync(nextTemp, bytes, { flag: "wx", mode: 0o600 });
+    return { target: nextTarget, temp: nextTemp };
+  });
   const tempIdentity = filesystemIdentity(temp);
   const targetIdentity = existsSync(target) ? filesystemIdentity(target) : null;
   const started = Date.now();
@@ -1642,24 +1646,25 @@ function writeOwnedOperationProgress(root, record, lease = null) {
     for (;;) {
       attempts += 1;
       if (lease) lease.metrics.replaceAttempts += 1;
-      revalidateClarityRoot(root);
-      if (lease) assertLeaseActive(lease);
-      const runtime = safeWritePath(root, ".clarity/runtime");
-      const runtimeStat = lstatSync(runtime);
-      fail(runtimeStat.isDirectory() && !runtimeStat.isSymbolicLink(), "runtime-unsafe", "progress親directoryが安全ではないため停止しました。", { changed: false, operationId: record.operationId });
-      accessSync(runtime, constants.W_OK);
-      fail(sameIdentity(filesystemIdentity(temp), tempIdentity) && sha256(readFileSync(temp)) === sha256(bytes),
-        "operation-progress-temp-changed", "logical operation progress tempが変わったため停止しました。", { changed: false, operationId: record.operationId });
-      if (targetIdentity) {
-        fail(existsSync(target) && sameIdentity(filesystemIdentity(target), targetIdentity), "operation-progress-changed", "logical operation progressが別実体へ変わったため停止しました。", { changed: false, operationId: record.operationId });
-        let prior;
-        try { prior = JSON.parse(readFileSync(target, "utf8")); } catch { prior = null; }
-        fail(prior?.owner === CANONICAL_LOCK_OWNER && prior?.operationId === record.operationId,
-          "operation-progress-changed", "logical operation progressのowner／operationが一致しないため停止しました。", { changed: false, operationId: record.operationId });
-      } else fail(!existsSync(target), "operation-progress-changed", "logical operation progressが同時に作成されたため停止しました。", { changed: false, operationId: record.operationId });
       try {
-        maybeInjectFilesystemFailure("progress-replace", record.artifacts.progress);
-        renameSync(temp, target);
+        withClarityRootRevalidationScope(root, () => {
+          if (lease) assertLeaseActive(lease);
+          const runtime = safeWritePath(root, ".clarity/runtime");
+          const runtimeStat = lstatSync(runtime);
+          fail(runtimeStat.isDirectory() && !runtimeStat.isSymbolicLink(), "runtime-unsafe", "progress親directoryが安全ではないため停止しました。", { changed: false, operationId: record.operationId });
+          accessSync(runtime, constants.W_OK);
+          fail(sameIdentity(filesystemIdentity(temp), tempIdentity) && sha256(readFileSync(temp)) === sha256(bytes),
+            "operation-progress-temp-changed", "logical operation progress tempが変わったため停止しました。", { changed: false, operationId: record.operationId });
+          if (targetIdentity) {
+            fail(existsSync(target) && sameIdentity(filesystemIdentity(target), targetIdentity), "operation-progress-changed", "logical operation progressが別実体へ変わったため停止しました。", { changed: false, operationId: record.operationId });
+            let prior;
+            try { prior = JSON.parse(readFileSync(target, "utf8")); } catch { prior = null; }
+            fail(prior?.owner === CANONICAL_LOCK_OWNER && prior?.operationId === record.operationId,
+              "operation-progress-changed", "logical operation progressのowner／operationが一致しないため停止しました。", { changed: false, operationId: record.operationId });
+          } else fail(!existsSync(target), "operation-progress-changed", "logical operation progressが同時に作成されたため停止しました。", { changed: false, operationId: record.operationId });
+          maybeInjectFilesystemFailure("progress-replace", record.artifacts.progress);
+          renameSync(temp, target);
+        });
         return;
       } catch (error) {
         const elapsed = Date.now() - started;
@@ -1694,7 +1699,6 @@ function readOwnedOperationProgress(root, operationId) {
 }
 
 function assertWritableCanonicalTarget(root, rel, expectedIdentity, expectedParentIdentity, lease, tempRel = null, expectedTempDigest = null, expectedTempIdentity = null) {
-  revalidateClarityRoot(root);
   assertLeaseActive(lease);
   const target = safeWritePath(root, rel);
   const parent = dirname(target);
@@ -1712,8 +1716,9 @@ function assertWritableCanonicalTarget(root, rel, expectedIdentity, expectedPare
   }
   const identity = filesystemIdentity(target);
   fail(!expectedIdentity || sameIdentity(identity, expectedIdentity), "canonical-target-changed", "canonical targetのidentityが試行中に変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
+  let temp = null;
   if (tempRel) {
-    const temp = safeWritePath(root, tempRel);
+    temp = safeWritePath(root, tempRel);
     const tempStat = lstatSync(temp);
     fail(tempStat.isFile() && !tempStat.isSymbolicLink() && (!expectedTempIdentity || sameIdentity(filesystemIdentity(temp), expectedTempIdentity)), "canonical-temp-unsafe", "自己所有tempのidentityが一致しないためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
     if (process.platform !== "win32") {
@@ -1721,7 +1726,7 @@ function assertWritableCanonicalTarget(root, rel, expectedIdentity, expectedPare
     }
     if (expectedTempDigest) fail(sha256(readFileSync(temp)) === expectedTempDigest, "canonical-temp-changed", "自己所有tempの内容が変わったためreplaceを停止しました。", { changed: false, operationId: lease.operationId });
   }
-  return { target, identity };
+  return { target, identity, temp };
 }
 
 function createOwnedArtifact(root, rel, bytes) {
@@ -1738,10 +1743,13 @@ function replaceCanonicalWithRetry(root, rel, tempRel, expectedTargetIdentity, e
   for (;;) {
     attempts += 1;
     lease.metrics.replaceAttempts += 1;
-    const checked = assertWritableCanonicalTarget(root, rel, expectedTargetIdentity, expectedParentIdentity, lease, tempRel, expectedTempDigest, expectedTempIdentity);
     try {
-      maybeInjectFilesystemFailure(point, rel);
-      renameSync(safeWritePath(root, tempRel), checked.target);
+      const checked = withClarityRootRevalidationScope(root, () => {
+        const next = assertWritableCanonicalTarget(root, rel, expectedTargetIdentity, expectedParentIdentity, lease, tempRel, expectedTempDigest, expectedTempIdentity);
+        maybeInjectFilesystemFailure(point, rel);
+        renameSync(next.temp, next.target);
+        return next;
+      });
       return filesystemIdentity(checked.target);
     } catch (error) {
       const elapsed = Date.now() - started;
@@ -1759,15 +1767,17 @@ function replaceCanonicalWithRetry(root, rel, tempRel, expectedTargetIdentity, e
 }
 
 function removeOwnedArtifact(root, rel, digest, lease) {
-  assertLeaseActive(lease);
-  const path = safeDeletePath(root, rel);
-  if (!existsSync(path)) return false;
-  const stat = lstatSync(path);
-  fail(stat.isFile() && !stat.isSymbolicLink() && sha256(readFileSync(path)) === digest,
-    "canonical-artifact-changed", "自己所有artifactが記録と一致しないため削除しません。", { changed: false, operationId: lease.operationId });
-  maybeInjectFilesystemFailure("canonical-cleanup", rel);
-  unlinkSync(path);
-  return true;
+  return withClarityRootRevalidationScope(root, () => {
+    assertLeaseActive(lease);
+    const path = safeDeletePath(root, rel);
+    if (!existsSync(path)) return false;
+    const stat = lstatSync(path);
+    fail(stat.isFile() && !stat.isSymbolicLink() && sha256(readFileSync(path)) === digest,
+      "canonical-artifact-changed", "自己所有artifactが記録と一致しないため削除しません。", { changed: false, operationId: lease.operationId });
+    maybeInjectFilesystemFailure("canonical-cleanup", rel);
+    unlinkSync(path);
+    return true;
+  });
 }
 
 function cleanupOperationArtifacts(root, record, lease) {

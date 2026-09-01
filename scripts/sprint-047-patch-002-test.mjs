@@ -13,6 +13,8 @@ import { applyInit } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 import {
   resolveClarityRoot,
   withClarityGitProbeRunnerForTest,
+  withClarityRootRevalidationObserverForTest,
+  withClarityRootRevalidationScope,
   withClarityRootRequest,
 } from "../plugins/secretary/scripts/lib/clarity-root.mjs";
 import { safeWritePath } from "../plugins/secretary/scripts/lib/safe-fs.mjs";
@@ -328,6 +330,38 @@ try {
     }));
     assert.equal(productSnapshot(root), before);
     assert.deepEqual(residue(root), []);
+  });
+
+  await test("GI-012", "one synchronous write boundary shares validation but the next boundary is fresh", () => {
+    const main = makeRepo(join(fixture, "write-boundary"));
+    const linked = join(fixture, "write-boundary-linked");
+    git(main, "worktree", "add", "-q", "-b", "patch-002-write-boundary", linked);
+    const stdout = gitProbeOutput(linked);
+    const before = productSnapshot(linked);
+    const validations = [];
+    withClarityGitProbeRunnerForTest(() => ({ status: 0, signal: null, stdout, stderr: "" }), () => {
+      withClarityRootRevalidationObserverForTest((row) => validations.push(row), () => withClarityRootRequest(() => {
+        const handle = resolveClarityRoot(linked);
+        let mutationPath;
+        withClarityRootRevalidationScope(handle.root, () => {
+          safeWritePath(handle.root, ".clarity/events.jsonl");
+          safeWritePath(handle.root, ".clarity/state.json");
+          safeWritePath(handle.root, ".clarity/runtime/operation.json");
+          mutationPath = safeWritePath(handle.root, "write-boundary.tmp");
+          writeFileSync(mutationPath, "one guarded mutation\n");
+        });
+        assert.equal(validations.length, 1, "one synchronous boundary must run one full validation");
+        assert.equal(readFileSync(mutationPath, "utf8"), "one guarded mutation\n");
+        rmSync(mutationPath);
+        git(main, "config", "clarity.patch002.boundary", "changed");
+        expectCode(() => withClarityRootRevalidationScope(handle.root, () => {
+          safeWritePath(handle.root, ".clarity/project.json");
+        }), "clarity-root-changed");
+        assert.equal(validations.length, 2, "the next boundary must not reuse stale validation");
+      }));
+    });
+    assert.equal(productSnapshot(linked), before);
+    assert.deepEqual(residue(linked), []);
   });
 } finally {
   rmSync(fixture, { recursive: true, force: true });
