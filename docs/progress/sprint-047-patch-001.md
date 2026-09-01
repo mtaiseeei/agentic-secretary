@@ -518,3 +518,67 @@ Windows Server 2025／Node 22 nativeはcandidate `85a53caf...`で **NOT-RUN**。
 - 製品candidateのGS-009は直近Windows runで3 round greenだったが、今回のtest／workflow変更を含むexact candidateのWindows因果性は未証明である。
 - 本記録はGenerator自己評価であり、fresh独立Evaluator Verdict、public done、private my-vault／Yasashii ready、release readyではない。
 - push／GitHub API／Windows CI／Evaluator／downstream／merge／release／tag／Marketplace／install／cache／live workspace／実Xmindは0件。offline fixtureのnetwork／external service writeも0件である。
+
+## 2026-09-01 Fable V-2〜V-5のpush前限定補正
+
+### 補正範囲とverification scope guard
+
+直前verification candidate `85a53caf0148e5de26a5e527a83f8532dabfb5e4`へのFable再レビューはproduct finding 0、blocking 0、Verdict Goだった。そのうちpush前に直すと指定されたverification-infra Minor V-2〜V-5だけを補正し、Clarity製品code、Case ID／意味／閾値、Windows process数／3 round、retry上限、lease、workflow timeoutを変更していない。
+
+今回と直前`85a53ca`はいずれも製品code 0行のverification-only Generator roundであり、**verification-onlyが2回連続**した。上の前round記録にある「2回連続ではない」は、その時点の比較対象を一つ前の製品roundとしていた記述であり、本roundでは成立しない。利用者への報告と`docs/sprints/state.md`の`Lineage Dispatches: 12`記録はオーケストレーターが実施済みである。stateは読み取り専用とし、本Generatorは変更していない。
+
+### V-2〜V-5の解消
+
+- **V-2**: Node-native syntax 8件を、各`node --check`が1 native commandだけを持つ独立PowerShell stepへ分離した。先行syntax failureはそのstepでjob failureとなり、後続commandのexit 0で上書きされない。対象8 file、`windows-2025`、Node 22、`timeout-minutes: 10`は維持した。
+- **V-3**: P001／Sprint 047と8 syntax stepを、正規表現の部分一致ではなくindentで境界を切ったstep blockとして抽出するhard gateへ変更した。各blockは`name`、`shell: pwsh`、`run: <exact command>`の非空3行だけを許可し、`run: |`／`run: >`、`; node ...`、重複command、`continue-on-error`、`if`、旧combined構造を拒否する。P001がSprint 047より前であること、Windows 2025／Node 22／10分、既存回帰stepもexactに固定した。YAML parser packageは追加していない。
+- **V-4**: P001 suite終了時に実行済みID列が`P001-01`〜`P001-23`の23件と順序まで完全一致することをcase外でassertする。削除、重複、順序変更、余分なIDは、残り22件がgreenでもsuiteを非0にする。case数、ID、意味、閾値は不変である。
+- **V-5**: workflow構造検査をP001-21の機能assertから分離し、fixture作成前の`WORKFLOW_PREFLIGHT_PASS=1` hard gateへ移した。workflow driftはP001-21 failureと表示されず、構造理由を持つAssertionErrorでcase実行前に非0になる。Patch 004も同じpreflightを全OSで実行し、Windows HS-015では同じexact gateを再確認する。
+- P001-21の1,800ms注入は1,000ms episode windowを超えることで、実EEXIST待機後の第2episodeが第1episodeのfailure budgetを引き継がずresetされることを証明する。この意図を注入直前の短いcommentへ明記した。300ms child scheduling window、failure数、1,000ms／15秒上限は緩和していない。
+- inventoryは`clarity-harness-scanner`の実内容digestだけを`4dbb386800d81a867c08bf50a47e3345793db140f9413d5d959eefc7d19f42ed`へ追従した。surface 20、case 67、path、marker、test割当は不変である。
+
+### 固定candidateと変更path
+
+- verification candidate: `536afcde9000e095944411d6c8beb2f90f1c91d5`
+- tree: `ec2401ae5134af79e6aa2737ab04b7f46432dfef`
+- 開始HEAD `a6573578a1fd84e42b8bda10656990d523120861`からcandidateまでの変更は次の4 pathだけで、製品code 0行である。
+  - `.github/workflows/windows-recording-regression.yml`
+  - `scripts/sprint-047-patch-001-test.mjs`
+  - `scripts/sprint-050-patch-004-test.mjs`
+  - `plugins/secretary/collaboration-inventory.json`
+- source／exact clean clone／`git archive 536afcd...`のGit-free archiveで上記4 fileのSHA-256はbyte一致した。exact cleanは検証前後`git status --short`空、Git-freeは`.git`不存在である。検証用temporary directory 2件は完了後に削除した。
+
+### 実行済み検証
+
+| 面／command | 結果 |
+|---|---|
+| source、Node syntax 8件＋P001／Patch 004の`node --check` | 全件exit 0 |
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 最終内容で3回すべて23／23。全回`WORKFLOW_PREFLIGHT_PASS=1`、P001-21はfailures 2、episodes 2、max episode failures 1、retry attempts 1、1,000ms margin正、15秒margin正 |
+| source、`node scripts/sprint-047-test.mjs` | 25／25、Critical 16／16、AC 7／7。GS-009はHook 32＋CLI 32＝64／64、parse／unique／State rebuild 100%、residue前後0、max wait 1,138／15,000ms、max lease critical 109／30,000ms |
+| source、Patch 004 | 12 PASS／0 FAIL／Windows 4 NOT-RUN。`WORKFLOW_PREFLIGHT_PASS=1` |
+| source、Patch 005 | 9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source、conversation migration | 9／9、Windows native NOT-RUN |
+| source、inventory | 20 surface／67 case、markers／digests valid |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| exact clean `536afcd...`、P001／Sprint 047 | 23／23、25／25。GS-009 64／64、parse／unique／rebuild 100%、residue前後0、max wait 1,166ms、lease critical 124ms |
+| exact clean、Patch 004／005／conversation／inventory | 12／12、9／9、9／9、20 surface／67 case、0 FAIL。Windows面はNOT-RUN |
+| Git-free `536afcd...`、P001／Sprint 047 | 23／23、25／25。GS-009 64／64、parse／unique／rebuild 100%、residue前後0、max wait 1,212ms、lease critical 130ms |
+| Git-free、Patch 004／005／conversation／inventory | 12／12、9／9、9／9、20 surface／67 case、0 FAIL。Windows面はNOT-RUN |
+| `git diff --check` | exit 0 |
+
+起動URLはないCLI／filesystem製品である。Evaluatorの主入口はP001のcase外workflow preflightとP001-01〜23、基礎回帰はSprint 047、配布面はPatch 004／005、conversation、inventory、archive gateである。
+
+### Windows期待step／marker
+
+Windows Server 2025／Node 22はcandidate `536afcd...`で **NOT-RUN**。main agentが通常pushした後の因果runで次を生ログ確認する。
+
+- `Node syntax - secretary store`から`Node syntax - P001 regression`までの8 stepが個別success。各stepは`pwsh`とexact `node --check` 1 commandだけで、どれかが非0ならその時点でjob failureになる。
+- `Clarity logical write failure recovery regression (P001)`が先に独立successし、`WORKFLOW_PREFLIGHT_PASS=1`、P001-01〜23の23 PASS／0 FAIL／platform `win32`。P001-21はfailures 2、episodes 2、max episode failures 1、retry attempts 1、retry limit 1,000ms、lock wait limit 15,000msと正marginを持つ。
+- `Clarity concurrent write regression (Sprint 047)`が後に独立successし、`SPRINT047_TEST_PASS=25 FAIL=0`。GS-009は3 roundそれぞれwriters 64、Hook 32＋CLI 32、exit 0が64／64、parse／unique／State rebuild 100%、guard込みresidue before／after 0、wait／lease／10分margin正である。
+- Patch 004は16／16かつHS-015 PASS、Patch 005は10／10、conversation migrationは9／9かつ`WINDOWS_NATIVE=RUN`。job合計は`timeout-minutes: 10`未満かつ正marginを持つ。
+
+### 残余リスク／未実施事項
+
+- **V-1残余**: P001-21の300ms child scheduling windowは、極端に遅いrunnerでspurious FAILを起こす可能性を残すが、false PASSを作らない。製品seam追加、sleep延長、閾値緩和は行っていない。
+- **V-6残余**: 1,800msの注入はwall-clockを使うfixtureであり、Windows因果run待ちである。ただし1,000ms episode resetを超えて証明する意図はcommentと既存metricsで固定し、case意味や上限は変更していない。
+- Windows native causal run、Fable再レビュー、fresh独立Evaluator、public handoff readyは未実施であり、macOS／exact clean／Git-freeのgreenをWindows PASSへ昇格しない。
+- push／GitHub API／CI dispatch／Evaluator／downstream／merge／release／tag／Marketplace／install／cache／loaded session／live workspace／実Xmindは0件。offline fixtureのnetwork／external service writeも0件である。
