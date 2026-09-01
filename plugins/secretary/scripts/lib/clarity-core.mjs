@@ -8,6 +8,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   readdirSync,
   realpathSync,
   renameSync,
@@ -165,6 +166,7 @@ const CANONICAL_LOCK_CREATE_MAX_FAILURES = 7;
 const CANONICAL_LOCK_CREATE_MAX_WAIT_MS = 1_000;
 const CANONICAL_LOCK_CREATE_RETRY_CODES = new Set(["EPERM"]);
 const CANONICAL_LOCK_TRANSITION_RETRY_CODES = new Set(["EBUSY", "EPERM"]);
+const CANONICAL_LOCK_TRANSITION_MAX_RECORD_BYTES = 4 * 1024;
 const CANONICAL_REPLACE_MAX_ATTEMPTS = 7;
 const CANONICAL_REPLACE_MAX_WAIT_MS = 1_000;
 const CANONICAL_TRANSIENT_CODES = new Set(["EACCES", "EBUSY", "EPERM", "ETXTBSY"]);
@@ -307,9 +309,46 @@ function canonicalLockAlreadyExists(path) {
   }
 }
 
-function acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId = null) {
+function canonicalLockExistsError() {
+  const error = new Error("canonical lock exists");
+  error.code = "EEXIST";
+  error.syscall = "open";
+  return error;
+}
+
+function waitAtLockTransitionContentionBarrier(root) {
+  if (process.env.CLARITY_TEST_MODE !== "1" || process.env.CLARITY_LOCK_TRANSITION_WAIT_BARRIER !== "1") return;
+  const ready = safeWritePath(root, ".clarity/.test-lock-transition-wait-ready");
+  const release = safeWritePath(root, ".clarity/.test-lock-transition-wait-release");
+  writeFileSync(ready, "ready\n", { encoding: "utf8", flag: "wx", mode: 0o600 });
+  const started = Date.now();
+  while (!existsSync(release)) {
+    if (Date.now() - started >= 5_000) {
+      throw new ClarityError("canonical-lock-transition-unavailable", "Clarity lock切替guardのtest barrierが上限内に解放されなかったため、変更せず停止しました。", 4, {
+        changed: false, errorCode: "ETIMEDOUT", syscall: "test-barrier",
+      });
+    }
+    sleepSync(5);
+  }
+}
+
+function markCanonicalLockObservedDuringTransitionWait(root) {
+  if (process.env.CLARITY_TEST_MODE !== "1" || process.env.CLARITY_LOCK_TRANSITION_WAIT_BARRIER !== "1") return;
+  const path = safeWritePath(root, ".clarity/.test-lock-transition-canonical-seen");
+  writeFileSync(path, "seen\n", { encoding: "utf8", flag: "wx", mode: 0o600 });
+}
+
+function acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId = null, canonicalCreatePath = null) {
   const path = safeWritePath(root, CANONICAL_LOCK_TRANSITION_REL);
   const token = sha256(`${process.pid}:${Date.now()}:${Math.random()}:lock-transition`);
+  const expectedRecord = {
+    schemaVersion: 1,
+    owner: CANONICAL_LOCK_OWNER,
+    kind: "lock-transition",
+    token,
+    operationId,
+    acquiredAt: new Date().toISOString(),
+  };
   let attempts = 0;
   let inspectionRetryStarted = null;
   let inspectionFailures = 0;
@@ -331,6 +370,7 @@ function acquireCanonicalLockTransition(root, expectedParentIdentity, started, o
     }
     fail(parentIdentity.kind === "directory" && sameIdentity(parentIdentity, expectedParentIdentity),
       "canonical-lock-parent-changed", "Clarity canonical lockの親directoryが差し替わったため、変更せず停止しました。", { changed: false });
+    if (canonicalCreatePath && canonicalLockAlreadyExists(canonicalCreatePath)) throw canonicalLockExistsError();
     let descriptor = null;
     let identity = null;
     try {
@@ -340,30 +380,25 @@ function acquireCanonicalLockTransition(root, expectedParentIdentity, started, o
       const stat = fstatSync(descriptor, { bigint: true });
       fail(stat.isFile(), "canonical-lock-transition-unsafe", "Clarity lock切替guardを通常fileとして作成できません。", { changed: false });
       identity = identityFromStat(stat);
-      writeFileSync(descriptor, stableJson({
-        schemaVersion: 1,
-        owner: CANONICAL_LOCK_OWNER,
-        kind: "lock-transition",
-        token,
-        operationId,
-        acquiredAt: new Date().toISOString(),
-      }), "utf8");
+      writeFileSync(descriptor, stableJson(expectedRecord), "utf8");
       closeSync(descriptor);
       descriptor = null;
       maybeCrash("lock-transition-held");
-      return { path, identity };
+      return { path, identity, expectedRecord };
     } catch (error) {
       if (descriptor !== null) closeSync(descriptor);
       if (identity && !removePathByIdentity(root, CANONICAL_LOCK_TRANSITION_REL, identity)) {
         throw new ClarityError("canonical-lock-transition-record-incomplete", "Clarity lock切替guardの所有recordを確定できず、同じidentityのcleanupにも失敗しました。成功扱いにしません。", 4, { changed: false });
       }
       if (error?.code === "EEXIST") {
+        let transitionPathConfirmed = false;
         try {
           maybeInjectFilesystemFailure("lock-transition-wait-lstat", CANONICAL_LOCK_TRANSITION_REL);
           const stat = lstatSync(path);
           fail(stat.isFile() && !stat.isSymbolicLink(), "canonical-lock-transition-unsafe", "Clarity lock切替guard pathが安全ではありません。", { changed: false });
           inspectionRetryStarted = null;
           inspectionFailures = 0;
+          transitionPathConfirmed = true;
         } catch (inspectionError) {
           if (inspectionError?.code === "ENOENT") {
             inspectionRetryStarted = null;
@@ -378,6 +413,11 @@ function acquireCanonicalLockTransition(root, expectedParentIdentity, started, o
             if (inspectionError instanceof ClarityError) throw inspectionError;
             throw lockInspectionError("canonical-lock-transition-unavailable", "Clarity lock切替guardを安全に確認できないため、変更せず停止しました。", inspectionError);
           }
+        }
+        if (transitionPathConfirmed) waitAtLockTransitionContentionBarrier(root);
+        if (transitionPathConfirmed && canonicalCreatePath && canonicalLockAlreadyExists(canonicalCreatePath)) {
+          markCanonicalLockObservedDuringTransitionWait(root);
+          throw canonicalLockExistsError();
         }
         sleepSync(CANONICAL_LOCK_POLL_MS);
         continue;
@@ -417,6 +457,38 @@ function releaseCanonicalLockTransition(root, transition) {
       revalidateClarityRoot(root);
       const checked = safeDeletePath(root, CANONICAL_LOCK_TRANSITION_REL);
       maybeInjectFilesystemFailure("lock-transition-release-lstat", CANONICAL_LOCK_TRANSITION_REL);
+      const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
+      let descriptor = null;
+      try {
+        descriptor = openSync(checked, constants.O_RDONLY | noFollow);
+        const stat = fstatSync(descriptor, { bigint: true });
+        const current = identityFromStat(stat);
+        fail(stat.isFile() && sameIdentity(current, transition.identity),
+          "canonical-lock-transition-cleanup-failed", "Clarity lock切替guardのfilesystem identityが変わったため、変更せず停止しました。", { changed: false });
+        fail(stat.size > 0n && stat.size <= BigInt(CANONICAL_LOCK_TRANSITION_MAX_RECORD_BYTES),
+          "canonical-lock-transition-cleanup-failed", "Clarity lock切替guardの所有recordを安全に確認できないため、変更せず停止しました。", { changed: false });
+        const bytes = Buffer.alloc(Number(stat.size) + 1);
+        let offset = 0;
+        while (offset < bytes.length) {
+          const count = readSync(descriptor, bytes, offset, bytes.length - offset, offset);
+          if (count === 0) break;
+          offset += count;
+        }
+        fail(offset === Number(stat.size),
+          "canonical-lock-transition-cleanup-failed", "Clarity lock切替guardの所有recordが確認中に変わったため、変更せず停止しました。", { changed: false });
+        let record = null;
+        try { record = JSON.parse(bytes.subarray(0, offset).toString("utf8")); }
+        catch { /* malformed or partial ownership records remain foreign. */ }
+        const expected = transition.expectedRecord;
+        fail(Boolean(expected)
+          && record?.owner === expected.owner
+          && record?.kind === expected.kind
+          && record?.token === expected.token
+          && record?.operationId === expected.operationId,
+        "canonical-lock-transition-cleanup-failed", "Clarity lock切替guardのowner／tokenが変わったため、変更せず停止しました。", { changed: false });
+      } finally {
+        if (descriptor !== null) closeSync(descriptor);
+      }
       const current = filesystemIdentity(checked);
       if (!sameIdentity(current, transition.identity)) break;
       maybeInjectFilesystemFailure("lock-transition-release-cleanup", CANONICAL_LOCK_TRANSITION_REL);
@@ -440,12 +512,9 @@ function releaseCanonicalLockTransition(root, transition) {
 
 function createCanonicalLockPath(root, path, expectedParentIdentity, started, operationId) {
   if (canonicalLockAlreadyExists(path)) {
-    const error = new Error("canonical lock exists");
-    error.code = "EEXIST";
-    error.syscall = "open";
-    throw error;
+    throw canonicalLockExistsError();
   }
-  const transition = acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId);
+  const transition = acquireCanonicalLockTransition(root, expectedParentIdentity, started, operationId, path);
   let descriptor = null;
   let createdIdentity = null;
   let transitionReleaseAttempted = false;

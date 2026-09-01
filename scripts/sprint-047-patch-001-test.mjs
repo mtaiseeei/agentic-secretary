@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -723,6 +723,39 @@ try {
     assert.equal(event(activeWaitRoot, "activewaitrecovered").json.changed, true);
     assert.deepEqual(operationResidue(activeWaitRoot), []);
 
+    const convoyRoot = fixture("lock-transition-create-convoy-exit");
+    const convoyLockPath = join(convoyRoot, ".clarity/lock.json");
+    const convoyTransitionPath = join(convoyRoot, ".clarity/lock-transition.json");
+    const convoyReadyPath = join(convoyRoot, ".clarity/.test-lock-transition-wait-ready");
+    const convoyReleasePath = join(convoyRoot, ".clarity/.test-lock-transition-wait-release");
+    const convoySeenPath = join(convoyRoot, ".clarity/.test-lock-transition-canonical-seen");
+    const convoyGuard = `${JSON.stringify({
+      schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "lock-transition",
+      token: "fixture-create-convoy-guard", operationId: "fixture-create-convoy-guard", acquiredAt: new Date().toISOString(),
+    })}\n`;
+    writeFileSync(convoyTransitionPath, convoyGuard, { flag: "wx", mode: 0o600 });
+    const convoyStarted = Date.now();
+    const convoyWriter = spawn(process.execPath, [cli, ...eventArguments(convoyRoot, "locktransitioncreateconvoy")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_LOCK_TRANSITION_WAIT_BARRIER: "1" },
+    });
+    await waitForPath(convoyReadyPath);
+    writeFileSync(convoyLockPath, `${JSON.stringify(activeLockRecord("fixture-create-convoy-active"))}\n`, { flag: "wx", mode: 0o600 });
+    writeFileSync(convoyReleasePath, "release\n", { flag: "wx" });
+    await waitForPath(convoySeenPath);
+    assert.equal(readFileSync(convoyTransitionPath, "utf8"), convoyGuard, "create-path waiter must not acquire or rewrite the held transition guard");
+    unlinkSync(convoyTransitionPath);
+    unlinkSync(convoyLockPath);
+    const convoyResult = await childResult(convoyWriter);
+    assert.equal(convoyResult.code, 0, convoyResult.stderr);
+    const convoyJson = JSON.parse(convoyResult.stdout);
+    assert.equal(convoyJson.changed, true);
+    assert(convoyJson.writeMetrics.lockWaitMarginMs > 0);
+    assert(Date.now() - convoyStarted < 5_000, "create-path waiter must leave transition contention before the 15 second budget");
+    for (const path of [convoyReadyPath, convoyReleasePath, convoySeenPath]) unlinkSync(path);
+    assert.deepEqual(operationResidue(convoyRoot), []);
+
     const guardWaitRoot = fixture("lock-transition-wait-transient");
     const guardWaitPath = join(guardWaitRoot, ".clarity/lock-transition.json");
     const guardWaitRecord = `${JSON.stringify({
@@ -942,6 +975,44 @@ try {
     unlinkSync(identityTransitionPath);
     assert.equal(event(identityRoot, "locktransitionidentityrecovered").json.changed, true);
     assert.deepEqual(operationResidue(identityRoot), []);
+
+    const inPlaceRoot = fixture("lock-transition-in-place-foreign-token");
+    const inPlaceTransitionPath = join(inPlaceRoot, ".clarity/lock-transition.json");
+    const inPlaceReadyPath = join(inPlaceRoot, ".clarity/.test-lock-transition-release-ready");
+    const inPlaceReleasePath = join(inPlaceRoot, ".clarity/.test-lock-transition-release-release");
+    const inPlaceCanonical = ["events.jsonl", "evidence.jsonl", "state.json"].map((name) => readFileSync(join(inPlaceRoot, ".clarity", name)));
+    const inPlaceWriter = spawn(process.execPath, [cli, ...eventArguments(inPlaceRoot, "locktransitioninplaceforeign")], {
+      cwd: repo,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, CLARITY_TEST_MODE: "1", CLARITY_LOCK_TRANSITION_RELEASE_BARRIER: "1" },
+    });
+    await waitForPath(inPlaceReadyPath);
+    const beforeRewrite = lstatSync(inPlaceTransitionPath, { bigint: true });
+    const inPlaceForeignBytes = `${JSON.stringify({
+      schemaVersion: 1, owner: "agentic-secretary:clarity", kind: "lock-transition",
+      token: "in-place-foreign-transition-owner", operationId: "in-place-foreign-operation", acquiredAt: new Date().toISOString(),
+    })}\n`;
+    writeFileSync(inPlaceTransitionPath, inPlaceForeignBytes, { flag: "w", mode: 0o600 });
+    const afterRewrite = lstatSync(inPlaceTransitionPath, { bigint: true });
+    assert.equal(String(afterRewrite.dev), String(beforeRewrite.dev));
+    assert.equal(String(afterRewrite.ino), String(beforeRewrite.ino), "foreign record rewrite must preserve the same inode");
+    writeFileSync(inPlaceReleasePath, "release\n", { flag: "wx" });
+    const inPlaceResult = await childResult(inPlaceWriter);
+    assert.equal(inPlaceResult.code, 4, inPlaceResult.stderr);
+    const inPlaceError = JSON.parse(inPlaceResult.stderr);
+    assert.equal(inPlaceError.code, "canonical-lock-transition-cleanup-failed");
+    assert.equal(inPlaceResult.stderr.includes("in-place-foreign-transition-owner"), false);
+    assert.equal(inPlaceResult.stderr.includes(inPlaceRoot), false);
+    assert.equal(readFileSync(inPlaceTransitionPath, "utf8"), inPlaceForeignBytes, "same-inode foreign guard must be preserved");
+    assert.equal(existsSync(join(inPlaceRoot, ".clarity/lock.json")), false, "canonical write must not start after transition ownership changes");
+    ["events.jsonl", "evidence.jsonl", "state.json"].forEach((name, index) => {
+      assert.deepEqual(readFileSync(join(inPlaceRoot, ".clarity", name)), inPlaceCanonical[index]);
+    });
+    unlinkSync(inPlaceReadyPath);
+    unlinkSync(inPlaceReleasePath);
+    unlinkSync(inPlaceTransitionPath);
+    assert.equal(event(inPlaceRoot, "locktransitioninplaceforeignrecovered").json.changed, true);
+    assert.deepEqual(operationResidue(inPlaceRoot), []);
   });
 } finally {
   const failed = results.filter((row) => !row.ok);
