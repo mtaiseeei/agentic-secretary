@@ -4,8 +4,10 @@
 - Windows失敗candidate: `e9b5f1f9d95c3463205f2acfb417a4fd075436f9`
 - Retry 1製品candidate commit: `f8e1a1c4b510c4ac3700c3aab33b3076ae833696`
 - Retry 1製品candidate tree: `c63b734e2fef1453b492f6bb820bbec549150c4b`
+- Retry 2製品candidate commit: `6487666b32d166c1a419b7e45dc069e81cc309cb`
+- Retry 2製品candidate tree: `fe6c5f5e98a252366b464a1c05d1a3fd6bddb893`
 - 対象: `sprint-047-patch-002`（regular patch、Risk high、Model Tier strong）
-- 現在地: Retry 1のpublic Generator実装と比例したmacOS回帰が完了。Windows Server 2025／Node 22とfresh独立EvaluatorはNOT-RUN
+- 現在地: Retry 2のpublic Generator実装と比例したmacOS回帰が完了。Windows Server 2025／Node 22とfresh独立EvaluatorはNOT-RUN
 
 ## 原因
 
@@ -98,7 +100,76 @@ Evaluatorは製品candidate `f8e1a1c4b510c4ac3700c3aab33b3076ae833696`を固定�
 - private my-vault／Yasashii source／spec／state／contract／rubric／feedbackへのwrite: **0件**
 - network／GitHub API／credential／remote provider call: **0件**
 
-## Retry 1対象外のfollow-up
+## Retry 1時点のfollow-up
 
-- transition guardのowner-token releaseは別のproduct patchとして扱う。Retry 1では変更していない。
+- transition guardのowner-token releaseはRetry 1では変更していなかった。Retry 2で同じtransition安全境界を変更するため、PR P1どおり閉じた。
 - State rebuild oracleのPR findingは別のverification patchとして扱う。Retry 1では変更していない。
+
+## Retry 2原因と限定修正
+
+Windows pull request run `33528106290`、job `99924026435`はWindows Server 2025／Node 22で2分44秒後にFAILした。変更なしのPatch 005内包`GS-009`で64 writer中9件が非0となり、内訳は`canonical-lock-transition-busy` 6件、`canonical-lock-busy` 3件だった。Git identity timeoutは0件で、後続P001、P002、正式3 roundはskipされた。
+
+Retry 1でfull root／Git revalidationを合計78→51、canonical lock内62→35へ減らしてもWindowsで失敗したため、検査量ではなくtransition guardのconvoyを主因とした。`createCanonicalLockPath()`は最初にcanonical lock不存在を確認してからtransition取得へ進む。burstでは複数processがtransition待機へ入り、その間にwinnerがcanonical lockを作っても、waiterはguardを順番に取得して`open(O_EXCL)`の`EEXIST`を知るまでcanonical待機へ戻れず、共有15秒budgetを消費していた。
+
+Retry 2は次の2点だけを修正した。
+
+1. create経路だけが`acquireCanonicalLockTransition()`へcanonical pathを渡す。transition待機中はguard pathが通常fileかつnon-symlinkであることを先に確認し、canonical lockが出現していればraw `EEXIST/open`として既存canonical waitへ戻る。stale takeoverとlock releaseはcanonical pathを渡さないため、この早期exitを使わない。
+2. transition取得時に作成した`owner`、`kind`、`token`、`operationId`を期待recordとして保持する。releaseの各試行はno-follow open、BigInt filesystem identity、4 KiB上限のbounded read、期待4 field、unlink直前のpath identityを再確認し、全部一致した場合だけguardを削除する。identityまたはrecord不一致はforeign guardを保持し、sanitizedな`canonical-lock-transition-cleanup-failed`で停止する。
+
+create waiterはforeign／malformed transitionをcanonical lockへ変換しない。既存transition pathの安全性を確認した後、別pathであるcanonical lockの出現だけを既存`EEXIST`導線へ返す。canonicalが消えた後もforeign guardが残る場合は、次のtransition取得で従来どおりboundedに待ってfail closedとなる。
+
+## Retry 2 focused証拠
+
+- deterministic create-convoy positive: transition guardを先に保持し、writerがその待機へ入ったbarrier後にactive canonical lockを作成した。writerはguardを取得・書換えずcanonical出現を観測し、15秒上限前に既存canonical waitへ戻って最終writeを1回だけ完了した。lock wait marginは正。
+- deterministic same-inode negative: transition release barrier中に、guardをunlink／renameせず同じ`dev`／`ino`のままforeign token／operationIdへ上書きした。releaseはexit 4、`canonical-lock-transition-cleanup-failed`。foreign guard bytesを保持し、empty canonical lockを自己identityでcleanupし、Event／Evidence／Stateの差分0、token／absolute path露出0だった。
+- 既存rename replacement negative、transient release retry、stale takeover、active lock、transition permanent failure、BigInt identityも同じP001 case内でPASSした。
+
+## Retry 2変更path
+
+製品candidate `6487666b32d166c1a419b7e45dc069e81cc309cb`は次の3 fileだけを変更した（158追加／18削除）。workflow、P002 suite、Sprint 047 suite、timeout、process／round／step、thresholdは変更していない。
+
+```text
+plugins/secretary/scripts/lib/clarity-core.mjs
+scripts/sprint-047-patch-001-test.mjs
+plugins/secretary/collaboration-inventory.json
+```
+
+Planner正本、`docs/sprints/state.md`、contract、rubric、feedback、private my-vault、Yasashii、installed cacheは変更していない。
+
+## Retry 2実行済み検証
+
+| command／面 | 結果 |
+|---|---|
+| `node scripts/sprint-047-patch-002-test.mjs` | 12/12 PASS、probe/request 1、timeout 5,000 ms、external write 0、network 0、Windows 8.3はmacOS NOT-RUN |
+| `node scripts/sprint-047-patch-001-test.mjs` | 23/23 PASS。create-convoy正例とsame-inode foreign-token負例をP001-23へ追加 |
+| Patch 001 timing | max lock wait 2,219/15,000 ms、margin 12,781 ms。max lease critical 1,060/30,000 ms、margin 28,940 ms |
+| `node scripts/sprint-050-patch-003-test.mjs` | root／alias positive・negative 21/21 PASS、external write 0、network 0 |
+| `node scripts/sprint-047-test.mjs` | 25/25 PASS、Critical 16/16、AC 7/7 |
+| GS-009 local 1 round | CLI 32＋Hook 32、64/64 exit 0、parse／unique／expected delta／State rebuild 100%、residue前後0 |
+| GS-009 local timing | max canonical lock wait 1,138/15,000 ms、margin 13,862 ms。max lease critical 149/30,000 ms、margin 29,851 ms。round 1,762 ms |
+| inventory | 20 surface／67 case、digest valid、marker valid、JSON parse exit 0 |
+| syntax／YAML／diff | Node 3 file、Ruby YAML、`git diff --check`すべてexit 0 |
+
+## Retry 2 Evaluator handoff
+
+server、DOM、UI、test URLはない。CLI／filesystem／Git processが製品surfaceである。
+
+```bash
+node scripts/sprint-047-patch-002-test.mjs
+node scripts/sprint-047-patch-001-test.mjs
+node scripts/sprint-050-patch-003-test.mjs
+node scripts/sprint-047-test.mjs
+node scripts/sprint-049-inventory.mjs validate
+```
+
+Evaluatorは製品candidate `6487666b32d166c1a419b7e45dc069e81cc309cb`、tree `fe6c5f5e98a252366b464a1c05d1a3fd6bddb893`を固定し、上記5 commandと、このexact candidateに因果するWindows workflow raw resultを確認する。WindowsではPatch 005内包`GS-009`、P001、P002、正式3 roundの順に、各round 64/64、root identity timeout 0、transition／canonical busy 0、各margin正、job全体10分未満を判定する。
+
+## Retry 2 NOT-RUN／残余
+
+- Windows Server 2025／Node 22、Windows 8.3短縮名、Windows正式3 round、Retry 2 candidateのroot identity timeout／transition busy／canonical busy実数、job合計時間: **NOT-RUN**
+- exact Retry 1失敗run `33528106290`／job `99924026435`は原因証拠であり、Retry 2 PASS evidenceではない。
+- fresh独立Evaluator: **NOT-RUN**。本記録はGenerator自己評価であり、Evaluator PASS／Sprint doneを主張しない。
+- State rebuild oracleのPR P2は別のverification follow-upとして残す。Retry 2では変更していない。
+- push、workflow dispatch、PR更新、merge、tag、release、Marketplace、install／update、cache、loaded session、live workspace、connector: **0件**
+- private my-vault／Yasashii source／spec／state／contract／rubric／feedbackへのwrite: **0件**
+- network／GitHub API／credential／remote provider call: **0件**
