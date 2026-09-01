@@ -6,7 +6,7 @@
 - Retry 1製品candidate commit: `22326598ec4ae1cfce10ea29b6ea6638a1e24e55`
 - Retry 1製品candidate tree: `53a2a014f94d03b39657af354509f2feb7c4238f`
 - 対象: `sprint-047-patch-001`（regular patch、Risk high、Model Tier strong）
-- 現在地: Retry 1 public source／exact clean candidate／同SHA Git-free archiveのGenerator自己検査完了。Windows Server 2025／Node 22とfresh独立Evaluator待ち
+- 現在地: 利用者承認の最終Retryについて、public source／exact clean candidate／同SHA Git-free archiveのGenerator自己検査完了。Windows Server 2025／Node 22とfresh独立Evaluator待ち
 
 ## 実装結果
 
@@ -246,3 +246,52 @@ workflowの`windows-2025`、Node 22、`timeout-minutes: 10`、既存step／trigg
 - 次のWindows native runは同一jobでPatch 20 case、Sprint 047 25 case、GS-009 3 round×Hook 32＋CLI 32、GS-010、Patch 004／005、conversation migrationを実行し、step／job timingと10分marginを記録する。1 roundでも64／64、parse／unique／State 100%、residue 0、正marginを欠けばPASSにしない。
 - 本記録はGenerator自己評価であり、fresh独立Evaluator Verdictではない。public handoff ready、private my-vault、Yasashii同期へ昇格しない。
 - push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実Xmind／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
+
+## 利用者承認の最終Retry — lock競合episodeとdelete-pending診断
+
+- 最終Retry開始HEAD: `21082cc743975b960158a8834406eda86786589d`
+- 最終Retry製品candidate commit: `b48060f555278ec6ca14d2019025e48c6c5166a1`
+- 最終Retry製品candidate tree: `c3aa1cbe54045399570cded40caae5fe9800ad54`
+- dispatch: fresh isolated Generator、期待metadata `gpt-5.6-sol`／`high`
+
+FableがRetry 2後に限定した2つの製品findingだけを補正した。lock取得の全体15秒、attempt上限、EPERM／`open`だけの狭い回復条件、7 failure／1,000 ms、30秒lease、owner／token、root／parent identity、`W_OK`、unsafe path拒否、rollback／cleanup条件は変更していない。
+
+### 補正した境界
+
+- EPERMの7 failure／1,000 ms予算を、1回のlock取得全体ではなく1つのcontention episodeへ限定した。実`openSync(... O_EXCL ...)`成功、EPERM後のboundaryでlockがvisible／existingになった時点、または実`EEXIST`待機へ入った時点でepisodeの開始時刻、failure数、backoff段階をresetする。その後のEPERMは新episodeとしてfresh budgetを持つ。累積観測値と`lockCreateEpisodes`／`lockCreateMaxEpisodeFailures`は分けて出力する。
+- EPERM後のparent／lock path `lstat`、通常`EEXIST`待機中のlock path `lstat`、lock取得開始時のparent identity読取を、raw filesystem errorの再throwからpath非含有の`ClarityError`へ変更した。外向けdetailsは許可文字だけの`errorCode`／`syscall`に限定する。identityを確認できない場合はwriteせずfail closedし、root外writeやsymlink／junction緩和を行わない。
+- `CLARITY_TEST_MODE=1`の既存failure seamだけに、bounded delayとparent／lock `lstat`境界を追加した。本番環境ではfailure／delay／message注入を有効化できない。
+- inventoryは`clarity-root-policy`と`clarity-harness-scanner`の実内容digestだけを追従した。workflow、trigger、Case ID、Severity、threshold、GS-009の3 round×Hook 32＋CLI 32は不変である。
+
+### 追加した決定的fixture
+
+| Case | 結果 | 実挙動 |
+|---|---:|---|
+| P001-21 | PASS | 実在するactive Clarity lockを作り、1回目EPERM、実`EEXIST`待機、別process release、2回目EPERM、成功を同じproduction open境界で通した。`lockAttempts=4`、累積EPERM 2、episode 2、最大failure／episode 1、retry 1、Event追加1、残骸0、全体15秒margin正 |
+| P001-22 | PASS | EPERM後のparent／lock path lstatとEEXIST待機中lstatへ、absolute fixture pathをmessageに含むraw errorを注入した。3経路ともpath非含有`canonical-lock-*-unavailable`、`EPERM`／`lstat`、canonical不変、残骸0 |
+
+P001-01〜20のID、期待、意味は変更していない。Patch専用suiteは合計 **22／22 PASS** である。
+
+### 最終Retry検証集計
+
+| 面／command | 結果 |
+|---|---|
+| source、`node scripts/sprint-047-patch-001-test.mjs` | 22／22 PASS、Windows native NOT-RUN |
+| exact clean candidate、同上 | 22／22 PASS、開始／終了`git status --short`空 |
+| 同candidate Git-free archive、同上 | 22／22 PASS、`.git`不存在 |
+| source／exact clean／Git-free、`node scripts/sprint-047-test.mjs` | 各25／25 PASS、GS-009 Hook 32＋CLI 32、registry missing／duplicate／extra 0 |
+| source／exact clean／Git-free、`node scripts/sprint-050-patch-004-test.mjs` | 各12 PASS／0 FAIL／Windows 4 NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-050-patch-005-test.mjs` | 各9 PASS／0 FAIL／Windows 1 NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-038-patch-003-conversation-migration-test.mjs` | 各9／9 PASS／Windows native NOT-RUN |
+| source／exact clean／Git-free、`node scripts/sprint-049-inventory.mjs validate` | 各20 surface／67 case、marker／digest PASS |
+| source、`node scripts/agentic-archive-gate.mjs` | `AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25` |
+| `node --check`／`git diff --check` | exit 0 |
+
+clean cloneとGit-free archiveは製品candidate `b48060f555278ec6ca14d2019025e48c6c5166a1`／tree `c3aa1cbe54045399570cded40caae5fe9800ad54`に固定した。3面ともPOSIX結果であり、Windows native PASSの代用ではない。
+
+### 最終Retry残余リスク／外部副作用
+
+- Windows Server 2025／Node 22で製品candidateを実行していない。既知FAIL runやRetry 2旧candidateの因果runを本candidateのPASSへ読み替えない。次のWindows同一jobでPatch 22 case、Sprint 047 25 case、GS-009 3 round×Hook 32＋CLI 32、GS-010、Patch 004／005、conversation migration、step／job timing、10分marginをfresh独立Evaluatorが確認する必要がある。
+- delete-pending等でparent／lock identityを安全に確認できない場合は、raw errorを出さず非0でfail closedする。Windows nativeでこの安全停止が反復して可用性を満たさない場合は、閾値やroundを弱めずproduct findingとして扱う。
+- 本記録はGenerator自己評価であり、独立Evaluator Verdict、public handoff ready、private my-vault／Yasashii ready、release readyではない。
+- push／workflow dispatch／PR更新／merge／tag／release／Marketplace／install／cache／live workspace／実downstream writeは **0件**。network／connector／GitHub API callも0件である。
