@@ -56,7 +56,7 @@ jobs:
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
       - name: Conversation migration sibling temp and rollback regression
         shell: pwsh
-        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs
+        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows
       - name: Clarity Harness scan and Windows native regression
         shell: pwsh
         run: node scripts/sprint-050-patch-004-test.mjs --require-windows
@@ -69,17 +69,3 @@ jobs:
       - name: Clarity concurrent write regression (Sprint 047)
         shell: pwsh
         run: node scripts/sprint-047-test.mjs
-      - name: Preserve exact reviewed candidate (no worktree or Git credentials)
-        if: always()
-        shell: pwsh
-        run: |
-          git archive --format=zip --output="$env:RUNNER_TEMP/clarity-review-candidate.zip" HEAD
-          if ($LASTEXITCODE -ne 0) { throw "candidate-archive-failed" }
-      - name: Upload candidate for independent diagnosis
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: clarity-review-candidate-${{ github.run_id }}
-          path: ${{ runner.temp }}/clarity-review-candidate.zip
-          retention-days: 3
-          if-no-files-found: error
