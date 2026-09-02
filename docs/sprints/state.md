@@ -2,7 +2,7 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-047-patch-004
+- Current ID: TBD
 - Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 22
@@ -88,7 +88,7 @@
 | sprint-047-patch-001 | done | [contract](sprint-047-patch-001.md) | [progress](../progress/sprint-047-patch-001.md) | [feedback](../feedback/sprint-047-patch-001.md) |
 | sprint-047-patch-002 | done | [contract](sprint-047-patch-002.md) | [progress](../progress/sprint-047-patch-002.md) | [feedback](../feedback/sprint-047-patch-002.md) |
 | sprint-047-patch-003 | done | [contract](sprint-047-patch-003.md) | [progress](../progress/sprint-047-patch-003.md) | [feedback](../feedback/sprint-047-patch-003.md) |
-| sprint-047-patch-004 | awaiting-eval | [contract](sprint-047-patch-004.md) | [progress](../progress/sprint-047-patch-004.md) | - |
+| sprint-047-patch-004 | done | [contract](sprint-047-patch-004.md) | [progress](../progress/sprint-047-patch-004.md) | [feedback](../feedback/sprint-047-patch-004.md) |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
@@ -104,6 +104,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-02: Sprint 047 Patch 004はfresh独立Evaluator commit `887ff19577e64ec31622f31cee45ea202e9c01b7`／tree `195d6b971f77de814bb9848a94b231b1f436261a`、feedback SHA-256 `6af986247aea390b0030a867fe5763b830cf0eec4570b12ceff7acb6aed97730`で**PASS**。製品candidate `2d03442960637634dd96655717a482a33b3ed472`を固定し、focused 13／13、Patch 001 23／23、Patch 002 12／12、Sprint 047 25／25、root／alias 21／21、inventory 20／67を独立再実行。C1／C2／C3／C5／C6／C19／C21／C24は全5／5、product／verification-infra／blocking finding 0、AC 1〜16未達0。Evaluatorが監査したWindows run `33601561430`／job `100156172538`は298／600秒でPASSし、追加のPR state-only head `2d10184b5625022d6dc652189e3910f1922e796a`もrun `33602131630`／job `100157982489`で276／600秒のPASS。後者の3 roundも各64／64、最大wait 7,564／15,000ms、最大lease 1,602／30,000ms、residue 0、Patch 004 identity precision PASS、external write／network 0だった。Windows 8.3は`NOT-RUN:8dot3-unavailable`、Linux native、private／Yasashii、merge、release、install、cache、実利用者root／顧客Repo apply／Xmind／connectorは未実施。Statusを`done`、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0とする。Lineage 22、最後にdispatchしたModel Tier `strong`、Rotate `none`を保持する。
 - 2026-09-02: Sprint 047 Patch 004のWindows exact-candidate gateはhead `fb0414cfbaed9027295710b2bd325c7ea2b101a2`、run `33601561430`／job `100156172538`で**PASS**。Microsoft Windows Server 2025／Node 22.23.2、job 298／600秒。Patch 004 13／13（config matrix 8、direct bytes change 2、zero-write negative 12、identity precision PASS、CLI／Hook path canary 0）、Patch 001 23／23、Patch 002 12／12、Sprint 047 25／25。GS-009 3 roundは各Hook 32＋CLI 32の64／64、parse／unique／delta／full-State／rebuild 100%、`preRebuildFullState:true`、`rebuildNoop:true`、residue 0。最大wait 6,772／15,000ms、最大lease 1,140／30,000ms、external write／network 0。8.3は`NOT-RUN:8dot3-unavailable`のため未検証を維持する。fresh独立Evaluator予約としてLineage Dispatchesを22へ積み増し、Status `awaiting-eval`、Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`を保持する。Evaluatorは製品candidate `2d03442960637634dd96655717a482a33b3ed472`とWindows head／生ログを固定して判定する。
 - 2026-09-02: Sprint 047 Patch 004のGenerator candidate `2d03442960637634dd96655717a482a33b3ed472`／tree `a248f66b949544052dd097cf94e682f2691c64d3`、progress HEAD `998157f3392bcccf4ad7e3d36c06581e3eaa9d55`／tree `af73a273bb9df6d4799e236b395011e1d08b0d4f`を固定した。Repo-local Git configのsymlink／broken symlink／`include`／`includeIf`をwrite前にfail closedとし、通常configの1 request 1 probe、CLI／Hookのabsolute physical path非露出、BigInt由来の64-bit filesystem identityを実装した。オーケストレーター再実行でfocused 13／13、Patch 001 23／23、Patch 002 12／12、Sprint 047 25／25、root／alias 21／21、inventory 20 surface／67 case、構文／diffが0 FAIL。local GS-009は64／64、full-State oracle／rebuild no-op、external write 0、network 0を確認した。Windows Server 2025／Node 22のexact candidate gateとfresh独立EvaluatorはNOT-RUNのため、PASS／doneへ昇格せずStatusを`awaiting-eval`とする。Retry／Spec-Issue 0、Lineage 21、Model Tier `strong`、Rotate `none`を保持する。
 - 2026-09-02: PR #11のfresh cross-model／別Agent再レビューを再現確認し、通常high-risk Patch `sprint-047-patch-004`をPlanner commit `7891f1913ead9fdc24fbf7aa1e066db563308472`／tree `0bd52daa90b8b0f0caf299d2fd89da795ed96f9a`で契約化した。対象は、Repo-local Git configのsymlink／broken symlink／`include`／`includeIf`を完全parserへ拡張せずwrite前にfail closedとするR4、`clarity-root-changed`のabsolute physical path非露出、Windowsの64-bit filesystem identity精度、PR #11新規tracked textだけのrole-owned placeholder化に限定する。正常なowned replacementへのroot identity比較、因果未確認のlock polling最適化、広い履歴cleanup、private／Yasashii、merge／release／installはNon-scope。ユーザーの進行指示とLineage停止条件を一旦無視する既承認に基づき、fresh strong Generator予約としてLineage Dispatchesを21、Current IDを`sprint-047-patch-004`、Statusを`active`、Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`とする。
