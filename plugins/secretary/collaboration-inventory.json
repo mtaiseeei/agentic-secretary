@@ -38,7 +38,7 @@
       "edition": "common-core-with-downstream-adapter-seam",
       "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/project-tools.mjs", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json"],
       "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
-      "contentDigest": "1eb4f4c6cb02bc8afcc371db94d1d227acbae61c4182e29a7663bd257521508d",
+      "contentDigest": "867a7b0d50e8ce7e7437e1c0086a622912e86de94f9540ae58ac1340fe20c6d8",
       "tests": ["CLX-002", "CLX-003", "CLX-004", "CLX-005", "CLX-006"],
       "delegation": "Project Decision to existing add-decision seam; Clarity link preparation remains preview-first",
       "noTouch": ["general memory duplication", "peer Repo write", "fetch", "pull", "push", "remote"]
@@ -49,7 +49,7 @@
       "edition": "common-core",
       "paths": ["plugins/secretary/skills/daily/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs"],
       "markers": [{"path": "plugins/secretary/skills/daily/SKILL.md", "token": "agentic-secretary:clarity-collaboration:daily:v1"}],
-      "contentDigest": "9467c3441b2e32e695e9b87f16327e8261f95542ee82ea968e29d9271e031573",
+      "contentDigest": "09df24e3041260dfe9d9508de4a68c6822d022ae2f4a592dcdc422d1803344bf",
       "tests": ["CLX-007"],
       "delegation": "Read open Project minimum projection only",
       "noTouch": ["schedule canonical", "TODO canonical", "resume canonical", "connector", "closed Project"]
@@ -60,7 +60,7 @@
       "edition": "common-core",
       "paths": ["plugins/secretary/skills/weekly/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs"],
       "markers": [{"path": "plugins/secretary/skills/weekly/SKILL.md", "token": "agentic-secretary:clarity-collaboration:weekly:v1"}],
-      "contentDigest": "01c376ff39c0734934399dfa3568a12c4881108d20d687b6684754edb1beb008",
+      "contentDigest": "07cb7a01b2f53edd9fd37967f5e6d16029ddac39d22d13b808bf01e3adafef9b",
       "tests": ["CLX-008"],
       "delegation": "Read journal and open Project minimum projection through separate seams",
       "noTouch": ["journal canonical", "closed Project", "full Item body", "connector"]
@@ -71,7 +71,7 @@
       "edition": "public-seam-private-implementation-protected",
       "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json", "adapters/downstream-clarity-handoff.json"],
       "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
-      "contentDigest": "56c6bd5f3eb00e648acea1cba1b4c5a0a97fdfe02c6188d86f56f194f550e8f6",
+      "contentDigest": "95ab25b35f72dab5a164c8a05fd7dd5d4d2a3810aba4181196565aace3f222d6",
       "tests": ["CLX-009", "CLX-010"],
       "delegation": "Explicit local task to project-tools:add-todo; explicit downstream task to fixed adapter",
       "noTouch": ["automatic task creation", "Notion schema", "downstream protected Skill"]
@@ -203,7 +203,7 @@
       "edition": "public-common-core-read-only",
       "paths": ["plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-secretary.mjs", "token": "agentic-secretary:canonical-repo-observation:v1"}],
-      "contentDigest": "af9c2d02ea78e44b94cb6f726297cfc95dbec6b6a216930d72385ea43a4d5b45",
+      "contentDigest": "1db7aeb9a5bc690a45e04ff7fd03feb120badae0c1ac0cd9973d3d39da2b3980",
       "tests": ["CF-001", "CF-002", "CF-003", "CF-004", "CF-005", "CF-006", "CF-007"],
       "delegation": "Read only the declared local canonical Repo; remote-only evidence remains unavailable without network",
       "noTouch": ["clone", "fetch", "pull", "push", "canonical Repo write", "Secret value", "binary body", "full source copy"]
@@ -214,7 +214,7 @@
       "edition": "public-common-core-internal-opt-in",
       "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-drift.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-link.mjs", "plugins/secretary/scripts/lib/clarity-projection.mjs", "plugins/secretary/scripts/lib/clarity-root.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/scripts/lib/safe-fs.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-root.mjs", "token": "agentic-secretary:clarity-root-policy:v1"}],
-      "contentDigest": "bb6fc9c272186656c2213a5e6af475ab45f683e2b35a96ca7ed7447c291fcfbf",
+      "contentDigest": "5258ad0314b7ba7494b5be8545a81bdb2a347fd5c0cd30ae85229c53842bfeba",
       "tests": ["AR-001", "AR-002", "AR-003", "AR-004", "AR-005", "AR-006", "AR-007", "AR-008", "AR-009", "AR-010", "AR-011", "AR-012", "AR-013", "AR-014"],
       "delegation": "Only declared Clarity Repo-root entrypoints opt in; Drift source locators retain their own closed policy",
       "noTouch": ["generic workingRoot default", "Repo-root symlink", "internal symlink", "root-external locator", "Git mutation", "user-facing flag"]

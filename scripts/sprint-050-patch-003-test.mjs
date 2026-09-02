@@ -47,21 +47,21 @@ function parseWindowsSid(output) {
   assert.equal(matches.length, 1, "whoami.exe must yield exactly one unique SID");
   return matches[0];
 }
-function windowsAclPlan(unreadableRoot, backupPath, sid) {
+function windowsAclPlan(unreadableRoot, backupPath, sid, relativeTarget = "README.md") {
   assert.match(sid, /^S-\d+(?:-\d+)+$/);
   return {
     whoami: { command: "whoami.exe", args: ["/user", "/fo", "csv", "/nh"], cwd: unreadableRoot, shell: false },
-    save: { command: "icacls.exe", args: ["README.md", "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false },
-    deny: { command: "icacls.exe", args: ["README.md", "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false },
+    save: { command: "icacls.exe", args: [relativeTarget, "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false },
+    deny: { command: "icacls.exe", args: [relativeTarget, "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false },
     restore: { command: "icacls.exe", args: [".", "/restore", backupPath, "/q"], cwd: unreadableRoot, shell: false },
   };
 }
-function assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid) {
+function assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid, relativeTarget = "README.md") {
   assert.equal(isWithin(fixtureRoot, backupPath), true);
   assert.equal(isWithin(unreadableRoot, backupPath), false);
   assert.deepEqual(plan.whoami, { command: "whoami.exe", args: ["/user", "/fo", "csv", "/nh"], cwd: unreadableRoot, shell: false });
-  assert.deepEqual(plan.save, { command: "icacls.exe", args: ["README.md", "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false });
-  assert.deepEqual(plan.deny, { command: "icacls.exe", args: ["README.md", "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false });
+  assert.deepEqual(plan.save, { command: "icacls.exe", args: [relativeTarget, "/save", backupPath, "/q"], cwd: unreadableRoot, shell: false });
+  assert.deepEqual(plan.deny, { command: "icacls.exe", args: [relativeTarget, "/deny", `*${sid}:(RD)`, "/q"], cwd: unreadableRoot, shell: false });
   assert.deepEqual(plan.restore, { command: "icacls.exe", args: [".", "/restore", backupPath, "/q"], cwd: unreadableRoot, shell: false });
   const allArgs = Object.values(plan).flatMap((entry) => entry.args);
   assert.equal(allArgs.some((arg) => ["/T", "(F)", "(M)", "(WDAC)", "(WO)", "(D)", "(OI)", "(CI)"].includes(arg.toUpperCase())), false);
@@ -88,18 +88,18 @@ function combinedFailure(primary, cleanupFailures) {
   const summary = failures.map((error, index) => `${index === 0 && primary ? "primary" : "cleanup"}: ${error instanceof Error ? error.message : String(error)}`).join("; ");
   return new AggregateError(failures, summary);
 }
-function observeWindowsUnreadableRepo(unreadableRoot, fixtureRoot) {
-  const readmePath = join(unreadableRoot, "README.md");
-  const beforeContent = readFileSync(readmePath);
+function observeWindowsUnreadableRepo(unreadableRoot, fixtureRoot, relativeTarget = "README.md") {
+  const targetPath = join(unreadableRoot, ...relativeTarget.split("/"));
+  const beforeContent = readFileSync(targetPath);
   const beforeDigest = sha(beforeContent);
   const backupDir = join(fixtureRoot, "windows-acl-backup");
-  const backupPath = join(backupDir, "README.acl");
-  const whoamiSpec = windowsAclPlan(unreadableRoot, backupPath, "S-1-5-21-1").whoami;
+  const backupPath = join(backupDir, "target.acl");
+  const whoamiSpec = windowsAclPlan(unreadableRoot, backupPath, "S-1-5-21-1", relativeTarget).whoami;
   const whoamiResult = runWindowsCommand(whoamiSpec);
   assertCommandPassed("whoami", whoamiResult);
   const sid = parseWindowsSid(whoamiResult.stdout);
-  const plan = windowsAclPlan(unreadableRoot, backupPath, sid);
-  assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid);
+  const plan = windowsAclPlan(unreadableRoot, backupPath, sid, relativeTarget);
+  assertWindowsAclPlan(plan, fixtureRoot, unreadableRoot, backupPath, sid, relativeTarget);
   mkdirSync(backupDir, { recursive: true });
 
   let primary = null;
@@ -113,11 +113,11 @@ function observeWindowsUnreadableRepo(unreadableRoot, fixtureRoot) {
     assertCommandPassed("icacls-deny-read-data", deny);
 
     let readError = null;
-    try { readFileSync(readmePath); } catch (error) { readError = error; }
-    assert(readError, "README.md must be unreadable after the deny ACE");
+    try { readFileSync(targetPath); } catch (error) { readError = error; }
+    assert(readError, `${relativeTarget} must be unreadable after the deny ACE`);
     assert(["EACCES", "EPERM"].includes(readError.code), `unexpected denied-read error: ${String(readError.code)}`);
 
-    observation = observeCanonicalRepo(pointerRecord("unreadable", unreadableRoot));
+    observation = observeCanonicalRepo(pointerRecord("unreadable", unreadableRoot, relativeTarget));
     assert.equal(observation.availability, "unreadable");
     assert.equal(observation.firstFile.reason, "unreadable");
     assert.equal(observation.reason, "first-file-unreadable");
@@ -132,9 +132,9 @@ function observeWindowsUnreadableRepo(unreadableRoot, fixtureRoot) {
       cleanupFailures.push(new Error(`icacls-restore failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`));
     }
     let afterContent = null;
-    try { afterContent = readFileSync(readmePath); }
+    try { afterContent = readFileSync(targetPath); }
     catch (error) { cleanupFailures.push(new Error(`post-restore-read failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`)); }
-    if (afterContent && sha(afterContent) !== beforeDigest) cleanupFailures.push(new Error("post-restore README.md digest changed"));
+    if (afterContent && sha(afterContent) !== beforeDigest) cleanupFailures.push(new Error(`post-restore ${relativeTarget} digest changed`));
     try { rmSync(backupDir, { recursive: true, force: true }); }
     catch (error) { cleanupFailures.push(new Error(`ACL backup cleanup failed (${error instanceof Error ? `${error.name}:${error.message}` : String(error)})`)); }
     if (existsSync(backupDir)) cleanupFailures.push(new Error("ACL backup cleanup left fixture files behind"));
@@ -206,9 +206,27 @@ try {
     const observation = observeCanonicalRepo(pointerRecord("stale", aliasRepo)); assert.equal(observation.freshness, "current-at-observation"); assert.equal(observation.snapshotFreshness, "stale-snapshot"); assert(observation.observedAt); assert(observation.sourceRevision);
   });
   test("CF-003", "daily weekly and Portfolio share the canonical observation", () => {
-    const portfolio = portfolioRollup(secretary); const daily = dailyClarityRollup(secretary); const weekly = weeklyClarityRollup(secretary);
-    const digests = [portfolio.projects[0].canonicalObservation, daily.canonicalObservations[0].observation, weekly.canonicalObservations[0].observation].map((row) => `${row.sourceRevision}:${row.firstFile.digest}:${row.freshness}`);
-    assert.equal(new Set(digests).size, 1); assert.equal(daily.items.length <= 3, true);
+    const stateRepo = makeRepo(join(fixture, "canonical-large-state-surface"));
+    write(join(stateRepo, "docs/sprints/state.md"), Buffer.alloc(194_857, 0x78));
+    const projectName = "大規模state正本案件"; project(secretary, projectName, stateRepo, "docs/sprints/state.md");
+    const before = { tree: tree(stateRepo), git: gitSnapshot(stateRepo) };
+    try {
+      const status = secretaryProjectClarityStatus(secretary, projectName); const portfolio = portfolioRollup(secretary); const daily = dailyClarityRollup(secretary); const weekly = weeklyClarityRollup(secretary);
+      const observations = [
+        status.canonicalObservation,
+        portfolio.projects.find((row) => row.name === projectName)?.canonicalObservation,
+        daily.canonicalObservations.find((row) => row.project === projectName)?.observation,
+        weekly.canonicalObservations.find((row) => row.project === projectName)?.observation,
+      ];
+      assert(observations.every(Boolean));
+      const digests = observations.map((row) => `${row.sourceRevision}:${row.firstFile.digest}:${row.freshness}`);
+      assert.equal(new Set(digests).size, 1); assert(observations.every((row) => row.firstFile.inspected && row.firstFile.bytesRead === 194_857));
+      assert(observations.every((row) => row.changed === false && row.canonicalWrites === 0 && row.gitWrites === 0 && row.networkCalls === 0));
+      assert.equal(daily.items.length <= 3, true);
+    } finally {
+      rmSync(join(secretary, "projects/open", projectName), { recursive: true, force: true });
+    }
+    assert.deepEqual({ tree: tree(stateRepo), git: gitSnapshot(stateRepo) }, before);
   });
   test("CF-004", "remote-only pointers never start network or Git operations", () => {
     const report = observeCanonicalRepo(pointerRecord("remote", "https://example.invalid/org/repo.git")); assert.equal(report.sourceKind, "remote-only"); assert.equal(report.availability, "unavailable"); assert.equal(report.networkCalls, 0); assert.equal(report.gitWrites, 0);
@@ -217,6 +235,47 @@ try {
     write(join(physicalRepo, ".env"), "API_TOKEN=synthetic-secret-value\n"); write(join(physicalRepo, "blob.bin"), Buffer.from([0, 1, 2])); write(join(physicalRepo, "large.md"), "x".repeat(70 * 1024)); write(join(fixture, "outside.md"), "outside canary\n"); symlinkSync(join(fixture, "outside.md"), join(physicalRepo, "linked.md"));
     const reasons = [".env", "blob.bin", "large.md", "linked.md"].map((entry) => observeCanonicalRepo(pointerRecord(entry, aliasRepo, entry)).firstFile.reason);
     assert.deepEqual(reasons, ["sensitive-name", "binary", "file-too-large", "symlink-not-followed"]); assert(!JSON.stringify(reasons).includes("synthetic-secret-value"));
+
+    const limitRepo = makeRepo(join(fixture, "canonical-first-file-limits"));
+    const statePath = join(limitRepo, "docs/sprints/state.md");
+    const observe = (entry = "docs/sprints/state.md") => observeCanonicalRepo(pointerRecord(`limit-${entry}`, limitRepo, entry));
+    for (const size of [194_857, 256 * 1024]) {
+      write(statePath, Buffer.alloc(size, 0x78));
+      const report = observe();
+      assert.equal(report.firstFile.inspected, true); assert.equal(report.firstFile.bytesRead, size); assert.equal(report.firstFile.digest, sha(Buffer.alloc(size, 0x78)));
+    }
+    write(statePath, Buffer.alloc((256 * 1024) + 1, 0x78));
+    const oversizedState = observe();
+    assert.equal(oversizedState.firstFile.inspected, false); assert.equal(oversizedState.firstFile.reason, "file-too-large"); assert.equal(oversizedState.firstFile.size, (256 * 1024) + 1); assert.equal(oversizedState.availability, "stale"); assert.equal(oversizedState.freshness, "current-at-observation");
+
+    write(join(limitRepo, "README.md"), Buffer.alloc(64 * 1024, 0x72));
+    const ordinaryAtLimit = observe("README.md");
+    assert.equal(ordinaryAtLimit.firstFile.inspected, true); assert.equal(ordinaryAtLimit.firstFile.bytesRead, 64 * 1024);
+    write(join(limitRepo, "README.md"), Buffer.alloc((64 * 1024) + 1, 0x72));
+    assert.equal(observe("README.md").firstFile.reason, "file-too-large");
+    write(join(limitRepo, "docs/sprints/state-copy.md"), Buffer.alloc((64 * 1024) + 1, 0x78));
+    assert.equal(observe("docs/sprints/state-copy.md").firstFile.reason, "file-too-large");
+    assert.equal(observe("./docs/sprints/state.md").firstFile.reason, "path-unsafe");
+    assert.equal(observe("../docs/sprints/state.md").firstFile.reason, "path-unsafe");
+    assert.equal(observe(statePath).firstFile.reason, "path-unsafe");
+    const backslashState = observe("docs\\sprints\\state.md").firstFile;
+    assert.equal(backslashState.inspected, false); assert(["file-too-large", "missing"].includes(backslashState.reason));
+
+    const secretCanary = "synthetic-secret-value";
+    write(statePath, `api_key=${secretCanary}\n${"x".repeat(70 * 1024)}`);
+    const secretState = observe(); assert.equal(secretState.firstFile.reason, "secret-like-content"); assert.equal(JSON.stringify(secretState).includes(secretCanary), false);
+    const nulState = Buffer.alloc(70 * 1024, 0x78); nulState[10] = 0; write(statePath, nulState);
+    assert.equal(observe().firstFile.reason, "binary");
+    const externalState = join(fixture, "external-state-canary.md"); write(externalState, "external state canary\n"); rmSync(statePath); symlinkSync(externalState, statePath);
+    const linkedState = observe(); assert.equal(linkedState.firstFile.reason, "symlink-not-followed"); assert.equal(JSON.stringify(linkedState).includes("external state canary"), false);
+    rmSync(statePath); write(statePath, Buffer.alloc(70 * 1024, 0x78));
+    if (process.platform === "win32") {
+      assert.equal(observeWindowsUnreadableRepo(limitRepo, fixture, "docs/sprints/state.md").firstFile.reason, "unreadable");
+    } else {
+      chmodSync(statePath, 0o000);
+      try { assert.equal(observe().firstFile.reason, "unreadable"); }
+      finally { chmodSync(statePath, 0o644); }
+    }
   });
   test("CF-006", "missing unsafe unreadable and stale sources remain truthful", () => {
     const missing = observeCanonicalRepo(pointerRecord("missing", join(fixture, "missing")));
