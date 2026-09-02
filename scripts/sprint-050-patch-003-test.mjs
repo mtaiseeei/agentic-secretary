@@ -258,8 +258,12 @@ try {
     assert.equal(observe("./docs/sprints/state.md").firstFile.reason, "path-unsafe");
     assert.equal(observe("../docs/sprints/state.md").firstFile.reason, "path-unsafe");
     assert.equal(observe(statePath).firstFile.reason, "path-unsafe");
+    write(statePath, Buffer.alloc(70 * 1024, 0x78));
     const backslashState = observe("docs\\sprints\\state.md").firstFile;
-    assert.equal(backslashState.inspected, false); assert(["file-too-large", "missing"].includes(backslashState.reason));
+    assert.equal(backslashState.inspected, false); assert.equal(backslashState.reason, process.platform === "win32" ? "file-too-large" : "missing");
+    const caseVariantPath = join(limitRepo, "docs/sprints/State.md");
+    const caseVariantState = observe("docs/sprints/State.md").firstFile;
+    assert.equal(caseVariantState.inspected, false); assert.equal(caseVariantState.reason, existsSync(caseVariantPath) ? "file-too-large" : "missing");
 
     const secretCanary = "synthetic-secret-value";
     write(statePath, `api_key=${secretCanary}\n${"x".repeat(70 * 1024)}`);
@@ -267,7 +271,9 @@ try {
     const nulState = Buffer.alloc(70 * 1024, 0x78); nulState[10] = 0; write(statePath, nulState);
     assert.equal(observe().firstFile.reason, "binary");
     const externalState = join(fixture, "external-state-canary.md"); write(externalState, "external state canary\n"); rmSync(statePath); symlinkSync(externalState, statePath);
+    const externalStateBefore = { exists: existsSync(externalState), content: readFileSync(externalState) };
     const linkedState = observe(); assert.equal(linkedState.firstFile.reason, "symlink-not-followed"); assert.equal(JSON.stringify(linkedState).includes("external state canary"), false);
+    assert.equal(existsSync(externalState), externalStateBefore.exists); assert.deepEqual(readFileSync(externalState), externalStateBefore.content);
     rmSync(statePath); write(statePath, Buffer.alloc(70 * 1024, 0x78));
     if (process.platform === "win32") {
       assert.equal(observeWindowsUnreadableRepo(limitRepo, fixture, "docs/sprints/state.md").firstFile.reason, "unreadable");

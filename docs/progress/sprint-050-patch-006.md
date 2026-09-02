@@ -4,7 +4,7 @@
 - 担当: Generator（自己検査とEvaluator handoffのみ。Evaluator PASSは宣言しない）
 - 実装日: 2026-09-02
 - 対象: `sprint-050-patch-006`（Type: micro、Model Tier strong）
-- 現在地: public sourceの実装・focused／scanner回帰完了。Windows nativeとfresh独立Evaluator待ち
+- 現在地: public sourceの実装とFable read-only reviewの限定補正、focused／scanner回帰完了。Windows nativeとfresh独立Evaluator待ち
 
 ## 着手時の実装契約
 
@@ -36,14 +36,16 @@
 | `README.md` | 64 KiB＋1 | `file-too-large` |
 | `docs/sprints/state-copy.md` | 64 KiB＋1 | `file-too-large` |
 | `./docs/sprints/state.md`／traversal／absolute | - | `path-unsafe` |
-| backslash表記 | 256 KiB＋1相当 | 256 KiB例外を受けず`file-too-large`またはhost上で`missing` |
+| backslash表記 | 70 KiB | 256 KiB例外を受けず、Windowsでは`file-too-large`、POSIXでは`missing` |
+| case違い `docs/sprints/State.md` | 70 KiB | 256 KiB例外を受けず、case-insensitive filesystemでは`file-too-large`、case-sensitiveでは`missing` |
 | exact state＋Secret-like content | 64 KiB超・256 KiB以下 | `secret-like-content`、canary非露出 |
 | exact state＋NUL | 64 KiB超・256 KiB以下 | `binary` |
-| exact state symlink | 参照先canaryあり | `symlink-not-followed`、参照先本文非露出 |
+| exact state symlink | 参照先canaryあり | `symlink-not-followed`、参照先本文非露出、観測前後の存在／内容不変 |
 | exact state unreadable | 64 KiB超・256 KiB以下 | macOSのmode／Windowsの既存ACL補助で`unreadable` |
 
 - 製品file変更に伴い、既存collaboration inventoryのうち同fileを含む6 surfaceのcontent digestだけを再計算した。surface、path、marker、Case ID、件数は変更していない。
 - `.github/workflows/windows-recording-regression.yml`は変更していない。既存`windows-native` jobがPatch 005を実行し、そのSR-009がPatch 003 focused回帰を子processで実行する結線を維持した。
+- Fable read-only reviewの限定補正として、backslash表記とcase違いpathの直前に同じ70 KiB state fixtureを固定した。これにより64 KiB上限と256 KiB例外を識別でき、外部symlink canaryも観測直前／直後の存在とcontentが不変であることを近接assertした。
 
 ## 変更file
 
@@ -68,6 +70,18 @@ Planner所有の`docs/spec*`／Sprint契約、Orchestrator所有の`docs/sprints
 | `node scripts/sprint-050-patch-005-test.mjs` | `PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false` |
 
 Patch 005のSR-009は同一process treeでPatch 004、Patch 003、Sprint 041、Sprint 047、Sprint 049、inventoryを子回帰として実行し、すべて0 FAILだった。現行Harness authoritative scanner製品fileとCurrent ID parserの差分は0件である。
+
+### Fable限定補正後の再実行（2026-09-02）
+
+| command | result |
+|---|---|
+| `node --check scripts/sprint-050-patch-003-test.mjs` | exit 0 |
+| `git diff --check` | exit 0 |
+| `node scripts/sprint-050-patch-003-test.mjs` | `PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0` |
+| `node scripts/sprint-049-inventory.mjs validate` | `PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID` |
+| `node scripts/sprint-050-patch-005-test.mjs` | `PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false` |
+
+この補正roundの差分は検証codeとGenerator progressだけで、製品code変更は0行である。Patch全体では既存candidate `7fcc9fce536693ec2f0cb6acdd4e3374e705b83b`に製品code変更を含むが、本roundではその製品実装、scanner、parser、workflow、registry、spec、state、feedbackを変更していない。
 
 ## 自己評価（micro-patch）
 
