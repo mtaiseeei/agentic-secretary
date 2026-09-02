@@ -21,7 +21,7 @@
 ユーザー提供の実機baselineは次のとおりである。この観測は要件決定のupstream evidenceであり、public PatchのPASS、
 private版修正、実顧客repoへのapplyを証明しない。
 
-- Mac mini: `/Users/taisei/workspace -> /Volumes/ExternalSSD/workspace`
+- Mac mini: `<workspace-alias> -> <external-volume-workspace>`
 - 対象repo自身: symlinkではない通常directory
 - installed private版のalias path `link-identity`: `working-root-unsafe`、`changed:false`
 - 同じrepoのphysical path `link-identity`: 次の判定である`clarity-not-initialized`まで到達
