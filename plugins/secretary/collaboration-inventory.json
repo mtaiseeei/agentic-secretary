@@ -170,7 +170,7 @@
       "edition": "common-core",
       "paths": ["plugins/secretary/hooks/hooks.json", "plugins/secretary/scripts/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs"],
       "markers": [{"path": "plugins/secretary/hooks/hooks.json", "token": "agentic-secretary:clarity-collaboration:hook:v1"}],
-      "contentDigest": "9dff9fce3cd83b1d8d8a1bddd7a9bd2bde5bfd7ecbd0467b8b426d4e95421771",
+      "contentDigest": "5d5bb08f6ac9c336a5f8f12b213678d12966afa0e619f897232d9565f2b81373",
       "tests": ["CLX-019"],
       "delegation": "Manual clarity Skill fallback only",
       "noTouch": ["other Skill Hook", "memory semantic classification", "network", "Xmind", "connector", "update"]
@@ -214,7 +214,7 @@
       "edition": "public-common-core-internal-opt-in",
       "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-drift.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-link.mjs", "plugins/secretary/scripts/lib/clarity-projection.mjs", "plugins/secretary/scripts/lib/clarity-root.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/scripts/lib/safe-fs.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-root.mjs", "token": "agentic-secretary:clarity-root-policy:v1"}],
-      "contentDigest": "86565b9b6bdb66ca9923285a6b41c45fce413477a043e373098f5a07e8886ca3",
+      "contentDigest": "bb6fc9c272186656c2213a5e6af475ab45f683e2b35a96ca7ed7447c291fcfbf",
       "tests": ["AR-001", "AR-002", "AR-003", "AR-004", "AR-005", "AR-006", "AR-007", "AR-008", "AR-009", "AR-010", "AR-011", "AR-012", "AR-013", "AR-014"],
       "delegation": "Only declared Clarity Repo-root entrypoints opt in; Drift source locators retain their own closed policy",
       "noTouch": ["generic workingRoot default", "Repo-root symlink", "internal symlink", "root-external locator", "Git mutation", "user-facing flag"]
@@ -223,9 +223,9 @@
       "id": "clarity-harness-scanner",
       "role": "Reserve bounded Harness canonical coverage before generic Clarity init scanning and keep Windows verification truthful",
       "edition": "public-common-core-windows-native",
-      "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-047-patch-001-test.mjs", "scripts/sprint-047-patch-002-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
+      "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-047-patch-001-test.mjs", "scripts/sprint-047-patch-002-test.mjs", "scripts/sprint-047-patch-004-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", "token": "agentic-secretary:clarity-harness-authoritative-scan:v1"}],
-      "contentDigest": "6c20aa2a67b933c1308ce7eead84eeb87dad4d78a5898ec0c2394dcd9fb46007",
+      "contentDigest": "ea0f7af37d4213fce6ef8e61f10cc2f9d16cc623de8b281babf9fd3f2239400a",
       "tests": ["HS-001", "HS-002", "HS-003", "HS-004", "HS-005", "HS-006", "HS-007", "HS-008", "HS-009", "HS-010", "HS-011", "HS-012", "HS-013", "HS-014", "HS-015", "HS-016", "SR-001", "SR-002", "SR-003", "SR-004", "SR-005", "SR-006", "SR-007", "SR-008", "SR-009", "SR-010"],
       "delegation": "Scan only local bounded sources; Windows verified requires the native workflow entry",
       "noTouch": ["unbounded repository read", "Secret body", "symlink or junction target", "Git write", "network", "downstream", "release"]

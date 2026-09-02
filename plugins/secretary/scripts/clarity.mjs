@@ -49,7 +49,7 @@ import { applyDrift, commitClarityOwned, recordDriftWaiver } from "./lib/clarity
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { safeWritePath } from "./lib/safe-fs.mjs";
-import { resolveClarityRoot, rootPolicyFor, withClarityRootRequest } from "./lib/clarity-root.mjs";
+import { resolveClarityRoot, rootPolicyFor, serializeClarityCliFailure, withClarityRootRequest } from "./lib/clarity-root.mjs";
 
 function usage(message = "") {
   const prefix = message ? `${message}\n\n` : "";
@@ -354,14 +354,7 @@ try {
   });
 } catch (error) {
   const known = error instanceof ClarityError || typeof error?.code === "string";
-  const output = {
-    ok: false,
-    code: known ? error.code : "unexpected-error",
-    message: error instanceof Error ? error.message : String(error),
-    changed: error?.details?.changed ?? false,
-    nextAction: error?.details?.nextAction || "原因を確認し、変更前の状態を保ったまま再実行してください",
-    ...(known && Object.keys(error.details || {}).length ? { details: error.details } : {}),
-  };
+  const output = serializeClarityCliFailure(error);
   process.stderr.write(`${JSON.stringify(output, null, 2)}\n`);
   process.exit(known ? (error.exitCode || 3) : 3);
 }

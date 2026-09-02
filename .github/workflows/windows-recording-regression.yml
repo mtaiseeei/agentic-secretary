@@ -15,6 +15,7 @@ on:
       - "scripts/sprint-047-test.mjs"
       - "scripts/sprint-047-patch-001-test.mjs"
       - "scripts/sprint-047-patch-002-test.mjs"
+      - "scripts/sprint-047-patch-004-test.mjs"
 
 permissions:
   contents: read
@@ -55,6 +56,9 @@ jobs:
       - name: Node syntax - P002 Git identity regression
         shell: pwsh
         run: node --check scripts/sprint-047-patch-002-test.mjs
+      - name: Node syntax - P004 Git config and identity regression
+        shell: pwsh
+        run: node --check scripts/sprint-047-patch-004-test.mjs
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
@@ -73,6 +77,9 @@ jobs:
       - name: Clarity root Git identity regression (P002)
         shell: pwsh
         run: node scripts/sprint-047-patch-002-test.mjs
+      - name: Clarity Git config and identity precision regression (P004)
+        shell: pwsh
+        run: node scripts/sprint-047-patch-004-test.mjs
       - name: Clarity concurrent write regression (Sprint 047)
         shell: pwsh
         run: node scripts/sprint-047-test.mjs

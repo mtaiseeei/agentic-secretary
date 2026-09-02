@@ -143,7 +143,7 @@ docs/progress/sprint-050-patch-004.md
 
 ### 実Repo read-only preview
 
-`/Users/taisei/workspace/ebino-marketing-hub`へ`--apply`なしのread-only previewを実行した。注釈付きCurrentは`detection.kind=invalid`／`reason=current-id-invalid`のまま、`fallbackSource=last-recorded-completion`、`currentId=sprint-016`、`inferred=true`となった。bundle、4 role、sources、authoritative lane、先頭authoritative candidateが存在し、contractはinspected、progress／feedbackはSecret-like contentとして本文非露出のexcluded coverageになった。preview前後でGit statusはclean、HEAD `be17ae120c274d41f9d352b688870d203b328ef7`、branch `main`、origin URLは不変で、Clarity／Git／network writeは0件だった。
+`<workspace-alias>/ebino-marketing-hub`へ`--apply`なしのread-only previewを実行した。注釈付きCurrentは`detection.kind=invalid`／`reason=current-id-invalid`のまま、`fallbackSource=last-recorded-completion`、`currentId=sprint-016`、`inferred=true`となった。bundle、4 role、sources、authoritative lane、先頭authoritative candidateが存在し、contractはinspected、progress／feedbackはSecret-like contentとして本文非露出のexcluded coverageになった。preview前後でGit statusはclean、HEAD `be17ae120c274d41f9d352b688870d203b328ef7`、branch `main`、origin URLは不変で、Clarity／Git／network writeは0件だった。
 
 ### Retry 1 local／Git-free結果
 
