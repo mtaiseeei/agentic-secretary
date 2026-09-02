@@ -61,10 +61,10 @@ git show -s --format='%H %P %s' 98535e4
 - Retry 1結果: **CLOSED**
 - 影響case／基準: HS-005、AC1、AC3〜5、C1、C26 → **すべてPASS**
 
-read-onlyで`/Users/taisei/workspace/ebino-marketing-hub`へ次を実行した。
+read-onlyで`<local-workspace>/ebino-marketing-hub`へ次を実行した。
 
 ```text
-node plugins/secretary/scripts/clarity.mjs init /Users/taisei/workspace/ebino-marketing-hub --json
+node plugins/secretary/scripts/clarity.mjs init <local-workspace>/ebino-marketing-hub --json
 exit 0 / status=preview / changed=false
 ```
 
@@ -367,7 +367,7 @@ Windows runは実行済みだが0 FAILではないため、AC12とC26をPASSに�
 | 11 | PASS | Windows symlink／junctionは別probe、両方PASS、SKIP 0 |
 | 12 | **FAIL** | workflow結線、0.9.2回帰、timeoutは維持したが因果runが2 FAIL、`windowsVerified=false` |
 | 13 | PASS | macOSとexact Git-freeでTarget portable、041、Patch 003、047、049 inventory／portableが0 product FAIL。Linux nativeは未実施境界として別記 |
-| 14 | PASS | changed production／test diffに`/Users/`、`my-vault`、`yasashii`追加0。manifest／version／CHANGELOG変更0 |
+| 14 | PASS | changed production／test diffに`<local-user-home-prefix>`、`my-vault`、`yasashii`追加0。manifest／version／CHANGELOG変更0 |
 | 15 | PASS | Patch case 37、HS 16、duplicate／missing／extra 0、feature割当各1 |
 | 16 | PASS | Evaluatorはread-only外部確認だけ。push／dispatch／merge／release／tag／install／cache／downstream／実Repo apply 0 |
 
@@ -409,7 +409,7 @@ authoritative lane、sources、bundle、authoritative candidateを捨てる。
 実Repo再現:
 
 ```text
-node plugins/secretary/scripts/clarity.mjs init /Users/taisei/workspace/ebino-marketing-hub --json
+node plugins/secretary/scripts/clarity.mjs init <local-workspace>/ebino-marketing-hub --json
 exit 0 / status=preview / changed=false
 detection.kind=invalid
 detection.reason=current-id-invalid
@@ -521,7 +521,7 @@ exit 0 / SPRINT049_PASS=20 FAIL=0 CRITICAL_PASS=15 CRITICAL_NOT_RUN=0 AC_EXECUTE
 
 ### exact candidate Git-free
 
-`git archive 4169c363...`を`/private/tmp`へ展開し、`.git`なしで実行した。
+`git archive 4169c363...`を`<system-temp-root>`へ展開し、`.git`なしで実行した。
 
 ```text
 node scripts/sprint-050-patch-004-test.mjs

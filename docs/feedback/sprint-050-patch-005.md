@@ -100,10 +100,10 @@ Git-free面は`git archive a55332f...`から作成し、開始・終了とも`.g
 評価時の実sourceに対して、read-only previewとcancelを直接操作した。
 
 ```text
-node plugins/secretary/scripts/clarity.mjs init /Users/taisei/workspace/agentic-secretary --json
+node plugins/secretary/scripts/clarity.mjs init <public-source-repo-root> --json
 exit 0 / ok=true / status=preview / changed=false
 
-node plugins/secretary/scripts/clarity.mjs init /Users/taisei/workspace/agentic-secretary --cancel --json
+node plugins/secretary/scripts/clarity.mjs init <public-source-repo-root> --cancel --json
 exit 0 / ok=true / status=canceled / changed=false
 ```
 
