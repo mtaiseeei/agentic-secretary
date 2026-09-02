@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: TBD
+- Current ID: sprint-047-patch-004
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 20
+- Lineage Dispatches: 21
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -88,6 +88,7 @@
 | sprint-047-patch-001 | done | [contract](sprint-047-patch-001.md) | [progress](../progress/sprint-047-patch-001.md) | [feedback](../feedback/sprint-047-patch-001.md) |
 | sprint-047-patch-002 | done | [contract](sprint-047-patch-002.md) | [progress](../progress/sprint-047-patch-002.md) | [feedback](../feedback/sprint-047-patch-002.md) |
 | sprint-047-patch-003 | done | [contract](sprint-047-patch-003.md) | [progress](../progress/sprint-047-patch-003.md) | [feedback](../feedback/sprint-047-patch-003.md) |
+| sprint-047-patch-004 | active | [contract](sprint-047-patch-004.md) | - | - |
 | sprint-048 | done | [contract](sprint-048.md) | [progress](../progress/sprint-048.md) | [feedback](../feedback/sprint-048.md) |
 | sprint-049 | done | [contract](sprint-049.md) | [progress](../progress/sprint-049.md) | [feedback](../feedback/sprint-049.md) |
 | sprint-050 | done-by-user-decision | [contract](sprint-050.md) | [progress](../progress/sprint-050.md) | [feedback](../feedback/sprint-050.md) |
@@ -103,6 +104,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-02: PR #11のfresh cross-model／別Agent再レビューを再現確認し、通常high-risk Patch `sprint-047-patch-004`をPlanner commit `7891f1913ead9fdc24fbf7aa1e066db563308472`／tree `0bd52daa90b8b0f0caf299d2fd89da795ed96f9a`で契約化した。対象は、Repo-local Git configのsymlink／broken symlink／`include`／`includeIf`を完全parserへ拡張せずwrite前にfail closedとするR4、`clarity-root-changed`のabsolute physical path非露出、Windowsの64-bit filesystem identity精度、PR #11新規tracked textだけのrole-owned placeholder化に限定する。正常なowned replacementへのroot identity比較、因果未確認のlock polling最適化、広い履歴cleanup、private／Yasashii、merge／release／installはNon-scope。ユーザーの進行指示とLineage停止条件を一旦無視する既承認に基づき、fresh strong Generator予約としてLineage Dispatchesを21、Current IDを`sprint-047-patch-004`、Statusを`active`、Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`とする。
 - 2026-09-02: Sprint 047 Patch 003はfresh独立Evaluator commit `18f0f5479c362b155cdd7be2b37f5282f075e300`／tree `745b02473d04b8159cdd34defeb2e41b9cf3168d`、feedback SHA-256 `0358cda1b8e0d5634d094775047ecae06b3ae37ad2b02bb0e57b6faf5069e990`で**PASS**。verification candidate `c9ca65e608819a40bfced9f2de495b0b2edda550`、Windows head `94258ed6b7df248299f098cc008f43112084b2df`、run `33532495145`／job `99938800797`を固定し、Sprint 047 25／25、P001 23／23、P002 12／12、inventory 20／67を独立再実行。各GS-009 roundはwriter直後／writeful rebuild前のfull-State一致、oracle前後filesystem不変、正常rebuild `changed:false`／bytes no-opを確認し、eventCount同値の別field不一致negativeはrepair前に検出、旧順序ならrepair後eventCount-only greenになる因果を確認した。Windows 3 round各64／64、max wait 7,620／15,000ms、max lease 1,635／30,000ms、job 299／600秒、timeout／busy／Actions error 0。C1／C2／C3／C5／C6／C19／C21／C24は全5／5、product／verification-infra finding 0、blocking 0、AC未達0。PR #11のState oracle P2をRESOLVEDとし、Statusを`done`、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0へ戻す。Lineage 20、Model Tier `strong`、Rotate `none`を保持。Windows 8.3はNOT-RUN、private／Yasashii、merge、release、install、cache、live workspaceは未実施。
 - 2026-09-02: Sprint 047 Patch 003のPR head `94258ed6b7df248299f098cc008f43112084b2df`に因果するWindows run `33532495145`／job `99938800797`を生ログまで監査し、Windows Server 2025／Node 22.23.2で299／600秒のPASSを確認した。Patch 005内包SR-009、P001 23／23、P002 12／12、Sprint 047 25／25が全step success。正式GS-009の3 roundは各Hook 32＋CLI 32の64／64、parse／unique／delta／State rebuild 100%、`preRebuildFullState:true`、`rebuildNoop:true`、residue 0。eventCount同値の`generatedAt`破損は`STATE_ORACLE_NEGATIVE=CONFIRMED`で、repair前full mismatch、新oracle検出、旧repair後eventCount-only greenを実証した。max wait 7,620／15,000ms、max lease 1,635／30,000ms、Git/root timeout・transition/canonical busy 0件。Windows 8.3は引き続き`NOT-RUN:8dot3-unavailable`で昇格しない。fresh独立Evaluator予約としてLineage Dispatchesを20へ積み増し、Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`、Status `awaiting-eval`を維持する。Evaluatorはverification candidate `c9ca65e608819a40bfced9f2de495b0b2edda550`、Windows head／raw result、product code／workflow差分0を固定して判定する。
 - 2026-09-02: Sprint 047 Patch 003のverification candidate `c9ca65e608819a40bfced9f2de495b0b2edda550`／tree `9f9fb641411812e480366f4009c49f2bba87964d`、progress HEAD `5ddc4f6265142837f1396f61b8b570e7ac47e970`／tree `d809950cc71989bde8d53b7c9a6dde69fc9e1b06`を確定した。製品code／workflow差分0のまま、各GS-009 roundでwriter直後のstored Stateを`rebuildState(root,{write:false})`の全State bytesと比較し、oracle前後の一時Repo filesystem snapshot不変を確認する。既存writeful rebuildは`changed:false`かつState bytes no-opを必須化。eventCount同値のまま`generatedAt`だけを壊す負例で、旧eventCount-only oracleはrepair後greenになり得る一方、新oracleはrepair前のfull mismatchを検出する`STATE_ORACLE_NEGATIVE=CONFIRMED`を固定した。Generatorとオーケストレーター独立再実行でSprint 047 25／25・GS-009 64／64・preRebuildFullState／rebuildNoop true、P001 23／23、P002 12／12、root／alias 21／21、inventory 20／67、構文／YAML／diffが0 FAIL。local max wait 1,106／15,000ms、max lease 146／30,000ms、residue 0。Windows Server 2025／Node 22の3 roundとfresh EvaluatorはNOT-RUNのためStatusを`awaiting-eval`へ進めるがPASS／doneへ昇格しない。Retry／Spec-Issue 0、Lineage 19、Model Tier `strong`、Rotate `none`を保持する。
