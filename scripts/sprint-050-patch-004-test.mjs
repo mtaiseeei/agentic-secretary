@@ -65,9 +65,13 @@ function stateText({ current = "sprint-050-patch-004", next = "TBD", status = "a
 }
 function harnessFixture(name, options = {}) {
   const root = mkdtempSync(join(tmpdir(), `${name} 空白 日本語-`));
-  write(root, "docs/spec.md", "# Spec Index\n\n[features](spec/features.md)\n[constraints](spec/constraints.md)\n");
-  write(root, "docs/spec/features.md", "# Features\n\nHarness bounded scanner.\n");
-  write(root, "docs/spec/constraints.md", "# Constraints\n\nNo external write.\n");
+  write(root, "docs/spec.md", [
+    "# Spec Index", "", "`docs/spec/product.md`", "[features](spec/features.md)", "`spec/constraints.md`",
+    "`docs/spec/domain.md`", "[ui](./spec/ui.md)", "`docs/spec/rubric.md`", "`../spec/outside.md`", "",
+  ].join("\n"));
+  for (const name of ["product", "features", "constraints", "domain", "ui", "rubric"]) {
+    write(root, `docs/spec/${name}.md`, `# ${name}\n\nHarness bounded scanner.\n`);
+  }
   write(root, "docs/sprints/state.md", options.state || stateText());
   write(root, "docs/sprints/sprint-050-patch-004.md", "# Requirements\n\nStatus: proposed\n");
   write(root, "docs/progress/sprint-050-patch-004.md", "# Generator self report\n\n実装完了（自己報告）\n");
@@ -178,6 +182,11 @@ try {
     assert.equal(baseReport.harness.detection.kind, "harness");
     assert.equal(baseReport.lanes.generic.partial, true);
     for (const role of ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"]) assert.equal(source(baseReport, role).coverage, "inspected");
+    assert.deepEqual(baseReport.harness.sources.filter((row) => row.role === "requirements-reference").map((row) => [row.path, row.coverage]), [
+      ["docs/spec/product.md", "inspected"], ["docs/spec/features.md", "inspected"], ["docs/spec/constraints.md", "inspected"],
+      ["docs/spec/domain.md", "inspected"], ["docs/spec/ui.md", "inspected"], ["docs/spec/rubric.md", "inspected"],
+    ]);
+    assert.equal(baseReport.harness.sources.some((row) => row.path.includes("outside.md")), false);
     assert.equal(baseReport.candidates[0].source, "harness-authoritative");
   });
 
@@ -260,6 +269,7 @@ try {
       "docs/sprints/sprint-050-patch-004.md",
     ]);
     assert(report.harness.bundles.every((row) => row.roles.length === 4 && row.roles.every((role) => role.coverage === "inspected")));
+    assert.equal(report.harness.sources.filter((row) => row.role === "requirements-reference" && row.coverage === "inspected").length, 6);
   });
 
   record("HS-006", "PASS", "bounded-state-section", () => {
