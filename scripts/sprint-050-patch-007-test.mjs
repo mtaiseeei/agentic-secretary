@@ -31,7 +31,9 @@ if (requireWindows && process.platform !== "win32") {
   process.exit(1);
 }
 
-const safeTemporaryBase = existsSync("/private/tmp") ? "/private/tmp" : tmpdir();
+const safeTemporaryBase = process.platform === "win32" && process.env.USERPROFILE && existsSync(process.env.USERPROFILE)
+  ? process.env.USERPROFILE
+  : existsSync("/private/tmp") ? "/private/tmp" : tmpdir();
 const temporaryRoot = mkdtempSync(join(safeTemporaryBase, "sprint050-p007-root-"));
 let pass = 0;
 let fail = 0;
@@ -152,10 +154,11 @@ try {
   if (process.platform === "win32") {
     const short = windowsShortPath(repo);
     const shortObservation = short ? observeUpdateDirectory(short) : null;
-    const shortGitTop = short ? observeUpdateDirectory(git(short, ["rev-parse", "--show-toplevel"])) : null;
+    const longGitTop = git(repo, ["rev-parse", "--show-toplevel"]);
+    const longGitTopObservation = observeUpdateDirectory(longGitTop);
     check("Windows 8.3短縮pathと長いGit rootを実identityで受理",
-      Boolean(shortObservation && shortGitTop && short !== shortGitTop.path && sameUpdateDirectoryIdentity(shortObservation.identity, shortGitTop.identity)),
-      `shortAlias=${Boolean(short)} distinct=${Boolean(shortObservation && shortGitTop && short !== shortGitTop.path)}`);
+      Boolean(shortObservation && short !== longGitTop && sameUpdateDirectoryIdentity(shortObservation.identity, longGitTopObservation.identity)),
+      `shortAlias=${Boolean(short)} distinct=${Boolean(short && short !== longGitTop)}`);
   } else {
     check("Windows 8.3 native positiveはPOSIXではNOT-RUN", !requireWindows);
   }
