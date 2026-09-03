@@ -1164,6 +1164,7 @@ function scanRepositoryImpl(rootValue) {
       detection: authoritative.detection,
       state: authoritative.state,
       bundle: authoritative.bundle,
+      bundles: authoritative.bundles,
       sources: authoritative.sources,
       coverageDigest: authoritative.coverageDigest,
     },

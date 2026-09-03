@@ -488,7 +488,7 @@ try {
     const canary = runtimeSecret();
     const tbd = fixture("clarity-sr007-tbd", { state: `${stateText({ current: "TBD", next: "sprint-050-patch-005" })}\n${secretLine(canary)}\n`, feedbackAbsent: true });
     const tbdReport = scanRepository(tbd); assert.equal(tbdReport.harness.state.fallbackSource, "next-planned"); assert.equal(tbdReport.harness.bundle.inferred, true); assert.equal(tbdReport.harness.bundle.roles.at(-1).reason, "evaluation-not-yet-recorded");
-    const invalid = fixture("clarity-sr007-invalid", { state: `${stateText({ current: "sprint-050-patch-005 (annotation)", next: "TBD" })}\n${secretLine(canary)}\n` });
+    const invalid = fixture("clarity-sr007-invalid", { state: `${stateText({ current: "sprint-050-patch-005 annotation", next: "TBD" })}\n${secretLine(canary)}\n` });
     const invalidReport = scanRepository(invalid); assert.equal(invalidReport.harness.detection.kind, "invalid"); assert.equal(invalidReport.harness.state.fallbackSource, "last-recorded-completion"); assert.equal(invalidReport.harness.state.currentId, "sprint-050-patch-004");
     const missingState = stateText().replace(/^- Current ID:.*\r?\n/mu, ""); const missing = fixture("clarity-sr007-missing", { state: `${missingState}\n${secretLine(canary)}\n` });
     assert.equal(scanRepository(missing).harness.state.fallbackSource, "last-recorded-completion");

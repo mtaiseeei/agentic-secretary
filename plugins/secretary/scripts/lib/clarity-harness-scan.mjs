@@ -25,6 +25,7 @@ const credentialAssignmentPattern = /(?:password|api[_-]?key|api[_-]?token|acces
 const directSecretPatterns = secretValuePatterns.filter((_, index) => index !== 4);
 const binaryExtensions = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".gz", ".7z", ".exe", ".dll"]);
 const currentIdPattern = /^sprint-\d{3}(?:-patch-\d{3})?$/u;
+const currentIdToken = "sprint-\\d{3}(?:-patch-\\d{3})?";
 const windowsReservedPattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/iu;
 
 function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
@@ -155,6 +156,15 @@ function resolveStateField(entries, name) {
   return { value: values[0], coverage: "inspected", reason: "resolved", present: true };
 }
 
+function parseDeclaredCurrentIds(value) {
+  const raw = String(value ?? "").trim();
+  if (raw === "TBD") return { valid: true, ids: [], expression: "TBD" };
+  const match = raw.match(new RegExp(`^(${currentIdToken}(?:\\s*\\/\\s*${currentIdToken})*)\\s*(?:[（(].*[）)])?$`, "u"));
+  if (!match) return { valid: false, ids: [], expression: null };
+  const ids = match[1].split(/\s*\/\s*/u);
+  return { valid: ids.length > 0 && ids.every((id) => currentIdPattern.test(id)), ids, expression: raw };
+}
+
 function inspectSource(root, path, role, lane, { stateSection = false, absentReason = "not-found" } = {}) {
   lane.entriesSeen += 1;
   if (lane.entriesSeen > HARNESS_SCAN_LIMITS.maxEntries || lane.filesRead >= HARNESS_SCAN_LIMITS.maxFiles || lane.bytesRead >= HARNESS_SCAN_LIMITS.maxReadBytes) {
@@ -228,31 +238,41 @@ function parseState(source) {
   const currentRaw = currentField.value;
   const nextRaw = nextField.value;
   const rows = source.stateStructure?.rows || [];
-  const currentValid = currentRaw === "TBD" || currentIdPattern.test(currentRaw || "");
-  let resolved = currentIdPattern.test(currentRaw || "") ? currentRaw : null;
+  const declared = parseDeclaredCurrentIds(currentRaw);
+  const currentValid = declared.valid;
+  let resolvedIds = [...declared.ids];
   let fallbackSource = null;
   let inferred = false;
   const currentUnsafe = currentField.coverage === "unresolved";
-  if (!resolved && !currentUnsafe) {
-    if (currentIdPattern.test(nextRaw || "")) { resolved = nextRaw; fallbackSource = "next-planned"; inferred = true; }
+  if (resolvedIds.length === 0 && !currentUnsafe) {
+    if (currentIdPattern.test(nextRaw || "")) { resolvedIds = [nextRaw]; fallbackSource = "next-planned"; inferred = true; }
     else {
       const lastDone = [...rows].reverse().find((row) => ["done", "done-by-user-decision"].includes(row.status));
-      if (lastDone) { resolved = lastDone.id; fallbackSource = "last-recorded-completion"; inferred = true; }
+      if (lastDone) { resolvedIds = [lastDone.id]; fallbackSource = "last-recorded-completion"; inferred = true; }
     }
   }
-  const matchingRows = rows.filter((row) => row.id === resolved);
-  const currentRow = matchingRows.length === 1 ? matchingRows[0] : null;
-  const rowAmbiguous = matchingRows.length > 1;
+  const currentEntries = resolvedIds.map((id) => {
+    const matchingRows = rows.filter((row) => row.id === id);
+    return { id, row: matchingRows.length === 1 ? matchingRows[0] : null, ambiguous: matchingRows.length > 1 };
+  });
+  const currentEntry = currentEntries[0] || null;
+  const currentRow = currentEntry?.row || null;
+  const rowAmbiguous = currentEntries.some((entry) => entry.ambiguous);
+  const rowUnresolved = currentEntries.some((entry) => !entry.row);
   const reason = currentUnsafe ? currentField.reason
     : !currentField.present ? "current-id-missing"
       : !currentValid ? "current-id-invalid"
         : rowAmbiguous ? "current-row-ambiguous"
-          : source.bounded && !currentRow ? "state-section-unresolved" : "resolved";
+          : source.bounded && rowUnresolved ? "state-section-unresolved" : "resolved";
   return {
-    currentId: resolved,
-    declaredCurrentId: currentValid ? currentRaw : null,
+    currentId: currentEntry?.id || null,
+    currentIds: resolvedIds,
+    declaredCurrentId: currentValid && (currentRaw === "TBD" || declared.ids.length === 1) ? (currentRaw === "TBD" ? "TBD" : declared.ids[0]) : null,
+    declaredCurrentIds: currentValid ? declared.ids : [],
+    declaredCurrentExpression: currentValid ? declared.expression : null,
     declaredCurrentPresent: currentField.present,
     currentStatus: currentRow?.status || null,
+    currentEntries: currentEntries.map((entry) => ({ id: entry.id, status: entry.row?.status || null, tableRow: entry.row ? { id: entry.row.id, status: entry.row.status } : null })),
     nextPlanned: nextField.coverage === "inspected" && (nextRaw === "TBD" || currentIdPattern.test(nextRaw || "")) ? nextRaw : null,
     tableRow: currentRow ? { id: currentRow.id, status: currentRow.status } : null,
     sourceSection: currentRow ? "sprint-table-row" : currentRaw ? "metadata" : null,
@@ -264,9 +284,9 @@ function parseState(source) {
     redactionReason: source.redactionReason || null,
     fieldCoverage: {
       currentId: { coverage: currentField.coverage, reason: currentField.reason },
-      currentStatus: { coverage: currentRow ? "inspected" : "unresolved", reason: currentRow ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
+      currentStatus: { coverage: currentEntries.length > 0 && !rowUnresolved ? "inspected" : "unresolved", reason: currentEntries.length > 0 && !rowUnresolved ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
       nextPlanned: { coverage: nextField.coverage, reason: nextField.reason },
-      tableRow: { coverage: currentRow ? "inspected" : "unresolved", reason: currentRow ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
+      tableRow: { coverage: currentEntries.length > 0 && !rowUnresolved ? "inspected" : "unresolved", reason: currentEntries.length > 0 && !rowUnresolved ? "resolved" : rowAmbiguous ? "current-row-ambiguous" : "current-row-unresolved" },
     },
   };
 }
@@ -323,12 +343,12 @@ export function scanHarnessAuthoritative(rootValue) {
     && state.inferred === true
     && currentIdPattern.test(state.currentId || "")
     && ["next-planned", "last-recorded-completion"].includes(state.fallbackSource);
+  const currentIds = state.currentIds?.length ? state.currentIds : state.currentId ? [state.currentId] : [];
   if (kind === "harness" || hasSafeFallback) {
-    const id = state.currentId;
-    if (id) {
-      sources.push(inspectSource(root, `docs/sprints/${id}.md`, "requirements", lane));
-      sources.push(inspectSource(root, `docs/progress/${id}.md`, "generator-self-report", lane));
-      sources.push(inspectSource(root, `docs/feedback/${id}.md`, "evaluator-validation", lane, { absentReason: "evaluation-not-yet-recorded" }));
+    for (const id of currentIds) {
+      sources.push({ ...inspectSource(root, `docs/sprints/${id}.md`, "requirements", lane), sprintId: id });
+      sources.push({ ...inspectSource(root, `docs/progress/${id}.md`, "generator-self-report", lane), sprintId: id });
+      sources.push({ ...inspectSource(root, `docs/feedback/${id}.md`, "evaluator-validation", lane, { absentReason: "evaluation-not-yet-recorded" }), sprintId: id });
     }
     sources.push(inspectSource(root, "AGENTS.md", "root-guidance", lane));
     sources.push(inspectSource(root, "CLAUDE.md", "root-guidance", lane));
@@ -352,6 +372,7 @@ export function scanHarnessAuthoritative(rootValue) {
     partial: Boolean(source.partial),
     redacted: Boolean(source.redacted),
     redactionReason: source.redactionReason || null,
+    ...(source.sprintId ? { sprintId: source.sprintId } : {}),
   }));
   for (const source of sources) {
     delete source.content;
@@ -373,32 +394,41 @@ export function scanHarnessAuthoritative(rootValue) {
     lane.bytesReadAtMost = HARNESS_SCAN_LIMITS.maxReadBytes;
     lane.redactedUsage = true;
   }
-  const bundle = (kind === "harness" || hasSafeFallback) && state.currentId ? {
-    currentId: state.currentId,
-    declaredCurrentId: state.declaredCurrentId,
-    currentStatus: state.currentStatus,
-    nextPlanned: state.nextPlanned,
-    sourceSection: state.sourceSection,
-    fallbackSource: state.fallbackSource,
-    inferred: state.inferred,
-    partial: lane.partial,
-    roles: sourceRoles.filter((source) => ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"].includes(source.role)),
-  } : null;
+  const bundles = (kind === "harness" || hasSafeFallback) ? currentIds.map((id) => {
+    const entry = state.currentEntries?.find((row) => row.id === id) || { status: state.currentStatus };
+    return {
+      currentId: id,
+      declaredCurrentId: state.declaredCurrentId,
+      declaredCurrentIds: state.declaredCurrentIds,
+      declaredCurrentExpression: state.declaredCurrentExpression,
+      currentStatus: entry.status,
+      nextPlanned: state.nextPlanned,
+      sourceSection: state.sourceSection,
+      fallbackSource: state.fallbackSource,
+      inferred: state.inferred,
+      partial: lane.partial,
+      roles: sourceRoles
+        .filter((source) => source.role === "orchestrator-execution-truth" || source.sprintId === id)
+        .filter((source) => ["orchestrator-execution-truth", "requirements", "generator-self-report", "evaluator-validation"].includes(source.role))
+        .map((source) => source.role === "orchestrator-execution-truth" ? { ...source, status: entry.status || "status-unresolved" } : source),
+    };
+  }) : [];
+  const bundle = bundles[0] || null;
   const digestSources = sourceRoles.map(({ size: _size, bytesRead: _bytesRead, ...source }) => source);
   const coverageDigest = stableDigest({ detection: { kind, reason }, state, sources: digestSources, usage: { entriesSeen: lane.entriesSeen, filesRead: lane.filesRead }, partialReasons: lane.partialReasons });
-  const candidates = bundle ? [{
-    path: `docs/sprints/${bundle.currentId}.md`,
-    title: `Harness ${bundle.currentId}`,
+  const candidates = bundles.map((currentBundle) => ({
+    path: `docs/sprints/${currentBundle.currentId}.md`,
+    title: `Harness ${currentBundle.currentId}`,
     contentDigest: coverageDigest,
     kind: "harness-current",
     source: "harness-authoritative",
-    decisionStatus: bundle.roles.find((source) => source.role === "requirements")?.coverage === "inspected" ? "proposed" : "unknown",
+    decisionStatus: currentBundle.roles.find((source) => source.role === "requirements")?.coverage === "inspected" ? "proposed" : "unknown",
     humanConfirmed: false,
-    executionStatus: executionStatus(bundle.currentStatus),
-    validationStatus: bundle.roles.find((source) => source.role === "evaluator-validation")?.status === "passed" ? "passed" : bundle.roles.find((source) => source.role === "evaluator-validation")?.status === "failed" ? "failed" : "unknown",
-    evidenceLocator: { path: "docs/sprints/state.md", currentSprint: bundle.currentId, sources: bundle.roles.map((source) => source.path).join(",") },
-    evidenceSummary: `Harness ${bundle.currentId}: state／requirements／Generator自己報告／Evaluator検証を分離して観測`,
-    harnessBundle: bundle,
-  }] : [];
-  return { detection: { kind, reason }, state, lane, sources: sourceRoles, bundle, candidates, coverageDigest };
+    executionStatus: executionStatus(currentBundle.currentStatus),
+    validationStatus: currentBundle.roles.find((source) => source.role === "evaluator-validation")?.status === "passed" ? "passed" : currentBundle.roles.find((source) => source.role === "evaluator-validation")?.status === "failed" ? "failed" : "unknown",
+    evidenceLocator: { path: "docs/sprints/state.md", currentSprint: currentBundle.currentId, sources: currentBundle.roles.map((source) => source.path).join(",") },
+    evidenceSummary: `Harness ${currentBundle.currentId}: state／requirements／Generator自己報告／Evaluator検証を分離して観測`,
+    harnessBundle: currentBundle,
+  }));
+  return { detection: { kind, reason }, state, lane, sources: sourceRoles, bundle, bundles, candidates, coverageDigest };
 }

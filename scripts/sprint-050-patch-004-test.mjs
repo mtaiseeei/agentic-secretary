@@ -216,14 +216,14 @@ try {
     assert.deepEqual({ id: scanRepository(noFallback).harness.state.currentId, source: scanRepository(noFallback).harness.state.fallbackSource }, { id: null, source: null });
     const missing = harnessFixture("clarity-hs005-missing", { state: stateText({ current: "sprint-099" }), large: false }); cleanup.push(missing);
     const missingReport = scanRepository(missing); assert.equal(missingReport.harness.detection.kind, "harness"); assert.equal(source(missingReport, "requirements").coverage, "not-found");
-    const invalid = harnessFixture("clarity-hs005-invalid", { state: stateText({ current: "sprint-050-patch-004（注釈付き）", next: "sprint-050-patch-004" }), large: false }); cleanup.push(invalid);
+    const invalid = harnessFixture("clarity-hs005-invalid", { state: stateText({ current: "sprint-050-patch-004 注釈付き", next: "sprint-050-patch-004" }), large: false }); cleanup.push(invalid);
     const invalidReport = scanRepository(invalid);
     assert.deepEqual(invalidReport.harness.detection, { kind: "invalid", reason: "current-id-invalid" });
     assert.deepEqual({ id: invalidReport.harness.state.currentId, source: invalidReport.harness.state.fallbackSource, inferred: invalidReport.harness.state.inferred }, { id: "sprint-050-patch-004", source: "next-planned", inferred: true });
     assert.equal(invalidReport.harness.bundle.currentId, "sprint-050-patch-004"); assert.equal(invalidReport.harness.bundle.inferred, true); assert.equal(invalidReport.harness.bundle.partial, true);
     assert.deepEqual(invalidReport.harness.bundle.roles.map((row) => [row.role, row.coverage]), [["orchestrator-execution-truth", "inspected"], ["requirements", "inspected"], ["generator-self-report", "inspected"], ["evaluator-validation", "inspected"]]);
     assert.equal(invalidReport.candidates[0].source, "harness-authoritative"); assert.equal(invalidReport.lanes.authoritative.partial, true); assert(invalidReport.harness.sources.length >= 4);
-    const lastRecorded = harnessFixture("clarity-hs005-invalid-last-done", { state: stateText({ current: "sprint-999（完了注釈）", next: "TBD" }), large: false }); cleanup.push(lastRecorded);
+    const lastRecorded = harnessFixture("clarity-hs005-invalid-last-done", { state: stateText({ current: "sprint-999 完了注釈", next: "TBD" }), large: false }); cleanup.push(lastRecorded);
     write(lastRecorded, "docs/sprints/sprint-050-patch-003.md", "# Prior requirements\n"); write(lastRecorded, "docs/progress/sprint-050-patch-003.md", "# Prior progress\n"); write(lastRecorded, "docs/feedback/sprint-050-patch-003.md", "# Prior feedback\n\nVerdict: PASS\n");
     const lastRecordedReport = scanRepository(lastRecorded);
     assert.deepEqual({ detection: lastRecordedReport.harness.detection.kind, id: lastRecordedReport.harness.bundle.currentId, source: lastRecordedReport.harness.bundle.fallbackSource, inferred: lastRecordedReport.harness.bundle.inferred }, { detection: "invalid", id: "sprint-050-patch-003", source: "last-recorded-completion", inferred: true });
@@ -231,6 +231,24 @@ try {
     const unsafeState = "# State\n\n- Current ID: ../../outside\n- Next Planned: ../also-outside\n\n| ID | Status |\n|---|---|\n| sprint-050-patch-004 | planned |\n";
     const unsafe = harnessFixture("clarity-hs005-unsafe-no-fallback", { state: unsafeState, large: false }); cleanup.push(unsafe);
     const unsafeReport = scanRepository(unsafe); assert.equal(unsafeReport.harness.detection.kind, "invalid"); assert.equal(unsafeReport.harness.state.currentId, null); assert.equal(unsafeReport.harness.bundle, undefined); assert.equal(unsafeReport.candidates.some((row) => row.source === "harness-authoritative"), false); assert.equal(unsafeReport.lanes, undefined);
+    const state = stateText({
+      current: "sprint-050-patch-003 / sprint-050-patch-004（両方done）",
+      status: "done",
+    });
+    const root = harnessFixture("clarity-hs005b", { state, large: false }); cleanup.push(root);
+    write(root, "docs/sprints/sprint-050-patch-003.md", "# Prior requirements\n");
+    write(root, "docs/progress/sprint-050-patch-003.md", "# Prior progress\n");
+    write(root, "docs/feedback/sprint-050-patch-003.md", "# Prior feedback\n\nVerdict: PASS\n");
+    const report = scanRepository(root);
+    assert.equal(report.harness.detection.kind, "harness");
+    assert.deepEqual(report.harness.state.currentIds, ["sprint-050-patch-003", "sprint-050-patch-004"]);
+    assert.deepEqual(report.harness.state.declaredCurrentIds, ["sprint-050-patch-003", "sprint-050-patch-004"]);
+    assert.deepEqual(report.harness.bundles.map((row) => row.currentId), ["sprint-050-patch-003", "sprint-050-patch-004"]);
+    assert.deepEqual(report.candidates.filter((row) => row.source === "harness-authoritative").map((row) => row.path), [
+      "docs/sprints/sprint-050-patch-003.md",
+      "docs/sprints/sprint-050-patch-004.md",
+    ]);
+    assert(report.harness.bundles.every((row) => row.roles.length === 4 && row.roles.every((role) => role.coverage === "inspected")));
   });
 
   record("HS-006", "PASS", "bounded-state-section", () => {
