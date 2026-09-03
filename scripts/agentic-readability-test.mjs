@@ -20,10 +20,6 @@ function check(label, callback) {
   process.stdout.write(`PASS ${label}\n`);
 }
 
-function report(...values) {
-  return contract.labels.map((label, index) => `- ${label}: ${values[index]}`).join("\n");
-}
-
 function strings(value) {
   if (typeof value === "string") return [value];
   if (Array.isArray(value)) return value.flatMap(strings);
@@ -41,16 +37,8 @@ const responses = {
     "- host固有回帰とofficial validator（存在する場合）",
     "1 hostのPASSは他hostへ流用しません。",
   ].join("\n\n"),
-  "completion-report": report(
-    "host result schemaを厳格化しました",
-    "`node scripts/sprint-033-test.mjs` は0 FAILです",
-    "4 hostはlive未実行のため `external-live-gate-unavailable` のままです",
-  ),
-  "status-report": report(
-    "Retry 1のlocal修正を実装中です",
-    "releaseと可読性の単独検査はPASSです",
-    "full regressionとarchive gateを続けます",
-  ),
+  "completion-report": "host result schemaを厳格化し、`node scripts/sprint-033-test.mjs` は0 FAILでした。\n\n4 hostはlive未実行のため `external-live-gate-unavailable` のままです。",
+  "status-report": "Retry 1のlocal修正を実装中で、releaseと可読性の単独検査はPASSです。\n\nfull regressionとarchive gateを続けます。",
   diagnosis: [
     "`node scripts/agentic-host-gate.mjs --mode offline` が入力を拒否しました。原因候補は次の2つです。",
     "- `runner` がhost adapterと一致していない",
@@ -81,7 +69,7 @@ const responses = {
 check("active edition style and copy resolve to agentic", () => {
   assert.equal(contract.styleKey, "agentic-style");
   assert.equal(contract.styleRule.copy, "copy/agentic.json");
-  assert.deepEqual(contract.labels, ["技術要約", "証跡（evidence）", "残課題"]);
+  assert.deepEqual(contract.labels, ["やったこと", "結果", "次に何が起きるか"]);
 });
 
 check("all Agentic user-facing copy is Japanese while formal names remain", () => {
@@ -89,7 +77,8 @@ check("all Agentic user-facing copy is Japanese while formal names remain", () =
   assert(values.every((value) => /[ぁ-んァ-ヶ一-龠]/.test(value)), "every user-facing copy value must contain Japanese explanation");
   const serialized = JSON.stringify(contract.copy);
   for (const term of ["UNVERIFIED", "command", "path", "error", "evidence"]) assert(serialized.includes(term), `missing formal term: ${term}`);
-  assert.equal(contract.copy.surfaces.conversation.decisionConfirmation, "この内容を決定として残しますね: <そのターンのユーザー入力全文>");
+  assert.equal(contract.copy.surfaces.conversation.decisionConfirmation, undefined);
+  assert.equal(contract.copy.surfaces.conversation.explicitMemory, "明示された内容をmemoryへ1回保存し、内部分類と保存先を結果で示す");
 });
 
 for (const kind of Object.keys(responses)) {
@@ -98,10 +87,10 @@ for (const kind of Object.keys(responses)) {
   });
 }
 
-check("completion and status reports use three physical items in copy order", () => {
+check("completion and status reports do not restore the legacy fixed schema", () => {
   for (const kind of ["completion-report", "status-report"]) {
-    assert(usesFixedThreeSchema(responses[kind], contract.labels));
-    assert.deepEqual(lineKinds(responses[kind]), ["bullet", "bullet", "bullet"]);
+    assert.equal(usesFixedThreeSchema(responses[kind], contract.labels), false);
+    assert.equal(lineKinds(responses[kind]).includes("bullet"), false);
   }
 });
 

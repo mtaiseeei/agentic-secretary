@@ -9,6 +9,14 @@ on:
       - "plugins/secretary/skills/memory-care/scripts/**"
       - "plugins/secretary/skills/**/SKILL.md"
       - "scripts/sprint-038-patch-002-windows-test.mjs"
+      - "scripts/sprint-038-patch-003-conversation-migration-test.mjs"
+      - "scripts/sprint-050-patch-004-test.mjs"
+      - "scripts/sprint-050-patch-005-test.mjs"
+      - "scripts/sprint-050-patch-007-test.mjs"
+      - "scripts/sprint-047-test.mjs"
+      - "scripts/sprint-047-patch-001-test.mjs"
+      - "scripts/sprint-047-patch-002-test.mjs"
+      - "scripts/sprint-047-patch-004-test.mjs"
 
 permissions:
   contents: read
@@ -19,17 +27,71 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Node-native syntax
+      - name: Node syntax - secretary store
         shell: pwsh
-        run: |
-          node --check plugins/secretary/scripts/lib/secretary-store.mjs
-          node --check plugins/secretary/scripts/workspace-tools.mjs
-          node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
-          node --check plugins/secretary/scripts/project-tools.mjs
-          node --check plugins/secretary/scripts/owner-name-transaction.mjs
+        run: node --check plugins/secretary/scripts/lib/secretary-store.mjs
+      - name: Node syntax - workspace tools
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/workspace-tools.mjs
+      - name: Node syntax - memory tools
+        shell: pwsh
+        run: node --check plugins/secretary/skills/memory-care/scripts/memory-tools.mjs
+      - name: Node syntax - project tools
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/project-tools.mjs
+      - name: Node syntax - owner name transaction
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/owner-name-transaction.mjs
+      - name: Node syntax - conversation migration
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/lib/conversation-migration.mjs
+      - name: Node syntax - update apply
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/update-apply.mjs
+      - name: Node syntax - Clarity core
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/lib/clarity-core.mjs
+      - name: Node syntax - P001 regression
+        shell: pwsh
+        run: node --check scripts/sprint-047-patch-001-test.mjs
+      - name: Node syntax - P002 Git identity regression
+        shell: pwsh
+        run: node --check scripts/sprint-047-patch-002-test.mjs
+      - name: Node syntax - P004 Git config and identity regression
+        shell: pwsh
+        run: node --check scripts/sprint-047-patch-004-test.mjs
+      - name: Update workspace root physical identity regression
+        shell: pwsh
+        run: node scripts/sprint-050-patch-007-test.mjs --require-windows
+      - name: Existing update gate regression (Sprint 032)
+        shell: pwsh
+        run: node scripts/sprint-032-update-gate-test.mjs
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
+      - name: Conversation migration sibling temp and rollback regression
+        shell: pwsh
+        run: node scripts/sprint-038-patch-003-conversation-migration-test.mjs --require-windows
+      - name: Clarity Harness scan and Windows native regression
+        shell: pwsh
+        run: node scripts/sprint-050-patch-004-test.mjs --require-windows
+      - name: Clarity state structure and Secret redaction regression
+        shell: pwsh
+        run: node scripts/sprint-050-patch-005-test.mjs --require-windows
+      - name: Clarity logical write failure recovery regression (P001)
+        shell: pwsh
+        run: node scripts/sprint-047-patch-001-test.mjs
+      - name: Clarity root Git identity regression (P002)
+        shell: pwsh
+        run: node scripts/sprint-047-patch-002-test.mjs
+      - name: Clarity Git config and identity precision regression (P004)
+        shell: pwsh
+        run: node scripts/sprint-047-patch-004-test.mjs
+      - name: Clarity concurrent write regression (Sprint 047)
+        shell: pwsh
+        run: node scripts/sprint-047-test.mjs

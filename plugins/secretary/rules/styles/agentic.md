@@ -14,6 +14,10 @@
 完了なら実行した操作と証跡、質問なら不足点、失敗なら原因と影響、部分完了なら完了済みと未完了を示します。
 固定3項目や架空の次の行動で包まず、最終応答より前に同内容の利用者向け途中報告を重ねません。
 
+Project ClarityのAttentionを含む場合も、共通ruleどおり重要な3件までを「結論→理由→根拠→選択」で示します。
+Clarity独自schemaへ通常報告を固定せず、予定／TODO／journal／connector結果と一つの正本に混ぜません。
+<!-- agentic-secretary:clarity-collaboration:serializer:v1 -->
+
 ## serializerを適用する場面
 
 - 作業完了報告

@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "collaborationMarker": "agentic-secretary:clarity-collaboration:handoff:v1",
+  "kind": "agentic-secretary-clarity-fixed-handoff",
+  "sourceEdition": "agentic-secretary",
+  "candidateVersion": "0.11.0",
+  "publicationStatus": "pending-public-evaluator-pass",
+  "acceptedSource": null,
+  "commonPaths": [
+    "plugins/secretary/clarity/schemas/event.schema.json",
+    "plugins/secretary/clarity/schemas/evidence.schema.json",
+    "plugins/secretary/clarity/schemas/item.schema.json",
+    "plugins/secretary/clarity/schemas/project.schema.json",
+    "plugins/secretary/clarity/schemas/state.schema.json",
+    "plugins/secretary/clarity/secretary-adapter.json",
+    "plugins/secretary/collaboration-inventory.json",
+    "plugins/secretary/hooks/hooks.json",
+    "plugins/secretary/host-inventory.json",
+    "plugins/secretary/release-inventory.json",
+    "plugins/secretary/scripts/clarity-hook.mjs",
+    "plugins/secretary/scripts/clarity-secretary.mjs",
+    "plugins/secretary/scripts/clarity.mjs",
+    "plugins/secretary/scripts/collaboration-router.mjs",
+    "plugins/secretary/scripts/lib/clarity-core.mjs",
+    "plugins/secretary/scripts/lib/clarity-drift.mjs",
+    "plugins/secretary/scripts/lib/clarity-hook.mjs",
+    "plugins/secretary/scripts/lib/clarity-link.mjs",
+    "plugins/secretary/scripts/lib/clarity-projection.mjs",
+    "plugins/secretary/scripts/lib/clarity-secretary.mjs",
+    "plugins/secretary/scripts/lib/collaboration-router.mjs",
+    "plugins/secretary/scripts/project-tools.mjs",
+    "plugins/secretary/skills/clarity/SKILL.md",
+    "plugins/secretary/skills/secretary/SKILL.md",
+    "plugins/secretary/skills/projects/SKILL.md",
+    "plugins/secretary/skills/daily/SKILL.md",
+    "plugins/secretary/skills/weekly/SKILL.md",
+    "plugins/secretary/skills/memory-care/SKILL.md",
+    "plugins/secretary/skills/build/SKILL.md",
+    "plugins/secretary/skills/update/SKILL.md",
+    "plugins/secretary/skills/onboarding/SKILL.md",
+    "plugins/secretary/skills/chatwork/SKILL.md",
+    "plugins/secretary/skills/google-chat/SKILL.md",
+    "plugins/secretary/skills/connections/SKILL.md",
+    "plugins/secretary/skills/setup-google/SKILL.md",
+    "plugins/secretary/skills/setup-microsoft/SKILL.md",
+    "plugins/secretary/skills/setup-notion/SKILL.md",
+    "plugins/secretary/templates/AGENTS.md",
+    "plugins/secretary/templates/CLAUDE.md",
+    "plugins/secretary/rules/plain-language.md",
+    "plugins/secretary/rules/common-language.md",
+    "plugins/secretary/rules/conversation-contract.md",
+    "plugins/secretary/rules/rule-manifest.json",
+    "plugins/secretary/rules/safety.md"
+  ],
+  "adapterSeams": [
+    { "id": "secretary-local", "path": "plugins/secretary/clarity/secretary-adapter.json", "owner": "public-common" },
+    { "id": "host-status", "path": "plugins/secretary/host-inventory.json", "owner": "public-common" },
+    { "id": "release-status", "path": "plugins/secretary/release-inventory.json", "owner": "public-common" },
+    { "id": "xmind-edition-default", "path": "plugins/secretary/release-inventory.json", "owner": "downstream-adaptation", "allowedFields": ["xmind.editions[].defaultEnabled", "xmind.editions[].reason"] },
+    { "id": "collaboration-surface", "path": "plugins/secretary/collaboration-inventory.json", "owner": "public-common" }
+  ],
+  "excludedPaths": [
+    ".git/**",
+    ".harness/**",
+    "docs/spec/**",
+    "docs/sprints/**",
+    "docs/progress/**",
+    "docs/feedback/**",
+    "README.md",
+    "plugins/secretary/rules/copy/**",
+    "plugins/secretary/rules/styles/**"
+  ],
+  "protectedDownstreamPaths": {
+    "agentic-secretary-my-vault": [
+      "AGENTS.md",
+      "README.md",
+      "docs/**",
+      "plugins/secretary/skills/notion-tasks/**",
+      "plugins/secretary/skills/task-triage/**",
+      "plugins/secretary/skills/vault-documents/**",
+      "plugins/secretary/skills/vault-search/**"
+    ],
+    "yasashii-secretary": [
+      "README.md",
+      "docs/**",
+      "plugins/secretary/rules/copy/yasashii.json",
+      "plugins/secretary/rules/styles/yasashii.md"
+    ]
+  },
+  "downstreamRepositories": {
+    "agentic-secretary-my-vault": "mtaiseeei/agentic-secretary-my-vault",
+    "yasashii-secretary": "mtaiseeei/yasashii-secretary"
+  },
+  "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+  "xmindContract": {
+    "editionDefaults": {
+      "agentic-secretary": false,
+      "agentic-secretary-my-vault": true,
+      "yasashii-secretary": false
+    },
+    "providerPriorityWhenEnabled": ["xmind-mcp", "local-native-after-explicit-approval"],
+    "writeWithoutApproval": false,
+    "visual": {
+      "topAxis": "決まっている",
+      "bottomAxis": "まだ決まっていない",
+      "quadrants": [
+        { "position": "top-left", "emoji": "🟢", "label": "定着・検証", "meaning": "安定している", "color": "#16A34A" },
+        { "position": "top-right", "emoji": "🔵", "label": "実行待ち", "meaning": "あとは進めるだけ", "color": "#2563EB" },
+        { "position": "bottom-left", "emoji": "🟡", "label": "暫定実装・要再確認", "meaning": "注意して確認する", "color": "#D97706" },
+        { "position": "bottom-right", "emoji": "🔴", "label": "設計・意思決定", "meaning": "人間の判断が必要", "color": "#DC2626" }
+      ]
+    }
+  },
+  "rollback": {
+    "strategy": "file-scoped-pre-sync-commit",
+    "instruction": "各downstreamの同期前commitへcommon pathだけを戻し、protected／excluded pathとrepo正本を変更しません。"
+  },
+  "preWriteGate": {
+    "script": "scripts/sprint-048-handoff.mjs",
+    "status": "closed",
+    "requiredPublicationStatus": "public-evaluator-pass",
+    "requires": ["accepted full SHA", "full tree digest", "common path digest", "file count", "protected path digests", "excluded path coverage", "clean candidate tree"],
+    "writesDownstream": false
+  },
+  "userDecisionPreWriteGate": {
+    "status": "closed",
+    "requiredPublicationStatus": "public-user-decision-risk-accepted",
+    "requiredAcceptanceBasisType": "user-risk-acceptance",
+    "evaluatorPass": false,
+    "writesDownstream": false,
+    "fixedBindings": {
+      "acceptedProductSource": {
+        "fullSha": "5f08d454c05576fcff8ab32c10c00887b4c15a96",
+        "treeSha256": "1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5",
+        "fileCount": 828,
+        "commonTreeSha256": "4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849",
+        "commonFileCount": 44
+      },
+      "originEvaluation": {
+        "feedbackCommit": "8483d86390b6c105163e64d24dcafe498ed2fe8b",
+        "feedbackPath": "docs/feedback/sprint-050.md",
+        "feedbackSha256": "fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd",
+        "verdict": "verification-scope-issue",
+        "productFindingCount": 0,
+        "blockingResidualIds": ["AC3", "C21"],
+        "conditionalNotRunIds": ["XM-007"],
+        "otherPhaseResidualIds": [
+          "claude-code-desktop",
+          "codex-app",
+          "windows-native",
+          "mac-mini",
+          "private-my-vault-application",
+          "yasashii-application",
+          "release",
+          "tag",
+          "push",
+          "marketplace",
+          "installed-cache",
+          "new-session-loaded-version"
+        ],
+        "registry": { "pass": 273, "fail": 0, "conditionalNotRun": 1 },
+        "e2e": { "pass": 4, "total": 4 }
+      },
+      "authorizationRecord": {
+        "authorizationId": "sprint-050-downstream-user-decision-2026-08-28",
+        "decisionDate": "2026-08-28",
+        "exactQuote": "よいです",
+        "recordedBy": "user-explicit-decision",
+        "revoked": false,
+        "context": "Sprint 050のexact candidateについて、Claude CodeとCodexの実install後live conversation・Hook発火未実施を後日自ら確認するリスクとして引き受け、元feedbackと未達を保持したままprivate my-vault、次にYasashiiの別Harnessへ展開してよい。",
+        "scope": {
+          "authorized": ["private-my-vault-separate-harness", "yasashii-separate-harness-after-private"],
+          "notAuthorized": ["release", "tag", "push", "marketplace", "installed-cache", "new-session", "xmind-mcp-write", "host-live-write", "downstream-write-by-public-patch"]
+        },
+        "targetAcceptedFullSha": "5f08d454c05576fcff8ab32c10c00887b4c15a96",
+        "targetOriginFeedbackCommit": "8483d86390b6c105163e64d24dcafe498ed2fe8b",
+        "targetOriginFeedbackSha256": "fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd",
+        "acceptedResidualIds": ["AC3", "C21"],
+        "notAcceptedResidualIds": [
+          "XM-007",
+          "claude-code-desktop",
+          "codex-app",
+          "windows-native",
+          "mac-mini",
+          "private-my-vault-application",
+          "yasashii-application",
+          "release",
+          "tag",
+          "push",
+          "marketplace",
+          "installed-cache",
+          "new-session-loaded-version"
+        ],
+        "downstreamOrder": ["agentic-secretary-my-vault", "yasashii-secretary"],
+        "invalidatedBy": [
+          "accepted-source-change",
+          "origin-feedback-change",
+          "residual-reduction-or-replacement",
+          "scope-change",
+          "downstream-order-or-identity-change",
+          "common-excluded-protected-path-change",
+          "protected-digest-change",
+          "rollback-change",
+          "authorization-revocation",
+          "governance-non-pass-or-commit-change"
+        ]
+      }
+    },
+    "requiredGovernance": {
+      "feedbackPath": "docs/feedback/sprint-050-patch-001.md",
+      "verdict": "PASS",
+      "evaluatedCommitLabel": "Evaluated commit"
+    }
+  }
+}

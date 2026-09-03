@@ -1,0 +1,613 @@
+---
+title: Project Clarity 受け入れテストマトリクス
+version: 1.0
+createdAt: 2026-08-28
+targetRepository: mtaiseeei/agentic-secretary
+owner: Planner（case定義正本。実行・判定はEvaluator）
+---
+
+## 変換来歴と公開境界
+
+- 元文書SHA-256: `4e33f971db499811e6dc4cb604d7c8df10e07f87d178482f1d5b3f4d8d7a3f7e`
+- 変換方針: target repositoryをpublic `mtaiseeei/agentic-secretary`へ変更し、実顧客名を同構造の「匿名CRM導入PJ」へ匿名化した。
+- case semantic不変: 250 caseのID、Severity、Scenario、Expected、EvidenceとE2E手順の意味は変更しない。
+- public評価では匿名fixtureを使う。実顧客fixture、提供PDF、提供Xmindはpublic repoへcopyしない。
+- 実顧客fixtureによる再実行はprivate my-vault版の別Harness、別state、別Evaluatorで行い、public PASSを流用しない。
+
+# Project Clarity 受け入れテストマトリクス
+
+## 0. 評価原則
+
+この文書は、Project Clarityの実装完了を判定するEvaluator向けの受け入れ正本である。
+
+- コードが存在するだけでは合格にしない。
+- 実際のSkill、CLI、Hook、生成物を動かす。
+- 1つのhostの合格を別hostへ流用しない。
+- 自動テストだけでなく、生成されたMarkdown、Mermaid、Xmind、Git差分を確認する。
+- product findingとverification-infra findingを分ける。
+- current user dirtyを含む本番Repoを破壊的fixtureとして使わない。
+- synthetic fixtureと安全なtemporary Repoを使う。
+- Evidence formatはSprint contractとrubricに定義されたsafe harborを用いる。
+- Xmind integration ON時は、connected／availableかつ必要capabilityを満たすXmind MCPを第1優先にする。MCP不可／失敗でもlocal `.xmind`へ自動writeせず、理由／対象path／create-update／既存影響／auth／credit見込みのpreviewと明示承認を必須にする。
+- Xmind MCP、承認済みlocal `.xmind`、利用可能なMermaid styleは、左上 🟢 定着・検証 `#16A34A`、右上 🔵 実行待ち `#2563EB`、左下 🟡 暫定実装・要再確認 `#D97706`、右下 🔴 設計・意思決定 `#DC2626`を使う。上軸は「決まっている」、下軸は「まだ決まっていない」とし、emoji／ラベル／意味文を併記する。
+
+合格には、全Criticalケースと各Sprint対象ケースの合格が必要である。
+
+Severity。
+
+| Severity | 意味 |
+|---|---|
+| Critical | 失敗すると製品の正本、安全性、主要価値が壊れる |
+| High | 主要利用経路またはhost parityが壊れる |
+| Medium | 補助機能、可視化、診断品質が不十分 |
+| Low | polish、説明、軽微な操作性 |
+
+---
+
+# 1. Standalone初期化
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| ST-001 | Critical | `.clarity/`もSecretaryもないGit Repoで`init preview` | write 0件。検出内容、作成予定path、Item候補、競合を表示 | before／after tree、git status、stdout |
+| ST-002 | Critical | previewをキャンセル | file、commit、journal、runtimeを含め副作用0件 | git diff、find結果 |
+| ST-003 | Critical | confirm後に初期化 | `.clarity/`が作られ、空テンプレでなく実Repo由来のItemを持つ | generated files、state、event |
+| ST-004 | High | Git remoteなしRepo | local identityで初期化でき、remote不明を明示 | manifest、doctor output |
+| ST-005 | High | non-git directory | 対応可能範囲を明示。Git機能なしでも安全に初期化するか、理由付き停止 | output、tree |
+| ST-006 | High | 巨大Repo | bounded scanとなり、除外／未確認範囲を表示 | timing、scan report |
+| ST-007 | Critical | `.env`、credential fixtureあり | 値を読取結果、Evidence、logへ露出しない | secret scanner、output inspection |
+| ST-008 | Critical | root外へ向くsymlinkあり | symlink先を読まず、対象を拒否または除外 | negative test |
+| ST-009 | High | 既存`CLARITY.md`あり | 無断上書きしない。managed block可否をpreview | diff |
+| ST-010 | High | 既存ADR規約あり | Decision正本候補として検出し、独自Decision本文を重複生成しない | state refs、tree |
+| ST-011 | High | specはあるがDecision未確定 | `proposed`または`exploring`となり、`confirmed`にならない | state |
+| ST-012 | High | Accepted ADRあり | 有効性を確認してEvidence付きDecision候補となる | Evidence、state |
+| ST-013 | Medium | binary中心Repo | binaryを無理に解析せず、確認範囲を明示 | scan report |
+| ST-014 | Critical | initを同じ入力で再実行 | duplicate Item、Event、commitが増えない | byte diff、event count |
+| ST-015 | High | 初期化途中でwrite失敗 | partialを明示し、retryで一状態へ収束 | failure injection、retry result |
+
+---
+
+# 2. 状態モデルと4象限
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| QM-001 | Critical | confirmed + implemented | `stabilize`、表示「定着・検証」 | state、matrix |
+| QM-002 | Critical | confirmed + not_started | `execute`、表示「実行待ち」 | state、matrix |
+| QM-003 | Critical | proposed + implemented | `validate`、表示「暫定実装・要再確認」 | state、matrix |
+| QM-004 | Critical | unknown + not_started | `decide`、表示「設計・意思決定」 | state、matrix |
+| QM-005 | High | confirmed + in_progress | `execute`かつ進行中badge | output |
+| QM-006 | High | unknown + verified | `validate` | output |
+| QM-007 | High | execution rolled_back | 実行済み扱いにしない | state |
+| QM-008 | Critical | quadrantを手で改ざん | rebuildでstateから正しい象限へ戻る | before／after |
+| QM-009 | High | Decision superseded | Active Matrixから旧Itemを除外し履歴保持 | state、history |
+| QM-010 | High | disposition idea | Matrixには任意表示できるが今日のAttention既定除外 | attention output |
+| QM-011 | High | deferred期限前 | Attention除外 | attention output |
+| QM-012 | High | deferred期限到来 | 再評価対象になる | time-fixed test |
+| QM-013 | Medium | unknown state | 無理に決定済み扱いせず不確実性を表示 | state |
+| QM-014 | High | state rebuild | eventsと参照正本からbyte安定したprojectionを生成 | repeated hashes |
+
+---
+
+# 3. Decision確定とEvidence
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| DE-001 | Critical | AIが「決まっていそう」と推定 | `proposed`、`humanConfirmed=false` | state |
+| DE-002 | Critical | ユーザーが「これで確定」と明示 | 既存Decision seam、PROJECT更新、Clarity Eventが一体成功 | affected files、event |
+| DE-003 | Critical | Decision書込み成功、Clarity更新失敗 | partialを明示し、retryで重複なしに完了 | failure injection |
+| DE-004 | Critical | Clarity更新成功、Decision正本書込み失敗 | confirmedと表示しない。rollbackまたはpartial | state、error |
+| DE-005 | High | draft ADR | confirmedにしない | Evidence |
+| DE-006 | High | superseded ADR | current Decisionとして使わない | output |
+| DE-007 | Critical | transcript全文がある | Clarityへ全文保存せず、短いref／digestだけ | repo scan |
+| DE-008 | High | meeting reference | path／ID／日付をEvidenceに残し、本文複製なし | evidence |
+| DE-009 | High | Git commit Evidence | repository、SHA、pathsが残る | evidence |
+| DE-010 | High | test run Evidence | command、status、time、bounded summaryを保持 | evidence |
+| DE-011 | Critical | EvidenceがSecretを含む | redactionまたは保存拒否 | negative test |
+| DE-012 | High | Decision変更 | 過去Decisionを消さずsuperseded履歴を追加 | event history |
+| DE-013 | Medium | Evidence source unreachable | stateを捏造せず`source_unreachable` | attention |
+| DE-014 | High | humanConfirmed field改ざん | schema／rebuildで不整合検知 | doctor output |
+
+---
+
+# 4. Attention Engine
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| AT-001 | Critical | implemented without confirmed decision | High Attention、理由を日本語表示 | attention.md |
+| AT-002 | High | confirmed but not executed | Medium以上のAttention | output |
+| AT-003 | Critical | decision implementation drift | Critical Attention、両方の根拠 | output |
+| AT-004 | High | possible drift | driftと断定せずpossible表示 | output |
+| AT-005 | Critical | validation failed | Critical Attention | output |
+| AT-006 | High | validation pending stale | High Attention | fixed-time test |
+| AT-007 | High | undecided stale | Medium Attention | fixed-time test |
+| AT-008 | Critical | authority conflict | Critical Attention | sync fixture |
+| AT-009 | High | sync conflict | High Attention | sync fixture |
+| AT-010 | High | evidence missing | Medium Attention | output |
+| AT-011 | High | dependency blocked | dependencyを示す | output |
+| AT-012 | Medium | decision owner missing | 誰が決めるか不明と表示 | output |
+| AT-013 | Critical | idea item | 既定の今日の要確認から除外 | output |
+| AT-014 | High | human priority override | deterministic priorityへ反映 | state、output |
+| AT-015 | High | Attention最大件数 | SessionStartは重要3件程度に制限 | hook output |
+| AT-016 | Medium | 同点項目 | stable tie-breakで順番が揺れない | repeated run |
+| AT-017 | High | 解消済みAttention | active一覧から消え、historyへ残る | before／after |
+| AT-018 | Medium | Clarity score未実装 | 件数と理由だけで主要価値が成立 | UX verification |
+
+---
+
+# 5. Claude Code Hook
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| HC-001 | Critical | Claude Code plugin load | Clarity SkillとHookが認識される | validator、live output |
+| HC-002 | High | SessionStart startup | 短いAttention contextを注入 | transcript／hook evidence |
+| HC-003 | High | SessionStart resume | 最新projectionを再読込 | output |
+| HC-004 | High | compact後 | Clarity contextが再注入 | compact live test |
+| HC-005 | Critical | PostToolUse複数同時 | runtime eventが破損しない | event count、JSON parse |
+| HC-006 | High | PostToolUse Edit／Write | touched pathだけを観測 | runtime event |
+| HC-007 | High | PostToolUse test command | test実行候補を観測 | event |
+| HC-008 | Critical | Stop material change + no checkpoint | 1回だけcheckpoint継続を要求 | live test |
+| HC-009 | Critical | Stop 2回目 | 無限継続せず停止可能 | live test |
+| HC-010 | High | no material change | Stopが不要なreviewを要求しない | live test |
+| HC-011 | High | PreCompact | flush／pending checkpoint／resume生成 | files |
+| HC-012 | High | SessionEnd | 制限時間内に軽量flush | timing |
+| HC-013 | Critical | Hook command failure | Repo正本を壊さずmanual fallback案内 | failure injection |
+| HC-014 | High | Hook無効 | Skill手動利用が完全動作 | live test |
+| HC-015 | High | plugin root from subdirectory | cwd依存せず正しいplugin scriptを解決 | live test |
+| HC-016 | Critical | Hook内networkなし | network call 0件 | instrumentation |
+| HC-017 | High | large Attention state | context注入がbounded | token／size evidence |
+
+---
+
+# 6. Codex Hook
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| HX-001 | Critical | Codex plugin load | `$clarity`とHookが認識される | plugin list、live output |
+| HX-002 | Critical | Hook trust前 | Hookを勝手に実行せず、review案内。Skill手動は動く | `/hooks` evidence |
+| HX-003 | High | trust後SessionStart | 追加developer contextを注入 | live output |
+| HX-004 | High | source compact | immediate continuationへcontext | compact live test |
+| HX-005 | Critical | command-only | prompt／agent hookへ依存しない | manifest inspection |
+| HX-006 | Critical | PostToolUse同時 | runtime event破損なし | parse test |
+| HX-007 | Critical | Stop block | 新しいcontinuationとしてcheckpointを1回促す | live test |
+| HX-008 | Critical | stop_hook_active true | 2回目継続なし | live test |
+| HX-009 | High | SessionEnd 3秒以内 | lightweight flushのみ | timing |
+| HX-010 | High | subdirectory起動 | git root／plugin rootを正しく解決 | live test |
+| HX-011 | High | Hook disable config | Skill fallback | live test |
+| HX-012 | High | PLUGIN_ROOT／compat env | common scriptが動く | environment evidence |
+| HX-013 | Critical | transcript format変更想定 | transcript parserを主要正本に依存しない | code inspection、fixture |
+| HX-014 | High | large output | bounded additionalContext | output size |
+
+---
+
+# 7. Host共通性
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| HP-001 | Critical | common core inventory | Claude／Codexで同じSkill semanticを参照 | inventory check |
+| HP-002 | Critical | hooks source | 可能な限り共通`hooks.json`。差分がある場合は単一生成元 | tree、generator test |
+| HP-003 | High | host input normalization | 同一fixtureから同一Clarity Event | fixture hashes |
+| HP-004 | High | host output serializer | host固有記法以外の意味内容が一致 | golden tests |
+| HP-005 | Critical | 1hostのみlive PASS | 他hostを検証済み表示しない | status output |
+| HP-006 | High | Desktop／CLI差 | supportedとverifiedを別表示 | host gate |
+| HP-007 | High | natural language invocation | Claude／Codex双方でClarity Skillが選ばれる | live conversation |
+
+---
+
+# 8. Secretary-local統合
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| SL-001 | Critical | 05 open PJへClarity追加 | 正しいPJ内にのみ生成 | tree |
+| SL-002 | Critical | 02 legacy only PJ | 既存resolver規則どおり参照し、無断二重writeなし | tree、resolver output |
+| SL-003 | Critical | 05／02 conflict | 05採用＋conflict報告 | output |
+| SL-004 | Critical | closed未明示 | closedを探索しない | instrumentation |
+| SL-005 | High | closed明示 | 指定範囲だけ参照 | output |
+| SL-006 | Critical | Decision確定 | existing project Decision seamへ委譲 | affected files |
+| SL-007 | Critical | Clarity Itemをタスク化 | 自動TODO生成せず、明示時だけnotion-tasksへroute | live test |
+| SL-008 | Critical | vault/10_sources | read-onlyを維持 | negative test |
+| SL-009 | High | PROJECT表示 | Clarity mode／Attention／link healthを短く表示 | output |
+| SL-010 | High | PROJECTへ全Item埋込みなし | pointer／summaryのみ | diff |
+| SL-011 | High | PJ完了 | Clarityを伴ってclosedへ整合移動または参照維持 | completion test |
+| SL-012 | High | PJ再開 | 過去Clarity履歴を失わない | reopen test |
+
+---
+
+# 9. Linked External Repo
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| LK-001 | Critical | link prepare | SecretなしLink Request生成 | JSON inspection |
+| LK-002 | Critical | expected target不一致 | accept拒否、副作用0件 | negative test |
+| LK-003 | Critical | link accept | targetにreciprocal manifest | files |
+| LK-004 | Critical | link finalize | 両Project ID／Repo identity／digest照合 | files、output |
+| LK-005 | Critical | external RepoにClarityなし | accept時にpreview後初期化可能 | live fixture |
+| LK-006 | High | 既存Standalone Clarityあり | ID維持してlink追加 | before／after IDs |
+| LK-007 | Critical | cross-root write監視 | 一方のprocessが他Repoを変更しない | filesystem canary |
+| LK-008 | Critical | remote pushなし | linkだけでpushしない | git log、remote evidence |
+| LK-009 | High | local checkout mapping | absolute pathはgitignored local configだけ | repo scan |
+| LK-010 | High | GitHub read-only取得 | 明示許可時だけread | command log |
+| LK-011 | High | bundle manual transfer | networkなしでlink可能 | fixture |
+| LK-012 | Critical | duplicate link | idempotent、重複なし | rerun |
+| LK-013 | High | link解除 | 履歴保持、Standalone継続 | state |
+| LK-014 | High | link先unreachable | stale／unreachable表示、local機能継続 | output |
+| LK-015 | Critical | linkId改ざん | sync拒否 | negative test |
+| LK-016 | Critical | repository identity改ざん | sync拒否 | negative test |
+
+---
+
+# 10. SyncとAuthority
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| SY-001 | Critical | sync preview | write 0件、変更候補とconflict表示 | diff |
+| SY-002 | Critical | sync apply | 自Repoのimports／projectionだけ更新 | filesystem evidence |
+| SY-003 | Critical | Secretary Primary field conflict | authority conflictとして停止／Attention | output |
+| SY-004 | Critical | Repo Primary implementation update | Secretary projectionへ反映候補 | output |
+| SY-005 | Critical | same field both Primary | schema validation拒否 | negative test |
+| SY-006 | Critical | last-write-wins禁止 | conflictが消えない | fixture |
+| SY-007 | High | stale remote revision | stale表示 | output |
+| SY-008 | High | schema newer than reader | 安全停止またはread-only degradation | output |
+| SY-009 | High | unknown fields | readerが保持／無視し、破壊しない | roundtrip test |
+| SY-010 | Critical | retry | duplicate import／eventなし | rerun |
+| SY-011 | High | remote item deletion | tombstone／conflictとして扱い、黙って削除しない | state |
+| SY-012 | High | item split resolution | 新Item relationとhistoryを保持 | resolution test |
+| SY-013 | High | authority変更 | previewと人間確認が必要 | output |
+
+---
+
+# 11. Drift Detection
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| DR-001 | Critical | Decision email first、code customer_id first | driftまたはpossible driftを検出 | Decision ref、code ref |
+| DR-002 | High | 同義実装 | false positiveを抑えalignedまたはunknown | output |
+| DR-003 | High | Evidence不足 | drift断定せずpossible | output |
+| DR-004 | Critical | confirmed drift | Critical Attention | attention |
+| DR-005 | High | Decision変更で整合 | drift解消、history保持 | before／after |
+| DR-006 | High | 実装修正で整合 | drift解消、history保持 | before／after |
+| DR-007 | High | 例外承認 | waiver Evidence付きでAttention調整 | state |
+| DR-008 | High | 古いcommitのみ | current implementationと誤認しない | git fixture |
+| DR-009 | High | generated code | source authorityを区別 | output |
+| DR-010 | Critical | Secret含むcode fixture | EvidenceへSecret非露出 | scan |
+
+---
+
+# 12. Mermaid
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| MM-001 | High | 4象限生成 | 軸・象限の配置が仕様どおり | `.mmd` |
+| MM-002 | High | item座標 | stateに対応 | golden test |
+| MM-003 | Medium | 同じ入力を再生成 | byte安定 | hashes |
+| MM-004 | Medium | point重複 | stable jitter | output |
+| MM-005 | High | 日本語label | syntaxを壊さず表示 | render evidence |
+| MM-006 | High | Mindmap failure | Markdown／flowchart fallback | failure fixture |
+| MM-007 | Medium | project structure | area treeが安定 | generated map |
+| MM-008 | Medium | dependencies | dependency relationが表示 | generated map |
+| MM-009 | Medium | state flow | transitionsが表示 | generated map |
+| MM-010 | High | Mermaidなし環境 | raw `.mmd`とMarkdownは生成 | live test |
+
+---
+
+# 13. Xmind
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| XM-001 | High | Xmind CLI未導入 | Clarity本体は成功し、導入案内またはfallback | output |
+| XM-002 | High | Xmind CLI利用可能 | native `.xmind`生成とvalidation成功 | file、CLI result |
+| XM-003 | High | multi-sheet | クラリティマトリクス／プロジェクト構造を持つ | Xmind inspection |
+| XM-004 | Medium | 追加Sheet | Attention／Decision履歴等が要件どおり | Xmind inspection |
+| XM-005 | Critical | credential | Repoへ保存されない | repo scan |
+| XM-006 | High | Xmind MCP未接続 | cloud機能だけdegrade、local／Mermaid継続 | output |
+| XM-007 | High | Xmind MCP接続済み | cloud map create／read／updateの少なくとも1経路 | live evidence |
+| XM-008 | Critical | Xmindでstatus変更 | 直接state変更せずproposal生成 | before／after |
+| XM-009 | High | proposal承認 | Clarity Eventへ反映 | event |
+| XM-010 | High | proposal拒否 | state変更なし | diff |
+| XM-011 | High | stable Item ID | Xmind nodeとClarity Itemを再対応可能 | map／mapping |
+| XM-012 | High | 匿名CRM導入PJ fixture | 元文書と同構造の匿名マップで4象限と将来アイデアを再現 | screenshot／file |
+| XM-013 | Medium | Xmind file既存編集 | 無関係Sheet／branchを保持 | before／after validation |
+| XM-014 | Medium | map open中編集 | refresh注意または安全な扱いを説明 | UX output |
+| XM-015 | High | 有料credit必要 | 実消費前に明示確認 | interaction evidence |
+
+---
+
+# 13A. Visual Provider user decision追加case
+
+XV-001〜004はprimary 250とCLX 20のID／意味／割当を変更せず、2026-08-28の最新user decisionを検証する追加caseである。
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| XV-001 | Critical | integration ONで(a) MCP connected／available／capable、(b) MCP未接続／無効／capability不足、(c) MCP実行失敗／外部操作未承認、(d) local fallback承認／拒否／cancel、(e) 最初からlocal指定を実行 | (a) `mcp-selected`、(b)(c)(e) preview中は`fallback-approval-required`・local write 0、(d)承認後だけ`local-selected-after-approval`、拒否／cancelは`stopped`・write 0。常にprovider status／selected／reasonが実状態と一致 | resolver JSON／stdout、provider capability fixture、approval前後tree／map snapshot、external／local write log |
+| XV-002 | Critical | Xmind MCPのcloud map create／updateを隔離adapterと、明示承認された場合のreal liveで評価 | 左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`。上軸=決まっている、下軸=まだ決まっていない。実tool schemaが不足なら要件を弱めずverifiedにしない | adapter request／response、tool schema capability report、map screenshot／style inspection、live未承認時はNOT-RUN理由／external write 0 |
+| XV-003 | Critical | local `.xmind`のcreate／updateを承認前、承認後、拒否／cancel、既存無関係Sheet／branchありで実行 | previewは対象file／path、create／update、既存影響、sign-in／credit見込みを示す。承認前／拒否／cancelはwrite 0。承認後だけcreate／updateし、XV-002と同じ位置・4色・emoji／ラベル／意味文・軸と無関係Sheet／branch保持を満たす | preview応答、before／after file hash／Sheet／branch inventory、native validation、screenshot／style inspection |
+| XV-004 | High | Mermaid quadrantをstyle利用可／不可の両fixtureで生成し、スクリーンリーダー相当の文字情報を検査 | `q1=右上 🔵 実行待ち`、`q2=左上 🟢 定着・検証`、`q3=左下 🟡 暫定実装・要再確認`、`q4=右下 🔴 設計・意思決定`。style可能なときは同じ4 hex color、style不可でもemoji／ラベル／意味文／軸が残り、色だけに依存しない | raw `.mmd`、render screenshot／DOMまたはSVG text／style inspection、accessibility review |
+
+---
+
+# 14. Daily／Weekly／Portfolio
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| PF-001 | High | open PJ複数 | Portfolio rollup生成 | rollup.json |
+| PF-002 | Critical | closed PJ | 通常rollupから除外 | output |
+| PF-003 | High | daily morning | `今日の要確認`を独立sectionで表示 | live output |
+| PF-004 | High | TODO／Attention同内容 | 自動重複タスク化しない | output、Notion check |
+| PF-005 | High | most critical | 理由付き最優先Item | output |
+| PF-006 | High | no Attention | 「現在判断不要」と簡潔表示 | output |
+| PF-007 | Medium | evening | Decision／実装／候補／Driftを分離 | output |
+| PF-008 | Medium | weekly | Attention増減とDrift解消を表示 | output |
+| PF-009 | High | link stale project | Portfolioにstale表示 | output |
+| PF-010 | High | source failure | 取得できた範囲と未確認範囲を分離 | output |
+| PF-011 | Medium | project counts | 全Item数ではなくAttention中心 | UX review |
+| PF-012 | High | Context size | dailyが全stateを読み上げない | output size |
+
+---
+
+# 15. Notion／既存機能回帰
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| RG-001 | Critical | Clarity Item作成 | Notion Task自動作成0件 | adapter log |
+| RG-002 | Critical | 「これをタスク化」 | 既存notion-tasksへ委譲し確認境界維持 | live test |
+| RG-003 | Critical | projects create／complete／reopen | 既存回帰合格 | suite |
+| RG-004 | Critical | daily既存予定／TODO | Clarity追加後も回帰なし | suite |
+| RG-005 | Critical | weekly | 既存集計回帰なし | suite |
+| RG-006 | Critical | memory authorization | Clarity scopeへ漏れない | suite |
+| RG-007 | Critical | Chatwork | config／workflow／history境界不変 | suite |
+| RG-008 | Critical | Google Chat | OAuth／SPACE／history境界不変 | suite |
+| RG-009 | Critical | vault-search | 10_sources read-only不変 | suite |
+| RG-010 | Critical | identity／rename | Clarityで回帰なし | suite |
+| RG-011 | Critical | plugin update | migration／version gate回帰なし | suite |
+| RG-012 | High | Harness connection | SecretaryへHarness本体を同梱しない | tree check |
+
+---
+
+# 16. Git／Filesystem／Security
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| GS-001 | Critical | preexisting unstaged change | 内容と状態を保持 | before／after diff |
+| GS-002 | Critical | preexisting staged change | stage状態を保持 | index diff |
+| GS-003 | Critical | Clarity commit | owned pathsだけを含む | commit diff |
+| GS-004 | Critical | failed apply | user dirtyへrollback作用なし | failure injection |
+| GS-005 | Critical | unexpected push | 実行しない | remote log |
+| GS-006 | Critical | branch／remote／visibility | 変更しない | before／after |
+| GS-007 | Critical | root外symlink | 拒否 | negative test |
+| GS-008 | Critical | `..`／absolute path injection | 拒否 | negative test |
+| GS-009 | Critical | concurrent hooks | JSON破損なし | stress test |
+| GS-010 | High | lock残骸 | doctor／recovery可能 | failure fixture |
+| GS-011 | Critical | Secret scanner | Clarity managed filesにSecret 0件 | scanner |
+| GS-012 | Critical | Xmind credential | Repo 0件 | scanner |
+| GS-013 | Critical | transcript path absolute | committed metadataへ保存しない | repo scan |
+| GS-014 | High | generated overwrite | plugin-owned generatedだけ再生成 | diff |
+| GS-015 | Critical | schema corruption | safe stop、正本破壊なし | negative test |
+
+---
+
+# 17. Idempotency／Migration／Doctor
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| IM-001 | Critical | same checkpoint retry | Event／Evidence重複0件 | counts |
+| IM-002 | Critical | same sync retry | import／event重複0件 | counts |
+| IM-003 | Critical | same link finalize retry | link重複0件 | links.json |
+| IM-004 | High | state rebuild retry | byte同一 | hash |
+| IM-005 | High | map render retry | byte同一 | hash |
+| IM-006 | Critical | migration preview | write 0件 | diff |
+| IM-007 | Critical | migration apply | schema更新、history保持 | before／after |
+| IM-008 | Critical | migration failure | old schemaを利用可能なまま保持 | failure injection |
+| IM-009 | High | newer unknown fields | roundtripで不要破壊しない | fixture |
+| IM-010 | High | doctor healthy | mode、schema、Hook、link、Xmind状態を表示 | output |
+| IM-011 | High | doctor broken link | 原因と修復候補を表示 | output |
+| IM-012 | High | doctor hook untrusted | trust確認方法を示す | output |
+| IM-013 | High | doctor stale runtime | 安全なcleanup preview | output |
+| IM-014 | Critical | cleanup apply | owned runtimeだけ削除 | tree |
+
+---
+
+# 18. Packaging／Release
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| PK-001 | Critical | Claude manifest | version／description／skills整合、標準`hooks/hooks.json`の重複宣言なし | validator |
+| PK-002 | Critical | Codex manifest | version／skills／hooks整合 | validator |
+| PK-003 | High | marketplace manifests | source／version／metadata整合 | tests |
+| PK-004 | Critical | host inventory | Clarity追加とhost差分が記録 | file、test |
+| PK-005 | Critical | skill inventory count | actual treeと一致 | inventory test |
+| PK-006 | High | CHANGELOG | 利用者向けに日本語で説明 | file |
+| PK-007 | Critical | existing release regression | 全suite green | command results |
+| PK-008 | High | Git-free archive | pluginが動く／validator合格 | archive gate |
+| PK-009 | High | clean checkout |同一candidateで合格 | clean gate |
+| PK-010 | Critical | live status | 未検証hostをverifiedにしない | status artifact |
+| PK-011 | Critical | public upstream | 明示許可なしにwrite／pushしない | remote evidence |
+| PK-012 | High | private candidate | current repo方針に従ってversion一貫 | manifests |
+
+---
+
+# 19. UX／日本語
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| UX-001 | High | 日本語UI | Clarity、象限、Attentionを日本語で自然に表示 | outputs |
+| UX-002 | High | 重要項目あり | 結論、理由、根拠、次の選択が分かる | UX review |
+| UX-003 | Medium | 情報多数 | 重要項目を先にし、全件を押し付けない | output |
+| UX-004 | High | AI推定 | 推定であることを明示 | output |
+| UX-005 | High | 未検証 | 未検証を断定しない | output |
+| UX-006 | Medium | technical handoff | command、path、error、証拠、残課題を保持 | final report |
+| UX-007 | Medium | matrix label | 「決定×実行クラリティマトリクス」で統一 | repo search |
+| UX-008 | Medium | old English labels | user-facingへ不要に露出しない | repo search |
+| UX-009 | High | no Attention | 安心できる短い表示 | output |
+| UX-010 | Medium | error | 何が起きたか、変更有無、次の一手が分かる | output |
+
+---
+
+# 19A. Sprint 050 Patch 003 — Canonical freshness／Ancestor root alias
+
+## Canonical freshness
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| CF-001 | Critical | development-pointerのlocal正本checkoutが利用可能。`canonicalRepo`記載path自体がworkspace ancestor alias配下のfixtureを含む | Project statusがpointerの「最初に読むファイル」、物理Repo identity、Git current state、Clarity状態をClarity内部root policyでbounded readする | observed paths／bytes、policy source、identity、Git snapshot、Clarity status |
+| CF-002 | Critical | workspace snapshotと正本repoの内容／時刻が異なる | 両根拠とobserved at／freshnessを分け、snapshotだけを最新状態へ昇格しない | status output、source revision、timestamps |
+| CF-003 | Critical | daily／weekly／Portfolioにlocal development-pointerを含む | 各surfaceが同じ正本観測意味を使い、bounded Attentionと未確認理由を保持する | surface outputs、observation digest、read limits |
+| CF-004 | Critical | remote URLだけでlocal checkoutなし | clone／fetch／pull／network 0。現在のadapterに許可済みread-only evidenceが無ければ`unavailable` | external operation log、output reason、Git／tree snapshot |
+| CF-005 | Critical | 正本repoにSecret、binary、巨大file、内部symlink | 値／本文／symlink先を読まず、excluded／uninspectedへ理由を示し、workspaceへ全文複製しない | canary、read report、workspace diff、secret scan |
+| CF-006 | Critical | 正本repoがmissing／unsafe／unreadable／stale | `source_unreachable`相当を表示し、包括的なcurrent／aligned／driftなしを断定しない | negative outputs、changed false、snapshot wording |
+| CF-007 | Critical | 全canonical observation経路 | 正本repoへのwrite／fetch／pull／push／checkout／branch／remote／network 0、dirty／staged／untracked不変 | before／after filesystem・Git、operation log |
+
+## Ancestor root alias
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| AR-001 | Critical | ancestor aliasに対し、一般`workingRoot`はoption省略／false、対応するClarity入口は内部root policyを使う | 一般入口は従来どおり`working-root-unsafe`で拒否し、Clarity入口は利用者操作なしで次のClarity判定へ到達するnegative control | policy source、error code、changed false、before／after |
+| AR-002 | Critical | alias/workspace/repoでworkspaceだけsymlink、Clarity指定入口の内部policy true | 未初期化はalias／physicalとも同じ次の`clarity-not-initialized`へ到達し、初期化済み`link-identity`は両方成功する | commands、policy source、exit、error／result、actual path |
+| AR-003 | Critical | 同一Repoをalias／physicalから識別 | Repo identity、Clarity Project ID、Git top-level identityが一致する | identity JSON、digests |
+| AR-004 | Critical | alias／physicalでinit previewとClarity-owned apply | previewは両方`changed:false`。apply fixtureは物理Repo内の宣言済み`.clarity/**`だけを変更し、alias別tree／外部rootへwriteしない | preview JSON、physical tree diff、canary |
+| AR-005 | Critical | working root自身がsymlink | Clarity内部policy trueでも`root-self-symlink`相当で拒否する | distinct error、changed false |
+| AR-006 | Critical | Repo内`.clarity`またはwrite targetが外向きsymlink | 参照先を追わず`root-internal-symlink`相当で拒否する | external canary、distinct error、tree diff 0 |
+| AR-007 | Critical | ancestor aliasがbroken | 次のClarity判定へ進まず、root解決で安全に拒否する | error、write 0、Git snapshot |
+| AR-008 | Critical | root解決後にalias target差替え／物理root identity変更 | 重要read／write直前の再確認で停止し、旧／新rootともcanonical変更0件 | failure injection、root identities、tree digests |
+| AR-009 | Critical | link prepare／accept／finalizeをalias経由で実行 | tracked link bundleのabsolute local path 0、alias／physical identity同一 | bundle scan、identity、repo scan |
+| AR-010 | Critical | dirty／staged／untracked、branch／remoteありRepoをalias経由で操作 | 全成功／失敗fixtureで内容とGit状態を保持する | index／worktree／HEAD／branch／remote snapshot |
+| AR-011 | Critical | Drift decision／implementation locatorがsymlink。read-only比較だけを実行し、resolve／apply／Git commit経路は使わない | root ancestor内部policyと無関係にlocator symlink拒否を維持する | comparator negative、canary、Evidence 0、Git snapshot |
+| AR-012 | Critical | macOS `/var`→`/private/var`、`/tmp`→`/private/tmp` | 既存platform alias正規化が回帰せず、host固有home／volume pathをhard-codeしない | macOS commands、realpath、source scan |
+| AR-013 | Critical | ancestor symlinkが通常fileまたはdirectory以外を指す | 物理rootとして採用せず副作用0件で拒否する | lstat／realpath、error、tree diff 0 |
+| AR-014 | Critical | CLI／core／link／projection／Drift／Secretary adapter／Hookの全Repo root指定入口。canonicalRepo記載path自体がancestor alias配下の組合せを含む | 同じClarity内部root policyとphysical containmentを使い、ancestor可・root自身・内部unsafe・root changedのerrorを区別する | entrypoint matrix、policy source、expected／observed codes、write set |
+
+Patch専用caseは既存primary 250、CLX 20、XV 4へ数えない。関連する`ST-008`、`LK-007`、`CLX-006`、
+Git／packaging回帰は意味・Severity・初回割当を変えず直接再実行する。
+
+---
+
+# 19B. Sprint 050 Patch 004 — Harness-aware comprehensive init／Windows native
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| HS-001 | Critical | `src/`／`scripts/`だけで2 MiB超になるHarness Repo。state、spec、current contract／progress／feedbackは後方のpathに置く | generic budgetに先に達してもauthoritative reserved laneが5正本群を確認し、`truncated`でも正本coverageを失わない | lane別budget／使用量、inspected paths、候補bundle、tree digest |
+| HS-002 | Critical | 同サイズの非Harness Repoと、Harness markerがpartial／invalidなRepo | 非Harnessは既存generic候補・上限・順序を維持し、partial／invalidをHarness完全検出へ昇格しない | baseline／candidate candidate set、detection reason、coverage digest |
+| HS-003 | Critical | stateのCurrent IDが有効で、contract、progress、feedbackが揃う | state=`orchestrator-execution-truth`、contract=`requirements`、progress=`generator-self-report`、feedback=`evaluator-validation`として区別し、同じCurrent Sprintの一貫したbundle／Evidenceへまとめる | candidate JSON、role fields、source locators、Item／Evidence件数 |
+| HS-004 | Critical | Current contract／progressはあるがfeedbackがまだ無い | `evaluation-not-yet-recorded`相当を返し、scan-limit／PASS／FAIL／uninspectedへ誤分類しない | coverage reason、candidate bundle、stdout／JSON |
+| HS-005 | Critical | Current IDがTBD、missing、またはinvalid。Next Planned／直近完了根拠の有無を組み合わせる | bounded fallbackだけを使い、根拠と推測を明示する。filename辞書順／mtimeだけでCurrentを確定しない | state snippets、fallback source、reason、deterministic rerun |
+| HS-006 | Critical | stateが1 file上限超、長大historyを持つがCurrent metadata／該当sectionはboundedに解決可能または解決不能 | 無制限readせずbounded sectionを使う。解決不能はpartial／uninspectedで停止し、完全coverageと表示しない | bytes read／limit、section locator、partial reason、memory／timing bound |
+| HS-007 | Critical | authoritative pathがSecret-like、binary、root内symlink、permission unreadable、missingを個別に持つ | 値／本文／link先を読まず、sourceごとにexcluded／uninspected／not-foundと固有理由を返す | secret canary、read log、external canary、coverage report |
+| HS-008 | High | authoritative laneの一部成功・一部失敗とgeneric truncationを同時に起こす | laneごとのinspected／excluded／uninspected、budget、partial理由を返し、「包括的確認済み」と誤表示しない | preview JSON／human output、counts、reason mapping |
+| HS-009 | High | 同じCurrent Sprintのstate／contract／progress／feedbackと多数の過去Sprint文書がある | 1 file 1 noisy ItemへせずCurrent bundleを安定生成し、全過去feedbackをItem化しない。同一inputでcandidate ID／順序／digestが安定する | Item／Evidence一覧、rerun digest、past-file non-selection |
+| HS-010 | Critical | Sprint 050 Patch 003のancestor alias経由とphysical pathでHS-001 fixtureをpreview | Repo identity、candidate IDs／意味／順序、coverage digestが一致し、一般rootの既定拒否とClarity内部policyを維持する | alias／physical JSON、identity／digest、AR negative controls |
+| HS-011 | Critical | dirty／staged／untracked、branch／remoteを持つfixtureでpreview、cancel、synthetic apply、failure injection | preview／cancelは`changed:false`、applyは物理Repo内の宣言済みClarity所有pathだけ。Git状態、外部canary、networkは不変 | before／after tree・Git、write set、operation log |
+| HS-012 | Critical | Windows native temp rootのdrive letter配下で、backslash、空白、日本語、CRLFを含むHarness fixtureをscan／preview／identity | POSIX separator／Bash変換なしで正本coverageとidentityが成立し、preview write 0 | Windows OS／Node、native paths、commands、coverage、Git snapshot |
+| HS-013 | Critical | Windows nativeでcase-only collision、reserved名、invalid path表現、前方一致する別rootのpath参照／入力を個別fixtureとして製品へ渡す。OS上に作成不能なreserved／invalid実fileを強制作成しない | collision／invalid／outsideをpreflightまたは安全なfilesystem観測から固有理由でfail closedし、別file／別rootを同一視しない | requested path、expected／observed error、filesystem probe、canary、changed false |
+| HS-014 | Critical | Windows nativeでsymlink作成capabilityとjunction作成capabilityを別々に観測し、各capabilityでancestor aliasとroot内boundaryを実行可能な範囲で試す | 実行可能な種類はpositive／negativeを直接評価。symlinkのDeveloper Mode／権限理由をjunctionへ流用せず、種類ごとの不足はSKIP／NOT-RUNとしてPASSやWindows全保証へ数えない | symlink probe、junction probe、種類別case status／reason、before／after |
+| HS-015 | Critical | `.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobへClarity suiteを結線し、許可済みexact candidate branch pushから既存PR CI、必要時は同candidateのworkflow dispatchを実行 | 既存0.9.2回帰と`timeout-minutes: 10`を維持し、scanner／init preview／identity／安全caseを集計する。0 FAILの因果的実runまで`windowsVerified=false`。未実行／CI不能とrunner内product failureを区別する | candidate SHA／branch／push、workflow path／job／run ID、OS／Node、command、PASS／FAIL／SKIP／NOT-RUN、classification |
+| HS-016 | Critical | 同じcandidateでmacOS／Linux portable suite、Sprint 041、Sprint 050 Patch 003、inventory／Git-free回帰を実行 | 旧bounded init、ancestor alias、Secret／symlink、generic scan、inventoryが0 product FAIL。platform固有caseを別OSへ偽装しない | commands、exit、case totals、inventory digest、not-run mapping |
+
+HS caseは既存primary 250、CLX 20、XV 4、CF／AR 21へ数えない。Windows native証拠は正式Windows runnerまたは
+同等の実Windows環境から取得し、macOS上のWindows風文字列fixtureは補助negativeにだけ使う。
+
+---
+
+# 19C. Sprint 050 Patch 005 — State structure／Secret redaction
+
+| ID | Severity | シナリオ | 期待結果 | 必須証拠 |
+|---|---|---|---|---|
+| SR-001 | Critical | current public sourceの実`docs/sprints/state.md`をread-only scanする。履歴説明にはcredential field名とplaceholderのコード例がある | Current ID／status／Next Planned／該当table rowを解決し、state・contract・progress・feedbackの4 roleとCurrent bundleを保持する。無害な履歴説明だけでwhole-fileを`secret-like-content`除外しない | command、state locator、構造field、4 role、bundle、coverage、changed false |
+| SR-002 | Critical | inline code、fenced code、過去の検査説明、複数のcredential field名、`<literal>`／`${PLACEHOLDER}`／伏字等の無害な例を別々にstateへ置く | exact文字列allowlistに依存せず、実行状態の構造と非構造本文を分ける。全positiveでCurrent／4 roleが一致し、本文をcandidateへ採用しない | fixture class、期待／観測Current、candidate IDs、rerun digest、source scan |
+| SR-003 | Critical | runtimeで生成したsynthetic Secret-like値をstateの履歴本文へ混在させる。値はtracked fixtureへ保存しない | 値と周辺本文を出力せず、Current／status／Next Planned／該当rowと4 role locatorは保持する。sourceは必要に応じて`redacted`／`partial`と理由を返し、validationを推測しない | canary non-occurrence、構造field、coverage／reason、stdout／JSON scan |
+| SR-004 | Critical | 低エントロピーを含む複数のruntime Secret候補を同じstate構造へ順に入れ、返却digest／candidate／Evidenceを比較する | unredacted whole-file／Secret span由来digestを返さず、候補辞書から値を照合できない。sanitized構造metadataが同じなら安全なcoverage／candidate digestは安定し、値の違いを外部へ漏らさない | in-memory candidate matrix、returned digest比較、raw hash不在、output scan |
+| SR-005 | Critical | contract、progress、feedback、spec reference、root guidance、package manifest、generic fileへ同じSecret-like inputを個別に置く | state専用の構造抽出を他sourceへ広げず、既存strict sensitive-name／Secret-like exclusionを維持する。値、本文、symlink先を読まず固有coverage理由を返す | sourceごとのcoverage／reason、canary、read log、external canary |
+| SR-006 | Critical | Yasashii相当のstateで無害な履歴説明とsynthetic Secret spanを128 KiB枠の先頭／中間／末尾、Current metadata／table rowの前後へ配置する。巨大stateも含む | bounded readを維持し、範囲内の安全なCurrent metadata／該当rowを決定的に解決する。範囲外・分断fieldはpartial／uninspectedとし、無制限readや完全coverageへ昇格しない | bytes read／limit、placement matrix、section locator、partial reason、timing bound |
+| SR-007 | Critical | Current ID valid／TBD／missing／invalid、Next Planned／last completion fallback、feedback absentを、無害本文／Secret本文と組み合わせる | 各state reasonとfallback sourceを維持し、安全なfallbackだけをinferred bundleへ使う。Secret本文によってCurrentをnull化せず、構造field自体がunsafeならそのfieldだけunresolvedにする | state snippets、fallback source、bundle、coverage、deterministic rerun |
+| SR-008 | Critical | public source／clean checkout／Git-free candidateでcommon runtimeを固定し、private my-vault→Yasashii handoff入力を検査する | `clarity.mjs`、`clarity-core.mjs`、`clarity-harness-scan.mjs`の3 pathとcandidate identityが固定される。下流のbyte-sync要件、保護path、順序を示すが実downstreamへwriteせず、public PASSを下流PASSへ昇格しない | candidate SHA、3 path digests、handoff scope／order、downstream write log 0 |
+| SR-009 | Critical | 同じcandidateでnon-Harness generic、4 role意味分離、ancestor alias／physical、Secret／binary／symlink、preview／cancel、dirty／staged／untracked、Git／networkを回帰する | Sprint 041／047／049／050 Patch 003／004の既存意味が0 product FAIL。previewは`changed:false`、alias identity／coverage一致、Git／external canary／network不変、inventory漏れ0 | commands、case totals、before／after tree・Git、identity／coverage digest、inventory result |
+| SR-010 | Critical | 既存PR #11のexact candidateをWindows Server 2025／Node 22の既存`windows-native` jobで実行する | SR Target、既存0.9.2回帰、HS／portable pathが0 FAILで、`timeout-minutes: 10`を維持する。別OS結果をWindows PASSへ流用せず、外部writeは同branch通常pushと因果CIだけ | candidate SHA／branch、run／job、OS／Node、command、totals、external operation log |
+
+SR caseは既存primary 250、CLX 20、XV 4、CF／AR 21、HS 16へ数えない。Secret negativeはruntime生成canaryを使い、
+実値、raw-content digest、周辺本文をtracked file、stdout、screenshot、feedbackへ残さない。public PASS後のprivate my-vault／Yasashiiは
+各repoの別Harnessと独立Evaluatorで扱い、SR-008のhandoff入力だけをPASS証拠として流用しない。
+
+---
+
+# 20. 最終E2Eシナリオ
+
+## E2E-001: StandaloneからSecretary連携
+
+1. Clarity無しのsynthetic code Repoを作る。
+2. Codexでinit previewを実行する。
+3. confirmして初期化する。
+4. Itemを4象限に配置する。
+5. Mermaidを生成する。
+6. Claude Codeで同じRepoを開き、SessionStart Briefを確認する。
+7. 実装変更を行い、Stop checkpointを確認する。
+8. Agentic Secretary PJでlink prepareを実行する。
+9. code Repoでacceptする。
+10. Secretary側でfinalizeする。
+11. 双方でsync preview／applyする。
+12. daily PortfolioへAttentionが出ることを確認する。
+13. integration ONでprovider resolverを実行し、capable Xmind MCPならexternal preview／明示承認後にcloud map、MCP不可／失敗ならlocal preview／明示承認後にlocal `.xmind`を生成する。未承認ではwrite 0件とする。
+14. Xmindで状態を動かし、proposalになることを確認する。
+15. proposalを承認し、両側のprojectionへ反映する。
+
+期待結果。
+
+- Clarity Project IDは初期化時から不変
+- cross-root write 0件
+- Decision推定は人間確認まで未確定
+- Hook loopなし
+- dailyで最重要Attentionが表示
+- Git／Secret／既存機能回帰なし
+
+## E2E-002: 匿名CRM導入PJFixture
+
+repo内の実行正本である「匿名CRM導入PJ」合成fixtureから、外部添付・実顧客file・absolute pathに依存せずmapを生成する。最低限次のbranchを持つ。
+
+- 左上 🟢 定着・検証／安定している／`#16A34A`
+- 右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`
+- 左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`
+- 右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`
+- 将来アイデア
+
+上軸は「決まっている」、下軸は「まだ決まっていない」に固定し、「赤=判断、黄=確認、青=実行、緑=安定」を色だけでなくemoji／ラベル／意味文でも読めるようにする。各branchに複数areaとItemを配置し、Itemの状態遷移でbranch移動と構造Sheetのbadge更新が同期すること。
+
+## E2E-003: Driftキラー体験
+
+1. Decisionとして「メールアドレスを第一キー」と確定する。
+2. 実装fixtureは`customer_id`優先にする。
+3. reviewを実行する。
+4. Critical Driftを検出する。
+5. Decisionと実装の両根拠を表示する。
+6. 実装修正後にDriftを解消する。
+7. 履歴を保持する。
+
+## E2E-004: Morning Brief
+
+複数PJに次を作る。
+
+- 実装済み・未決定 2件
+- 決定済み・未実行 1件
+- Drift 1件
+- idea 5件
+- 正常 20件
+
+morning outputは、ideaや正常20件を詳細表示せず、判断が必要な4件と最優先Driftを示すこと。
+
+---
+
+# 21. PASS判定
+
+Project Clarity全体をPASSにする条件。
+
+- Critical項目が全件PASS
+- High項目に未解決の主要機能欠落がない
+- Claude CodeとCodexを別々に実検証
+- Standalone、Secretary-local、Linked、Portfolioの全モードがPASS
+- Drift E2EがPASS
+- Hook無限ループ負例がPASS
+- dirty worktree／Secret／path guardがPASS
+- 既存master regressionがPASS
+- Xmind MCP未接続時の`fallback-approval-required`／承認／`stopped`／write 0境界がPASS
+- Xmind integration ONでMCP-first provider resolverがPASSし、MCP不可／失敗からlocalへの切替は承認前write 0となる
+- Xmind MCPのexternal liveが承認済みならreal create／updateとfixed visualを実検証する。未承認ならadapter contract／isolated fakeとtruthful NOT-RUNを証拠化し、fakeでverifiedにしない
+- 承認済みlocal `.xmind`とMermaidがfixed visual／accessibilityを満たす
+- current candidateのmanifest、inventory、versionが整合
+- 証拠がfeedbackに記録
+- state.mdをOrchestratorが更新
+
+条件未達を`done`にしない。ユーザーが記録済み短所を明示的に受け入れた場合だけ、既存規則に従って`done-by-user-decision`を使用する。

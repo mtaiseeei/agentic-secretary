@@ -851,3 +851,308 @@ current-configはtransaction対象、user-contentは個別opt-in、historical-au
 Identity managed sectionはAGENTS／CLAUDE内の製品所有範囲であり、利用者自由記述やuser-scope guidanceとは別概念である。
 Migration ledger recordは管理対象pathと版・基準の判定metadataであり、display name、stable ID、author本文を正本として持たない。
 Plugin更新完了、ローカルmigration完了、user-scope routing有効化は別の状態として報告する。
+
+## Project Clarity
+
+### CanonicalRepoObservation
+
+`development-pointer`／`canonicalRepo`を持つProjectのClarity-aware表示は、workspace側の`PROJECT.md` snapshotと
+正本repoの現在観測を別の根拠として扱う。`CanonicalRepoObservation`は次を持つ。
+
+- source kind: `local-checkout / supplied-read-only-provider / remote-only / unavailable`
+- availability: `available / stale / missing / unsafe / unreadable / unavailable`
+- pointer上の「最初に読むファイル」と、そのbounded確認結果
+- 物理root基準のRepo identity、Git kind／HEAD／branch／dirty・staged・untracked有無、remote identityの非機密summary
+- Clarity canonicalの`initialized / not-initialized / unsafe / unreadable`と、確認できた場合のProject ID／state revisionの最小summary
+- observed at、source revision、inspected／excluded／uninspected、freshness、利用者向けreason
+
+local checkoutが実在する通常directoryなら自動readする。remote URLだけではclone／fetchせず、Clarity coreからprovider／networkを
+起動しない。現在の用件で利用可能かつ許可済みのread-only provider evidenceがadapterへ供給された場合だけ取り込む。
+「最初に読むファイル」は物理root内の安全な相対pathである通常fileだけを読み、absolute path、traversal、symlink、missing、
+directory、上限超過は理由つきのuninspectedとする。freshnessは`current-at-observation / stale-snapshot / unknown`を区別し、
+観測時刻とsource revisionなしに`current-at-observation`へしない。
+観測はSecret、binary、巨大file、root内symlink、本文全文を追わず、workspace側へ正本内容を複製しない。
+観測できない場合は`source_unreachable`相当の根拠不足として扱い、古いsnapshotからcurrent alignmentやDriftを確定しない。
+
+### HarnessAuthoritativeScan
+
+Clarity initは一般file候補を探す`generic` laneと、Harness正本を確認する`authoritative` laneを分ける。
+Harness laneは`docs/sprints/state.md`等の構造を安全に確認できたRepoだけで有効になり、非Harness RepoへHarness意味を推測しない。
+
+`HarnessAuthoritativeScan`は少なくとも次を持つ。
+
+- detection: `harness / non-harness / partial / invalid`と根拠
+- lane別のbyte／file／entry budget、使用量、`inspected / excluded / uninspected / not-found`
+- state observation: Current ID、status、Next Planned、source section、partial／invalid理由
+- spec indexと、boundedに解決した必要spec参照
+- current contract、progress、feedbackのlocator、digest、coverage、意味role
+- root guidanceとpackage manifestのcoverage
+- fallback source、推測の有無、confidenceではなくtruthful reason
+
+意味roleは固定する。stateは`orchestrator-execution-truth`、contractは`requirements`、progressは
+`generator-self-report`、feedbackは`evaluator-validation`である。progressの完了報告をEvaluator PASSへ昇格しない。
+current feedbackが存在しない場合は`evaluation-not-yet-recorded`、pathがあるが上限や安全境界で読めない場合は
+`uninspected`または`excluded`とする。scan-limit、not-found、invalidを同じ状態へ潰さない。
+
+Current IDは最初にstateから解決する。TBD、missing、invalid、巨大stateでは、`maxFileBytes`を単純拡大せず、bounded metadata／該当section、明示された
+Next Planned、直近完了記録等の許可されたfallbackだけを使い、どの根拠を使ったかを表示する。filenameの辞書順やmtimeだけで
+currentを確定しない。巨大stateを全文無制限に読むことも、過去feedbackを全件Item化することも行わない。
+
+state observationはMarkdown本文全体の安全判定と同義ではない。Current ID、Next Planned、Sprint tableのID／status等、実行状態を
+構成する既知の構造だけをboundedに認識し、履歴説明、inline code、コードblock、自由記述はexecution truthへ採用しない。
+credential field名、placeholder、過去のSecret検査説明等の非機密記述があっても、構造fieldが安全に解決できる限りCurrent ID、status、
+fallback source、4 role locatorを保持する。無害判定を特定のexact文字列だけのallowlistへ固定しない。
+
+実値らしいSecretを含むspanは構造metadataと分離し、値と周辺本文を返さない。そのsourceは必要に応じて`redacted`または`partial`とし、
+reasonと構造field単位のcoverageだけを返す。外部へ出せるdigestはredaction後の構造metadataと非機密locatorから決定的に作り、
+unredacted state bytes、Secret span、Secret値を含むwhole-file hashをcandidate／summary／Evidenceへ使わない。特に低エントロピー値の
+推測照合に使えるraw-content digestを公開しない。構造metadata自体にSecretが混入して安全に分類できない場合は、そのfieldだけを
+unresolvedとして扱い、値を補完・正規化・要約しない。
+
+候補化では同じCurrent Sprintのstate、contract、progress、feedbackを1 file 1 Itemへ機械変換せず、Decision、Execution、
+ValidationとEvidence参照へ一貫して束ねる。正本本文をClarityへ複製せず、relative locator、digest、短いsummary、観測時刻を使う。
+authoritative laneの後にだけ、残余budgetでgeneric laneを実行する。
+
+pathの比較とcontainmentはhostのfilesystem意味とNodeのplatform path APIへ従う。Windowsではdrive letter、backslash、空白、
+日本語、CRLF、case-insensitive collision、reserved／invalid path、junction／symlink capabilityを区別する。作成権限がない
+symlinkとjunctionは別々にcapabilityを観測する。symlink作成のDeveloper Mode／権限理由をjunctionへ流用せず、実行不能fixtureは
+`not-run-capability`等の理由を返して別caseの成功へ数えない。alias pathとphysical pathは同一Repoで
+同じ候補bundleとcoverage digestを返し、tracked dataへabsolute local pathを保存しない。
+
+Windows external live gateは、candidate SHA固定後の`origin`同branchへの通常pushと、そのSHAをcheckoutする
+`.github/workflows/windows-recording-regression.yml`の`windows-native` job、必要時の同一SHAへの`workflow_dispatch`から成る。
+既存0.9.2回帰と`timeout-minutes: 10`を保持する。offline scan／preview／fixtureはnetwork／external write 0のままで、live gateの
+push／Actionsだけを別operation logへ記録する。gate未実行／CI利用不能は`external-live-gate-unavailable`またはverification-infra、
+runner内のcandidate因果assertion failureはproductとして分離し、いずれも`windowsVerified=false`を維持する。
+
+Sprint 050 Patch 005で更新するpublic common runtimeの固定面は、少なくとも次の3 pathである。
+
+- `plugins/secretary/scripts/clarity.mjs`
+- `plugins/secretary/scripts/lib/clarity-core.mjs`
+- `plugins/secretary/scripts/lib/clarity-harness-scan.mjs`
+
+public candidateのsource／clean checkout／Git-freeでこの3 pathとstate構造抽出の意味を固定し、独立Evaluator PASS後だけ
+private my-vault、次にYasashiiへ宣言済みcommon pathとして渡す。Yasashiiのpublic fixed candidateは3 pathのbyte-syncを必要とするが、
+public PASSをYasashii PASSへ流用しない。private／Yasashiiの版固有正本、Harness state、spec、progress、feedbackを同期対象にしない。
+
+### ClarityRootPolicy
+
+root policyは少なくとも`allowAncestorSymlinks`を持ち、既定は`false`である。一般`workingRoot(value)`はoption省略時もfalseであり、
+共通filesystem処理と他Skillはfalseのまま使う。Clarity専用root resolverだけが、次のRepo root指定入口から呼ばれたrequestで
+`allowAncestorSymlinks: true`を内部指定する。これは利用者向けCLI flag／設定ではない。
+
+- Clarity CLIのRepo root指定
+- Clarity coreの公開操作にあるRepo root指定
+- link prepare／accept／finalize等のlocal Repo root指定
+- projectionのRepo root指定
+- DriftのRepo root指定。ただしDecision／implementation source locatorには適用しない
+- Secretary adapterの`canonicalRepo` local rootとSecretary-local Clarity root指定
+- Clarity Hookのcwd／Repo root discovery
+
+各入口の結果は、適用policyがClarity internal opt-inであり`allowAncestorSymlinks: true`だったことを識別できる情報を返す。
+trueでも要求されたworking root自身はsymlinkであってはならず、ancestor aliasだけをrealpathで物理rootへ固定する。物理rootは
+実在する通常directoryで、Git RepoではGit top-levelの実体と一致しなければならない。
+
+root observationは要求path、物理root、ancestor chain、root filesystem identity、Repo identityをrequest中だけ保持し、重要なreadと
+各write／rename直前に再確認する。realpath文字列が同じでも物理rootの実体が差し替わった場合を含め、alias targetまたはfilesystem
+identityが変われば`changed: false`で停止する。containment、owned path、
+canonical lock、runtime、projection、link、Drift、Secretary adapter、Hookは全て物理root基準であり、root内symlinkやsource locator
+symlinkは従来どおり拒否する。tracked Clarity data／link bundleへ要求path・物理rootのabsolute local pathを保存しない。
+
+macOSの`/var`→`/private/var`、`/tmp`→`/private/tmp`という既存platform aliasは従来の正規化を維持する。製品契約には
+特定利用者のhomeやvolume名を埋め込まない。
+
+### ClarityProjectとMode
+
+`ClarityProject`はschema version、immutable `clarityProjectId`、名称、mode、作成時刻、Repo identity、
+任意のSecretary link、reader／writer互換範囲を持つ。modeは次の4値である。
+
+| Mode | 正本の位置 | 主な責務 |
+|---|---|---|
+| `standalone` | 対象Repo | Repo自身のDecision／実装Evidence、Attention、projection |
+| `secretary-local` | generic Secretary open PJ | PROJECT／Decision／memoryを参照したPJ内Clarity |
+| `linked-external` | Secretary PJと外部Repoの両方 | 各Repoが自分のauthorityとimport／exportを所有 |
+| `portfolio` | Secretary workspace | open PJの最小rollupと横断Attention |
+
+public版のSecretary-local正本は`secretary/projects/open/<project>/clarity/`を基本とする。private my-vault版での
+`05/02`等へのadaptationはdownstream責務であり、public canonical schemaへprivate pathを埋め込まない。
+
+### ClarityItem
+
+`ClarityItem`は少なくとも次を持つ。
+
+- immutable Item ID、title、area path、kind
+- disposition: `required / candidate / idea / deferred / rejected`
+- Decision: status、source、human confirmation、authority、Evidence refs、updated at
+- Execution: status、authority、Evidence refs、updated at
+- Validation、Alignment、Attention level／reasons
+- owner、decision owner、dependencies、external refs、confidence、timestamps
+
+Decision statusは`unknown / exploring / proposed / confirmed / rejected / superseded`、Execution statusは
+`unknown / not_started / in_progress / implemented / verified / operational / rolled_back`とする。
+Validationは`unknown / pending / passed / failed / waived`、Alignmentは
+`unknown / aligned / possible_drift / drift / not_applicable`とする。
+
+### Quadrantの派生
+
+| Decision | Execution | enum | 日本語表示 |
+|---|---|---|---|
+| confirmed | implemented以上 | `stabilize` | 定着・検証 |
+| confirmed | implemented未満 | `execute` | 実行待ち |
+| confirmed未満 | implemented以上 | `validate` | 暫定実装・要再確認 |
+| confirmed未満 | implemented未満 | `decide` | 設計・意思決定 |
+
+`in_progress`は未実行側だが、表示では進行中を示す。`rolled_back`は実行済み扱いにしない。
+`rejected`／`superseded`はActive Matrixから外して履歴を保持する。`idea`と期限前`deferred`は既定Attentionから外し、
+期限到来後に再評価する。保存されたquadrantが改ざんされてもrebuildで正しい派生値へ戻る。
+
+### Event／Evidence／State
+
+- `ClarityEvent`: event ID、type、Item ID、actor、時刻、最小payloadを持つ純追加の状態遷移。
+- `ClarityEvidence`: Evidence ID、type、source、最小locator、短いsummary、observed at、content digest、sensitivity。
+- `ClarityState`: Eventと現在有効な参照正本から決定的に再構築するprojection。
+
+主なEvidence typeはuser confirmation、project decision、ADR、spec section、meeting reference、git commit／diff、
+pull request、test run、deployment、file reference、task reference、Xmind proposal、agent observationである。
+本文やSecretを複製せず、同じ根拠はdigestとidentityでdedupeする。
+
+### Attention
+
+Attention reasonと既定levelは次をproduct normative、つまり実装と評価が従う製品規則とする。
+
+| reason | 表示例 | 既定level |
+|---|---|---|
+| `implemented_without_confirmed_decision` | 実装済みですが、確認済みの決定がありません | `high` |
+| `confirmed_but_not_executed` | 決定済みですが、実行が開始されていません | `medium` |
+| `decision_implementation_drift` | 決定内容と現在の実装が一致しません | `critical` |
+| `possible_drift` | 決定と実装に差がある可能性があります | `high` |
+| `validation_failed` | 検証に失敗しています | `critical` |
+| `validation_pending_too_long` | 実装後の確認が長期間行われていません | `high` |
+| `undecided_stale` | 未決定のまま長期間滞留しています | `medium` |
+| `authority_conflict` | 2つの正本が異なる内容を主張しています | `critical` |
+| `sync_conflict` | 接続先Repoとの同期結果が競合しています | `high` |
+| `missing_evidence` | 状態を裏付ける根拠が不足しています | `medium` |
+| `dependency_blocked` | 依存項目が未解決です | `medium` |
+| `decision_owner_missing` | 誰が決めるか未設定です | `medium` |
+| `source_unreachable` | 参照先を確認できません | `low` |
+
+priorityはseverity、disposition、impact、urgency、age、dependency、conflict、validation、human overrideから決定的に
+導き、stable tie-breakを持つ。利用者向け表示はscoreより理由を先にする。主要指標はHuman Attention Count、
+Unconfirmed Implementation Count、Decision-to-Execution Lag、Validation Lag、Drift Count、Stale Undecided Count、
+Evidence Freshness、Attention Resolution Timeである。
+
+### Link／Authority／Sync
+
+Linkは`prepared → accepted → active → disabled`のhandshake状態を持ち、link ID、双方のClarity Project ID、
+Repo identity、challenge／content digest、schema compatibilityを照合する。Link Requestは非機密だが、資格情報、
+absolute path、顧客本文を含めない。
+
+authorityはfieldごとに`primary / reference / shared-derived`を持つ。顧客合意、事業方針、scope、goal、priorityは
+Secretary側がprimary、実装、test、technical architecture、deployment evidenceは外部Repo側がprimary、alignment、
+Drift、Attentionはshared-derivedを既定とする。同一fieldのprimary重複はinvalidである。
+
+syncは`previewed → awaiting-confirmation → applied`または`conflict / stale / incompatible / failed`へ遷移する。
+applyは自Repoのimport projectionだけを更新し、source revisionとlast imported revisionを記録する。同じinputのretryは
+import、Event、projection差分0件へ収束する。削除は黙って消さずtombstoneまたはconflictとして扱う。
+
+### Drift
+
+Drift comparisonはDecision／spec／ADR／顧客合意のEvidenceと、current code／commit／test／成果物Evidenceを対にする。
+根拠不足は`unknown`または`possible_drift`、両根拠が揃う不一致は`drift`、整合確認は`aligned`とする。
+AIの意味比較だけで`drift`を確定する場合も、両locatorと比較要約を必須とし、確信できなければ`possible_drift`へ留める。
+Decision変更、実装修正、waiverの解決Eventは過去Evidenceを消さない。
+
+### ProjectionとXmind proposal
+
+Markdown、Mermaid、Xmindは同じStateから生成する。matrix座標の微小jitterはItem ID hashから決定し、project structureは
+area hierarchyを安定させる。Xmindの2必須Sheetはクラリティマトリクスとプロジェクト構造である。
+Xmind上のtopic追加、title／area／disposition／status変更は`XmindProposal`として取り込み、承認／拒否EventまでStateを変えない。
+
+4象限visualはproviderによらず次に固定する。配置順とhex colorを入れ替えない。
+
+| 位置 | enum | emoji／ラベル | 意味文 | 色 |
+|---|---|---|---|---|
+| 左上 | `stabilize` | 🟢 定着・検証 | 安定している | `#16A34A` |
+| 右上 | `execute` | 🔵 実行待ち | あとは進めるだけ | `#2563EB` |
+| 左下 | `validate` | 🟡 暫定実装・要再確認 | 注意して確認する | `#D97706` |
+| 右下 | `decide` | 🔴 設計・意思決定 | 人間の判断が必要 | `#DC2626` |
+
+上軸は「決まっている」、下軸は「まだ決まっていない」である。意味のmnemonicは「赤=判断、黄=確認、青=実行、緑=安定」とし、色だけでなくemoji、ラベル、意味文を常に併記する。Xmind MCP、local `.xmind`、利用可能なstyle表現を持つMermaidはこの同一表に従う。
+
+Mermaid Quadrant Chartの軸と象限は次の配置に固定し、実装都合で反転・入替しない。
+
+```mermaid
+quadrantChart
+    title 決定×実行クラリティマトリクス
+    x-axis もうできている --> これからやる
+    y-axis まだ決まっていない --> 決まっている
+    quadrant-1 🔵 実行待ち
+    quadrant-2 🟢 定着・検証
+    quadrant-3 🟡 暫定実装・要再確認
+    quadrant-4 🔴 設計・意思決定
+```
+
+Point座標はStateから決定的に生成する。重なり回避の微小jitterはItem ID hashから導き、同じ入力では位置を変えない。
+
+Xmind integration stateは`enabled`とprovider capabilityを別fieldにする。edition defaultはAgentic／YasashiiがOFF、
+private my-vaultがONである。providerは少なくとも`xmind-mcp`と`local-native`を区別し、`available`、`connected`、`stylePlacementCapable`、`authRequired`、`creditExpected`、`priority`、`selected`、`reason`、`verified`を持つ。ON設定、provider接続、capability、confirmation／credit待ちを同じ状態へ潰さない。OFFからON、ONからOFFは明示設定変更であり、Clarity canonicalと既存Xmind fileを削除しない。
+
+provider resolverは次の状態を正本とする。
+
+| selected state | 条件 | write |
+|---|---|---|
+| `mcp-selected` | integration ON、MCP connected／available、固定配置／色を含む必要capabilityあり | external preview後の明示承認まで0件 |
+| `fallback-approval-required` | MCP未接続／無効／capability不足／失敗／外部操作不承認、またはlocal明示指定 | local理由・対象file／path・create/update／既存影響／auth／credit見込みをpreview中のため0件 |
+| `local-selected-after-approval` | 上記previewに対する利用者の明示承認済み | 承認された対象・影響の範囲だけ |
+| `stopped` | integration OFF、承認拒否／cancel／無回答、provider利用不能、安全に満たせない | 0件 |
+
+MCPはON時の第1優先、local nativeは承認付き第2優先である。fallbackは自動writeしない。cloud map create／update、外部write、network、credit／課金消費はprovider／対象／予想影響を示した別authorizationを必須とする。local Skill／CLIもsign-inおよびrich optionのcreditが必要な場合があるため、offline／無料を未検証のまま表示しない。isolated fakeはadapter contractの評価に使えるが、real external-liveの`verified=true`を代替しない。
+
+capabilityの基礎はXmind公式の[Xmind MCP guide](https://xmind.com/user-guide/xmind-mcp/)と[Xmind CLI guide](https://xmind.com/user-guide/xmind-cli/)とする。MCPのcloud map create／read／edit、color theme／topic styleの説明、Write Toolsの`Always allow / Need approval / Blocked`、CLIのlocal `.xmind` create／read／edit／check、sign-in／credit可能性を設計入力にする。ただし実行時の実tool schemaとprovider statusを優先し、公式説明だけから固定配置／4色のcapabilityやverified状態を推定しない。
+
+### Hook observationとCheckpoint
+
+Hook observationはsession ID、turn ID、event ID、host event、tool、touched path、testらしいcommand、result summaryを持つ
+一時eventであり、runtime領域へ競合安全に記録する。重い意味分類はreview／checkpointのSkill側で行う。
+Checkpointはmaterial change、last checkpoint、same-turn markerから必要性を決め、同一turnに1回だけ生成する。
+trust前skip、disabled、failureは`degraded`であり、canonical Clarityを失敗状態へ変更しない。
+
+### Downstream handoff acceptance basis
+
+固定handoffの`publicationStatus`は次を区別する。
+
+| status | 意味 | readyの根拠 |
+|---|---|---|
+| `pending-public-evaluator-pass` | template。受入根拠未固定 | 常にclosed |
+| `public-evaluator-pass` | public candidateが独立Evaluator PASS | 既存PASS経路のexact source／digest／scope／rollback |
+| `public-user-decision-risk-accepted` | public candidateはPASSではないが、記録済み残余をユーザーがcandidate限定で受容 | exact source／元feedback／残余／明示承認／scope／rollback／governance Evaluator PASS |
+
+ユーザー判断経路の`acceptanceBasis`は少なくとも次を持つ。
+
+- `type=user-risk-acceptance`、`evaluatorPass=false`、元Verdict=`verification-scope-issue`
+- feedback commit、repo-relative path、content SHA-256
+- 受容したblocking residual IDsと、受容対象外のconditional NOT-RUN／別phase residual IDs
+- `authorizationId`、承認日、原文、具体的な判断文脈、scope、対象candidate、下流順序、失効条件、撤回状態
+
+`acceptedSource`は配る製品bytesのidentity、`governanceSource`はhandoff判定を実装してPatch Evaluatorが確認した
+bytesのidentityである。両者を入れ替えない。Sprint 050の固定値は次とする。
+
+| field | value |
+|---|---|
+| product full SHA | `5f08d454c05576fcff8ab32c10c00887b4c15a96` |
+| full tree SHA-256／files | `1fbffe636565355b875dcde35ff05d26cd7e15f00710c1c88a563866749037c5`／828 |
+| common path SHA-256／files | `4aa6e8d4b21aa9e0020cfaa6edefd5ff0e6640fd2e8f937db00478190142f849`／44 |
+| feedback commit | `8483d86390b6c105163e64d24dcafe498ed2fe8b` |
+| feedback path／SHA-256 | `docs/feedback/sprint-050.md`／`fcaed413963cfcee2ea6303c1293a8c376b197a4998b5e3a682154eeca1b9cdd` |
+| feedback Verdict | `verification-scope-issue`、product finding 0 |
+| downstream order | `agentic-secretary-my-vault`→`yasashii-secretary` |
+
+この承認が受容するblocking residualは、AC3／C21のexact candidate実install後Claude Code／Codex別live conversation・
+Hook発火が未実施であることだけである。`XM-007`実Xmind MCPはconditional NOT-RUNのまま、Claude Code Desktop／
+Codex App／Windows native／Mac mini、downstream独立評価、release／tag／push／marketplace／cache／new sessionは
+別phase残余のままで、この承認から実施済み・verified・許可済みを推測しない。
+
+承認記録は2026-08-28の現Harness会話で、上記candidate・feedback・残余・順序・別repo Harness境界を示した問いに対する
+ユーザー原文「よいです」と、その判断文脈を一体で保持する。原文だけを切り出して再利用しない。candidate SHA／tree／common digest、
+feedback digest／Verdict／残余集合、downstream order／repo identity／file scope／rollbackが変わる、承認が撤回される、または
+Patch governanceが独立Evaluator PASSでなくなる場合は失効し、readyからclosedへ戻る。

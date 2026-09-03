@@ -241,6 +241,24 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 保存とjournalが済んだ後にlocal commitだけ失敗した場合は部分成功を正直に示し、retryはcommitだけを行う。
 この契約をAgentic、Yasashii、private my-vaultの3版へ揃え、旧確認契約が再流入しないinventoryで守る。
 
+### G18 Project Clarity — 今、人間が考える必要があることを示す
+
+Project Clarity（クラリティ）は、タスク数や進捗率ではなく、プロジェクトで「決まっていること」と
+「実行されていること」のずれを外部化する。利用者がRepoやSecretaryのPJを再開したとき、全体を頭の中で
+復元しなくても、判断・確認が必要な項目、決定済みなのに未実行の項目、確認済みDecisionなしで実装された項目、
+Decisionと実装のDrift（ずれ）を、理由と根拠つきで把握できることを中核価値とする。
+
+Project ClarityはStandalone Repo、Secretary-local Project、Linked External Repo、Portfolioの4モードを持つ。
+既存の`PROJECT.md`、Decision、memory、実行タスク、外部Repoを置き換えず、状態・Evidence参照・Attention・履歴を
+扱う派生レイヤーとして動く。Claude CodeとCodexでは同じSkill semanticとcommand-only lifecycle hookを使い、
+Hookが未信頼・無効・失敗でもmanual Skillから全機能を使える。
+
+Clarityの初期化は、Repo全体を無制限に読むことではなく、現在判断に必要な正本を安全な上限内で取りこぼさないことを
+「包括的」とする。Harness Repoではstate、spec、Current Sprint contract、Generator progress、Evaluator feedbackを
+一般sourceより先に意味別で確認し、未確認・除外・不存在を区別する。非Harness Repoは従来のgeneric scanを維持する。
+macOSだけでなくWindows nativeでも同じ意味と安全境界でpreviewでき、実行していないsymlink／junction caseを
+対応済みと表示しない。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -268,6 +286,11 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 23. 秘書自身の英語名、stable identity、AI authorが初回と既存利用者で一貫し、別repo routingは任意の明示確認、renameは分類previewから安全に行える。
 24. 公開済み`0.10.0`へplugin更新済みでもローカルidentity面が未導入または部分適用のworkspaceを、新sessionのread-only診断、preview、別確認、atomic migration、local checkpoint、rollbackで新規導入相当へ揃えられる。
 25. 明示memory依頼は内部分類の確認なしに同じturnで1回保存され、content hedge、訂正、retry、checkpoint失敗でも意味と副作用件数が正しく保たれる。3版のsourceは同じoffline契約へ揃い、live cache／新session反映とは別状態で確認できる。
+26. Project Clarityが4モードで動き、決定状態×実行状態から4象限を再計算し、Attentionを理由・根拠・選択肢つきで最大3件程度へ絞って示せる。
+27. Standalone Repoをread-only previewから初期化でき、後からSecretaryへリンクしてもClarity Project IDと履歴を失わない。linked Repoは相手を直接書き換えず、双方が相手exportを読むpull方式で同期する。
+28. Claude Code／CodexのHookが正常時に軽量な観測・再開支援を行い、未信頼・無効・失敗時は正常なdegraded状態としてmanual Skillへ戻れる。Hookはnetwork、LLM、重い全Repo解析を行わない。
+29. Mermaid、Markdownに加え、Xmind integration ON時はprovider resolverがMCP-firstでcloud mapまたは明示承認後のlocal native `.xmind`を選び、同じ状態と固定4象限visualを可視化できる。いずれも正本ではなく再生成可能なprojectionであり、Xmind編集は人間確認前のproposalに留まる。
+30. public `agentic-secretary`は、独立Evaluator PASS、または元feedbackと残余リスクへ束縛したユーザー判断の明示的例外のどちらかを正直な別statusで固定し、そのexact SHA／digestだけをprivate my-vault、次にYasashiiの別Harnessへ渡せる。例外をPASSへ昇格せず、public版へprivate固有のvault／Notion実装を混ぜない。
 
 ## 成功状態
 
@@ -317,6 +340,14 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 - 成功、質問、失敗、部分成功の返答が実状態と一致し、単純成功に不要な固定帳票や次行動を付けない。保存内容は入力の主体・日付・行動を保ち、入力にない事実、依頼語、不要な全文を加えない。
 - `agentic-secretary`、`agentic-secretary-my-vault`、`yasashii-secretary` は、行き先・正本ルールが同じ共通caseで同じ意味と安全境界を持つ。Notion routing等は版固有caseとして、その版の正本に従う保存先とresponse stateを評価し、共通比較は安全境界に限定する。
 - 明示memory依頼、content hedge、pending修正、topic訂正、同内容retry、checkpoint failureの各caseで、memory／journal／commitの実件数がF63どおりとなり、3版のconversation-core inventoryに禁止旧契約が0件である。
+- 「今、人間が考える必要があるのは何か」に対し、結論→理由→根拠→選択の順で重要Attentionを最大3件程度示し、その他の正常・idea項目は件数へ畳める。
+- `decision.status`と`execution.status`が正本で、`quadrant`は毎回決定的に派生する。AI推定だけのDecisionは`confirmed`にならず、Evidenceが弱いDriftは`possible_drift`に留まる。
+- Clarity未導入RepoではHookが高速no-opし、初期化済みRepoでもHook内のnetwork／LLM／重いscanは0件である。Claude Code／Codexの未信頼・無効状態を故障と誤表示しない。
+- Standalone、generic Secretary-local、Linked、Portfolioの各modeで正本所有が一意で、cross-root write、last-write-wins、自動タスク起票が0件である。
+- 同じ入力からMarkdown／Mermaid／選択されたXmind providerのprojectionが安定して再生成され、projectionの手編集だけでDecision／Executionが確定しない。Xmind MCPの未接続／無効／能力不足／失敗は理由つきでlocal fallback承認待ちとなり、承認なしにlocal fileを作成・更新しない。
+- public版の独立PASS、または元feedback・未達・明示承認へ束縛した`public-user-decision-risk-accepted`のいずれかと、固定SHA／digest、protected path、rollbackが揃う前にprivate／Yasashiiへ反映しない。ユーザー判断経路をEvaluator PASSと表示せず、release／marketplace／cache／pushをPlanningまたは実装Sprintの完了へ混ぜない。
+- 2 MiBを超えるHarness Repoでも、一般`src/`／`scripts/`が先に容量を使い切らず、state、spec、Current Sprint contract／progress／feedbackのcoverageをpreviewから確認できる。progressは自己報告、feedbackは独立検証として区別され、feedbackがまだ無い状態をscan-limitと誤表示しない。
+- Clarity scanner／init previewはWindows native runnerでdrive letter、backslash、空白、日本語、CRLF、case-insensitive衝突を安全に処理する。symlinkとjunctionはcapabilityを別々に観測し、実行不能caseは種類ごとの理由付きSKIPまたはNOT-RUNとして、Windows verifiedへ数えない部分を明示する。
 
 ## 非ゴール
 
@@ -324,7 +355,7 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 - cc-company の部署制、必須 `case-NNN`、`patterns/` 自動統合は導入しない。
 - 同意前のschedule push、確認なしの予期しない手動同期、public repoへのChatwork保存は行わない。復元機能「昨日の状態に戻して」は今回作らない。
 - 濃いキャラクター（関西弁・執事風等）のプリセットは同梱しない。例ペアを育てる方法は本プラグインの必須導線にしない。
-- hooks は同梱しない。採用する場合は先に不変条件を再定義する。
+- genericな自動化HookやHarness Hookは同梱しない。例外はProject Clarityの成立に必須なcommand-only lifecycle hookだけであり、Clarity未初期化・未linked Repoでは高速no-op、manual Skill fallback必須、network／LLM／重い処理禁止とする。
 - Notion TaskDBのproperty設計、relation、通常の作成・再読確認、DB正本を全面再設計しない。Sprint 038では承認済みの5問題を越えるNotion変更を行わない。
 - 会話を自然にするために、削除・上書き・公開・push・認証・権限・課金・他者通知・大量操作・Secret保存の事前確認、path guard、atomic write、rollback、未確認外部状態の正直な表示を外さない。
 - dashboard は G1 の完了条件にしない。sprint-012 で明示判断する。
@@ -358,8 +389,24 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 - 既存workspaceの名前オンボーディング確認を、user-scope registry／routingの有効化、rename、既存文書のgrep置換、push、release、Mac mini同期の許可へ拡張しない。
 - Sprint 039 Patch 002では実HOME、installed cache、実下流repo、実利用者workspace、remote、GitHub Releaseを変更しない。3版PASS後のrelease／Mac mini同期と、release後の受講者向け文面は別の運用phaseとする。
 - Sprint 040のsource／offline regression完了を、push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、Mac mini、release後の新sessionへ反映済みという意味に拡張しない。
+- Project ClarityをJira／Linear／Notion／GitHub Issuesの代替、PJ内の生きた`TODO.md`、自動タスク起票、会議録・チャット本文の複製、単一の進捗率へ拡張しない。
+- public版へprivate my-vault固有の`05/02` resolver、`vault/10_sources`実装、Notion TaskDB property／relation、private root guidanceを混ぜない。これらはpublic固定handoff後のprivate版別Harnessで扱う。
+- Xmind integrationは明示ON／OFFを持ち、public AgenticとYasashiiは既定OFF、private my-vaultは既定ONとする。ON／OFF設定とprovider capability／priority／selected／reasonは別stateとし、ONだけでproviderを利用可能・検証済み・課金承認済みにしない。
+- integration ONでXmind MCPが接続済み・利用可能・固定色と配置を含む必要capabilityを満たす場合はMCPを第1優先にする。MCP未接続／無効／capability不足／失敗／外部操作不承認では、理由、local代替、対象file／path、create／update、既存fileへの影響、sign-inとcredit見込みをpreviewし、利用者の明示承認後だけlocal native `.xmind`を書く。承認なし／cancelはwrite 0件で停止する。最初からlocalを明示指定した場合も同じwrite preview／confirmを省略しない。
+- cloud map create／update、その他のexternal write、network、credit／課金消費はprovider、対象、予想影響を示した明示確認後だけ実行する。local Skill／CLIもsign-inやcreditが必要な場合があるため、「完全offline／無料」と断定しない。実external live未承認ではadapter contract／isolated fakeで実装境界を評価できるが、fakeでreal providerをverifiedにしない。
+- Xmind MCP、local `.xmind`、表現可能なMermaidは、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`の固定配置・固定色を守る。上軸は「決まっている」、下軸は「まだ決まっていない」。色だけでなくemoji／ラベル／意味文を併記する。
+- Clarityがprojectsのcomplete／reopenなどproject lifecycle、memory-careの一般memory、dailyの予定・TODO、updateの更新判断を所有しない。関連Skillは責務を保ったままinput／output／routingだけをClarity-awareにする。
+- 本計画では原則としてpush、tag、GitHub Release、marketplace、installed cache、Mac mini、downstream実repoへの反映を行わない。例外はSprint 050 Patch 004で承認済みのexact candidate branch `origin` pushと、そのcandidateのWindows CI／必要時workflow dispatchだけであり、merge、release、install、downstreamへ拡張しない。
+- 「包括的」を全Repo全文index、全履歴読込、上限撤廃、Secret／binary／symlink先の読込へ拡張しない。すべての過去Sprint feedbackをItem化せず、Currentと必要な直近検証根拠を優先する。
+- Windows対応を、macOS上でWindows風path文字列を渡した結果だけで完了扱いにしない。Windowsのsymlink作成権限／Developer Modeとjunction capabilityを別々に扱い、実行不能caseを実行済みまたはPASSと偽装しない。
+- `done-by-user-decision`というstate文字列、文脈から切り離した短い了承、別candidateへの承認転用だけでdownstream gateを開かない。handoff governance commitをaccepted product sourceとして置き換えず、実機未検証をPASSと表示しない。
 
 ## 承認済みの条件付き判断
+
+- HookはProject Clarity専用とし、projects、daily、weekly、memory-care、updateその他のSkillへ独立Hookを追加しない。memory-careの自然会話選択はSkill description、secretary router、conversation contract、回帰で扱い、Hookが意味的な保存候補を自動判定しない。
+- projectsはproject lifecycle、ClarityはDecision／Execution／Validation／Attention／Driftを所有する。この責務分離を保ったまま、project作成・表示・完了・再開・canonicalRepo link、daily、weekly、Portfolioのinput／output／routingをClarity-awareにする。
+- Clarityからタスク化を暗黙実行しない。「タスク化して」の明示依頼だけを既存TODO／notion-tasksへ委譲し、その既存確認境界を維持する。
+- secretary、projects、daily、weekly、notion-tasks、memory-care、build、update／release inventory、onboarding、templates、rules、host inventory、edition handoffを関連surfaceとして棚卸しし、Clarity正本の重複・暗黙外部操作・旧copyの再流入を回帰で防ぐ。外部connectorをClarityから自動実行しない。
 
 - sprint-012時点では既存利用者の証跡がなかったため、journalディレクトリ追加とpreferences v1→v2のmigrationは作らなかった。今後の配布更新と既存workspace移行は、別Sprintであらためて扱う。
 - 更新機能はSprint 017の読み取り専用基盤とSprint 018の実行に分ける。実更新の主体は秘書とするが、説明とユーザーの明示確認を必須にし、カスタマイズ済みファイルは「現状を残す」を既定とする。

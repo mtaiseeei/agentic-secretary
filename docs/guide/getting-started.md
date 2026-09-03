@@ -48,6 +48,13 @@ codex plugin list --marketplace agentic-secretary
 `AGENTS.md`、skills手動コピー、`config.toml` はrepository-localの開発・隔離test・fallback用です。
 正式なCodex plugin導入の代わりにはなりません。
 
+## 0.11.0 source candidateについて
+
+Project Clarityを含む現在のpublic source candidateは`0.11.0`です。source、manifest、CHANGELOG、
+inventory、clean checkout／Git-free archiveの検査対象を示す版であり、まだtag、GitHub Release、
+marketplace公開・refresh、installed cache、新しいsessionのloaded versionではありません。
+public版のsource candidateと、private版やYasashii版のinstalled version／評価状態は別々に扱います。
+
 ## 初回セットアップ
 
 最初に秘書を呼ぶと、呼び方、主に使うサービス、任せたいこと、役割、報告の詳しさを確認します。

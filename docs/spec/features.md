@@ -470,6 +470,147 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - 会話coreの対象surfaceを追跡する機械可読なinventoryを製品正本として保つ。rules、copy、skills、templates、runtime分類、memory保存シーム、golden fixture、旧Sprint回帰を実内容まで検査し、`memory-care`／`secretary`に加えて`settings`／`daily`／`projects`等の関連surfaceを含める。Agentic、Yasashii、private my-vaultの各sourceで新契約markerの存在と、topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧markerの不在を検証する。
 - 3版のsourceとオフライン回帰を同じ契約へ揃える。push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、release後の新session確認は別phaseとし、sourceのオフラインPASSだけでloaded versionへ反映済みと表示しない。
 
+## Project Clarity（F64〜F81）
+
+### F64 Project Clarity identityと4モード
+
+- 正式名称はProject Clarity、日本語表示はクラリティ、namespaceは`clarity`とする。
+- Standalone Repo、Secretary-local Project、Linked External Repo、Portfolioの4モードを同じcoreで扱う。
+- immutableなClarity Project IDを持ち、後からSecretaryへリンクしてもIDと履歴を変えない。
+
+### F65 Event／Evidence／Stateの正本分離
+
+- 状態遷移は純追加Event、根拠は本文を複製しないEvidence参照、現在状態は決定的に再構築できるprojectionへ分ける。
+- Evidenceはpath、URL、ID、日付、commit、test result等の最小参照と短い要約を持ち、Secret、transcript全文、顧客本文を保存しない。
+- generated Markdown／Mermaid／Xmindは再生成可能なprojectionであり、手編集を正本にしない。
+
+### F66 決定×実行クラリティマトリクス
+
+- 決定状態と実行状態から`stabilize`／`execute`／`validate`／`decide`を常に再計算する。
+- AI推定は`proposed`または`inferred`に留め、人間確認または現在有効な明示正本なしに`confirmed`へ進めない。
+- `idea`、期限前`deferred`、`rejected`／`superseded`を現在AttentionとActive Matrixで適切に分ける。
+
+### F67 Attention Engine
+
+- 無承認実装、決定済み未実行、Drift、validation失敗、長期滞留、authority／sync conflict、Evidence不足等を理由つきで抽出する。
+- 起動時とdailyは最大3件程度へ絞り、結論→理由→根拠→選択の順で示す。残りは件数と詳細pathへ畳む。
+- 単一の進捗率や不透明なAI scoreを主要価値にせず、件数、lag、freshness、解消時間を使う。
+
+### F68 Standalone init／review／doctor／migration
+
+- Clarity未導入Repoをboundedかつread-onlyに解析し、作成予定、候補、競合、除外・未確認範囲をpreviewする。
+- Harness Repoのinit previewは、一般scanが上限へ達する大規模RepoでもF81のauthoritative reserved laneから現在判断に必要な正本coverageを先に示す。
+- 明示確認後だけ実Repo由来の初期Itemを持つClarityを作り、retryでItem／Event／commitを重複させない。
+- doctorはmode、schema、Hook、link、projection、lockを診断し、schema migrationとcleanupはpreviewとapplyを分ける。
+
+### F69 Clarity Skill／決定的CLI／manual fallback
+
+- 利用者向けSkillは`clarity` 1つを基本とし、status、init、scan、review、checkpoint、decide、validate、drift、map、xmind、link、sync、portfolio、history、doctor、migrateを扱う。
+- 反復処理はsafe path、atomic write、JSON output、partial failure、idempotent retryを持つ決定的CLIへ分ける。
+- Hookが未信頼・無効・失敗でも自然言語またはSkillからstatus／review／checkpointを完全に実行できる。
+
+### F70 Claude Code／Codex共通command-only lifecycle hook
+
+- plugin rootの共通`hooks/hooks.json`と軽量command routerを1組だけ持ち、host event payload差はadapterで正規化する。
+- SessionStart、PostToolUse、PreCompact、compact後の再開、Stop、SessionEndを扱うが、Hook内でnetwork、LLM、Xmind生成、全Repo scanを行わない。
+- Clarity未初期化・未linked Repoでは高速no-opとし、同時発火でもevent破損や重複checkpointを起こさない。
+- Codex trust未承認／無効とClaude plugin無効を正常なdegraded状態として表示し、host別に実機検証する。
+- 共通routerはClarity eventだけを扱う。projects、daily、weekly、memory-care、updateその他のSkill用Hookを追加せず、自然会話の保存候補をHookで意味判定しない。
+
+### F71 Markdown／Mermaid projection
+
+- 人間向けoverview、Attention、4象限一覧と、matrix、project structure、dependency、state flowのMermaidを生成する。
+- 同じ入力はbyte安定し、Item ID由来のstable jitterで座標重なりを軽減する。
+- Mermaid描画不能時もraw `.mmd`とMarkdownを残し、Clarity本体を失敗にしない。
+- Quadrant Chartは`q1=右上 🔵 実行待ち #2563EB`、`q2=左上 🟢 定着・検証 #16A34A`、`q3=左下 🟡 暫定実装・要再確認 #D97706`、`q4=右下 🔴 設計・意思決定 #DC2626`に固定し、Mermaidで利用可能なstyle表現はXmindと同じ色・意味を使う。色だけに依存せずemoji／ラベル／意味文を併記する。
+
+### F72 Xmind provider projection
+
+- `xmind.enabled`とprovider capabilityを別状態にする。public Agentic／Yasashiiの既定はOFF、private my-vaultの既定はONで、利用者が明示的にON／OFFを変更できる。
+- ON／OFF設定、provider capability、priority、selected、reasonを分ける。integration ONでXmind MCPがconnected／availableかつ必要capabilityを満たす場合は常にMCPを第1優先とする。local native `.xmind`は明示承認後だけ選択できる第2優先のfallbackである。
+- provider resolverは少なくとも`mcp-selected`、`fallback-approval-required`、`local-selected-after-approval`、`stopped`を区別し、provider status／selected／reasonを表示する。MCP未接続／無効／capability不足／失敗／外部操作不承認をverified成功にしない。
+- cloud map create／update、external write、network、credit／課金消費は、provider／対象／予想影響を示した明示承認後だけ行う。MCPからlocalへの切替は自動writeせず、失敗理由、local代替、対象file／path、create／update、既存fileへの影響、auth／credit見込みをpreviewし、明示承認後だけwriteする。拒否／取消／無回答はwrite 0件。最初からlocal指定でもこのpreview／confirmを守る。
+- 選択されたXmind providerは、クラリティマトリクスとプロジェクト構造の2 Sheet／同等mapと、stable Item IDを生成・検証する。Xmind MCPの実tool schemaが固定色／配置を満たせない場合はcapability不足と正直に表示し、固定visual要件を弱めない。
+- Xmind MCPとlocal `.xmind`の両方で、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`の色・配置を厳密に守る。上軸は「決まっている」、下軸は「まだ決まっていない」とし、「赤=判断、黄=確認、青=実行、緑=安定」をemoji／ラベル／意味文とともに表示する。
+- Xmind nodeとClarity Itemをstable IDで対応づけ、既存無関係Sheet／branchを保持する。
+- Xmind編集はproposalへ変換し、人間確認前にDecision／Executionを確定しない。Hook内ではMCP・CLIのどちらも呼ばず、Xmind生成とnetworkを常に禁止する。
+
+### F73 generic Secretary-local統合
+
+- public版の既存`secretary/projects/open/`、`PROJECT.md`、Decision／memory正本、project resolverを再利用し、Clarity Item本文をPROJECTへ埋め込まない。
+- open／closed、作成／完了／再開、PJ固有Decisionの既存契約を置き換えず、mode、Attention、最重要項目、link healthだけを短く追加する。
+- private my-vault固有の`05/02`、`vault/10_sources`、Notion routingはadapter seamだけを用意し、public sourceへ実装しない。
+- projectsは作成、open／closed、complete／reopen、`canonicalRepo`のlifecycle正本を維持し、ClarityはDecision／Execution／Validation／Attention／Driftだけを付加する。両者はinput／output／routingで協働するが所有権を交換しない。
+- `development-pointer`／`canonicalRepo`がlocal checkoutとして利用できる場合、Project statusはworkspace側snapshotに加えて正本repoを自動でbounded readする。少なくともpointerの「最初に読むファイル」、Repo identity、Gitのcurrent state、既存Clarity状態の有無を確認し、観測時刻、根拠、除外・未確認範囲を一緒に返す。
+- local checkoutが無いremote URLだけのpointerではclone／fetch等を行わない。Clarity coreがnetworkやproviderを自動起動せず、現在の用件で利用可能かつ許可済みのread-only provider evidenceがadapterから与えられた場合だけ同じ観測形式へ取り込む。それ以外は`unavailable`と理由を示す。
+
+### F74 daily／weekly／Portfolio統合
+
+- daily morningは予定・TODO・中断点と混ぜず、`今日の要確認`を独立sectionで最大3件程度表示する。
+- eveningは新規Decision、観測実装、未処理候補、Drift、持越しAttentionを分け、weeklyはAttention増減、lag、解消Drift、長期滞留を扱う。
+- Portfolioはopen PJの最小projectionだけを集約し、closedと全Item本文を通常読込しない。
+- development-pointerを含むopen PJは、statusと同じbounded canonical observationをdaily／weekly／Portfolioで共有する。正本未確認、stale、unsafe、unreadableのときはworkspace snapshotを履歴的な参考として分離し、包括的な「現在」を断定しない。
+
+### F75 reciprocal link handshake
+
+- prepare／accept／finalizeで両Project ID、Repo identity、link ID、digest、authorityを相互確認する。
+- Link metadataへSecret、資格情報、absolute local path、顧客本文を保存しない。
+- 既存Standalone IDを維持し、duplicate／tamper／target不一致を副作用0件で拒否する。
+- local root aliasを使っても双方のRepo identityは物理root基準で同一になり、tracked link bundleへalias／physicalのabsolute local pathを保存しない。
+
+### F76 pull sync／authority／conflict
+
+- 双方が相手exportをread-only取得し、自Repoのimport projectionだけをpreview後に更新する。cross-root writeと暗黙pushを行わない。
+- fieldごとにPrimary／Reference／Shared derivedを持ち、同じfieldのPrimary重複とlast-write-winsを拒否する。
+- stale、schema不一致、削除、authority違反を隠さず、resolutionを新しいEventとして履歴へ残す。
+
+### F77 Decision／implementation Drift Detection
+
+- Decision／spec／ADR／顧客合意と、current code／commit／test／成果物Evidenceを比較する。
+- 根拠が弱い差は`possible_drift`、両根拠が揃う不一致は`drift`とし、Decision側と実装側を同時に示す。
+- Decision変更、実装修正、例外承認のいずれでも履歴を消さず、解消後はActive Attentionから外す。
+- working rootのancestor aliasを許可した場合も、Decision／implementationのsource locator自身やroot内pathのsymlinkは追わない。locatorの拒否をroot aliasの例外へ広げない。
+
+### F78 Clarityの安全性・競合安全性・冪等性
+
+- working root、symlink／junction、path traversal、dirty／staged変更、Secret、schema破損、lock残骸を安全側に扱う。
+- concurrent hookは共有JSONのread-modify-writeへ依存せず、atomic write／lock／一意eventで破損と重複を防ぐ。
+- failed apply／migration／sync／checkpointは利用者差分を巻き戻さず、partialとretryで一つの状態へ収束する。
+- root解決契約は`allowAncestorSymlinks: false`相当を既定とする。Clarityの指定入口だけは専用root resolverがrequest中にtrueを明示し、利用者向けCLI flag／設定を増やさずancestor aliasへ自動対応する。trueでもworking root自身は通常directoryでなければ拒否し、ancestor aliasだけをrealpathで実在する通常directoryの物理rootへ固定する。
+- ClarityのCLI／core／link／projection／Drift／Secretary adapter／HookにあるRepo root指定入口は同じ内部policyを使い、適用結果へClarity internal opt-inであることを示す。以後のread、containment、Git top-level確認、canonical／runtime／projection／link／Drift／Secretary adapter／Hook writeは同じ物理rootを基準にする。root内から外向きのsymlink、壊れたalias、directory以外を指すalias、alias差替え、物理rootのidentity変更はfail closedとする。
+- macOSの既存platform aliasである`/var`→`/private/var`と`/tmp`→`/private/tmp`は回帰させず、host固有のhome／volume pathを製品規則へhard-codeしない。
+
+### F79 public-first packagingと固定handoff
+
+- public `agentic-secretary`のSkill、Hook、host inventory、manifest、marketplace metadata、archive／clean checkout回帰を整合させる。
+- Claude CodeとCodex、DesktopとCLIのsupported／verifiedを別に表示し、1 surfaceのPASSを他へ昇格しない。
+- 通常経路はpublicの独立Evaluator PASS後だけ`public-evaluator-pass`として完全SHA、共通digest、共通path、除外・保護path、rollbackを固定し、private my-vault、次にYasashiiの別Harnessへ渡す。
+- `verification-scope-issue`をユーザーが明示的に引き受けた場合だけ、PASSと別の`public-user-decision-risk-accepted`を使える。この経路はexact candidate、元feedbackとdigest、受容した未達、受容していない条件付き／別phase残余、候補へ束縛した承認記録、下流順序、file scope、rollback、handoff governanceの独立Evaluator PASSがすべて一致した時だけreadyになる。
+- `done-by-user-decision`の文字列だけ、曖昧な了承、別candidate、変更済みfeedback、失効・撤回済み承認からreadyを自動推測しない。accepted product sourceとhandoff governance commitを別fieldにし、後者で前者を置き換えない。
+- push、tag、Release、marketplace公開、cache更新、実downstream反映はこのmain sprint群の対象外とする。
+
+### F80 Clarity-aware collaboration surface inventory
+
+- `secretary`、`projects`、`daily`、`weekly`、`notion-tasks`、`memory-care`、`build`、`update`、onboarding、workspace templates、rules、host inventory、manifest／release inventory、edition handoffを機械可読inventoryで棚卸しする。
+- 各surfaceに、Clarityを読む／書く／委譲する／触れない責務、manual／Hook入口、外部操作、正本、edition適用、必須回帰を記録する。
+- inventoryはdevelopment-pointer canonical readerとClarity root policyの適用入口も列挙し、status／daily／weekly／Portfolio間のfreshness意味、一般working rootのnegative control、Clarity core／link／projection／Drift／Secretary adapter／Hookのroot解決差をstaleにしない。
+- notion-tasks／TODOは明示依頼時だけの委譲、memory-careはDecision重複保存防止、buildはHarness state非置換、updateは自動更新なし、connectorは自動実行なしを負検査する。
+- file存在やSkill名だけで合格にせず、実内容marker、routing fixture、前後snapshot、inventory digestで旧契約再流入と対象漏れを検出する。
+
+### F81 Harness-aware comprehensive init scannerとWindows native互換
+
+- Clarity initの「包括的」は全fileを無制限に読むことではなく、判断に必要な正本をboundedに取りこぼさないこととする。Harness Repoは構造から検出し、一般scanと分離したauthoritative reserved laneで`docs/sprints/state.md`を最優先に読む。
+- stateからCurrent IDをboundedに解決し、`docs/spec.md`と必要な`docs/spec/*.md`、current contract、対応progress、対応feedback、`AGENTS.md`、`CLAUDE.md`、package manifestを一般`src/`／`scripts/`より先に確認する。stateがTBD、missing、invalid、上限超過の場合は根拠とfallbackを明示し、推測を確定表示しない。
+- stateはOrchestrator execution truth、contractはrequirements、progressはGenerator self-report、feedbackはEvaluator validationとして意味を分ける。1 fileを機械的に1 Itemへ変換せず、同じCurrent SprintのDecision／Execution／ValidationとEvidenceを一貫した候補bundleへまとめる。feedback不存在は`evaluation-not-yet-recorded`相当で扱い、scan-limitによる未確認と区別する。
+- stateはCurrent ID、status、Next Planned、該当Sprint table row等の構造化execution truthと、履歴説明・コード例等の非構造本文を分離して扱う。credential field名、placeholder、無害な過去説明があるだけでstate全体を除外せず、Currentと4 role bundleを維持する。特定の既知文字列だけを許可するallowlistには依存しない。
+- stateに実値らしいSecretが混在する場合も、構造metadataは安全に抽出し、該当本文、値、summary、candidate、Evidence、raw-contentまたは低エントロピー推測に使えるdigestを返さない。必要なcoverageは`redacted`／`partial`と理由を正直に示し、state以外のauthoritative sourceとgeneric sourceのstrict Secret exclusionは維持する。
+- authoritative laneとgeneric scanのbudget、inspected／excluded／uninspected、partial理由を返す。正本が巨大、Secret-like、binary、symlink、missing、invalidの場合は黙って完全扱いせず、将来stateが1 file上限を超えてもCurrent metadataと該当sectionだけをboundedに扱える契約を持つ。
+- 巨大stateは`maxFileBytes`等の1 file上限を単純拡大して扱わず、Current metadataと該当sectionだけをboundedに読む。解決不能ならpartial／uninspectedを維持する。
+- 非Harness Repoは既存generic scanの候補、上限、順序、安全意味を回帰させない。Harness正本を確保した後だけ、残余budgetで一般fileを読む。
+- WindowsではNodeのplatform path APIを使い、POSIX separatorやBashのpath解釈を前提にしない。drive letter、backslash、空白、日本語、CRLF、case-insensitive collision、reserved／invalid path、junction／symlink権限差をfail closedかつ理由付きで扱う。host固有home／volumeをhard-codeしない。
+- Windows verifiedは`.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobでscanner、init preview、identity、安全negativeを直接実行した場合だけ付与する。既存0.9.2回帰と`timeout-minutes: 10`を維持し、symlinkとjunctionのcapability／SKIP理由を別集計する。別OS上のWindows風文字列fixtureをnative PASSへ昇格せず、macOS／LinuxとSprint 041／050 Patch 003の回帰を維持する。
+- Windows runはexternal live gateであり、offline preview／fixtureのnetwork／external write 0とは分離する。許可済み操作はexact candidate branchの`origin`への通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけである。未実行／CI利用不能は`windowsVerified=false`のverification未達、runner内のcandidate因果assertion失敗はproduct findingとして区別する。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -491,3 +632,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
 | G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
 | G17 | F05 F07 F17 F19 F52 F54 F55 F56 F57 F63 |
+| G18 | F28 F51 F52 F54 F64 F65 F66 F67 F68 F69 F70 F71 F72 F73 F74 F75 F76 F77 F78 F79 F80 F81 |

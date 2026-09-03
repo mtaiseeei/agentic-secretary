@@ -1,0 +1,374 @@
+# Sprint 050 Patch 005 Generator進捗 — state構造とSecret本文の分離
+
+- 開始HEAD: `b73e120`
+- 製品candidate commit: `5ab63d6455e919fb3bb825fc1c7448d3861e609b`
+- 製品candidate tree: `ad9d5a70c49a68d48dc926287256282b4ea228ad`
+- 担当: Generator（自己検査とEvaluator handoffのみ。Evaluator Verdictは宣言しない）
+- 実装日: 2026-08-31
+- 対象: `sprint-050-patch-005`（Model Tier strong）
+- 現在地: public source／exact clean checkout／Git-free portable検証完了。Windows native CIと独立Evaluator待ち
+
+## 実装内容
+
+- `docs/sprints/state.md`だけを、構造化したexecution truthと非構造本文へ分けてboundedに解析するようにした。Current ID、status、Next Planned、該当table row、許可済みfallbackを、fenced／inline code、HTML comment、履歴説明から分離する。
+- Markdown fenceはdelimiter文字とopening長を保持し、同じ文字かつ同じ長さ以上のclosingだけで閉じる。重複Current rowは同じstatusでも曖昧としてunresolvedにする。inline codeのMarkdown delimiterはplaceholder判定前に安全に除く。
+- placeholderは、山括弧、環境変数参照、mask記号、明示的な置換語など、構文上明らかな形式だけに限定した。任意suffixを許すprefix allowlistや現在stateのexact文字列allowlistは使用していない。
+- 実値らしいSecretはstateのbounded本文全体で検査し、fence／comment内でも無害扱いしない。安全に抽出できる構造metadataは保持しつつ、sourceを`redacted`／`partial`にして固定理由とfield単位coverageを返す。Secret spanが構造field自体に重なる場合、そのfieldだけをunresolvedにし、Current、status、PASSを補完しない。
+- redacted時は値、断片、周辺本文、summary、candidate、Evidence、raw bytes由来digestを返さない。正確な`size`／`bytesRead`とlane使用量も隠し、既存上限に基づく`bytesReadAtMost`だけを返す。値だけ、または値長だけが異なる同一構造入力は、外部へ返るsanitized state／coverage／candidate digestが一致する。
+- Harness stateはgeneric laneで重ねて読まず、`harness-authoritative-source`として除外する。state以外のcontract／progress／feedback／spec／guidance／manifestとgeneric sourceは従来のstrict Secret exclusionを維持する。
+- bounded readは128 KiBのままで拡張していない。valid／TBD／missing／invalid／unsafe Current、last-completion fallback、feedback absent、範囲外fieldの固有reasonを維持する。
+- Patch005専用suiteへSR-001〜010を登録した。Secret canaryはruntimeだけで生成し、tracked fixture／stdout／progressへ実値またはraw hashを残さない。
+- Windows workflowの既存`windows-native` job、`windows-2025`、Node 22、`timeout-minutes: 10`、0.9.2回帰を維持したまま、`node scripts/sprint-050-patch-005-test.mjs --require-windows`を結線した。
+- collaboration inventoryへSR 10件とPatch005 suiteを追加した。Patch caseは47、SRは10、全caseは67となり、duplicate／missing／extra 0、feature単一割当を機械確認する。過去suiteは進化するregistry総数だけを更新し、historical findingやverification基準を改変していない。
+
+## 変更file
+
+```text
+.github/workflows/windows-recording-regression.yml
+plugins/secretary/collaboration-inventory.json
+plugins/secretary/scripts/clarity.mjs
+plugins/secretary/scripts/lib/clarity-core.mjs
+plugins/secretary/scripts/lib/clarity-harness-scan.mjs
+scripts/lib/sprint-049-inventory.mjs
+scripts/sprint-049-test.mjs
+scripts/sprint-050-patch-003-test.mjs
+scripts/sprint-050-patch-004-test.mjs
+scripts/sprint-050-patch-005-test.mjs
+docs/progress/sprint-050-patch-005.md
+```
+
+Planner所有の`docs/spec*`／Sprint契約、Orchestrator所有の`docs/sprints/state.md`、Evaluator所有の`docs/feedback/**`は変更していない。private my-vault／Yasashii source、release／merge／tag、Marketplace、install／cache、live apply、実Xmind、実顧客Repoも変更していない。
+
+## 起動／回帰command
+
+server／UI／test URLはない。実Repoのread-only previewは次で起動できる。
+
+```bash
+node plugins/secretary/scripts/clarity.mjs init <repo-root> --json
+```
+
+portable Target suite:
+
+```bash
+node scripts/sprint-050-patch-005-test.mjs
+```
+
+Windows native必須入口:
+
+```powershell
+node scripts/sprint-050-patch-005-test.mjs --require-windows
+```
+
+inventory gate:
+
+```bash
+node scripts/sprint-049-inventory.mjs validate
+```
+
+## Target結果
+
+| case | local結果 | 確認内容 |
+|---|---|---|
+| SR-001 | PASS | current public sourceでCurrent、status、Next Planned、row、4 role、bundleを保持 |
+| SR-002 | PASS | placeholder／inline／fence／comment／履歴説明、fence長negative、構造／coverage digest安定 |
+| SR-003 | PASS | runtime Secretを本文へ置いてredacted／partial、構造保持、本文非露出 |
+| SR-004 | PASS | 値と値長が異なるSecretでsanitized identity一致、長さ／raw digest非露出 |
+| SR-005 | PASS | state以外のauthoritative／generic strict exclusion維持 |
+| SR-006 | PASS | 128 KiB枠の先頭／中間／末尾と範囲外、固定reason／上限表示 |
+| SR-007 | PASS | valid／TBD／missing／invalid／unsafe／fallback／feedback absent |
+| SR-008 | PASS | public common 3 path identityとcopy portability precheck。これ単体をclean checkout証拠には数えない |
+| SR-009 | PASS | Patch004／003、Sprint041／047／049、inventory、generic／alias回帰 |
+| SR-010 | NOT-RUN | Windows native runner必須 |
+
+集計は`SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false`である。SR-010未実行のため、GeneratorはTarget全件PASSまたはWindows verifiedを宣言しない。
+
+## 実source read-only結果
+
+Darwin `25.6.0 arm64`、Node `v22.23.2`で、current public sourceへ`init . --json`を実行した。
+
+- `ok=true`、`status=preview`、`changed=false`
+- Harness detection: `harness`／`state-and-spec-confirmed`
+- Current: `sprint-050-patch-005`、status `active`、Next Planned `TBD`
+- table row: `sprint-050-patch-005`／`active`、`reason=resolved`、推測なし
+- bundle source: `harness-authoritative`
+- 4 role: state inspected、contract inspected、progress inspected、feedbackは`evaluation-not-yet-recorded`
+- stateは約210 KiBだが、読込は既存上限128 KiB、`reason=bounded-section-read`
+- preview後のfilesystem／Clarity runtime／journal／Git／network writeは0件
+
+progress作成後に再度previewし、Generator roleが`inspected`／`available`となってもCurrentとbundleを維持することを確認した。同じ実sourceへ`--cancel --json`も実行し、`status=canceled`、`changed=false`を確認した。apply、connector、Xmind、外部providerは実行していない。
+
+## exact candidateの3面検査
+
+製品candidate `5ab63d6455e919fb3bb825fc1c7448d3861e609b`を固定し、次の3面で検査した。
+
+1. public source: candidate commit上の作業treeでTarget／関連回帰／inventoryとread-only previewを実行。
+2. exact clean checkout: local `git clone --no-hardlinks --no-checkout`後、同SHAをdetached checkout。開始／終了とも`git status --short`は空。
+3. Git-free: 同SHAの`git archive`を別directoryへ展開し、`.git`不存在を確認。
+
+clean checkoutとGit-freeの両方で次を得た。
+
+```text
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+```
+
+SR-008のfixture copyはidentity portabilityの事前検査にだけ使い、上記clean checkout／Git-freeの代替証拠にはしていない。
+
+common runtime 3 pathのSHA-256はsource／clean checkout／Git-freeで一致した。
+
+```text
+61fe8a9ca207db3dd0039c1f98ea315f1c0f390a30bee69a771aa851849dc6c9  plugins/secretary/scripts/clarity.mjs
+55a5383e432ff3ba9081ff9603d7c417ab7912da441a0ab29172c5be6855f02e  plugins/secretary/scripts/lib/clarity-core.mjs
+d70610079f6c1d4812b62818b54c609a8940a9d2941419e91f2662b12871b345  plugins/secretary/scripts/lib/clarity-harness-scan.mjs
+```
+
+## 実行済み検証
+
+| command | result |
+|---|---|
+| `node scripts/sprint-050-patch-005-test.mjs` | `PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10`、external write／network 0、Windows false |
+| exact clean checkoutで同上 | 同じく`9/0/0/1` |
+| Git-free exact archiveで同上 | 同じく`9/0/0/1` |
+| `node scripts/sprint-049-inventory.mjs validate`（source／clean／Git-free） | 各面`PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID` |
+| SR-009内 `node scripts/sprint-050-patch-004-test.mjs` | exit 0。macOSではWindows専用4件をNOT-RUNとして維持 |
+| SR-009内 `node scripts/sprint-050-patch-003-test.mjs` | exit 0 |
+| SR-009内 `node scripts/sprint-041-test.mjs` | exit 0 |
+| SR-009内 `node scripts/sprint-047-test.mjs` | exit 0 |
+| SR-009内 `node scripts/sprint-049-test.mjs` | exit 0 |
+| `node --check`（変更した`.mjs`） | 全件exit 0 |
+| `git diff --check` | exit 0 |
+
+最初の通常sandbox内`git add`は`.git/index.lock: Operation not permitted`で失敗した。製品fileの問題ではなくGit metadata書込権限の境界だったため、許可された昇格で同じ対象だけをstage／commitし、回避用Repoや別Git metadataは作っていない。
+
+## Windows待ちと外部境界
+
+- SR-010、Windows Server 2025／Node 22の因果的run、run ID／URL、0.9.2同居結果は未実行。`windowsVerified=false`、1 NOT-RUNを維持する。
+- workflowは既存`windows-native`、`windows-2025`、Node 22、10分、0.9.2を維持し、Patch005 suiteを`--require-windows`で結線済み。
+- Generatorはpush、workflow dispatch、remote変更、merge、release、tag、Marketplace、install、cache、live apply、Xmind、private my-vault／Yasashii writeを行っていない。
+- 通常pushと、そのcandidateに因果する既存Windows CIはOrchestratorの責務。manual dispatchや別SHA／過去runを証拠にしない。
+- public独立Evaluatorの判断前にdownstream handoff ready、private／Yasashii PASS、release-ready、installed、loadedへ昇格しない。
+
+## Evaluator handoff
+
+Evaluatorは製品candidate SHAとtreeを固定し、source／exact clean checkout／Git-freeでSR-001〜009、inventory 67 case、common 3 path digestを独立確認する。runtime Secret fixtureは値を記録せず、redacted理由、field coverage、sanitized identity一致、本文／断片／raw digestの非露出を操作で確認する。
+
+Windowsでは同じcandidateに因果する既存workflow runで、Windows Server 2025、Node 22、Patch005 `--require-windows`、Patch004／既存0.9.2回帰、10分timeoutを確認する。SR-010が実行され0 FAILになるまでは、本progressからSprint PASSを推測しない。
+
+## Generator補正 — stateライフサイクルに追随するSR-001（2026-08-31）
+
+- 補正開始HEAD: `73ed397`
+- 補正candidate commit: `a938f792786f16acdad9877138dd76403b2c5f66`
+- 補正candidate tree: `51179ae7f1cf49de4288bc194379d37c88040582`
+- 対象: verification-infraのみ。製品runtime candidate `5ab63d6455e919fb3bb825fc1c7448d3861e609b`、common runtime 3 path、workflow、spec／contract、state、feedbackは変更していない。
+
+オーケストレーターがstateを正規に`awaiting-eval`へ進めた際、SR-001の実source assertionだけがstatusを`active`へ固定していたため、製品previewは整合しているのにsuiteが8 PASS／1 FAIL／1 Windows NOT-RUNとなった。synthetic fixtureの入力条件としての`active`は維持し、実sourceの期待値をtracked `docs/sprints/state.md`の構造行から独立に得るよう補正した。
+
+補正後は、対象rowが一意でstatusが`active`／`awaiting-eval`／`done`の許可集合にあることを先に検査する。宣言Currentが対象Sprintなら`fallbackSource=null`／`inferred=false`、最終`Current ID: TBD`なら対象rowが`done`、`Next Planned: TBD`、`fallbackSource=last-recorded-completion`／`inferred=true`であることを要求する。state／bundle／4 role pathとstatus、candidate path、Evidence locator、`executionStatus`、Evaluator role／`validationStatus`を同じtracked lifecycleへ完全一致させ、最終done時はPASS feedbackを要求する。fenced code、HTML comment、inline code内の履歴例は期待値の正本にしない。
+
+SR-001には次のtemporary lifecycle回帰を追加した。いずれも製品Repoやstateへのwriteはなく、OS一時directoryだけで実行した。
+
+- Current対象＋`active` → `in_progress`、fallbackなし
+- Current対象＋`awaiting-eval` → `implemented`、fallbackなし
+- Current対象＋`done` → `implemented`、fallbackなし
+- Current `TBD`＋対象`done` → `last-recorded-completion`、`inferred=true`
+
+`scripts/sprint-050-patch-005-test.mjs`変更に伴う`clarity-harness-scanner` inventory digestだけを正規計算値へ更新した。case数、path、marker、feature割当、製品runtime digestは変更していない。
+
+### 補正candidateの3面検証
+
+source、exact clean detached checkout、同SHAのGit-free archiveを並列化せず順番に実行し、3面とも次を確認した。
+
+```text
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+exact clean checkoutは実行前後とも`git status --short`が空で、HEAD／treeは補正candidateと一致した。Git-free面は`.git`不存在を確認した。`node --check scripts/sprint-050-patch-005-test.mjs`と`git diff --check`もexit 0。テスト一時fileは各suiteのcleanup対象だけで、external write／network callは0件である。
+
+### 残る評価境界
+
+- SR-010とPatch004のWindows専用4件はMacではNOT-RUN。Windows Server 2025／Node 22の同一candidate因果runが必要で、`windowsVerified=false`を維持する。
+- 本補正はGenerator自己検査であり、独立Evaluator Verdictではない。
+- push、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator診断補正 — Windows SR-009子suiteの安全な失敗詳細（2026-08-31）
+
+- 診断開始HEAD: `885f14c3fdce3c760226eab4e7df5c9f2ee60398`
+- 診断candidate commit: `2fe671e18e60ab7ce8e10cbcb97e2add3dd4b145`
+- 診断candidate tree: `742575b3fe3aaeda6a5df30cfe9415bff846c2cb`
+- 対象round: verification-infraのみ。製品runtime、common 3 path、workflow、spec／contract、state、feedbackの差分は0件。
+- 起点となったWindows証跡: exact remote head `6e173c5003f45036700a1ac0e7f4e197d2245c6a`、run `33367569393`、job `99411300266`。Patch005は9 PASS／1 FAILで、SR-009内の`scripts/sprint-050-patch-003-test.mjs`がstatus 1だったが、旧`runScript()`は子stdout／stderrを捨てていたため、失敗Caseと原因を分類できなかった。
+
+`runScript()`は成功時の出力を増やさず、非0終了、signal、spawn errorのときだけ、子suiteのrepo-relative path、status、signal、error、stdout、stderrを親のCI errorへ含めるようにした。stdout／stderrは各8 KiB、spawn errorは1 KiB、Case failure全体は20 KiBを上限とする。
+
+診断本文は、Secretらしい代入値／Bearer値、opaque token、40〜128桁のhex digest、Node assertのactual／expected実値をredactする。source rootとOS一時directoryの絶対pathは`<repo-root>`／`<tmp-root>`へ安定化し、制御文字を除去する。runtimeだけで生成するcanary、canaryのraw digest、低エントロピーassert値、元の絶対pathが整形後に残らないことを、既存SR-009内のhelper回帰で確認する。Case ID、registry、Acceptance Criteriaは追加していない。
+
+inventory digest更新前の意図的な不一致で、親errorが`path=scripts/sprint-050-patch-004-test.mjs`、`status=1`、`signal=none`、`error=none`、子の`HS-016`／`inventory-digest-stale:clarity-harness-scanner`まで示すことを確認した。正規digest更新後は同じ失敗を解消し、inventoryのcase数、path、marker、feature割当は変更していない。
+
+### 診断candidateの3面検証
+
+source、exact clean detached checkout、同commitのGit-free archiveを並列化せず順番に検査した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeが診断candidateと一致した。Git-free面は実行前後とも`.git`不存在だった。各面で次を個別に順次実行し、同じ結果を得た。
+
+```text
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+active／awaiting-eval／done／最終TBDの既存lifecycle回帰はSR-001で維持し、全3面でPASSした。`node --check scripts/sprint-050-patch-005-test.mjs`と`git diff --check`もexit 0。検査用一時directoryは終了後に削除した。
+
+### Windows再実行待ちと残る境界
+
+- 本candidateは、Windows失敗をskip／NOT-RUNへ落とさず、Patch003の実行を外さず、閾値やCase割当を緩和していない。次の同一candidate因果Windows runで、SR-009が失敗した場合に具体的なCF／AR Caseとassert理由を安全に得るための診断candidateである。
+- Windows Server 2025／Node 22の因果的再runは未実行。SR-010とPatch004のWindows専用4件はMacでは引き続きNOT-RUNで、`windowsVerified=false`。旧runのPASS／FAILを新candidateへ流用しない。
+- 診断結果が得られるまでは、Windows上の製品不具合かPatch003のplatform固有verification-infra不具合かを確定しない。本GeneratorはEvaluator Verdictを宣言しない。
+- push、manual workflow dispatch、network、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator補正 — Windows CF-006のfile ACL fixture化（2026-08-31）
+
+- 補正開始HEAD: `9f76a6a42a3501415232348e1107797d8d3a3329`
+- 検証candidate commit: `6127b72e3df1ae23f7783c654fa3ff7f99bc85ac`
+- 検証candidate tree: `a27355881848666da3e252babaa6cdf5e03b7dbe`
+- 原因を確定したWindows証跡: exact remote head `28e00219cbf0215848c2a71015ab6cefe9cc0cf4`、run `33369618547`、job `99417486335`
+- 対象round: `verification-infra`のみ。製品runtime、common 3 path、Patch005 diagnostic test、workflow、spec／contract、state、feedbackの差分は0件。
+
+Windows runではPatch005 SR-009内の旧Patch003だけが失敗し、具体的にはCF-006が20 PASS／1 FAILの唯一のFAILだった。CF-006はsynthetic Repo directoryへ`chmodSync(0o000)`を適用してunreadableを期待していたが、WindowsではPOSIX mode bitがReadData拒否にならない。このため製品は正しく`available`を返しており、製品runtimeではなくplatform固有fixtureの欠陥と確定した。他のCF／AR 20件、既存0.9.2、Patch004、SR-001〜008／010は同runでPASSしている。
+
+CF-006だけを次のように補正した。
+
+- POSIXでは既存のdirectory `chmodSync(0o000)`によるunreadable意味を維持し、観測がthrowしても`finally`で`0o755`へ必ず復旧する。
+- WindowsではOS一時fixture内のsynthetic Repoにある`README.md` 1 fileだけを対象にする。`whoami.exe /user /fo csv /nh`を`shell:false`で実行し、usernameを使わず、`S-\d+(?:-\d+)+`に一致する一意のcurrent SIDだけを抽出する。
+- `icacls.exe`はすべて`shell:false`、`cwd=unreadableRoot`で実行する。save／deny targetは相対`README.md`、restore targetは`.`である。元DACLはRepo外かつ同fixture内のbackupへ`/save`し、denyは`*SID:(RD)`だけに限定した。directory deny、`F`／`M`／`WDAC`／`WO`／`D`、`OI`／`CI`、`/T`は使わない。
+- deny後は製品観測より先に`readFileSync(README.md)`が`EACCES`または`EPERM`になることを必須probeする。その後だけ`observeCanonicalRepo`の`availability=unreadable`、`firstFile.reason=unreadable`、`reason=first-file-unreadable`をassertする。
+- `finally`では`icacls.exe . /restore <backup> /q`を必ず実行する。restore status 0、READMEのread成功、deny前後content digest一致、backup削除をすべて必須とした。save／deny／probe／製品観測／restore／復旧read／digestのどれか一つでも失敗すればCF-006はFAILし、capability不足をSKIP／NOT-RUN／PASSへ落とさない。primary failureとrestore／cleanup failureは`AggregateError`へ併記し、restore failureを隠さない。
+- MacでもSID抽出の0件／複数件拒否、`whoami.exe`／`icacls.exe`の正確なcommand・引数、`shell:false`、relative file target、fixture内かつRepo外backup、非再帰・ReadData限定deny、primary＋restore failureの保持を純helper／構造assertで回帰する。これはWindows native PASSの代替には数えない。
+
+### 変更fileとinventory
+
+検証candidateの変更は`scripts/sprint-050-patch-003-test.mjs` 1 fileだけである。`plugins/secretary/collaboration-inventory.json`のdigest対象pathにPatch003 testは含まれないため、inventory digest更新は不要だった。case ID、registry、feature割当、Acceptance Criteriaは変更せず、inventory validatorは3面とも`DIGESTS=VALID`を維持した。
+
+製品runtimeの変更は0件で、開始HEADからcommon runtime 3 pathのdigestも不変である。
+
+```text
+61fe8a9ca207db3dd0039c1f98ea315f1c0f390a30bee69a771aa851849dc6c9  plugins/secretary/scripts/clarity.mjs
+55a5383e432ff3ba9081ff9603d7c417ab7912da441a0ab29172c5be6855f02e  plugins/secretary/scripts/lib/clarity-core.mjs
+d70610079f6c1d4812b62818b54c609a8940a9d2941419e91f2662b12871b345  plugins/secretary/scripts/lib/clarity-harness-scan.mjs
+```
+
+### 検証candidateの3面検証
+
+source、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Patch003、Patch005、inventory、Patch004、Sprint041、Sprint047、Sprint049をこの順に個別実行した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeがcandidateと一致した。Git-free面は実行前後とも`.git`不存在だった。3面とも次の結果でexit 0となった。
+
+```text
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+`node --check scripts/sprint-050-patch-003-test.mjs`、`node --check scripts/sprint-050-patch-005-test.mjs`、`git diff --check`もexit 0。各suiteが作ったOS一時fixtureと3面検査用directoryは終了後に削除した。Repo、Git、network、external providerへの製品書込みは0件である。
+
+### 新Windows因果run待ちと残る境界
+
+- 本Mac検証では新しいWindows ACL branchを実行していない。SR-010は1 NOT-RUN、Patch004のWindows専用4件もNOT-RUN、`windowsVerified=false`のままであり、Windows PASSを合成していない。
+- exact candidate `6127b72e3df1ae23f7783c654fa3ff7f99bc85ac`に因果するWindows Server 2025／Node 22の新run ID／job IDは未取得である。次のrunでCF-006のsave／deny／probe／製品観測／restore／復旧read／digest／backup cleanupがすべて実行され、0 FAILになるまでWindows境界は閉じない。
+- 本Generatorはpush、PR操作、workflow dispatch、remote変更、Evaluator判定、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindを行っていない。
+
+## Generator製品補正 — Windows GS-003のphysical Git top-level判定（2026-08-31）
+
+- 補正開始HEAD: `b9d4f21bf674485701f2870a60dafd633584b2a1`
+- 製品candidate commit: `76aae9fbd7fd87e32bdb9266c69258d76d1d4289`
+- 製品candidate tree: `a0c5dc7930a5cb6449a6c58d15f08adbce5bc143`
+- 原因を確定したWindows証跡: PR #11 exact head `cf61738c25ead736f641c020ae25d60f01c73d87`、run `33371816241`、job `99424428888`
+- 対象round: `product`／`implementation-issue`。Windows runではCF-006／Patch 003が21／21、既存0.9.2／Patch 004、SR-001〜008／010がPASSした後、SR-009内Sprint 047のGS-003だけがexit 3／`clarity-commit-non-git`となった。
+
+一時`drift-repo`は同じrootで`git init`、`git add`、複数commitに成功し、Clarity CLIも同じrootを受け取っていた。原因は`clarity-drift.mjs`のcommit入口だけが、Gitの`--show-toplevel`とClarity rootを`resolve(top) === root`で比較していたことである。Windowsでは同一NTFS directoryが8.3 short／long path、大文字小文字、separatorの表現差を持ち得るため、同一physical Git top-levelを文字列差だけでnon-Gitとして誤拒否していた。
+
+commit入口を、Patch 004 HS-011でWindows PASS済みの既存`inspectRepoIdentity(root)`へ接続した。`repoIdentity.kind === "git"`だけを受理し、内部の`statSync(..., { bigint: true })`による`dev`／`ino`完全一致で同一physical directoryを判定する。nested rootは`git-root-mismatch`、non-Gitは`clarity-commit-non-git`、stat不能、`dev`／`ino`がともに0、identity不明は推測せずfail closedのままである。lowercase、prefix、`startsWith`、lexical relative、realpath文字列だけの比較への緩和は行っていない。
+
+GS-003はCase IDを増やさず、次を同じCase内で検査するよう補強した。
+
+- 同一Git top-levelのpreviewはfilesystem／Gitを変更せず、applyは`CLARITY.md`と`.clarity/**`のうち`.clarity/runtime/**`を除くClarity所有pathだけを`git commit --only`へ含める。
+- nested rootは`git-root-mismatch`で拒否し、前後のnested filesystem、親RepoのHEAD／branch／remote／status／index／worktree diffを完全一致させる。
+- non-Git rootは`clarity-commit-non-git`で拒否し、filesystem不変、`.git`新規作成0、main fixture RepoのGit状態不変とする。
+- 既存staged／unstaged／untracked、branch、remote、push 0の検査を維持し、registry 25 case、補助2 case、GS-003の初回割当を変更していない。
+
+### 変更fileとinventory
+
+製品candidateの変更は次の3 fileだけである。
+
+- `plugins/secretary/scripts/lib/clarity-drift.mjs`
+- `scripts/sprint-047-test.mjs`
+- `plugins/secretary/collaboration-inventory.json`
+
+inventoryは製品fileを含む`clarity-root-policy`の`contentDigest`だけを正規計算値`79ee27e50185e7e978dbfb26b88a62e0328cbc094dc309699bfadd30f98a9688`へ更新した。surface path、role、marker、tests、case数、他surface digestは変更していない。`clarity-core.mjs`、`clarity-root.mjs`、`safe-fs.mjs`、common runtime 3 path、Patch 003 ACL、Patch 005 diagnostic、workflow、spec／contract、state、feedbackは変更していない。
+
+### 製品candidateの3面検証
+
+source candidate、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Sprint 047、Patch 003、Patch 005、inventory、Patch 004、Sprint 041、Sprint 049の順に個別実行した。clean checkoutは開始／終了とも`git status --short`が空で、HEAD／treeがcandidateと一致した。Git-free面は実行前後とも`.git`不存在だった。3面とも次の結果でexit 0となった。
+
+```text
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0
+```
+
+`node --check plugins/secretary/scripts/lib/clarity-drift.mjs`、`node --check scripts/sprint-047-test.mjs`、`git diff --check`もexit 0。各suiteの一時fixture以外へのfilesystem／Git／network／external provider writeは0件である。
+
+### Windows再run待ちと残る境界
+
+- macOSではSR-010とPatch 004のWindows専用4件をtruthful NOT-RUNとし、`windowsVerified=false`を維持した。`76aae9fbd7fd87e32bdb9266c69258d76d1d4289`に因果するWindows Server 2025／Node 22の新run／jobは未取得である。
+- 次の既存PR CIでは、GS-003の同一physical top-level positive、nested／non-Git negative、commit所有範囲、前後filesystem／Git不変に加え、Patch 003、Patch 004、Patch 005、既存0.9.2が0 FAILになることを確認する。旧run `33371816241`のPASS／FAILを新candidateへ流用しない。
+- 本記録はGenerator自己検査であり、独立Evaluator Verdictではない。push、PR操作、manual workflow dispatch、remote変更、private my-vault／Yasashii write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindは行っていない。
+
+## Generator検証基盤補正 — Windows Git identityのRepo-local fixture化（2026-08-31）
+
+- 補正開始HEAD: `7164f8c4b6c0bacdb0d17272c806205f40e8d312`
+- test candidate commit: `0c8aed606edb7f335710c7a4d911614e4ed4e2df`
+- test candidate tree: `e849d30bd8da18166d1a2a057c78bb6b5bd10066`
+- 原因を確定したWindows証跡: PR #11 exact head `c48ed1aac4863f6d104b2b81212a8107b25ea680`、run `33373492423`、job `99429641170`
+- 対象round: `verification-infra`のみ。製品runtime、common runtime、workflow、spec／contract、state、feedback、private my-vault／Yasashiiの変更は0件。
+
+Windows runではNode syntax、既存0.9.2、ancestor symlink／boundary、Patch 004、Patch 003、Patch 005 SR-001〜008／010がPASSし、SR-009内Sprint 047のGS-003だけがRepo identity通過後の実`git commit --only`で`clarity-commit-failed`となった。fixture準備用`git()` helperは準備commitの子processだけへ`GIT_AUTHOR_*`／`GIT_COMMITTER_*`を渡す一方、製品CLI processには渡さず、Repo-local `user.name`／`user.email`も存在しなかった。global Git identityを持つMacでだけ偶然PASSし、global設定のないWindows runnerで失敗するfixture欠陥だった。
+
+synthetic `drift-repo`の`git init`直後に、Repo-local `user.name=Sprint 047 Fixture`、`user.email=sprint-047-fixture@example.invalid`、`user.useConfigOnly=true`を設定した。名前とメールはtest-onlyの非実在値であり、global／system Git configや実Repoは変更しない。さらにGS-003 positiveのpreview／applyを、空の`GIT_CONFIG_GLOBAL`、`GIT_CONFIG_NOSYSTEM=1`、継承した`GIT_AUTHOR_*`／`GIT_COMMITTER_*`／`EMAIL`を除去した同一`runJson`環境で実行した。空のglobal config、Repo-local値、`git var GIT_AUTHOR_IDENT`の解決値を機械確認してから製品CLIのcommitを通すため、PASS根拠はRepo-local identityだけである。
+
+GS-003の同一top-level positive、nested root `git-root-mismatch`、non-Git `clarity-commit-non-git`、Clarity所有path／runtime除外、既存staged／unstaged／untracked、HEAD／branch／remote不変を維持した。Case ID 25件、Critical 16件、AC 7件、supplemental 2件、registry、threshold、feature割当は変更していない。`plugins/secretary/collaboration-inventory.json`のdigest対象にSprint 047 testは含まれないため、inventory更新は不要だった。今回のcandidate diffは検証コード1 file、製品コード0 fileであり、検証コードのみのroundである。
+
+### test candidateの3面検証
+
+source、同SHAのexact clean detached checkout、同SHAのGit-free archiveで、Sprint 047、Sprint 050 Patch 003、Sprint 050 Patch 005、Sprint 049 inventory validate、Sprint 050 Patch 004、Sprint 041、Sprint 049の順に個別実行した。clean checkoutは開始／終了ともHEAD／treeがcandidateと一致し、detachedかつ`git status --short`が空だった。Git-free面は実行前後とも`.git`不存在だった。3面すべてで次の集計が同一、exit 0となった。
+
+```text
+SPRINT047_TEST_PASS=25 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0 CRITICAL=16/16 AC=7/7 STRESS_CLI=32 STRESS_HOOK=32 EVENT_PARSE=100% EVENT_UNIQUE=100% STATE_REBUILD=100% SUPPLEMENTAL=2
+SPRINT050_PATCH003_PASS=21 FAIL=0 TOTAL=21 EXTERNAL_WRITES=0 NETWORK_CALLS=0
+SPRINT050_PATCH005_PASS=9 FAIL=0 SKIP=0 NOT_RUN=1 TOTAL=10 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT049_INVENTORY_PASS=20 FAIL=0 CASES=67 MARKERS=VALID DIGESTS=VALID
+SPRINT050_PATCH004_PASS=12 FAIL=0 SKIP=0 NOT_RUN=4 TOTAL=16 EXTERNAL_WRITES=0 NETWORK_CALLS=0 WINDOWS_VERIFIED=false
+SPRINT041_CASE_PASS=43 FAIL=0 TOTAL=43
+SPRINT049_PASS=20 FAIL=0 REGISTRY_MISSING=0 REGISTRY_DUPLICATE=0 REGISTRY_EXTRA=0 CRITICAL_PASS=15 CRITICAL_NOT_RUN=0 AC_EXECUTED=6 AC_NOT_RUN=0 SIDE_EFFECT_VIOLATIONS=0
+```
+
+`node --check scripts/sprint-047-test.mjs`と`git diff --check`もexit 0。3面検査用directoryと各suiteのOS一時fixture以外へのfilesystem writeは0件で、network／external provider／remoteへのwriteは0件である。
+
+### Windows未実行境界
+
+- macOSではSR-010を1 NOT-RUN、Patch 004のWindows専用4件をNOT-RUNとし、`windowsVerified=false`を維持した。空global／system無効化のGS-003はMacでも機械確認したが、Windows native PASSの代替には数えない。
+- candidate `0c8aed606edb7f335710c7a4d911614e4ed4e2df`に因果する新しいWindows Server 2025／Node 22 runは未実行。旧run `33373492423`の結果を新candidateへ流用しない。
+- 本Generatorはpush、PR操作、CI dispatch、Evaluator判定、downstream write、merge／release／tag／Marketplace／install／cache／live apply／実Xmindを行っていない。

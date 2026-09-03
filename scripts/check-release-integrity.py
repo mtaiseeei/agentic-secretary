@@ -95,8 +95,8 @@ def validate(root: Path) -> list[str]:
 
     if codex_plugin.get("name") != PLUGIN_NAME:
         errors.append("Codex plugin manifest name is missing or invalid")
-    if codex_plugin.get("version") != "0.10.2":
-        errors.append("Codex plugin manifest version must be 0.10.2")
+    if codex_plugin.get("version") != "0.11.0":
+        errors.append("Codex plugin manifest version must be 0.11.0")
     if codex_plugin.get("skills") != "./skills/":
         errors.append("Codex plugin manifest skills must be ./skills/")
     if codex_plugin.get("author", {}).get("name") != AUTHOR:
@@ -105,8 +105,14 @@ def validate(root: Path) -> list[str]:
         errors.append("Codex plugin manifest homepage/repository is missing or invalid")
     if codex_plugin.get("license") != "MIT":
         errors.append("Codex plugin manifest license must be MIT")
-    if any(field in codex_plugin for field in ("apps", "mcpServers", "hooks")):
+    if any(field in codex_plugin for field in ("apps", "mcpServers")):
         errors.append("Codex plugin manifest declares a nonexistent or unsupported companion")
+    if codex_plugin.get("hooks") != "./hooks/hooks.json":
+        errors.append("Codex plugin manifest must enumerate the shared Clarity hooks")
+    if plugin.get("skills") != "./skills/":
+        errors.append("Claude plugin manifest skills must be ./skills/")
+    if "hooks" in plugin:
+        errors.append("Claude plugin manifest must not redeclare standard Clarity hooks")
     codex_interface = codex_plugin.get("interface")
     if not isinstance(codex_interface, dict) or any(not codex_interface.get(field) for field in (
         "displayName", "shortDescription", "longDescription", "developerName", "category", "capabilities", "defaultPrompt"
@@ -116,11 +122,11 @@ def validate(root: Path) -> list[str]:
     skills_root = root / "plugins/secretary/skills"
     skill_names = sorted(path.parent.name for path in skills_root.glob("*/SKILL.md"))
     expected_skills = sorted([
-        "build", "chatwork", "connections", "daily", "google-chat", "memory-care", "name", "onboarding",
+        "build", "chatwork", "clarity", "connections", "daily", "google-chat", "memory-care", "name", "onboarding",
         "projects", "secretary", "settings", "setup-google", "setup-microsoft", "setup-notion", "update", "weekly",
     ])
     if skill_names != expected_skills:
-        errors.append("Codex plugin must reference the 16 unique shared skills")
+        errors.append("Codex plugin must reference the 17 unique shared skills")
     if (root / ".agents/skills").exists():
         errors.append("repo-local .agents/skills duplicates the formal bundled skills")
 

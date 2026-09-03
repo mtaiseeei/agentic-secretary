@@ -92,7 +92,7 @@
 1. 配布物は改名後の `plugins/yasashii-secretary/` 配下に置き、manifest・marketplace・README・インストールコマンドの名前を一致させる。
 2. 配布SKILLは同梱されない開発docsを参照しない。必要な規律は配布 `rules/` やテンプレに含める。
 3. 同梱スクリプトの実行権限と案内する実行方法を一致させる。
-4. 薄いルーターと段階ロードを維持し、部署制・自動case生成・patterns自動統合・hooksを追加しない。
+4. 薄いルーターと段階ロードを維持し、部署制・自動case生成・patterns自動統合・generic／Harness hooksを追加しない。Project Clarityに必須なcommand-only lifecycle hookだけは§25の狭い例外とする。
 5. `yasashii-secretary` から同梱ハーネス、agents、ハーネスベースラインを撤去し、section 12 は参照導線の健全性を検査する。
 
 ## 8. Chatwork設定wizard
@@ -362,7 +362,9 @@
 7. Windows対応のために、空上書き拒否、削除2段階、純追加journal、所有pathだけのcommit、push禁止、Secret非露出、macOS／Linux回帰を削除・緩和しない。
 8. Windows対応のPASSにはWindowsネイティブの実行証跡を必要とする。別OSでWindows形式path文字列を模擬した結果だけで「Windows対応済み」と表示しない。
 9. Agentic共通coreを先に独立評価し、PASSした完全SHAからだけYasashii overlayを同期する。Yasashiiは固有copy・identity・README・repo所有docsを保護した別回帰・独立評価を必要とする。
-10. `agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillは本変更の対象外とし、本Patchの対応済み表示に含めない。
+10. Sprint 038 Patch 002では、`agentic-secretary-my-vault`、installed cache、利用者workspace、private固有Skillを対象外とし、当時の対応済み表示に含めない。この履歴上の範囲を遡及変更しない。
+11. Sprint 038 Patch 003では、conversation migrationの一時ファイルを実行中OSのpath規則で対象fileと同じdirectoryへ置き、atomic置換、失敗時rollback、cleanup、再実行の冪等性、POSIX無回帰を維持する。Windows形式path文字列の別OS上の模擬だけをWindows native PASSにしない。
+12. この修正はpublic Agentic common coreを先に独立評価し、PASSした40桁完全SHAからだけprivate my-vault版とYasashii版へ別々に展開する。各下流は別Harness契約・Windows native回帰・独立評価を必要とし、public PASSまたは一方の下流PASSを他版の反映済み・合格・公開へ昇格しない。
 
 ## 22. 秘書identity・名前routing・rename境界
 
@@ -411,3 +413,71 @@
 9. inventoryは少なくとも会話rule／copy、`memory-care`、`secretary`、`settings`、`daily`、`projects`、workspace templates、runtime classifier、memory保存シーム、golden fixture、Sprint 010を含む現役回帰を対象とする。topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧契約を、言い換え・別surfaceを含めて負検査する。
 10. Agentic、Yasashii、private my-vaultのsourceは、各版固有の文体・Notion／vault routing・repo-owned docsを保ちながら同じauthorization、安全分類、内容冪等性を持つ。共通caseは実内容markerとoffline file fixtureで3版を別々に検査し、1版のPASSを他版へ昇格しない。
 11. Sprint 040ではsourceとoffline regressionまでを完了範囲とする。push、tag、GitHub Release、marketplace、installed cache、利用者workspace、Mac mini、release後の新session／loaded version確認は別phaseであり、offline PASSをlive反映済みと表示しない。
+
+## 25. Project Clarityの正本・Hook・連携境界
+
+1. Project Clarityは生きた実行タスクの新しい正本を作らない。PJ内の生きた`TODO.md`、Notion TaskDB複製、自動タスク起票、会議録・チャット本文の恒久コピー、進捗率だけの健康判定を禁止する。
+2. `PROJECT.md`、確認済みDecision、memory、既存TODO／Notion、外部Repoのspec・Sprint・実装・成果物は従来の正本を維持する。Clarityが所有するのはimmutable ID、状態、Evidence参照、Attention、link、Event、projectionである。
+3. `decision.status`と`execution.status`を正本とし、quadrantは決定的に派生する。AI推定、draft、古いproposal、superseded情報だけでDecisionを`confirmed`へ進めない。
+4. Eventは純追加を原則とし、state、Markdown、Mermaid、Xmindは再構築可能なprojectionとする。projectionを直接編集してDecision／Execution／authorityを確定しない。
+5. 初期化、sync、migration、cleanup、Xmind proposal applyはpreviewとapplyを分ける。取消・拒否・競合・確認不足ではClarity canonical、Git、journal、runtimeを含む副作用0件とする。
+6. working rootは実体path、Git top-level、edition／Clarity identityで確認する。root外symlink／junction、path traversal、absolute path injection、別Repoへのwrite、禁止pathへのwriteを拒否する。
+7. linked Repo連携は双方が相手exportをread-only取得し、自Repoのimport projectionだけを更新するpull方式とする。cross-root write、暗黙fetch／pull／push、branch／remote／visibility変更、last-write-winsを禁止する。
+8. authorityはfieldごとにPrimary／Reference／Shared derivedを一意に持つ。同一fieldにPrimaryが複数ある、Repo identity／link ID／digestが不一致、schemaが非互換の場合はconflictとして停止し、利用者へ選択を返す。
+9. Secret、OAuth token、private key、`.env`値、connector／Xmind／GitHub credential、transcript全文、顧客本文、local absolute pathをtracked Clarity dataへ保存しない。Evidenceは最小locator、短いsummary、digestへ限定する。
+10. 既存dirty、staged、unstaged、untracked、HEAD、branch、remoteを利用者の状態として保持する。Clarityのwrite、rollback、commitは所有pathだけを対象にし、pushは別の明示許可なしに行わない。
+11. Hookはplugin rootの共通`hooks/hooks.json`と軽量command routerを1組だけ持つ。Claude CodeとCodexのevent payload差はadapterで正規化し、common coreをhost別に複製しない。
+12. HookはClarity未初期化・未linked Repoで高速no-opする。Clarity利用中でもnetwork、LLM、Xmind生成、Git全履歴、全Repo scan、外部connector、plugin更新を実行しない。
+13. PostToolUse等の並行発火は共有JSONのread-modify-writeへ依存せず、atomic write、競合安全なlockまたは同等手段、一意eventで破損と重複を防ぐ。lock残骸はdoctorとcleanup previewから回復できる。
+14. Stopはmaterial changeと未checkpointを確認した場合に同一turnで1回だけ継続を促す。`stop_hook_active`または同等marker、turn／checkpoint identityにより2回目をblockせず、Hook failureでsession終了を妨げない。
+15. SessionStart／compact後の再開contextはAttention最大3件程度、件数summary、詳細path、last checkpointに制限する。全state、transcript、顧客本文をcontextへ注入しない。
+16. Codexはplugin rootの`hooks/hooks.json`を読み、互換用`CLAUDE_PLUGIN_ROOT`／`CLAUDE_PLUGIN_DATA`も提供する前提で共通routerを使える。ただし環境変数名だけでhostを推定せず、実payloadを正規化してClaude Code／Codexを別々に実機検証する。
+17. Codexの非managed plugin hookは内容hashのtrust前にskipされること、Codex trust未承認／無効、Claude plugin無効を正常なdegraded状態とする。manual Skill fallbackを常に利用可能にし、未実行Hookを故障またはverifiedと表示しない。
+18. 複数sourceまたは複数matching command hookが並行実行され得るため、同一観測、checkpoint、flush、Eventは内容とsession／turn identityで冪等にし、追加Eventや共有state破損を起こさない。
+19. Xmind integrationは明示ON／OFFとprovider capability／priority／selected／reasonを別に持つ。public Agentic／Yasashiiは既定OFF、private my-vaultは既定ONとするが、ONだけでprovider接続、必要能力、verified、課金承認を推定しない。integration ONかつXmind MCPがconnected／availableで必要capabilityを満たす場合はMCPを第1優先、local native `.xmind`を明示承認後の第2優先とする。MCP未接続／無効／capability不足／失敗／外部操作不承認は、理由・local代替・対象file／path・create/update／既存file影響／auth／credit見込みをpreviewし、利用者の明示承認前はlocal write 0件とする。拒否／cancel／無回答は`stopped`、write 0件。最初からlocal指定でもpreview／confirmを省略しない。
+20. Xmind MCPのcloud map create／update、external write、network、credit／課金消費は、provider、対象、予想影響を示した明示確認後だけ実行する。provider側のWrite Toolsが`Always allow`でも製品の事前確認を省略しない。実external-live gateで新しい権限・auth／creditが必要になった場合はその時点で停止し、対象と影響を示して利用者に確認する。local Skill／CLIもsign-inやcreditが必要な場合があるため「完全offline／無料」と断定しない。external-live未承認ではadapter contract／isolated fakeで確認境界を評価できるが、fakeでreal providerをverifiedにしない。Hook内ではXmind生成、MCP／CLI呼出し、networkを禁止する。
+21. Xmind MCP、local `.xmind`、表現可能なMermaidの4象限は、左上 🟢 定着・検証／安定している／`#16A34A`、右上 🔵 実行待ち／あとは進めるだけ／`#2563EB`、左下 🟡 暫定実装・要再確認／注意して確認する／`#D97706`、右下 🔴 設計・意思決定／人間の判断が必要／`#DC2626`に固定する。上軸は「決まっている」、下軸は「まだ決まっていない」。「赤=判断、黄=確認、青=実行、緑=安定」とemoji／ラベル／意味文を併記し、色だけに依存しない。MCPの実tool schemaでこの色／配置を保証できない場合はcapability不足と表示し、要件を弱めない。
+22. public版のSecretary-local統合はgeneric `secretary/projects/open/`と既存project seamを使う。private my-vault固有の`05/02` resolver、`vault/10_sources`、Notion property／relation、root private guidanceをpublic sourceへ持ち込まない。
+23. public `agentic-secretary`を先に完全実装・独立評価する。通常はPASSした完全SHA／digest、共通path、除外・保護path、rollbackだけを`public-evaluator-pass`のhandoff正本とする。記録済み`verification-scope-issue`をユーザーが明示受容した例外では、同じ要素と元feedback／未達／承認記録を固定し、PASSとは異なる`public-user-decision-risk-accepted`だけを使用できる。private my-vault、次にYasashiiは別Harness、別state、別Evaluatorで適用・評価し、1版の結果を他版へ昇格しない。
+24. planningとpublic実装Sprintでは原則としてpush、tag、GitHub Release、marketplace公開、installed cache更新、Mac mini同期、実downstream writeを行わない。唯一の例外として、ユーザーが明示許可したSprint 050 Patch 004のWindows external live gateは、exact candidate branchの既存`origin`への通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけを行える。force／別branch／remote変更／merge／release／install／downstreamへ拡張しない。sourceのEvaluator結果、Windows live、release、snapshot、installed cache、loaded version、downstream外部liveを別状態で報告する。
+25. HookはProject Clarity専用である。projects、daily、weekly、memory-care、updateその他のSkillへ独立Hookを追加せず、Hookから一般memoryの保存候補を意味判定しない。memory自然会話はSkill description、secretary router、conversation contract、回帰で扱う。connector live取得、自動更新、他の外部／確認系Skillの暗黙実行を禁止する。
+26. projectsはproject lifecycle（作成、open／closed、complete／reopen、`canonicalRepo`）を、ClarityはDecision／Execution／Validation／Attention／Driftを所有する。関連Skillのinput／output／routingはClarity-awareにするが、正本と確認境界を交換しない。タスク化は明示依頼時だけ既存TODO／notion-tasksへ委譲する。
+27. secretary、projects、daily、weekly、notion-tasks、memory-care、build、update／release inventory、onboarding、templates、rules、host inventory、edition handoffを実内容まで棚卸しする。外部connectorはClarityから自動実行しない。inventory対象漏れ、stale digest、Clarity正本の二重化、private値のpublic混入を不合格とする。
+28. primary 250 acceptance IDは`sprint-041`〜`sprint-048`のtarget集合で各1回だけ割り当て、ID／意味／割当を変更しない。CLX-001〜020は`sprint-049`割当のまま保持する。最新user decision用のXV-001〜004は`sprint-043`に初回割当し、`sprint-050`でprimary 250、CLX 20、XV 4、4 E2E、既存master回帰を再実行する。個別Sprintで他Sprintの全caseを合格条件に追加しない。
+29. ユーザー判断handoffは、accepted product sourceの完全SHA／tree SHA-256／file count／common path SHA-256／common file count、元feedbackのcommit／path／SHA-256／Verdict、受容対象、条件付きNOT-RUN、別phase残余、承認日／原文／判断文脈／scope／対象candidate／失効条件を一体で固定する。いずれか不足・不一致ならfail closedとする。
+30. `docs/sprints/state.md`の`done-by-user-decision`だけ、ユーザー発話の自動推測、文脈から切り離した「はい」「よいです」、別candidate／別feedbackへの転用、承認後のsource・tree・common path・未達・順序・file scope変更、撤回済み承認をauthorizationとして扱わない。現在の短い原文は、同じ記録内の具体的な判断文脈とcandidate束縛が揃う場合に限り有効である。
+31. ready handoffでは`acceptedSource`と`governanceSource`を分離する。`acceptedSource`はSprint 050 exact product candidate `5f08d454c05576fcff8ab32c10c00887b4c15a96`のまま保持し、Sprint 050 Patch 001の実装・評価commitを代入しない。`governanceSource`はこの例外gateを実装し独立EvaluatorがPASSしたcommitを指し、state文字列だけで代替しない。
+32. `public-evaluator-pass`の既存経路は同じ意味・入力・失敗条件を維持する。ユーザー判断経路で`evaluatorPass=true`、Sprint 050 Verdictの書換え、live／Xmindのverified昇格、`public-evaluator-pass`へのaliasを禁止する。
+33. handoffの順序は`agentic-secretary-my-vault`→`yasashii-secretary`、write対象は宣言済みcommon pathだけとする。excluded／protected pathと各downstream同期前状態を保持し、rollbackは同期前commitへcommon pathだけを戻す。順序、対象repo identity、path集合、protected digest、rollbackが固定値と異なる場合はreadyにしない。
+34. Sprint 050 Patch 001自身は実downstream repo、remote、release、tag、push、marketplace、installed cache、new session、実Xmind MCP、実hostへwriteしない。Patchの独立Evaluator PASS後に、各downstreamの別Harnessがhandoffを入力として適用・独立評価する。
+35. `development-pointer`／`canonicalRepo`を持つopen PJのClarity-aware status、daily、weekly、Portfolioは、利用可能なlocal正本repoをboundedかつread-onlyに確認する。pointerの「最初に読むファイル」、Repo identity、Git current state、Clarity状態の有無、観測時刻、未確認理由を欠かさず、Secret、binary、巨大file、root内symlink、本文全文を取り込まない。
+36. remote URLだけのpointerをclone／fetch／pull／checkoutせず、Clarityからnetwork／providerを暗黙起動しない。利用可能かつ許可済みのread-only provider evidenceが現在のadapter入力に無い場合は`unavailable`とする。missing、unsafe、unreadable、staleな正本をworkspace snapshotだけで補完して包括的な現在判断へ昇格しない。
+37. 一般filesystemのworking rootは`allowAncestorSymlinks: false`相当を既定とし、option省略時もancestor symlinkを拒否する。Clarityの指定入口だけは専用root resolverがrequest中にtrueを内部指定し、working root自身がsymlinkではないことを確認したうえでancestorだけを物理rootへ固定する。これは利用者向けCLI flag／設定ではなく、共通filesystem、他Skill、tracked project／link bundleへ伝播・永続化しない。
+38. Clarity内部policyの適用時も解決先は実在する通常directoryでなければならず、containmentとwriteは物理root基準とする。root内から外向きのsymlink、root自身のsymlink、壊れた／file向きalias、Drift source locator symlink、解決後のalias差替え・物理root identity変更は副作用0件で拒否する。readとwriteの重要境界で同じroot identityを再確認する。
+39. canonical readerとancestor alias対応は正本repoへのwrite、fetch、pull、push、checkout、branch／remote変更、network callを0件に保ち、dirty／staged／untracked、HEAD、branch、remoteを保持する。applyのsynthetic fixtureでは物理repo内の宣言済み`.clarity/**`だけが変わり、alias側の別tree、workspace側、外部参照先を変更しない。
+40. Clarity canonicalの論理writeは、Event／Evidenceのappendとそれらから派生するStateが互いに一致する単位で完了する。append-onlyの既存履歴を維持し、rollbackできるのは、同じlogical operationが同じowner／tokenの有効leaseを保持している間かつrelease前に、自分が追加した未完了appendだけである。開始前から存在する履歴、別writerの正当なappend、owner／token不一致の対象を巻き戻さない。
+41. canonical writeの排他は、owner／token、active／stale、期限の意味を保つ有効leaseで保証する。固定TTL／wait値の維持を要件にはせず、各logical writeのlock取得後に行うretry、rollback、cleanupまでを有効lease内で終えるか、同じtokenを再確認した安全なlease延長を使う。延長失敗、owner／token変更、期限切れではwrite／rollback／cleanupを即停止する。lock取得、stale回復、lease延長、canonical置換、release／cleanupを含む全待機loopは有限上限と非busy待機を持ち、`ENOENT`等の再試行も上限内で終了する。
+42. retry可能なtransientはerrno名だけで決めない。各試行前にphysical root、targetとparentの存在・書込み可能性・read-only状態、symlink／junction／identity不変、lock owner／token、temp ownershipを再確認でき、他の安全違反がなく、有限上限内に解消した共有／利用中競合だけをtransientとする。permission、read-only、missing parent、schema破損、所有不明、境界差替え、上限まで継続する競合は成功候補へ広げない。
+43. logical writeは、operation identity、対象canonical、進行段階、owner／tokenを他writerと区別できるClarity所有のdurable progressを持つ。同じ記録と実残骸が一致する自己所有の未完了operationだけをretry／doctor／rebuildで決定的に収束させる。記録がない、または対象・段階・owner／tokenが一致しない`state-mismatch`は第三者変更の可能性があるため既存どおりfail closedとし、自動rollback／自動rebuildしない。
+44. 通常成功、通常拒否、rollback成功ではEvent／Evidence／State不整合とowned残骸を0件にする。State確定に加えてrollbackまたはcleanupも失敗するdouble faultは、成功／部分成功を表示せず、自己所有の未完了operationと残ったcanonical状態をdoctorが識別でき、利用者確認を伴うrecoveryで他者所有物を変えずに収束できる診断可能な終端にする。lock fileの排他作成後に所有recordを書けない識別不能lockと、canonical直下を含むorphan tempも同じinventoryへ含め、PID／時刻だけで所有を推定して削除しない。
+45. Clarity rootのRepo／Git identity確認は、対応Windowsの既存並行Hook／CLI burstでも全processが有限時間内に同じ現在identityを確認できるようにする。速度のためにGit／filesystem identity、Git top-level、Git dir、config由来identityの変更検知を省略せず、古い観測をrequest境界の外で再利用しない。malformed output、実timeout、directory以外、identity変更、root／symlink／junction境界違反はfail closedとし、Git prompt／network、Secret露出、dirty／staged／untracked、HEAD／branch／remote変更を0件に保つ。
+
+## 26. Clarity init scannerの包括性・portable path境界
+
+1. scannerの包括性は、全file／全履歴の無制限読込ではなく、現在判断に必要な正本を固定した上限内で優先して確認することを意味する。global byte／file／entry上限と1 file上限を撤廃しない。
+2. Harness構造を確認できたRepoだけにauthoritative reserved laneを適用する。`src/`、`scripts/`、一般文書がgeneric budgetを先に消費しても、state、spec、Current Sprint contract／progress／feedback、root guidance、package manifest用の予約枠を失わない。
+3. stateはOrchestrator execution truth、contractはrequirements、progressはGenerator self-report、feedbackはEvaluator validationである。progressだけから独立PASSを推測せず、feedback missingをscan-limit、PASS、FAILのいずれにも偽装しない。
+4. authoritative sourceごとに`inspected`、`excluded`、`uninspected`、`not-found`と理由、使用byte／上限、partial状態を返す。巨大、invalid、Secret-like、binary、symlink、permission、case collisionを黙って成功へ丸めない。
+5. stateがTBD、missing、invalid、上限超過の場合のfallbackはboundedで、使用した根拠と推測を明示する。全過去feedbackを順番に全文走査したり、最新らしいfilenameだけを無根拠に現在正本へ昇格したりしない。
+6. `.env`／credential／Secret-like content、binary、root内symlink／junction、path traversal、absolute path injection、tracked dataへのlocal absolute path混入を引き続き拒否する。previewは`changed:false`、network／external provider／Git変更0件である。
+7. alias pathとphysical pathは同じ候補意味、Repo identity、coverage結果を返す。Sprint 050 Patch 003のancestor alias許可範囲を広げず、root自身／root内symlink、差替え、identity変更をfail closedとする。
+8. Windows pathはNodeのplatform path APIとfilesystem観測で扱い、`/`固定、文字列prefix containment、BashによるWindows path解釈へ依存しない。drive letter、backslash、空白、日本語、CRLF、case-insensitive collision、reserved／invalid表現を安全側へ分類する。
+9. Windowsのsymlinkとjunctionは作成capabilityを別々に観測する。symlinkはDeveloper Mode／権限により作成不能な場合があるが、その理由をjunctionへ流用しない。作成不能を製品PASSへ数えず、種類ごとの実行caseとSKIP／NOT-RUN理由を分離する。macOS上のWindows風文字列caseはparser補助証拠であってWindows native証拠ではない。
+10. Windows verifiedは正式なWindows native runnerで今回のClarity suiteが実行され、実行可能なscanner／init preview／identity／安全caseがPASSした場合だけ表示する。macOS／Linux回帰も同じcandidateで維持し、host固有home、drive、volume名を製品へhard-codeしない。
+11. Windows native runはexternal live gateとして、exact candidate branchの既存`origin`への通常pushと、因果的な既存PR CI／必要時workflow dispatchだけを許可する。offline preview／fixtureはnetwork／external write 0を維持し、force push、remote変更、merge、release、tag、Marketplace、install、downstream、実顧客Repo writeを禁止する。
+12. Windows gate未実行、認証／runner／dispatch不能、timeoutは`windowsVerified=false`とtruthful NOT-RUN／incompleteを維持し、verification-infra／external-live-gate未達として分類する。Windows runner内のClarity assertionがcandidate因果で失敗した場合はproduct findingとして分ける。どちらもPASSへ数えない。
+13. `docs/sprints/state.md`は、Current ID、status、Next Planned、対応table row等の構造化execution truthと、履歴説明・コード例・自由記述を安全境界上で分ける。無害なplaceholder、credential field名、過去の検査説明だけを理由にwhole-fileを除外し、Current IDをnull、4 role bundleを欠落させてはならない。
+14. stateに実値らしいSecretがある場合、値、周辺本文、raw-content digest、値の候補を低コストで推測できるdigestをsummary、candidate、Evidenceその他の出力へ露出しない。Evidence locatorは非機密のrepo-relative pathと構造fieldだけに限定する。構造metadataだけを保持できる場合は`redacted`／`partial`と理由を返し、保持できないfieldを推測しない。Secret本文を含むbytesのhashを安全なEvidenceとみなさない。
+15. state専用の構造抽出を、Secret検査の無効化、特定literal／placeholderのexact allowlist、全Markdown本文の採用、global／per-file上限撤廃へ広げない。state以外のspec、contract、progress、feedback、guidance、manifestとgeneric laneは既存のstrict sensitive-name／Secret-like exclusionを維持する。
+16. public common runtimeの修正対象は`plugins/secretary/scripts/clarity.mjs`、`plugins/secretary/scripts/lib/clarity-core.mjs`、`plugins/secretary/scripts/lib/clarity-harness-scan.mjs`を含む固定candidateとする。publicの独立Evaluator PASS後だけそのcandidate identityと宣言済みcommon pathをprivate my-vault、次にYasashiiの別Harnessへ渡す。byte-syncが必要な3 pathの差分、版固有pathの上書き、1版のPASSの他版への昇格を禁止する。
+17. Sprint 050 Patch 005のexternal writeは、既存PR #11と同じ`codex/sprint-041-project-clarity` branchの`origin`への通常pushと、そのcandidateに因果する既存Windows CIだけを許可する。merge、release、tag、Marketplace、install、cache、live apply、実Xmind、private／Yasashii実repo writeへ拡張しない。

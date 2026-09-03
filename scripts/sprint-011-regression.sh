@@ -170,7 +170,7 @@ missing_pref_ref=0
 while IFS= read -r skill; do
   grep -q 'preferences.md' "$skill" || { printf '  preferences参照なし: %s\n' "$skill"; missing_pref_ref=$((missing_pref_ref+1)); }
 done < <(find "$PLUGIN/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | sort)
-check "全16スキルがpreferencesを参照" "[ '$missing_pref_ref' -eq 0 ] && [ \"\$(find '$PLUGIN/skills' -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')\" -eq 16 ]"
+check "全17スキルがpreferencesまたは専用共通契約を参照" "[ '$missing_pref_ref' -eq 0 ] && [ \"\$(find '$PLUGIN/skills' -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')\" -eq 17 ]"
 
 # 部分更新・追記・確認後のjournal/commit
 SEC="$WORK/main/secretary"
