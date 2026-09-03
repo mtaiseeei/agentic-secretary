@@ -5,7 +5,7 @@
 - Current ID: sprint-050-patch-007
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 28
+- Lineage Dispatches: 29
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -106,6 +106,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-03: Generator candidate `95b63b3c9408792d912cb57df5cbc0c5dd2d727c`／tree `2dc24cea98edb750b34b3a32a6e9c6515728c93b`は、更新専用identity helper、`update-apply.mjs`の同一Git root判定と最初のwrite直前再検査、focused test、Windows workflow接続、inventory該当digest 1値、progressへ限定した。local focused 24/24、Sprint 032 15/15、wrapper 5/5、関連Clarity各gate、inventory 20 surface／67 caseがgreen。read-only指定のFable 5.1敵対的reviewは製品codeをGo相当、Critical 0／Major product 0とした一方、verification-infra Major 2件を検出して全体No-Goとした。1件目はpublic workflowのprivate checkoutがshallowなためSprint 032の0.7.0履歴探索がWindowsで到達不能、2件目はfocused 8.3 positiveがslash表記差だけでも通るfalse-green。junction fixtureの作成方法とundefined identity比較はMinor。workflowのprivate checkoutを`fetch-depth: 0`へ限定補正し、実8.3 alias存在とresolve後の差を必須化、junctionをNode nativeへ統一、undefined比較をfalseにする。製品root意味、timeout、case数、thresholdは不変。Fableは指示外に`~/.claude/plans/`へreview文書1件を作成したと自己申告したが、Repo差分0で製品／PASS証拠に使わず削除もしない。fresh Generator補正予約としてLineage Dispatchesを29へ更新し、Retry／Spec-Issue 0、Status active、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: Generator前の依存監査で、既存Windows workflow／inventory追跡runnerへ回帰接続すると`clarity-harness-scanner.contentDigest`が必然的に変わることを確認した。Plannerがcommit `8043d70f726ac834852ad78353ac1e89663c82e5`／tree `c6aa37cb11ee0d3b6d3fa4d9900c4a79fd49aa7a`で契約1ファイルだけを補正し、宣言がstaleになる場合の該当digest 1値だけを許可、他surface／field／path／marker／test／schema差分0と既存inventory validator全greenを固定した。AC数11、threshold、evidence safe harbor、製品scopeは不変。fresh Generator予約としてLineage Dispatchesを28へ更新し、Retry／Spec-Issue 0、Status active、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: fresh PlannerがWindows更新rootの物理directory identity判定を`Type: micro`／Risk highのPatch 007としてcommit `60209f29b5016bf8d302829dd111c99808f78e91`／tree `1f030c4712fc95b90543006800c1609cd68e57e5`で契約化した。変更対象は`update-apply.mjs`のworkspace root確認1 flowとfocused回帰／既存Windows workflow接続だけ。同じ通常directoryの非ゼロ`dev`／`ino`完全一致だけを許可し、別root、identity不明・0、非directory、差替え、symlink／junction、Git異常は副作用0で拒否する。Sprint 032 Windows 15/0、関連Clarity gate維持、test skip／threshold緩和0を固定し、private／Yasashii、release／install／mergeは別phaseとした。fresh strong Generator予約としてLineage Dispatchesを27へ更新し、Status active、Retry／Spec-Issue 0、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: private下流のexact Windows run `33716116328`で、public／private共通の`update-apply.mjs`がWindows 8.3短縮pathとGitの長い`--show-toplevel`を文字列比較し、安全な同一Git rootを誤拒否するproduct portability bugを確認した。Clarity側で既に採用・Windows評価済みのfail-closedなfilesystem identity比較と同じ意味を更新機能へ限定適用し、同一rootは許可、別root／identity不明は引き続き拒否する`Type: micro`のPatch 007としてPlannerへ渡す。更新処理、同意境界、symlink境界、他Skill、Clarity製品、release／installは変更しない。ユーザーの継続承認とLineageカウンター一時無視に基づき、Current IDを本Patch、Statusを`active`、fresh Planner予約としてLineage Dispatchesを26へ更新する。Retry／Spec-Issue 0、Model Tier strong、Rotate noneを保持する。
