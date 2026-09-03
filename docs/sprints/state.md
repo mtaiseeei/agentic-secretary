@@ -2,10 +2,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: TBD
+- Current ID: sprint-050-patch-007
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 25
+- Lineage Dispatches: 26
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -98,6 +98,7 @@
 | sprint-050-patch-004 | done | [contract](sprint-050-patch-004.md) | [progress](../progress/sprint-050-patch-004.md) | [feedback](../feedback/sprint-050-patch-004.md) |
 | sprint-050-patch-005 | done | [contract](sprint-050-patch-005.md) | [progress](../progress/sprint-050-patch-005.md) | [feedback](../feedback/sprint-050-patch-005.md) |
 | sprint-050-patch-006 | done | [contract](sprint-050-patch-006.md) | [progress](../progress/sprint-050-patch-006.md) | [feedback](../feedback/sprint-050-patch-006.md) |
+| sprint-050-patch-007 | active | [contract](sprint-050-patch-007.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -105,6 +106,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-03: private下流のexact Windows run `33716116328`で、public／private共通の`update-apply.mjs`がWindows 8.3短縮pathとGitの長い`--show-toplevel`を文字列比較し、安全な同一Git rootを誤拒否するproduct portability bugを確認した。Clarity側で既に採用・Windows評価済みのfail-closedなfilesystem identity比較と同じ意味を更新機能へ限定適用し、同一rootは許可、別root／identity不明は引き続き拒否する`Type: micro`のPatch 007としてPlannerへ渡す。更新処理、同意境界、symlink境界、他Skill、Clarity製品、release／installは変更しない。ユーザーの継続承認とLineageカウンター一時無視に基づき、Current IDを本Patch、Statusを`active`、fresh Planner予約としてLineage Dispatchesを26へ更新する。Retry／Spec-Issue 0、Model Tier strong、Rotate noneを保持する。
 - 2026-09-02: Sprint 050 Patch 006はfresh独立Evaluator commit `0a2852c2c79c68f273eb810b5983ce8f11724030`で**PASS**。評価開始head `bd329c85408aa66f38fb4771be28f2715a09c9c4`、product candidate `7fcc9fce536693ec2f0cb6acdd4e3374e705b83b`、Fable補正後verification candidate `5c9393d38d80ff16fd2737a5a5817e0b280edcca`を固定し、focused 21／21、Patch 005 local 9 PASS／0 FAIL／Windows 1 NOT-RUN、inventory 20／20・67 caseを独立再実行した。同一headのWindows Server 2025／Node 22 run `33642215658`／job `100287868131`はsuccessで、Patch 005 10／10、SR-009／SR-010 PASS、`WINDOWS_VERIFIED=true`、external write／network 0。機能完全性／動作安定性／回帰なしは全5／5、AC未達0、product finding 0、blocking 0。verification-infra findingはGenerator handoffに記した完全SHAの1文字過多だけで、本記録では正しいSHAへ訂正した。Statusを`done`、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0、Lineage 25、最後にdispatchしたModel Tier `strong`、Rotate `none`とする。private／Yasashii、install、cache、実Repo apply、Xmind、release、mergeは未実施。
 - 2026-09-02: Sprint 050 Patch 006はproduct candidate `7fcc9fce536693ec2f0cb6acdd4e3374e705b83b`／tree `172acb141a9aa0dcc84f01e6c828ccb9c5adea34`、Fable限定補正後verification candidate `5c9393d38d80ff16fd2737a5a5817e0b280edcca`でGenerator handoffを確定した。exact `docs/sprints/state.md`だけ256 KiB、他first file 64 KiB、194,857／256 KiB／各+1、Secret／binary／symlink／unsafe／unreadable、4 surface収束、Git／filesystem不変を既存CF 21件内で回帰化した。Fableのblockingは0、識別不能だったbackslash negativeは70 KiBへ補正し、case違いと外部canary不変も近接assertした。focused 21／21、Patch 005 9 PASS／0 FAIL／Windows 1 NOT-RUN、inventory 20／20・67 case、external write／network 0。現行scanner／parser／workflow／registryは未変更。Windows因果CIとfresh独立Evaluatorは未実施のためPASSへ昇格せず、Statusを`awaiting-eval`とする。ユーザーの既承認によりLineage停止を一旦無視し、fresh strong Evaluator予約としてLineage Dispatchesを25へ積み増す。Retry／Spec-Issue 0、Model Tier `strong`、Rotate `none`を保持する。
 - 2026-09-02: Generator candidate `7fcc9fce536693ec2f0cb6acdd4e3374e705b83b`／tree `172acb141a9aa0dcc84f01e6c828ccb9c5adea34`は、exact `docs/sprints/state.md`だけ256 KiBを適用する製品変更1箇所と既存CF内の境界matrixを実装し、focused 21／21、Patch 005 9 PASS／0 FAIL／Windows 1 NOT-RUN、inventory 20／20・67 case、external write／network 0だった。read-only Fable reviewは製品blocking 0を確認したが、backslash negativeが256 KiB超のfileを使い64 KiB境界を識別できないverification-infra finding 1件を指摘した。契約済みnegativeを70 KiBで識別可能にする限定補正とcase差／外部canary不変の近接assertだけをfresh strong Generatorへ戻す。製品実装、scanner、parser、workflow、case registry、spec、private／Yasashiiへは広げず、Retry／Spec-Issueは0、Status `active`、Model Tier `strong`、Rotate `none`を維持する。ユーザーの既承認によりLineage停止を一旦無視し、実dispatch監査値を24へ積み増す。
