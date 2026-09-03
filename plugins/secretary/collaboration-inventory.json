@@ -214,7 +214,7 @@
       "edition": "public-common-core-internal-opt-in",
       "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-drift.mjs", "plugins/secretary/scripts/lib/clarity-hook.mjs", "plugins/secretary/scripts/lib/clarity-link.mjs", "plugins/secretary/scripts/lib/clarity-projection.mjs", "plugins/secretary/scripts/lib/clarity-root.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/scripts/lib/safe-fs.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-root.mjs", "token": "agentic-secretary:clarity-root-policy:v1"}],
-      "contentDigest": "0383c922a118c3dc001243233f961325a278eda5bd265111b4aaa129a255b756",
+      "contentDigest": "0f5621468b1630c6e78d0a68f09261b8baf93a55eb782aae2046f31f33a075c3",
       "tests": ["AR-001", "AR-002", "AR-003", "AR-004", "AR-005", "AR-006", "AR-007", "AR-008", "AR-009", "AR-010", "AR-011", "AR-012", "AR-013", "AR-014"],
       "delegation": "Only declared Clarity Repo-root entrypoints opt in; Drift source locators retain their own closed policy",
       "noTouch": ["generic workingRoot default", "Repo-root symlink", "internal symlink", "root-external locator", "Git mutation", "user-facing flag"]
@@ -225,7 +225,7 @@
       "edition": "public-common-core-windows-native",
       "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-047-patch-001-test.mjs", "scripts/sprint-047-patch-002-test.mjs", "scripts/sprint-047-patch-004-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", "token": "agentic-secretary:clarity-harness-authoritative-scan:v1"}],
-      "contentDigest": "2d7e2b3d3a338f34b10d814fe9ab93bbcd972d868f7c5368003f6711cdfa0592",
+      "contentDigest": "bc9a98b128de016a5c94941d2308eeb637c7495bdcd88f882307c30a98996abc",
       "tests": ["HS-001", "HS-002", "HS-003", "HS-004", "HS-005", "HS-006", "HS-007", "HS-008", "HS-009", "HS-010", "HS-011", "HS-012", "HS-013", "HS-014", "HS-015", "HS-016", "SR-001", "SR-002", "SR-003", "SR-004", "SR-005", "SR-006", "SR-007", "SR-008", "SR-009", "SR-010"],
       "delegation": "Scan only local bounded sources; Windows verified requires the native workflow entry",
       "noTouch": ["unbounded repository read", "Secret body", "symlink or junction target", "Git write", "network", "downstream", "release"]
