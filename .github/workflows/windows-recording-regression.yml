@@ -12,6 +12,7 @@ on:
       - "scripts/sprint-038-patch-003-conversation-migration-test.mjs"
       - "scripts/sprint-050-patch-004-test.mjs"
       - "scripts/sprint-050-patch-005-test.mjs"
+      - "scripts/sprint-050-patch-007-test.mjs"
       - "scripts/sprint-047-test.mjs"
       - "scripts/sprint-047-patch-001-test.mjs"
       - "scripts/sprint-047-patch-002-test.mjs"
@@ -47,6 +48,9 @@ jobs:
       - name: Node syntax - conversation migration
         shell: pwsh
         run: node --check plugins/secretary/scripts/lib/conversation-migration.mjs
+      - name: Node syntax - update apply
+        shell: pwsh
+        run: node --check plugins/secretary/scripts/update-apply.mjs
       - name: Node syntax - Clarity core
         shell: pwsh
         run: node --check plugins/secretary/scripts/lib/clarity-core.mjs
@@ -71,6 +75,12 @@ jobs:
       - name: Clarity state structure and Secret redaction regression
         shell: pwsh
         run: node scripts/sprint-050-patch-005-test.mjs --require-windows
+      - name: Update workspace root physical identity regression
+        shell: pwsh
+        run: node scripts/sprint-050-patch-007-test.mjs --require-windows
+      - name: Existing update gate regression (Sprint 032)
+        shell: pwsh
+        run: node scripts/sprint-032-update-gate-test.mjs
       - name: Clarity logical write failure recovery regression (P001)
         shell: pwsh
         run: node scripts/sprint-047-patch-001-test.mjs
