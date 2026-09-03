@@ -20,7 +20,10 @@ export function normalizeUpdateDirectoryIdentity(stat) {
 }
 
 export function sameUpdateDirectoryIdentity(left, right) {
-  return left?.dev === right?.dev && left?.ino === right?.ino;
+  if (!left || !right || typeof left.dev !== "string" || typeof left.ino !== "string"
+    || typeof right.dev !== "string" || typeof right.ino !== "string"
+    || !left.dev || !left.ino || !right.dev || !right.ino) return false;
+  return left.dev === right.dev && left.ino === right.ino;
 }
 
 export function observeUpdateDirectory(value) {

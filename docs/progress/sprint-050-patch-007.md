@@ -104,3 +104,20 @@ JSON semantic diffは当該1値だけで、他surface、field、path、marker、
 
 Windows実機で8.3短縮名が利用できない環境ではfocused native positiveがFAILし、文字列fixtureだけでPASSにはしない。
 Orchestratorは通常push後、exact candidateのWindows raw logでfocused 0 FAIL、Sprint 032 15／0、既存step 0 product FAILを確認する。
+
+## Fable verification findingの限定補正
+
+Fable 5.1のread-only reviewは製品codeのCritical／Majorを0件とした一方、Windows検証面のMajorを2件、
+Minorを2件指摘した。既存結果と履歴を残したまま、次の4点だけを補正した。
+
+- `actions/checkout@v4`へ`fetch-depth: 0`を指定し、Sprint 032がWindowsでも公開0.7.0のGit履歴へ到達できるようにした。
+- Windows positiveは`~数字`を含む実8.3 aliasを必須とし、separatorとcaseを正規化した表記同士が異なる場合だけ受理する。
+  slash差だけ、短縮alias不在、同一表記はFAILとなる。
+- junction fixtureはshellの`mklink`ではなくNodeの`symlinkSync(..., "junction")`で作る。作成不能時はrequired checkがFAILする。
+- `sameUpdateDirectoryIdentity()`は片側、`dev`、`ino`のいずれかが欠ける場合に必ずfalseを返す。
+
+workflowのjob、ref、Windows Server 2025、Node 22、`timeout-minutes: 10`、既存case／thresholdは不変。
+focused POSIX再確認は25／25、Sprint 032は15／15、inventoryは20 surface／67 caseで0 FAIL。
+workflow bytesに合わせてinventoryは、許可済みの`clarity-harness-scanner.contentDigest` 1値だけを
+`8e85db97bb906e9a2b620e71aaaa1c73379a11f6a6866cbec052a502a0803f3e`へ再同期した。
+Windows nativeとfresh Evaluatorは引き続きNOT-RUNである。

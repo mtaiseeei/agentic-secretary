@@ -89,11 +89,17 @@ function windowsShortPath(path) {
   return result.stdout.trim();
 }
 
+function canonicalWindowsSpelling(path) {
+  return resolve(path).replaceAll("/", "\\").toLocaleLowerCase("en-US");
+}
+
 try {
   const large = 18_014_398_509_481_999n;
   const normalized = normalizeUpdateDirectoryIdentity(syntheticDirectory(large, large + 1n));
   check("BigInt identityを精度を落とさず10進文字列化", normalized.dev === large.toString() && normalized.ino === (large + 1n).toString());
   check("dev/ino完全一致だけを同一identityとして受理", sameUpdateDirectoryIdentity(normalized, { ...normalized }));
+  check("identityの片側またはfield欠損を拒否", [null, {}, { dev: normalized.dev }, { ino: normalized.ino }]
+    .every((candidate) => !sameUpdateDirectoryIdentity(normalized, candidate) && !sameUpdateDirectoryIdentity(candidate, normalized)));
   check("devが異なるidentityを拒否", !sameUpdateDirectoryIdentity(normalized, { ...normalized, dev: (large + 2n).toString() }));
   check("inoが異なるidentityを拒否", !sameUpdateDirectoryIdentity(normalized, { ...normalized, ino: (large + 3n).toString() }));
   expectCode("dev=0をfail closed", () => normalizeUpdateDirectoryIdentity(syntheticDirectory(0n, 1n)), "update-root-identity-unavailable");
@@ -134,13 +140,10 @@ try {
 
   const alias = join(temporaryRoot, "root-alias");
   let aliasCreated = false;
-  if (process.platform === "win32") {
-    const junction = spawnSync("cmd.exe", ["/d", "/s", "/c", `mklink /J "${alias}" "${repo}"`], { encoding: "utf8" });
-    aliasCreated = junction.status === 0;
-  } else {
-    symlinkSync(repo, alias, "dir");
+  try {
+    symlinkSync(repo, alias, process.platform === "win32" ? "junction" : "dir");
     aliasCreated = true;
-  }
+  } catch { /* required check below records unsupported junction creation as a failure */ }
   check("symlink/junction fixtureを作成", aliasCreated);
   if (aliasCreated) {
     try {
@@ -156,9 +159,13 @@ try {
     const shortObservation = short ? observeUpdateDirectory(short) : null;
     const longGitTop = git(repo, ["rev-parse", "--show-toplevel"]);
     const longGitTopObservation = observeUpdateDirectory(longGitTop);
+    const canonicalShort = short ? canonicalWindowsSpelling(short) : "";
+    const canonicalLong = canonicalWindowsSpelling(longGitTop);
+    const genuineShortAlias = /(?:^|\\)[^\\]*~\d+(?=\\|$)/u.test(canonicalShort);
     check("Windows 8.3短縮pathと長いGit rootを実identityで受理",
-      Boolean(shortObservation && short !== longGitTop && sameUpdateDirectoryIdentity(shortObservation.identity, longGitTopObservation.identity)),
-      `shortAlias=${Boolean(short)} distinct=${Boolean(short && short !== longGitTop)}`);
+      Boolean(shortObservation && genuineShortAlias && canonicalShort !== canonicalLong
+        && sameUpdateDirectoryIdentity(shortObservation.identity, longGitTopObservation.identity)),
+      `shortAlias=${Boolean(short)} genuine8dot3=${genuineShortAlias} canonicalDistinct=${Boolean(short && canonicalShort !== canonicalLong)}`);
   } else {
     check("Windows 8.3 native positiveはPOSIXではNOT-RUN", !requireWindows);
   }
