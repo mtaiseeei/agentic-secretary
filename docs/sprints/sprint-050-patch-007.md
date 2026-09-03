@@ -55,6 +55,10 @@ Clarityでは同じWindows表記差について、双方が通常directoryであ
    修正済みやlive update対応済みへ書き換えない。
 4. Clarityのroot resolver、ancestor alias、Hook、scanner、link、projection、Xmind provider／承認境界、
    projects／memory／TODO／settings／文書保存の動作を変更しない。
+5. 本Patchで既存Windows workflowまたはinventory追跡対象runnerのbytesが変わり、既存宣言がstaleになる場合に限り、
+   `plugins/secretary/collaboration-inventory.json`のsurface ID `clarity-harness-scanner`にある
+   `contentDigest` 1値だけを現在bytesへ同期できる。JSON semantic diffはこの1値だけとし、他surface、他field、
+   path、marker、test、schemaはすべて不変にする。これは宣言同期であり、製品scopeの追加に数えない。
 
 ### D. public-firstと比例した検証
 
@@ -87,6 +91,8 @@ Clarityでは同じWindows表記差について、双方が通常directoryであ
    logical-write／concurrency／root identity stepも0 product FAILである。test除外、SKIPへの変更、threshold緩和は0件である。
 9. product変更は更新root判定に必要な最小範囲、test／workflow変更は本Patchのfocused回帰接続に限定され、
    Clarity／Xmindと無関係な製品bytes、version、manifest、migration metadata、release artifactを変更していない。
+   inventory宣言同期が必要な場合も、JSON semantic diffは`clarity-harness-scanner.contentDigest`の1値だけで、
+   他surface／field／path／marker／test／schemaが不変かつ既存inventory validatorが0 FAILである。
 10. fresh独立Evaluatorが同一candidate、focused正負例、Sprint 032、Windows raw logを確認し、C1、C2、C3、C5、C6、C10を
     既存threshold以上、ゼロ許容軸を5／5、product finding 0、Acceptance Criteria未達0とした場合だけPASSである。
 11. public PASS前のprivate my-vault／Yasashii source write、merge、release、tag、GitHub Release、Marketplace、
