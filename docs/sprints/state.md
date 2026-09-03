@@ -5,7 +5,7 @@
 - Current ID: sprint-050-patch-007
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 27
+- Lineage Dispatches: 28
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -106,6 +106,7 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-03: Generator前の依存監査で、既存Windows workflow／inventory追跡runnerへ回帰接続すると`clarity-harness-scanner.contentDigest`が必然的に変わることを確認した。Plannerがcommit `8043d70f726ac834852ad78353ac1e89663c82e5`／tree `c6aa37cb11ee0d3b6d3fa4d9900c4a79fd49aa7a`で契約1ファイルだけを補正し、宣言がstaleになる場合の該当digest 1値だけを許可、他surface／field／path／marker／test／schema差分0と既存inventory validator全greenを固定した。AC数11、threshold、evidence safe harbor、製品scopeは不変。fresh Generator予約としてLineage Dispatchesを28へ更新し、Retry／Spec-Issue 0、Status active、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: fresh PlannerがWindows更新rootの物理directory identity判定を`Type: micro`／Risk highのPatch 007としてcommit `60209f29b5016bf8d302829dd111c99808f78e91`／tree `1f030c4712fc95b90543006800c1609cd68e57e5`で契約化した。変更対象は`update-apply.mjs`のworkspace root確認1 flowとfocused回帰／既存Windows workflow接続だけ。同じ通常directoryの非ゼロ`dev`／`ino`完全一致だけを許可し、別root、identity不明・0、非directory、差替え、symlink／junction、Git異常は副作用0で拒否する。Sprint 032 Windows 15/0、関連Clarity gate維持、test skip／threshold緩和0を固定し、private／Yasashii、release／install／mergeは別phaseとした。fresh strong Generator予約としてLineage Dispatchesを27へ更新し、Status active、Retry／Spec-Issue 0、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: private下流のexact Windows run `33716116328`で、public／private共通の`update-apply.mjs`がWindows 8.3短縮pathとGitの長い`--show-toplevel`を文字列比較し、安全な同一Git rootを誤拒否するproduct portability bugを確認した。Clarity側で既に採用・Windows評価済みのfail-closedなfilesystem identity比較と同じ意味を更新機能へ限定適用し、同一rootは許可、別root／identity不明は引き続き拒否する`Type: micro`のPatch 007としてPlannerへ渡す。更新処理、同意境界、symlink境界、他Skill、Clarity製品、release／installは変更しない。ユーザーの継続承認とLineageカウンター一時無視に基づき、Current IDを本Patch、Statusを`active`、fresh Planner予約としてLineage Dispatchesを26へ更新する。Retry／Spec-Issue 0、Model Tier strong、Rotate noneを保持する。
 - 2026-09-02: Sprint 050 Patch 006はfresh独立Evaluator commit `0a2852c2c79c68f273eb810b5983ce8f11724030`で**PASS**。評価開始head `bd329c85408aa66f38fb4771be28f2715a09c9c4`、product candidate `7fcc9fce536693ec2f0cb6acdd4e3374e705b83b`、Fable補正後verification candidate `5c9393d38d80ff16fd2737a5a5817e0b280edcca`を固定し、focused 21／21、Patch 005 local 9 PASS／0 FAIL／Windows 1 NOT-RUN、inventory 20／20・67 caseを独立再実行した。同一headのWindows Server 2025／Node 22 run `33642215658`／job `100287868131`はsuccessで、Patch 005 10／10、SR-009／SR-010 PASS、`WINDOWS_VERIFIED=true`、external write／network 0。機能完全性／動作安定性／回帰なしは全5／5、AC未達0、product finding 0、blocking 0。verification-infra findingはGenerator handoffに記した完全SHAの1文字過多だけで、本記録では正しいSHAへ訂正した。Statusを`done`、Current ID／Next PlannedをTBD、Retry／Spec-Issue 0、Lineage 25、最後にdispatchしたModel Tier `strong`、Rotate `none`とする。private／Yasashii、install、cache、実Repo apply、Xmind、release、mergeは未実施。
