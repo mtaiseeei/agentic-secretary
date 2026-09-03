@@ -2,7 +2,7 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-050-patch-008
+- Current ID: sprint-050-patch-007
 - Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 29
@@ -99,7 +99,6 @@
 | sprint-050-patch-005 | done | [contract](sprint-050-patch-005.md) | [progress](../progress/sprint-050-patch-005.md) | [feedback](../feedback/sprint-050-patch-005.md) |
 | sprint-050-patch-006 | done | [contract](sprint-050-patch-006.md) | [progress](../progress/sprint-050-patch-006.md) | [feedback](../feedback/sprint-050-patch-006.md) |
 | sprint-050-patch-007 | awaiting-eval | [contract](sprint-050-patch-007.md) | [progress](../progress/sprint-050-patch-007.md) | - |
-| sprint-050-patch-008 | active | [contract](sprint-050-patch-008.md) | - | - |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -107,8 +106,6 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
-- 2026-09-03: fresh Plannerが`sprint-050-patch-008`をcommit `51c84cab1b1e46c2259114e07cdfe6ce98f52ab0`／tree `e71c76c1b2c2e97db757919716e716393183e1ee`で契約化した。Typeはregular patch、Risk high、AC 14件。統合可能なのはcanonical lock取得後の有効lease内にある同一同期filesystem mutationで重複するfull root／Git安全再検査だけとし、別mutation、retry別試行、callback write、rollback、cleanup、release、非同期、別request／processへの観測共有を禁止した。Windows 3 round×Hook 32＋CLI 32、100% hard gate、15秒lock wait、30秒lease、5秒Git probe、10分job、Patch 001〜004の安全境界、Patch 007更新root製品bytesを不変とする。宣言同期が必要な場合はユーザー承認どおり`clarity-harness-scanner.contentDigest`該当1値だけを許可し、他semantic diff 0とvalidator 0 FAILを必須化。Fable追加review、新collector、private／Yasashii、release／install／cache／live apply／Xmindは非scope。Retry／Spec-Issue 0、Lineage 29、Model Tier strong、Rotate noneを保持してfresh Generatorへ渡す。
-- 2026-09-03: Patch 007 exact head `e8b3d0065a6b83aa9b4e6c7c61f8070cb4a96262`のWindows run `33718943133`／job `100533920841`は、更新root focused stepへ到達する前の既存Patch 005内包`GS-009`でHook／CLI 64 process中3件が非0となり、expected CLI event 32に対して29で停止した。会話migration 9／9、Clarity Harness scan 16／16、`GS-001`〜`GS-008`と`GS-010`〜`GS-015`はPASSし、Patch 007製品変更に因果する失敗は未観測。既承認どおりPatch 007へ並行lock修正を混ぜず、Windows canonical critical section内で同一mutationに重複するfull root／Git安全再検査だけを安全に統合する限定再試行を`sprint-050-patch-008`へ切り分ける。process 32＋32、Windows 3 round、15秒lock wait、30秒lease、10分job、100% hard gate、root／Git／symlink／junctionのfail-closed境界は不変。workflow／追跡runnerの正当な変更でinventory宣言がstaleになる場合は、ユーザーが明示承認した`plugins/secretary/collaboration-inventory.json`の`clarity-harness-scanner.contentDigest`該当1値だけを同期可能とし、他surface／field／path／marker／test／schema差分を禁止する。Retry Countは承認どおり0、Lineageカウンターは一旦無視して29を保持し、fresh Plannerへ契約化を渡す。Patch 007は`awaiting-eval`のまま、Patch 008がWindows gateを回復した後に同一最終候補で評価を再開する。
 - 2026-09-03: Fable限定補正後candidate `3af2efdd6756296432c93f16b8ffad18f36122a2`／tree `8a905d3a0dc747e99efce9395e83ff15108b4705`を確定した。public checkoutへ`fetch-depth: 0`を追加してSprint 032履歴探索を到達可能にし、focused Windows positiveは`~数字`を含む実8.3 aliasとseparator／case正規化後のlong Git topとの差を必須化した。junction fixtureをNode nativeへ統一し、identity片側／field欠損をfalseへ補正。job／ref／Windows Server 2025／Node 22／10分timeout、製品root意味、case／thresholdは不変。Orchestrator再実行でfocused 25/25、Sprint 032 15/15、inventory 20 surface／67 caseがgreen、inventory semantic diffは`clarity-harness-scanner.contentDigest`該当1値だけ。Windows nativeとfresh Evaluatorは未実施のためStatusを`awaiting-eval`へ進め、Retry／Spec-Issue 0、Lineage 29、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: Generator candidate `95b63b3c9408792d912cb57df5cbc0c5dd2d727c`／tree `2dc24cea98edb750b34b3a32a6e9c6515728c93b`は、更新専用identity helper、`update-apply.mjs`の同一Git root判定と最初のwrite直前再検査、focused test、Windows workflow接続、inventory該当digest 1値、progressへ限定した。local focused 24/24、Sprint 032 15/15、wrapper 5/5、関連Clarity各gate、inventory 20 surface／67 caseがgreen。read-only指定のFable 5.1敵対的reviewは製品codeをGo相当、Critical 0／Major product 0とした一方、verification-infra Major 2件を検出して全体No-Goとした。1件目はpublic workflowのprivate checkoutがshallowなためSprint 032の0.7.0履歴探索がWindowsで到達不能、2件目はfocused 8.3 positiveがslash表記差だけでも通るfalse-green。junction fixtureの作成方法とundefined identity比較はMinor。workflowのprivate checkoutを`fetch-depth: 0`へ限定補正し、実8.3 alias存在とresolve後の差を必須化、junctionをNode nativeへ統一、undefined比較をfalseにする。製品root意味、timeout、case数、thresholdは不変。Fableは指示外に`~/.claude/plans/`へreview文書1件を作成したと自己申告したが、Repo差分0で製品／PASS証拠に使わず削除もしない。fresh Generator補正予約としてLineage Dispatchesを29へ更新し、Retry／Spec-Issue 0、Status active、Model Tier strong、Rotate noneを保持する。
 - 2026-09-03: Generator前の依存監査で、既存Windows workflow／inventory追跡runnerへ回帰接続すると`clarity-harness-scanner.contentDigest`が必然的に変わることを確認した。Plannerがcommit `8043d70f726ac834852ad78353ac1e89663c82e5`／tree `c6aa37cb11ee0d3b6d3fa4d9900c4a79fd49aa7a`で契約1ファイルだけを補正し、宣言がstaleになる場合の該当digest 1値だけを許可、他surface／field／path／marker／test／schema差分0と既存inventory validator全greenを固定した。AC数11、threshold、evidence safe harbor、製品scopeは不変。fresh Generator予約としてLineage Dispatchesを28へ更新し、Retry／Spec-Issue 0、Status active、Model Tier strong、Rotate noneを保持する。
