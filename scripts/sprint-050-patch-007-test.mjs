@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -31,9 +32,7 @@ if (requireWindows && process.platform !== "win32") {
   process.exit(1);
 }
 
-const safeTemporaryBase = process.platform === "win32" && process.env.USERPROFILE && existsSync(process.env.USERPROFILE)
-  ? process.env.USERPROFILE
-  : existsSync("/private/tmp") ? "/private/tmp" : tmpdir();
+const safeTemporaryBase = existsSync("/private/tmp") ? "/private/tmp" : tmpdir();
 const temporaryRoot = mkdtempSync(join(safeTemporaryBase, "sprint050-p007-root-"));
 let pass = 0;
 let fail = 0;
@@ -155,17 +154,22 @@ try {
   }
 
   if (process.platform === "win32") {
-    const short = windowsShortPath(repo);
-    const shortObservation = short ? observeUpdateDirectory(short) : null;
-    const longGitTop = git(repo, ["rev-parse", "--show-toplevel"]);
-    const longGitTopObservation = observeUpdateDirectory(longGitTop);
+    const generatedShort = windowsShortPath(repo);
+    const short = [repo, generatedShort].find((candidate) => candidate && existsSync(candidate)
+      && /(?:^|\\)[^\\]*~\d+(?=\\|$)/u.test(canonicalWindowsSpelling(candidate))) || "";
     const canonicalShort = short ? canonicalWindowsSpelling(short) : "";
+    const gitTop = git(repo, ["rev-parse", "--show-toplevel"]);
+    const expanded = short ? realpathSync.native(short) : "";
+    const longGitTop = [gitTop, expanded].find((candidate) => candidate && existsSync(candidate)
+      && canonicalWindowsSpelling(candidate) !== canonicalShort) || "";
+    const shortObservation = short ? observeUpdateDirectory(short) : null;
+    const longGitTopObservation = longGitTop ? observeUpdateDirectory(longGitTop) : null;
     const canonicalLong = canonicalWindowsSpelling(longGitTop);
     const genuineShortAlias = /(?:^|\\)[^\\]*~\d+(?=\\|$)/u.test(canonicalShort);
     check("Windows 8.3短縮pathと長いGit rootを実identityで受理",
-      Boolean(shortObservation && genuineShortAlias && canonicalShort !== canonicalLong
+      Boolean(shortObservation && longGitTopObservation && genuineShortAlias && canonicalShort !== canonicalLong
         && sameUpdateDirectoryIdentity(shortObservation.identity, longGitTopObservation.identity)),
-      `shortAlias=${Boolean(short)} genuine8dot3=${genuineShortAlias} canonicalDistinct=${Boolean(short && canonicalShort !== canonicalLong)}`);
+      `shortAlias=${Boolean(short)} longAlias=${Boolean(longGitTop)} genuine8dot3=${genuineShortAlias} canonicalDistinct=${Boolean(short && canonicalShort !== canonicalLong)}`);
   } else {
     check("Windows 8.3 native positiveはPOSIXではNOT-RUN", !requireWindows);
   }
