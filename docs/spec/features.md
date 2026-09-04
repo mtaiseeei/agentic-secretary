@@ -1,6 +1,6 @@
 # Features
 
-機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合、F58はWindows保存互換、F59〜F61は秘書identity／routing／rename、F62は既存workspaceの名前オンボーディング完全移行である。
+機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合、F58はWindows保存互換、F59〜F61は秘書identity／routing／rename、F62は既存workspaceの名前オンボーディング完全移行、F63は明示memory依頼の一度きり実行、F82はChatwork／Google ChatのActions結果を安全にローカルへ取り込む機能である。
 
 ## 既存機能（F01〜F16）
 
@@ -470,6 +470,15 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - 会話coreの対象surfaceを追跡する機械可読なinventoryを製品正本として保つ。rules、copy、skills、templates、runtime分類、memory保存シーム、golden fixture、旧Sprint回帰を実内容まで検査し、`memory-care`／`secretary`に加えて`settings`／`daily`／`projects`等の関連surfaceを含める。Agentic、Yasashii、private my-vaultの各sourceで新契約markerの存在と、topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧markerの不在を検証する。
 - 3版のsourceとオフライン回帰を同じ契約へ揃える。push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、release後の新session確認は別phaseとし、sourceのオフラインPASSだけでloaded versionへ反映済みと表示しない。
 
+### F82 Chatwork／Google ChatのActions結果を安全にローカルへ取り込む
+
+- Chatwork／Google Chatのwizard、検索、同期にある6つのGit取り込み経路は、同じ安全分類を使う。Actions後は相関した `run.branch`、検索前は現在branchを対象にし、remote名とbranch名を明示する。
+- 取り込みは同じ実体filesystem locationへ正規化したroot、現在branch、remote、`refs/heads/<branch>` のfetch結果、HEADと`FETCH_HEAD^{commit}`の関係、remote変更pathとdirty pathの重なりを順に確認する。成功は `up-to-date`／`fast-forwarded`／`local-ahead`、停止理由は `ingest-root-mismatch`／`detached-head`／`branch-mismatch`／`remote-missing`／`fetch-failed`／`timeout`／`inspect-failed`／`diverged`／`dirty-conflict`／`fast-forward-failed` とする。
+- 非競合のtracked／untracked／staged差分とindexを保持したままfast-forwardできる。dirty衝突または分岐ではHEAD、差分、indexを変更せず停止し、競合pathまたは手動解消の必要性を示す。
+- wizardは `dispatch`／`run-correlation`／`actions-run`／`git-ingest`／`result-missing` を区別する。Git取り込みだけの失敗ではGitHub上のrun成功と端末側だけの未完了を示し、API TokenやActions設定へ誤誘導しない。API Token確認を案内できるのはworkflow conclusionの失敗を確認できた場合だけで、`gh` の認証・通信・timeout・killは同じ `actions-run` 内の別codeと案内にする。
+- Actions run発見は有効なCLI override、有効な環境変数、60秒の順で値を決め、無効値は安全に60秒へ戻す。250msから最大2,000msまでの指数backoffには決定的な時刻・待機seamを使い、古い成功runを流用しない。Git取り込みcommandの既定は60秒とし、`gh run watch`等の無関係なtimeoutは変更しない。
+- Windows互換の隔離fixtureをWindows CIで実行する。製品はWindowsでもargv配列と `shell: false` で実行し、`.cmd`／`.bat` shimや `shell: true` を回避策にしない。Windows CIのpush／`workflow_dispatch` はユーザー確認後の外部gateであり、証跡が得られるまではpendingとして扱う。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -491,3 +500,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G15 | F03 F04 F20 F52 F53 F54 F55 F59 F60 F61 |
 | G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
 | G17 | F05 F07 F17 F19 F52 F54 F55 F56 F57 F63 |
+| G19 | F07 F23 F24 F26 F32 F34 F36 F37 F38 F40 F82 |

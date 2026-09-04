@@ -34,7 +34,8 @@
 16. external live gateの準備が無い場合、合成fixtureで実APIを代替せずSprintを不合格とする。ただし理由は `external-live-gate-unavailable` と明記し、実装不具合としてGeneratorへ誤分類しない。
 17. live gateの権限は、専用private test workspaceと非機密test room／spaceの読取・同期に必要な範囲へ限定する。証跡にはSecret名の存在、workflow run状態、件数、commit、push／pull、検索状態だけを残し、token値、不要な対象名、チャット本文を残さない。
 18. live gate完了後はscheduleを停止し、Repository Secretを削除し、test room／spaceの選択を解除する。Google ChatではGoogle側のOAuth grant／tokenもrevokeし、アプリ権限の取消を確認する。test workspaceと取得済み履歴を削除・archiveする場合は対象と影響を示し、ユーザーの明示確認後だけ行う。
-19. Chatwork／Google Chatのwizard、検索、同期が履歴repoのremote更新を取り込むときは、fast-forwardだけを許可し、rebaseを明示的に無効化する。利用者の `pull.rebase` 設定を変更せず、取得対象と競合しない既存の未commit差分は保持する。fast-forward不能、または取得対象pathとdirty差分が競合する場合は、rebase、merge commit、force、差分の退避・復元を行わず安全に停止する。
+19. Chatwork／Google Chatのwizard、検索、同期が履歴repoのremote更新を取り込むときは、fast-forwardだけを許可し、rebaseを明示的に無効化する。Actions後は相関した `run.branch`、検索前は現在branchを対象にremote名と曖昧でない `refs/heads/<branch>` を明示し、upstreamや同名tagへ依存しない。利用者の `pull.rebase` 等のGit設定とupstreamを変更せず、取得対象と競合しない既存のtracked／untracked／staged差分とindexを保持する。root不一致、detached HEAD、branch不一致、remote欠落、fetch失敗、timeout、予期しない検査失敗、分岐、dirty衝突、fast-forward失敗を区別し、fast-forward不能または競合時はmerge、rebase、stash、reset、restore、commit、force pushを行わず安全に停止する。root比較は両側をresolve／normalizeし、symlink解決後の実体path、Windowsのseparatorとcase規則を含めて同じfilesystem locationかで判定する。外部commandは全OSでargv配列と `shell: false` を使い、`shell: true` または `.cmd`／`.bat` shimを回避策にしない。失敗情報はcode、stage、remote名、branch、必要時のexpectedBranch、定型化したreason、root相対の競合pathだけをallowlistで返し、remote URL、raw stderr、URLのuserinfo／query、資格情報、絶対pathを返却・log・証跡へ出さない。`ingest-root-mismatch` は比較したどちらのpathも含めない。
+20. Sprint 051のWindows CIは、ローカル実装・評価と分けたexternal gateである。pushと `workflow_dispatch` は対象・副作用を示したユーザー確認後だけ行い、Sprint契約を事前許可として扱わない。許可または証跡を得られない場合は `external-live-gate-unavailable` またはpendingと記録し、製品実装不具合としてGeneratorへ誤分類しない。ただし、ユーザーが残余リスクを明示的に受け入れない限り、合意済みWindows CI証跡なしでSprintをdoneまたは最終PASSにしない。
 
 ## 3. 記憶保護と封じ込め
 

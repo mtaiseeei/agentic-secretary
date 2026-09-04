@@ -64,6 +64,9 @@ PASSした完全SHAからYasashii overlayを別評価する。private my-vault�
 「覚えて」はuser-visible scope `memory`への一度きりauthorizationとして扱い、request hedgeとcontent hedge、
 pending一件束縛、append-only訂正、内容冪等性、checkpoint partialを共通契約にする。Agentic、Yasashii、
 private my-vaultのsourceとoffline回帰をSprint 040で揃え、push／Release／cache／新session確認は別phaseとする。
+2026-09-04の追加決定により、Chatwork／Google Chatの安全なGit取り込みは `sprint-051`、
+3つの後続PRを載せるcandidateは `0.12.0` と確定した。`sprint-041`〜`sprint-050` は並行中の
+Project Clarity系譜で予約済みであり、本系譜では再利用しない。
 
 ## ひとことで
 
@@ -95,13 +98,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G15 | 秘書名をworkspace全体で一貫させる | 初回と既存利用者の双方で英語名、stable identity、AI authorを持ち、別repo呼び出しと安全なrenameを選べる |
 | G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
 | G17 | 「覚えて」を一度で安全に完了する | memory scope、hedge分離、append-only訂正、内容冪等性、checkpoint partial、3版inventory |
+| G19 | Actionsの取得結果を安全に取り込む | Chatwork／Google Chatの対象branchを明示し、upstream未設定でもfast-forward可能な結果だけをローカルへ取り込む。分岐・dirty衝突・失敗段階を区別する |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F63 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17・G19、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F63・F82 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -112,6 +116,8 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 
 進行状態の正本は `docs/sprints/state.md`（オーケストレーターのみが更新）。
 2026-07-15 の方針転換後は次の順序で進める。
+`sprint-041`〜`sprint-050` は別branchのProject Clarity系譜で予約済みであり、2026-09-04の引き継ぎで
+Chatwork／Google ChatのGit取り込みを `sprint-051` と確定した。
 
 | スプリント | 主眼 | 依存 |
 |---|---|---|
@@ -158,6 +164,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [sprint-039-patch-002](sprints/sprint-039-patch-002.md) | 既存workspaceの名前オンボーディング完全移行、更新後handoff、`0.10.1` candidateと3版release順序 | sprint-039-patch-001 |
 | [sprint-040](sprints/sprint-040.md) | 明示memory依頼のrun-once、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版conversation-core inventory | sprint-039-patch-002 |
 | [sprint-040-patch-001](sprints/sprint-040-patch-001.md) | 3版handoff manifestのpath役割完全化、機械算出した集合照合、candidate再現と下流pre-write gate | sprint-040 |
+| [sprint-051](sprints/sprint-051.md) | Chatwork／Google ChatのGit取り込み: 対象branch明示、安全分類、stage別案内、Actions run発見60秒＋指数backoff、Windows CI | sprint-040-patch-001 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

@@ -128,28 +128,33 @@ secretary/
 
 ### Chatworkをつなぐ
 
-`/chatwork` または「Chatworkにつなぎたい」と依頼すると、設定画面が開きます。保存するルームと取得間隔を選び、
-保存内容とGitのcommit・pushを確認した後だけ、初回取得や自動取得を開始します。
+`/chatwork` または「Chatworkにつなぎたい」と依頼すると、設定画面が開きます。選択したルームの履歴は、
+同じ非公開のGitHubリポジトリへ保存します。保存するルームと自動取得の間隔を選び、保存内容とGitのcommit・pushを
+確認した後だけ、初回取得や自動取得を開始します。
 
 ![Chatworkのルーム、取得間隔、保存内容を確認する設定画面。表示内容はサンプルです。](docs/assets/chatwork-settings-review.png)
 
 <details><summary>設定と安全性の詳細を見る</summary>
 
-1. Chatwork公式画面でAPI Tokenを取得します。Tokenを使えない組織では、管理者によるAPI利用承認が必要です。
+1. [ChatworkでAPI Tokenを取得する](https://www.chatwork.com/service/packages/chatwork/subpackages/api/token.php)か、[API Tokenの発行方法を見る](https://help.chatwork.com/hc/ja/articles/115000172402-API%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B)へ進みます。Tokenを使えない組織では、[組織契約のAPI利用申請を見る](https://help.chatwork.com/hc/ja/articles/115000169501-API%E3%81%AE%E5%88%A9%E7%94%A8%E7%94%B3%E8%AB%8B%E3%82%92%E6%89%BF%E8%AA%8D-%E5%8D%B4%E4%B8%8B%E3%81%99%E3%82%8B)から管理者へ申請します。
 2. wizardから、現在のprivate repositoryのGitHub Repository Secret追加画面を開きます。
 3. `Name` に `CHATWORK_API_TOKEN`、`Secret` に本人が取得したAPI Tokenを入力します。Token値をwizardや会話へ貼る必要はありません。
 4. 登録確認後だけルーム一覧を取得し、保存するルームと取得間隔を選びます。
 5. 保存対象、自動取得、commit・pushの内容を確認し、同意後だけ設定を反映します。
 
 初回取得は選択した各ルームの最新100件以内です。検索で見つからない場合も、導入前、取得範囲より前、
-未選択ルームの可能性があるため、「Chatworkに存在しない」とは断定しません。自動取得を選ばない場合は手動だけで利用できます。
+未選択ルームの可能性があるため、「Chatworkに存在しない」とは断定しません。同期して再検索／同期しない／対象ルームを
+見直す、の3択を示し、同意後だけ同期します。自動取得を選ばない場合は手動だけで利用できます。
 
-- [ChatworkでAPI Tokenを取得する](https://www.chatwork.com/service/packages/chatwork/subpackages/api/token.php)
-- [API Tokenの発行方法](https://help.chatwork.com/hc/ja/articles/115000172402-API%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B)
+自動取得の間隔は30分ごと／1時間ごと／3時間ごと（おすすめ・初期値）／6時間ごと／12時間ごと／手動のみです。
+30日換算の概算実行回数は約1,440回／720回／240回／120回／60回／0回です。実行回数とGitHub Actionsの
+処理時間は別なので、[GitHub Actionsの料金と利用枠を見る](https://docs.github.com/en/billing/concepts/product-billing/github-actions)で最新情報を確認してください。
+
+> 公式情報は2026年7月確認。サービス側の変更により手順・料金・利用枠が変わる可能性があります。
 
 </details>
 
-### Google Chatをつなぐ
+### Google Chatをつなぐ（少し高度な設定）
 
 Google Workspace版Google Chatに対応しています。`/google-chat` または「Google Chatを設定したい」と依頼すると、
 Google Cloudの準備から案内します。接続後は、選択した通常スペースだけを取得・検索できます。
@@ -159,7 +164,7 @@ Google Cloudの準備から案内します。接続後は、選択した通常�
 <details><summary>設定と安全性の詳細を見る</summary>
 
 Google Workspace組織が所有するGoogle Cloud projectで、Google Chat API、People API、Audience `Internal`、
-Application type `Desktop app` のOAuth clientを準備します。管理者またはCloud project作成権限者の操作が必要な場合があります。
+Application type `Desktop app` のOAuth clientを準備します。Google Workspace管理者またはCloud project作成権限者の操作が必要な場合があります。
 
 接続用JSONを取得した後、ローカルwizardでファイルを選び、別タブでGoogleの接続を許可します。OAuthは
 `chat.spaces.readonly`、`chat.messages.readonly`、`contacts.readonly` だけを要求します。client secret、
@@ -167,6 +172,7 @@ Application type `Desktop app` のOAuth clientを準備します。管理者ま�
 
 候補に出すのは `spaceType=SPACE` の通常スペースだけです。DMとグループDMは取得しません。保存するスペース、
 取得間隔、保存内容、共同編集者への可視性、Gitのcommit・pushを確認し、同意後だけ初回取得と自動取得を設定します。
+People APIでは連絡先にない同僚名を補完できない場合があり、その場合は安定した代替表示を使います。
 
 - [ユーザーとしてGoogle Chat APIを認証する](https://developers.google.com/workspace/chat/authenticate-authorize-chat-user)
 - [OAuth同意画面とscope分類](https://developers.google.com/workspace/guides/configure-oauth-consent)

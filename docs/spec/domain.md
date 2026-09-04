@@ -598,6 +598,22 @@ busy roomの最新100件が覆う時間幅は推奨材料にできるが、間�
 4. 同期承認時だけworkflowを開始し、完了を待つ。
 5. 成功確認後にpullし、同じ条件で再検索する。失敗・timeout時は検索結果を最新と見なさない。
 
+## Chatwork／Google Chat共通のGit取り込み
+
+- 6つの取り込みcallsiteは同じ分類を使う。Chatwork wizardの `runSync`（初回／設定変更が共有する1 callsite）、同wizardの `discoverRooms`、Chatwork `search-flow`、Google Chat `search`、Google Chat `search-flow`、Google Chat `actions-discovery` を対象とする。
+- 検索前は現在branch、今回のActions成功後は相関結果の `run.branch` を期待branchとする。`main` やupstreamを暗黙の正本にしない。
+- root比較は入力rootと `git rev-parse --show-toplevel` の両方をresolve／normalizeし、存在するpathはsymlink解決後の物理pathで比較する。Windowsはseparatorとfilesystemのcase挙動も考慮し、文字列が違っても同じ実体locationなら一致とする。`ingest-root-mismatch` のerror、log、証跡にはどちらの絶対pathも出さない。
+- 検査順は、root一致、`git symbolic-ref --quiet --short HEAD`、期待branch一致、`git remote get-url <remote>`、`git fetch <remote> refs/heads/<branch>`、HEADと `FETCH_HEAD^{commit}` の関係、dirty pathとの重なり、`git pull --ff-only --no-rebase <remote> refs/heads/<branch>`、事後のHEADとpull後 `FETCH_HEAD^{commit}` の一致である。同名tagをbranchとして選ばない。
+- `symbolic-ref` と `merge-base --is-ancestor` の終了1はそれぞれdetached／祖先ではないという期待されたpredicate結果として扱う。それ以外の非ゼロやparse不能をdetached／divergedへ誤分類せず、定型化した `inspect-failed` として停止する。remote branch欠落はsanitized reason `branch-missing` を持つ `fetch-failed` でよく、専用のtop-level codeを増やさない。
+- 成功状態は `up-to-date`、`fast-forwarded`、`local-ahead`。失敗codeは `ingest-root-mismatch`、`detached-head`、`branch-mismatch`、`remote-missing`、`fetch-failed`、`timeout`、`inspect-failed`、`diverged`、`dirty-conflict`、`fast-forward-failed` とし、以降の段階へ進まない。
+- `dirty-conflict` は `git diff --name-only -z HEAD FETCH_HEAD^{commit}` と `git status --porcelain=v1 -z --untracked-files=all` をNUL区切りのままparseして判定する。rename／copy recordは旧pathと新pathの両方を含め、非ASCII pathもbyte境界を壊さない。重ならないdirty差分は保持して取り込みを続け、競合時はHEAD、working tree、indexを変更しない。
+- fetchで検査したcommitはpull直前の対象として保持する。ただしbranch指定のpullとの間にremoteが進む競合窓はあり、merge／rebase／reset等の禁止操作なしに元commitへpinした更新は保証しない。pull後はHEADとpullが更新した `FETCH_HEAD^{commit}` を再取得して一致を必須とし、fetch時点とpull時点の対象が違えばその事実を成功結果・証跡で明示して、最初に検査したcommitを取り込んだと誤表示しない。pull自身の `--ff-only --no-rebase` を最終防衛として維持し、失敗時は `fast-forward-failed` とする。
+- Git取り込み失敗payloadはallowlist方式とし、`code`、`stage`、remoteの名前だけ、`branch`、branch不一致時の `expectedBranch`、定型化した `reason`、root相対の競合pathだけを持つ。full remote URL、raw stderr、URLのuserinfo／query、資格情報、絶対pathを返却・log・証跡へ出さない。Actions側のrun ID／branch／安全に組み立てたrun URLは、このpayloadと分けたrun summaryとして扱える。
+- Actions処理の状態は `dispatch`、`run-correlation`、`actions-run`、`git-ingest`、`result-missing` に分ける。現在branchをdispatch前に確認できない場合は `dispatch`／`branch-unconfirmed` とし、「開始していない」と示す。workflow conclusionの失敗を確認できた場合だけAPI Token確認を案内できる。`gh` の認証・通信・timeout・killは `actions-run` のまま、それぞれ定型化した別code／messageで示し、workflow失敗へ読み替えない。
+- run発見待ちは、有効なCLI `--run-discovery-timeout-ms`、有効な `YASASHII_RUN_DISCOVERY_TIMEOUT_MS`、60秒の順で値を決め、非数・0以下等の無効値は安全に60秒へ戻す。pollは有効なCLI override、環境変数、既定値の順で250msから最大2,000msまで指数backoffし、注入可能な時刻・待機seamで決定的に検査する。baseline ID、`createdAt`、`displayTitle` による古いrun非流用を維持する。
+- Git取り込みhelperのroot／branch／remote／fetch／commit関係／diff／status／pull／事後確認commandは、明示された有効な `timeoutMs`、有効な `YASASHII_CLI_TIMEOUT_MS`、60秒の順を共通契約にする。これは既存callsiteの一部にある30秒を60秒既定へ揃える変更である。`gh run watch` の5分と、取り込み以外の外部CLI／HTTP timeoutは変更しない。
+- 製品の外部commandはmacOS／Linux／Windowsでargv配列と `shell: false` を使う。Windows検証はreal `git.exe` と資格情報・絶対pathを残さない `GIT_TRACE` 等の安全な引数traceを使い、fake `gh`／hangは時間とprocessを制限できるNode互換のfakeまたはspawn seamで置き換える。`.cmd`／`.bat` shimや `shell: true` を回避策にしない。
+
 ## Google Chatの取得境界
 
 ### 保存形式と取得境界

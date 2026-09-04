@@ -241,6 +241,17 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 保存とjournalが済んだ後にlocal commitだけ失敗した場合は部分成功を正直に示し、retryはcommitだけを行う。
 この契約をAgentic、Yasashii、private my-vaultの3版へ揃え、旧確認契約が再流入しないinventoryで守る。
 
+### G19 Actionsの取得結果を安全に取り込む
+
+Chatwork／Google ChatのGitHub Actionsが成功した後は、今回のrunが実行されたbranchを明示して、
+fast-forward可能な結果だけをローカルへ取り込む。upstream未設定、分岐、dirty衝突、detached HEAD、
+remote欠落、fetch失敗、timeoutを区別し、利用者のGit設定や既存差分を製品が書き換えない。
+
+Actions側の失敗と、この端末へのGit取り込み失敗を別の段階として伝える。Git取り込みだけが失敗した場合は、
+GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず、安全な再試行または手動解消へ案内する。
+本機能は2026-09-04の引き継ぎで `sprint-051`、candidate `0.12.0` と確定済みである。
+`sprint-041`〜`sprint-050` は別branchのProject Clarity系譜で予約されている。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -268,6 +279,7 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 23. 秘書自身の英語名、stable identity、AI authorが初回と既存利用者で一貫し、別repo routingは任意の明示確認、renameは分類previewから安全に行える。
 24. 公開済み`0.10.0`へplugin更新済みでもローカルidentity面が未導入または部分適用のworkspaceを、新sessionのread-only診断、preview、別確認、atomic migration、local checkpoint、rollbackで新規導入相当へ揃えられる。
 25. 明示memory依頼は内部分類の確認なしに同じturnで1回保存され、content hedge、訂正、retry、checkpoint失敗でも意味と副作用件数が正しく保たれる。3版のsourceは同じoffline契約へ揃い、live cache／新session反映とは別状態で確認できる。
+26. Chatwork／Google ChatのActions成功結果を、相関したbranchからfast-forward可能な場合だけ取り込み、ローカル差分とGit設定を保持したまま、失敗段階と回復方法を正しく示せる。
 
 ## 成功状態
 
@@ -317,10 +329,12 @@ decision／topic等の内部分類、保存先file、要約案のために聞き
 - 成功、質問、失敗、部分成功の返答が実状態と一致し、単純成功に不要な固定帳票や次行動を付けない。保存内容は入力の主体・日付・行動を保ち、入力にない事実、依頼語、不要な全文を加えない。
 - `agentic-secretary`、`agentic-secretary-my-vault`、`yasashii-secretary` は、行き先・正本ルールが同じ共通caseで同じ意味と安全境界を持つ。Notion routing等は版固有caseとして、その版の正本に従う保存先とresponse stateを評価し、共通比較は安全境界に限定する。
 - 明示memory依頼、content hedge、pending修正、topic訂正、同内容retry、checkpoint failureの各caseで、memory／journal／commitの実件数がF63どおりとなり、3版のconversation-core inventoryに禁止旧契約が0件である。
+- upstream未設定でもChatwork／Google Chatの対象branchを明示して取り込める。非競合のdirty差分は保持し、分岐またはdirty衝突ではHEAD・index・working treeを変えず停止する。Actions失敗とGit取り込み失敗は別の案内になる。
 
 ## 非ゴール
 
 - ChatworkとGoogle Chat以外の外部データ同期層・キャッシュ層は作らない。2つの実装を汎用同期基盤へ一般化しない。
+- Git取り込みのためにupstreamを設定したり、merge、rebase、stash、reset、restore、commit、force push、Git設定の書換えを行ったりしない。初回publishのupstream設定修正と、取り込み専用endpointは別作業とする。
 - cc-company の部署制、必須 `case-NNN`、`patterns/` 自動統合は導入しない。
 - 同意前のschedule push、確認なしの予期しない手動同期、public repoへのChatwork保存は行わない。復元機能「昨日の状態に戻して」は今回作らない。
 - 濃いキャラクター（関西弁・執事風等）のプリセットは同梱しない。例ペアを育てる方法は本プラグインの必須導線にしない。

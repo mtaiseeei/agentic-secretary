@@ -6,9 +6,19 @@ on:
     paths:
       - ".github/workflows/windows-recording-regression.yml"
       - "plugins/secretary/scripts/**"
+      - "plugins/secretary/scripts/lib/actions-run.mjs"
+      - "plugins/secretary/scripts/lib/git-ingest.mjs"
+      - "plugins/secretary/skills/chatwork/scripts/wizard-server.mjs"
+      - "plugins/secretary/skills/chatwork/scripts/search-flow.mjs"
+      - "plugins/secretary/skills/chatwork/assets/wizard/app.js"
+      - "plugins/secretary/skills/google-chat/scripts/search.mjs"
+      - "plugins/secretary/skills/google-chat/scripts/search-flow.mjs"
+      - "plugins/secretary/skills/google-chat/scripts/actions-discovery.mjs"
       - "plugins/secretary/skills/memory-care/scripts/**"
       - "plugins/secretary/skills/**/SKILL.md"
       - "scripts/sprint-038-patch-002-windows-test.mjs"
+      - "scripts/sprint-051-git-ingest-test.mjs"
+      - "scripts/sprint-035-patch-002-git-pull-test.mjs"
 
 permissions:
   contents: read
@@ -33,3 +43,6 @@ jobs:
       - name: Windows path, rollback, retry, and boundary regression
         shell: pwsh
         run: node scripts/sprint-038-patch-002-windows-test.mjs --require-windows
+      - name: Git ingest and Actions correlation regression
+        shell: pwsh
+        run: node scripts/sprint-051-git-ingest-test.mjs --require-windows

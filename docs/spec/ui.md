@@ -107,6 +107,9 @@ Chatworkのルーム設定と、Google ChatのOAuth・スペース設定は、lo
 - 選択0件は「選択を0件にすると、今後の取得は止まります。これまでの履歴は削除しません。」の意味を持つ自然な日本語にする。
 - 手動のみは「自動取得を止めます。必要なときだけ取得でき、これまでの履歴は残ります。」の意味を持つ自然な日本語にする。
 - エラーは「接続を確認できませんでした。接続情報を見直して、もう一度お試しください。」のように、状態名やコードより先に原因の範囲と次の行動を示す。原因を特定できないときは推測で断定しない。
+- Chatworkの既存 `discover-failure`、`settings-result-failure`、`initial-result-failure` だけを、`dispatch`、`run-correlation`、`actions-run`、`git-ingest`、`result-missing` の段階に応じた見出しと次の行動へ分ける。Google Chatは3つの指定callsiteで同じhelper／stage／codeを返すところまでとし、この名称の画面を新設しない。API Tokenの確認はworkflow conclusionの失敗を確認できた場合だけに出し、`gh` の認証・通信・timeout・kill、run相関、端末側Git取り込みの失敗へ出さない。
+- `git-ingest` 失敗は「取得はGitHub上で完了しています（run <id>）。この端末への取り込みだけ失敗しました: <理由>」の意味を主表示し、既存の再取得または手動回復を案内する。`diverged` は手動解消が必要と示し、`dirty-conflict` は競合pathを列挙する。
+- 管理者向けdetailsには、利用できる場合だけrun URLと `git pull --ff-only --no-rebase origin refs/heads/<branch>` を示す。`diverged`／`dirty-conflict` では、先に示した分岐または競合pathを利用者が解消した後の「再試行用command」と明記し、今すぐ成功する修正として表示しない。wizard copyは両edition共通とし、copy overlayへ分岐を追加しない。
 
 ### CTAと言語品質
 
