@@ -217,3 +217,63 @@ Sprint 051の42件には、P-01の悪性remote遮断、P-02の欠落／古いsyn
 ### Remaining gate and evaluator handoff
 
 ローカル必須回帰はすべて0 FAILとなり、fresh独立Evaluatorへ引き渡せる。Windows CI external gateは引き続き `pending / unverified` で、同一candidate commitの `windows-2025`／`--require-windows` 成功証跡はない。push、PR、`workflow_dispatch`、Windows CI、外部API／OAuth／Repository Secret、install、release、version更新は実行していない。ローカルgreenだけでSprintをdoneとはしない。
+
+## Retry 2 — Windows real Git root identity修正
+
+外部Windows gateのGitHub Actions run `33899718779` は、Node-native syntaxと既存Windows回帰を通過後、`Git ingest and Actions correlation regression` の最初の実Git up-to-date fixtureで `ingest-root-mismatch` になった。失敗位置は `git-ingest.mjs` の同期root比較、Nodeはv22.23.2、runnerは `windows-2025` だった。絶対pathをerror／test出力へ追加せず診断した。
+
+### 原因
+
+root比較は入力rootと `git rev-parse --show-toplevel` を旧 `fs.realpathSync` へ通した後、slashとcaseだけを揃えていた。Windowsでは同じ実体でも、Node側のpathとGit for Windows側のpathが、短縮名、mapped drive／UNC、DOS device prefix等の別表記になることがある。旧実装はこの別名を同じ最終DOS pathへ必ず収束させないため、最初の実Git fixtureを別rootと誤判定した。
+
+非同期側には同じ境界内の別不具合もあった。callback APIの `node:fs` `realpath` をPromiseとして `await` していたため、呼出時例外をcatchし、実在pathでも常に文字列 `resolve` へfallbackしていた。これはsymlinkを含む物理root契約を非同期callsiteで満たしていなかった。
+
+### 最小修正
+
+- 同期root解決を `realpathSync.native` に変更し、Windows APIが返す最終pathへ両入力を揃えた。
+- 非同期root解決を `node:fs/promises` の `realpath` に変更し、実在pathの物理解決を実際にawaitするようにした。
+- Windows文字列比較は `path.win32.resolve` を使い、`\\?\<drive>` と `\\?\UNC\<server>\<share>` の2つの既知namespace表記だけを通常のdrive／UNC形式へ揃えた。任意のdevice pathやPOSIX風pathを広く受理する変換は追加していない。
+- root比較のskip、Windows限定無効化、relative fallback、別repo許容、error payloadへの絶対path追加は行っていない。既存のdirty衝突判定、branch／remote／fetch順序、Git argvも変更していない。
+
+### 決定的な回帰保護
+
+Sprint 051専用testは次を追加・強化した。
+
+- Windowsのcase／separatorに加え、driveとUNCの限定device prefix同値、および別drive非同値を検査する。
+- 最初の隔離bare remote＋cloneを実 `git` で同期・非同期の両経路から実行する。Windows runnerでは今回失敗した `os.tmpdir()` 配下のNode rootと実 `git.exe` の `--show-toplevel` 表記差を同じfixtureで再検査する。
+- 実在する別clone rootをGit出力として返すfixtureで、同期・非同期とも `ingest-root-mismatch`、絶対path非露出を維持する。
+- 既存の非競合dirty fast-forward、dirty衝突pull 0件、分岐、privacy、禁止Git操作、6 callsite wiringを削除・skipせず維持する。
+
+Retry 2差分は製品helper `+13/-4`、Sprint test `+13/-3`。検証追加が製品追加を上回らず、新frameworkやCartesian matrixも追加していない。
+
+### Retry 2 ローカル検証
+
+テスト前の `pgrep node | wc -l` はこのchild権限では `sysmond service not found`／`Cannot get process list` となり実測不能だった。orchestrator側も同じ制限だったため、直近EvaluatorのNode 25件、inventory Generator完了時24件という40未満の記録を開始根拠にした。全commandは直列実行し、60秒以上の無出力やhangはなかった。loopback suiteのsandbox内初回だけ `listen EPERM 127.0.0.1` となったため製品failureへ数えず、同一commandを許可済みloopback面で再実行した。
+
+| Command | Exit | Assertions / result |
+|---|---:|---|
+| `node scripts/sprint-051-git-ingest-test.mjs` | 0 | 43 pass / 0 fail、darwin。native root、async実Git、sync/async別repo拒否を含む |
+| `node scripts/sprint-035-patch-002-git-pull-test.mjs` | 0 | wrapper 9/9、内包Sprint 051 43/43 |
+| `node scripts/sprint-013-chatwork-test.mjs` | 0 | 35/35 |
+| `node scripts/sprint-014-chatwork-test.mjs` | 0 | 59/59 |
+| `node scripts/sprint-019-google-chat-test.mjs` | 0 | 51/51 |
+| `node scripts/sprint-020-google-chat-test.mjs` | 0 | 50/50 |
+| `node scripts/sprint-022-safety-test.mjs` | 0 | 69/69 |
+| `node scripts/sprint-024-data-causality-test.mjs` | 0 | 43/43 |
+| `bash scripts/sprint-035-patch-001-regression.sh` | 0 | wrapper 9/9、内包各suiteも0 fail |
+| `node scripts/sprint-020-patch-001-copy-test.mjs` | 0 | 69/69、inventory 52 |
+| `node scripts/sprint-027-copy-test.mjs` | 0 | 66/66 |
+| candidate差分のJavaScript 16 fileの `node --check` | 0 | syntax error 0件 |
+| `git diff --check` と `git diff --check HEAD^` | 0 | 出力0件 |
+
+全test processは終了し、Generatorが起動したserver／watcher／実行sessionは残していない。
+
+### Windows再実行とhandoff
+
+修正前candidate commitは `feb1c45fa4359229e2c048adfed474cffe9c6aca`。Retry 2差分は未commitで、commitは作成していない。Windowsで再実行すべきcommandは次である。
+
+```text
+node scripts/sprint-051-git-ingest-test.mjs --require-windows
+```
+
+同じRetry 2 candidate commitを `windows-2025` へ置き、上記commandが43/43、既存 `Windows path, rollback, retry, and boundary regression` がgreenになることを外部gateで確認する。今回はpush、PR、`workflow_dispatch`、Windows CI再実行、downstream、plugin install、release、version実ファイル変更を行っていないため、Windows修正結果は引き続き `pending / unverified`。新しいrun URLと同一commitの0 FAILが得られるまでSprintをdoneとはしない。

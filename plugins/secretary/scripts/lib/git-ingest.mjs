@@ -1,5 +1,6 @@
-import { realpath, realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { realpathSync } from "node:fs";
+import { realpath } from "node:fs/promises";
+import { resolve, win32 } from "node:path";
 import { runExternal, runExternalSync } from "./external-ops.mjs";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -60,8 +61,16 @@ function safeToken(value, kind) {
   return token;
 }
 
+function windowsPath(path) {
+  const normalized = String(path).replaceAll("/", "\\");
+  if (/^\\\\\?\\UNC\\/i.test(normalized)) return `\\\\${normalized.slice(8)}`;
+  if (/^\\\\\?\\[A-Za-z]:\\/.test(normalized)) return normalized.slice(4);
+  return normalized;
+}
+
 function canonical(path, platform = process.platform) {
-  const normalized = resolve(path).replaceAll("\\", "/").replace(/\/+$/, "") || "/";
+  const absolute = platform === "win32" ? win32.resolve(windowsPath(path)) : resolve(path);
+  const normalized = absolute.replaceAll("\\", "/").replace(/\/+$/, "") || "/";
   return platform === "win32" ? normalized.toLocaleLowerCase("en-US") : normalized;
 }
 
@@ -180,7 +189,7 @@ async function physicalRoot(path) {
 }
 
 function physicalRootSync(path) {
-  try { return realpathSync(path); } catch { return resolve(path); }
+  try { return realpathSync.native(path); } catch { return resolve(path); }
 }
 
 async function driveAsync(plan, options) {

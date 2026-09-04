@@ -597,3 +597,109 @@ dispatch前Node数はorchestrator実測25件を開始値とした。このhost�
 - safe harbor外のcollector、attestation、schema、追加gateは要求していない。
 
 推奨routeは、Generator / Plannerへ自動差し戻さず、Retry Count / Spec-Issue Countを増やさない `verification-scope-issue` である。まず現在のuncommitted candidateを1 commitに固定する。その後に、pushとWindows `workflow_dispatch`の対象・副作用を示し、別の明示確認をユーザーから得る。同じcommitの `windows-2025` / `--require-windows` 0 FAILとrun URLが得られた時点でのみ最終PASS / `done` に進める。
+
+---
+
+# Retry 2 independent evaluation — Windows root identity fix
+
+## Verdict
+
+**Local product verdict: PASS / overall: verification-scope-issue, pending external Windows gate**
+
+Retry 2の未commit差分には、ローカルで再現できるproduct findingを認めなかった。Windowsで同一rootを誤拒否した経路に対し、同期処理は `realpathSync.native`、非同期処理は実際にawaitできる `node:fs/promises.realpath` を使い、比較直前に物理rootを解決する。Windows device namespaceの変換も通常のdrive pathとUNC pathに限定され、別drive、別UNC server/share、その他のdevice namespaceを同一扱いしない。
+
+ただし、現在の修正はHEAD `feb1c45fa4359229e2c048adfed474cffe9c6aca` 上のuncommitted candidateである。失敗済みWindows run `33899718779` の後に変更されたbyteを `windows-2025` でまだ実行していないため、AC13、AC16、C6はpendingのままとする。ローカルgreenだけでSprintをPASS / `done` にはしない。
+
+## Candidate identity and incremental boundary
+
+- branch: `codex/sprint-051-git-ingest`
+- HEAD / tracked remote branch: `feb1c45fa4359229e2c048adfed474cffe9c6aca`
+- evaluation target: HEADからの未commit製品・test差分
+- Git helper SHA-256: `8587f46e31fa2966f792a03030523eee015b7fc6b51711c91ad1aaaf96c20405`
+- Sprint 051 test SHA-256: `3712f8477b26a560cc6651472f95776be13e789a22ef9d31445273702832aa6c`
+- 本Retry 2評価の書込み: この節だけ
+
+Retry 1で検証済みのUI、公開案内、6 callsiteは今回の製品差分で変更されていない。UIは同candidate系列の既存browser証跡を増分原則でcarry forwardし、新規browser runとは扱っていない。
+
+## Adversarial product audit
+
+### Windows same-root correction
+
+- `physicalRootSync` は存在する入力rootと `git rev-parse --show-toplevel` の両方を `realpathSync.native` に通してから比較する。Windows Actionsで観測されたNode/Git間の表現差を、比較の手前で揃える修正になっている。
+- `canonical(..., "win32")` はhost依存のPOSIX `resolve` ではなく `path.win32.resolve` を使う。drive pathとUNC pathをWindows規則で絶対化した後、separator、末尾separator、caseを正規化する。
+- synthetic境界probeでは、`\\?\C:` と通常drive path、`\\?\UNC` と通常UNCだけが同一になった。別drive、別UNC server、別UNC share、`\\.\` device path、Volume GUID pathは通常drive pathと非同一だった。別repoを過剰に許す挙動は見つからない。
+
+### Async physical root
+
+- 旧callback APIをPromiseのようにawaitしていた経路はなくなり、`node:fs/promises` の `realpath` の解決値を左右両rootへ使う。
+- 専用suiteは同じ実Git fixtureを `ingestGitSync` と `ingestGit` の両方で通し、さらに別cloneのrootを注入してsync / async双方の `ingest-root-mismatch` を確認した。43/43でgreenだった。
+
+### Privacy and Git safety
+
+- root mismatchの例外は `{ code, stage, reason }` のallowlistだけで、比較したpath、`stdout`、`stderr`を保持しない。別repo fixtureのpayloadにもfixture absolute rootはなかった。
+- Retry 2の製品変更はrootの物理解決とWindows比較だけで、branch、remote、fetch、dirty判定、`pull --ff-only --no-rebase`、pull後HEAD / `FETCH_HEAD` 検査には差分がない。
+- 専用43件と旧wrapperは、tracked / untracked / staged / index保持、rename / non-ASCII conflict、diverged、branch mismatch、detached HEAD、remote不在・悪性URL、FETCH_HEAD競合窓、安全な明示remote/ref、禁止argv 0件を再実行してgreenだった。
+
+### Windows gate fidelity and size guard
+
+- Windows workflowは `windows-2025` で `--require-windows` を付け、`where.exe git.exe` で解決した実Gitからbare remote / cloneを作る。先頭のup-to-date fixtureは失敗runと同じ実Git root比較をsyncで通し、Retry 2は同fixtureのasync実Git経路も追加した。別repo拒否もsync / async双方を通る。
+- Windows以外で `--require-windows` を成功扱いするskipはない。現hostでの通常実行はWindows成功証跡へ読み替えていない。
+- Retry 2の製品差分は13 additions / 4 deletions、test差分は13 additions / 3 deletionsである。追加行は同数、総churnは製品17行・test16行で、verification codeが製品変更を上回っていない。verification-only roundでもない。
+
+## Independent command evidence
+
+重いcommandは直列実行した。`pgrep node | wc -l` はこのsandboxでは `sysmond service not found` / `Cannot get process list` となり実測不能だったため、直近の24〜25件という40未満の記録を開始根拠にした。60秒以上の無出力やhangはなかった。
+
+| Command | Exit | Result |
+|---|---:|---|
+| `node scripts/sprint-051-git-ingest-test.mjs` | 0 | 43/43, darwin |
+| `node scripts/sprint-035-patch-002-git-pull-test.mjs` | 0 | wrapper 9/9, embedded Sprint 051 43/43 |
+| `node scripts/sprint-013-chatwork-test.mjs` | 0 | 35/35 |
+| `node scripts/sprint-014-chatwork-test.mjs` | 0 | 59/59 |
+| `node scripts/sprint-019-google-chat-test.mjs` | 0 | 51/51 |
+| `node scripts/sprint-020-google-chat-test.mjs` | 0 | 50/50 |
+| `node scripts/sprint-022-safety-test.mjs` | 0 | 69/69 |
+| `node scripts/sprint-024-data-causality-test.mjs` | 0 | 43/43 |
+| `bash scripts/sprint-035-patch-001-regression.sh` | 0 | IME 30/30、Chatwork 35/35、Google Chat 51/51、各wrapper / edition項目0 fail |
+| `node scripts/sprint-020-patch-001-copy-test.mjs` | 0 | 69/69, inventory 52 |
+| `node scripts/sprint-027-copy-test.mjs` | 0 | 66/66 |
+| candidate差分のJavaScript 16 fileの `node --check` | 0 | syntax error 0 |
+| `git diff --check` / `git diff --check HEAD^` | 0 | output 0 |
+| Windows namespace synthetic boundary probe | 0 | expected same 2 / expected different 4 |
+
+loopbackを使う既存suiteはsandbox内の初回だけ `listen EPERM 127.0.0.1` になった。これはverification-infra制約として分離し、許可済みlocal loopback面で同一commandを再実行した上表の結果だけを採用した。また、誤った未契約filename `sprint-013-gate-test.mjs` を一度指定して `MODULE_NOT_FOUND` になったEvaluator操作ミスは製品結果から除外し、正しい契約command `sprint-013-chatwork-test.mjs` を35/35で完了した。
+
+## Rubric and acceptance
+
+| Criterion | Score | Threshold | Result | Evidence |
+|---|---:|---:|---|---|
+| C1 完成度 | 4 | ≥4 | PASS locally | Retry 2対象のWindows root修正と回帰はローカル成立。外部条件のみpending |
+| C2 構文・整合 | 5 | 5 | PASS | 16 file syntax、同期 / 非同期API整合、diff check green |
+| C3 機能の実証 | 5 | ≥4 | PASS locally | 専用43、wrapper9、実Git sync / async fixture |
+| C4 非エンジニア体験 | 5 | ≥4 | PASS, carried | UI不変。既存Retry 1 browser証跡をcarry forward |
+| C5 安全・規律 | 5 | 5 | PASS | path / stderr非露出、別repo fail closed、外部書込み0 |
+| C6 無回帰 | 4 | 5 | **PENDING external gate** | 全local必須回帰green、修正後Windows runなし |
+| C8 wizard体験・デザイン | 5 | ≥4 | PASS, carried | UI byte不変、既存6 screenshot / overflow証跡 |
+| C11 Google Chat境界 | 5 | 5 | PASS | callsite回帰green、OAuth / API / Secret操作0 |
+
+| AC | Result | Evidence / reason |
+|---|---|---|
+| AC1〜AC12 | PASS | 専用43、旧wrapper、全関連回帰、未変更UI carry-forward |
+| AC13 Windows互換fixture | PENDING | fixtureは実gate failureを再現する構造だが、修正後の実 `git.exe` 実行は未確認 |
+| AC14 回帰・copy inventory | PASS | 指定local command全て0 FAIL、assert弱体化0件 |
+| AC15 ローカル版・外部境界 | PASS | push / PR / workflow dispatch / API / Secret / install / release / version変更0 |
+| AC16 Windows CI external gate | PENDING | 修正後candidate commitと0 FAIL run URLがまだない |
+
+## Findings and self-review
+
+- 新規product finding: **0件**。
+- 新規verification-infra finding: **0件**。
+- 未解消境界: **verification-infra / external gate pending**。現時点の最新Windows証跡は修正前candidateのFAILであり、修正後candidateの結果ではない。
+- 旧Windows同一root誤拒否は、コードとローカルfixture上は解消する実装になっている。ただしWindows上のresolvedとはまだ断定しない。
+- diff、例外payload、Git操作順、テストの実Git利用、workflowのrunner / flag、検証規模を独立に再確認した。
+- findingをproduct / verification-infraに分離し、safe harbor外のcollector、attestation、追加schemaを要求していない。
+- push、PR、workflow dispatch、Windows CI、外部API、OAuth、Secret、install、release、version変更は実行していない。禁止された別Harness workspaceにも接触していない。
+
+## Recommended orchestration route
+
+追加のGenerator修正やPlanner差し戻しは不要である。現在のRetry 2 candidateを1 commitへ固定し、対象commitと副作用を示してユーザーの明示確認を得た後、そのcommitをpushして `windows-2025` のSprint 051 suiteを `--require-windows` で再実行する。同じcommitの0 FAILとrun URLを得るまではSprintを`done`にしない。

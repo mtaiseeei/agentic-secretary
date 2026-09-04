@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSyn
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ingestGitSync, samePhysicalRoot, resolveGitIngestTimeout } from "../plugins/secretary/scripts/lib/git-ingest.mjs";
+import { ingestGit, ingestGitSync, samePhysicalRoot, resolveGitIngestTimeout } from "../plugins/secretary/scripts/lib/git-ingest.mjs";
 import { dispatchCorrelatedWorkflow, resolveRunDiscoveryTiming, watchCorrelatedWorkflow } from "../plugins/secretary/scripts/lib/actions-run.mjs";
 import { runExternalSync } from "../plugins/secretary/scripts/lib/external-ops.mjs";
 import { isCurrentSyncResult } from "../plugins/secretary/skills/chatwork/scripts/wizard-server.mjs";
@@ -78,18 +78,27 @@ function errorOf(callback) {
   try { callback(); return null; } catch (error) { return error; }
 }
 
+async function asyncErrorOf(callback) {
+  try { await callback(); return null; } catch (error) { return error; }
+}
+
 function safePayload(error) {
   return JSON.stringify(error?.toJSON?.() || error || {});
 }
 
 try {
   check(resolveGitIngestTimeout(undefined, undefined) === 60_000 && resolveGitIngestTimeout(321, "999") === 321 && resolveGitIngestTimeout("bad", "999") === 60_000 && resolveGitIngestTimeout(undefined, 654) === 654, "Git timeoutはhelper入力 > env > 60秒、無効入力は60秒");
-  check(samePhysicalRoot("C:\\Repo\\", "c:/repo", "win32") && !samePhysicalRoot("/tmp/a", "/tmp/b", "linux"), "Windows case/separatorを正規化し別rootを拒否");
+  check(samePhysicalRoot("C:\\Repo\\", "c:/repo", "win32")
+    && samePhysicalRoot("\\\\?\\C:\\Repo", "c:/repo", "win32")
+    && samePhysicalRoot("\\\\?\\UNC\\Server\\Share\\Repo", "\\\\server\\share\\repo", "win32")
+    && !samePhysicalRoot("\\\\?\\C:\\Repo", "D:\\Repo", "win32")
+    && !samePhysicalRoot("/tmp/a", "/tmp/b", "linux"), "Windows case/separator/device prefixを正規化し別rootを拒否");
 
   const up = fixture("up-to-date");
   const upLog = [];
   const upResult = ingestGitSync({ root: up.candidate, git: realGit, runner: capturedRunner(upLog) });
   check(upResult.status === "up-to-date" && !upLog.some(([command]) => command === "pull"), "up-to-dateはpullせず成功");
+  check((await ingestGit({ root: up.candidate, git: realGit })).status === "up-to-date", "async経路も実Git rootを物理identityで同一判定");
 
   const symlink = join(up.root, "candidate-link");
   try { symlinkSync(up.candidate, symlink, process.platform === "win32" ? "junction" : "dir"); }
@@ -145,7 +154,8 @@ try {
 
   const fault = fixture("faults"); remoteCommit(fault, "remote.txt");
   const rootMismatch = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv.join(" ") === "rev-parse --show-toplevel" ? { status: 0, stdout: `${fault.seed}\n`, stderr: "" } : null) }));
-  check(rootMismatch?.code === "ingest-root-mismatch" && !safePayload(rootMismatch).includes(fault.root), "root不一致payloadに絶対pathなし");
+  const asyncRootMismatch = await asyncErrorOf(() => ingestGit({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv.join(" ") === "rev-parse --show-toplevel" ? { status: 0, stdout: `${fault.seed}\n`, stderr: "" } : null) }));
+  check(rootMismatch?.code === "ingest-root-mismatch" && asyncRootMismatch?.code === "ingest-root-mismatch" && !safePayload(rootMismatch).includes(fault.root), "sync/asyncとも別repoをroot不一致で拒否しpayloadに絶対pathなし");
   const inspect = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv[0] === "symbolic-ref" ? { status: 2, stdout: "", stderr: "secret raw" } : null) }));
   check(inspect?.code === "inspect-failed", "symbolic-ref予期しない非0をinspect-failed");
   const fetchMissing = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv[0] === "fetch" ? { status: 128, stdout: "", stderr: "fatal: couldn't find remote ref; https://user:pass@example.invalid/x?token=secret" } : null) }));

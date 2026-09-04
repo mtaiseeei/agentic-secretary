@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-051
-- Retry Count: 1
+- Retry Count: 2
 - Spec-Issue Count: 0
-- Lineage Dispatches: 8
+- Lineage Dispatches: 10
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -85,6 +85,9 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-05: Retry 2 fresh独立EvaluatorはLocal product PASS／overall `verification-scope-issue`（Windows external gate pending）。専用43/43、wrapper 9/9＋内包43/43、Sprint 013／014／019／020／022／024、統合、copy、16 JS syntax、diff-checkが全green。新規product／local verification-infra findingは各0件。限定device prefixだけを同一化し、別drive、別UNC server/share、`\\.\`、Volume GUID、別repoは非同一、async物理root、privacy、dirty／branch／remote／FETCH_HEAD境界も維持した。Status awaiting-eval、Retry Count 2、Lineage Dispatches 10を保持し、candidate commit固定後の明示承認push／同一commit Windows再実行待ちとする。
+- 2026-09-05: Retry 2 GeneratorがWindows root identityの限定修正を完了。同期は `realpathSync.native`、非同期は誤って使っていたcallback APIから `node:fs/promises.realpath` へ変更し、Windows drive／UNCの既知 `\\?\` namespaceだけを比較前に正規化した。別repo拒否、dirty境界、Git順序は維持し、製品helper `+13/-4`、test `+13/-3`で検証過大化なし。専用43/43、wrapper 9/9、Sprint 013／014／019／020／022／024、統合、copy、syntax、diff-checkが全green。fresh独立Evaluator予約としてLineage Dispatches 10、Status awaiting-evalへ更新する。Windows external gateは未再実行。
+- 2026-09-05: candidate `feb1c45fa4359229e2c048adfed474cffe9c6aca` を明示承認後にbranchへpushし、Windows workflow run `33899718779` を実行。既存Windows path／rollback／retry／boundary回帰とNode-native syntaxはgreenだが、新規Git ingest／Actions correlation回帰は最初の実Git up-to-date fixtureで `ingest-root-mismatch`（`git-ingest.mjs:213`、test line 91）となりFAILした。Windowsで同一physical rootを異なる表記として拒否しうるproduct `implementation-issue` と分類し、Retry Count 2、fresh strong Generator予約としてLineage Dispatches 9、Status activeへ更新する。別repo拒否境界を弱めず、同一root正規化だけを限定修正する。
 - 2026-09-05: V-01限定修復を完了。READMEの現行公開案内、受入済みdigest 4値、`agentic-overlay`のexact inventory 152 pathを補正し、allowed 120→272、unique 272、undeclared 0、broad glob／absolute／temp path追加0、legacy allowlist不変を確認した。統合9/9、Sprint 014 59/59、019 51/51、051 42/42、wrapper 9/9、013／020／022／024、copy 2系統、syntax、diff-checkが全green。Node 25件を確認し、fresh独立Evaluator予約としてLineage Dispatchesを8、Status awaiting-evalへ更新する。残る外部gateは未承認Windows CIのみ。
 - 2026-09-05: V-01限定修復でREADME公開案内と4 digestを補正後、統合suiteの早期停止の奥から同種のstale overlay inventory 152 pathが顕在化した。前Generatorを一時停止し、`adapters/agentic-overlay.json`未変更を確認。現inventory 120件に対しneutral commit→HEADで141件、現candidate込み152件が未宣言で、広いglob／skip／assert弱化は将来pathを無審査で許可するため採用しない。ユーザー選択1の既存baseline修復内として、現テストと同じ算出によるexact 152 pathだけを追加する。Node 27件を確認し、fresh Generator予約としてLineage Dispatchesを7へ更新。Status active、Retry Count 1、Model Tier strong、Rotate noneを保持する。
 - 2026-09-05: ユーザーがverification-scope-issueの選択肢1を明示選択。V-01のHEADにも存在する必須回帰8件を別の限定範囲として修復し、全必須suite 0 FAIL後にcandidateを固定する。その後のpush／Windows workflow dispatchは別途明示確認を得る。Retry／Spec-Issue Countは増やさず、Node 30件を確認し、fresh Generator予約としてLineage Dispatchesを6、Status active、Model Tier strong、Rotate noneとする。次main Sprint候補のsecretary voice方針はユーザー判断`1B / 2A / 3A`（「私」既定で設定変更可、名前表示は限定4場面、全会話面を1 Sprintで統一）として保持し、Sprint 051へ混ぜない。
