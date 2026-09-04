@@ -703,3 +703,145 @@ loopbackを使う既存suiteはsandbox内の初回だけ `listen EPERM 127.0.0.1
 ## Recommended orchestration route
 
 追加のGenerator修正やPlanner差し戻しは不要である。現在のRetry 2 candidateを1 commitへ固定し、対象commitと副作用を示してユーザーの明示確認を得た後、そのcommitをpushして `windows-2025` のSprint 051 suiteを `--require-windows` で再実行する。同じcommitの0 FAILとrun URLを得るまではSprintを`done`にしない。
+
+---
+
+# Fable F1〜F4 follow-up independent evaluation
+
+## Verdict
+
+**Local product verdict: PASS / overall: verification-scope-issue, pending same-candidate Windows gate**
+
+現在の未commit candidateを、Generatorの自己申告を合否根拠にせず、差分、製品code、fixture、実行結果から独立評価した。Fable F1〜F4とSprint 051のローカル受入条件に、新しいproduct findingまたはverification-infra findingは認めなかった。
+
+ただし、Windows run `33902137773` はHEAD `b7c2adbb5c588429daa1b475dec9eb2b9604cf1d` の旧candidateを実行した証跡であり、その後の未commit差分を含まない。現在byteを固定したcandidate commitがなく、同一commitの `windows-2025` / `--require-windows` 成功証跡もないため、AC13、AC16、C6はpendingとする。ローカルgreenだけでSprint全体をPASS / `done` にはしない。
+
+## Candidate identity and host checks
+
+- host: `mac.lan`, Darwin `arm64`、実行userと物理rootを確認した。利用者固有のabsolute pathはこの証跡へ記録しない。
+- branch: `codex/sprint-051-git-ingest`
+- HEAD: `b7c2adbb5c588429daa1b475dec9eb2b9604cf1d`
+- upstream: `origin/main`、HEADはupstreamに対してahead 2 / behind 0
+- remote: `origin` のfetch / push設定をread-only確認。query / userinfoなし。評価中のremote変更、fetch、pushは0件。
+- evaluation target: HEADからの未commit製品・test差分。対象7 fileのbinary diff SHA-256は `ff0f5b11eb4f4e9752094652439b325f48d8a753288f391bfc6a4f5ea7523329`。
+- 評価開始前のNode process数は17件、終了後は16件。40件未満なので直列の必須回帰を開始し、60件到達はなかった。
+- 初回と終了前のworktreeを比較し、テストによる製品・test・Git metadataの意図しない変更は認めなかった。本節以外の既存変更には触れていない。
+
+## Independent diff and size audit
+
+Fable follow-upの製品差分と検証差分を、HEAD基準でpathごとに再集計した。
+
+| Classification | Added | Deleted | Files |
+|---|---:|---:|---|
+| product | 47 | 43 | `actions-run.mjs` 44/20、Chatwork `search-flow.mjs` 2/12、Google Chat `search-flow.mjs` 1/11 |
+| verification | 92 | 14 | Sprint 014 19/4、Sprint 020 11/1、Sprint 024 2/1、Sprint 051 60/8 |
+
+- verification追加92行がproduct追加47行を上回る点は、今回のF2 / F3証拠追加についてユーザーが明示承認済みであり、それ自体をfailureにしていない。
+- 変更testの `check(...)` callはSprint 014 / 020 / 024で各43 / 31 / 23のまま、Sprint 051は42→44へ増加した。assertの削除、任意PASS化、`.skip`、`.only`、TODO化は0件。
+- 新しいtest framework、不要なplatform matrix、workflow job、dependencyは追加されていない。既存 `windows-2025` jobと `--require-windows` stepの構造も不変である。
+- product変更はworkflow失敗確認と2つのsearch-flowの重複log取得除去に限定され、UI、OAuth、API、Secret、version、release、配布inventoryへscopeを広げていない。
+
+## Fable findings audit
+
+### F1 — completed failureからのfailed log取得と細分類
+
+**PASS (product)**
+
+- `watchCorrelatedWorkflow` は `gh run watch ... --exit-status` の非0後、まず `gh run view <id> --json status,conclusion` を実行する。
+- JSONが `status=completed` かつ失敗conclusionのallowlistに一致した場合だけ、`gh run view <id> --log-failed` を1回実行する。専用testはJSON 1回 / failed log 1回をcommand traceで確認した。
+- Chatworkはworkflow conclusionの一般分類より `chatwork-auth`、`rate-limit`、`service-network`、`chatwork-partial` のreason分類を先に適用する。Google Chatもreauthorization、scope、admin、audience、API disabled、permission、rate、networkの細分類へ到達する。
+- pending JSONではfailed log 0回。watch / JSON viewのauth、transport、timeout、killed経路でもfailed logを読まず、workflowの成否を断定しない。
+
+### F4 — log二重取得、誤分類、privacy
+
+**PASS (product)**
+
+- Chatwork / Google Chatのsearch-flowにあった独自 `--log-failed` 再取得を削除し、共通 `watchCorrelatedWorkflow` だけがfailed logを取得する。各service回帰でもJSON 1回 / log 1回、timeoutではlog 0回だった。
+- GitHub CLIのauth / transport分類はwatch errorとJSON view commandの診断だけを入力にし、workflow failed log本文を混ぜない。workflow本文はservice固有の `failureReason` にだけ使われる。
+- workflow失敗errorはallowlist化したcode / stage / conclusion / correlated run / reasonだけを保持する。合成raw logにSecret marker、query付きURL、absolute fixture path、`stdout` / `stderr`を入れたprobeでも公開payloadに残らなかった。
+- failed log取得自体が失敗した場合も、確認済みconclusionを `workflow-conclusion-failure` として返し、raw command errorを公開payloadへ保持しない。
+
+### F2 — 隔離Git configと明示fast-forward
+
+**PASS (verification of product contract)**
+
+- 実Git fixtureは一時HOME / XDG配下で動き、`HOME`、`XDG_CONFIG_HOME`、`GIT_CONFIG_NOSYSTEM=1`、`LC_ALL=C` を確認してからGit操作を開始した。
+- global / local双方に `pull.rebase=true` と `pull.ff=false` を設定し、local branch upstreamを未設定にした状態で検証した。
+- 取り込み前後でlocal config全体、global / localの両pull policy、upstream未設定が一致した。
+- command trace上のpullは1回だけで、argvは正確に `pull --ff-only --no-rebase origin refs/heads/main`。相反するconfigに依存せずfast-forwardし、tracked / staged / untracked / indexを保持した。
+
+### F3 — 停止段階とrepository不変条件
+
+**PASS (verification of product contract)**
+
+- dirty-conflictはfetch後にremote差分とdirty statusを比較して停止し、pull 0回。前後のHEAD、porcelain status、index snapshotが一致した。
+- divergedはfetchと両向き祖先判定の後に停止し、diff / status / pullは各0回。前後のHEAD、status、indexも一致した。
+- sync / async root mismatchは最初の `rev-parse --show-toplevel` だけで停止し、`symbolic-ref`、remote、fetch、pullへ進まない。両経路のHEAD、status、indexは不変だった。
+- root mismatchの公開payloadはcode / stage / reasonだけで、入力root、実Git root、その他のabsolute pathを含まなかった。
+
+## Other Sprint 051 contract audit
+
+- branch / remote / FETCH_HEAD: detached HEAD、branch mismatch、remote missing、不正remote、remote branch missingを分類し、fetch後は実 `FETCH_HEAD^{commit}` を用いる。pull後はHEADと再読したFETCH_HEADの一致を検査し、remote進行競合は `targetAdvanced` で正直に報告する。
+- run correlation: dispatch前run ID集合、秒境界以後のcreatedAt、branch、workflow name、相関ID入りdisplay titleの完全一致を要求する。missing / invalid time、wrong branch、wrong workflow、old successは採用しない。
+- result-missing: Chatwork初回・設定変更とGoogle Chat discoveryは今回run以後の結果だけをcurrentとし、欠落 / stale resultを成功にしない。
+- Git operation: 6 callsiteは共通helperへ接続され、未分類直接pull 0件。製品traceにmerge、rebase、stash、reset、restore、commit、push、force、upstream設定、Git config書換えは0件。argv配列と `shell: false` を維持する。
+- Windows fixture: Windowsでは `where.exe git.exe` から実 `git.exe` を解決し、bare remote / cloneを使う。`.cmd` / `.bat` shim、`shell: true`、shell文字列連結を使わない。非Windowsで `--require-windows` を成功skipにする経路はない。ただし今回byteのWindows実行そのものはunverifiedである。
+- boundary: push、PR、`workflow_dispatch`、Windows CI、downstream、plugin install、外部API、OAuth、Repository Secret、release、tag、version変更を実行していない。禁止された別Harness workspaceへも接触していない。
+
+## Mandatory local command evidence
+
+全commandを直列実行した。sandbox内でloopback bindを使う4 commandに `listen EPERM 127.0.0.1` が出たため、これはverification-infra環境制約として分離し、指示どおり同一commandだけを許可済みloopback面で再実行した。以下は最終採用結果で、すべてexit 0である。
+
+| Command | Result |
+|---|---|
+| `node scripts/sprint-051-git-ingest-test.mjs` | 45/45、platform darwin |
+| `node scripts/sprint-035-patch-002-git-pull-test.mjs` | wrapper 9/9、embedded Sprint 051 45/45 |
+| `node scripts/sprint-013-chatwork-test.mjs` | 35/35 |
+| `node scripts/sprint-014-chatwork-test.mjs` | 59/59 |
+| `node scripts/sprint-019-google-chat-test.mjs` | 51/51 |
+| `node scripts/sprint-020-google-chat-test.mjs` | 50/50 |
+| `node scripts/sprint-022-safety-test.mjs` | 69/69 |
+| `node scripts/sprint-024-data-causality-test.mjs` | 43/43 |
+| `bash scripts/sprint-035-patch-001-regression.sh` | wrapper 9/9、IME 30/30、Chatwork 35/35、Google Chat 51/51、各内包wrapper / browser expression / edition 0 fail |
+| `node scripts/sprint-020-patch-001-copy-test.mjs` | 69/69、inventory 52 |
+| `node scripts/sprint-027-copy-test.mjs` | 66/66 |
+| candidate変更JavaScript 7 fileの `node --check` | 7/7、syntax error 0 |
+| `git diff --check` | output 0 |
+
+UIの新変更はないためPlaywright / screenshotの新規実行は行っていない。UI関連の評価は、同candidate系列で記録済みかつ今回の製品差分で変更されていないRetry 1証跡をcarry forwardし、新規browser evidenceとは表現しない。
+
+## Rubric and acceptance
+
+| Criterion | Score | Threshold | Result | Evidence |
+|---|---:|---:|---|---|
+| C1 完成度 | 4 | ≥4 | PASS locally | F1〜F4、AC1〜12 / 14 / 15がローカル成立。Windowsだけpending |
+| C2 構文・整合 | 5 | 5 | PASS | 7 file syntax、diff / fixture / callsite整合 |
+| C3 機能の実証 | 5 | ≥4 | PASS locally | 専用45、service回帰、実Git fixtureとcommand trace |
+| C4 非エンジニア体験 | 5 | ≥4 | PASS, carried | UI byte不変、既存browser証跡をcarry forward |
+| C5 安全・規律 | 5 | 5 | PASS | privacy、禁止Git、外部境界、scope guard成立 |
+| C6 無回帰 | 4 | 5 | **PENDING external gate** | local必須回帰は全green。同一candidate Windows runなし |
+| C8 wizard体験・デザイン | 5 | ≥4 | PASS, carried | UI変更なし、既存6 screenshot / overflow証跡 |
+| C11 Google Chat境界 | 5 | 5 | PASS | search-flow分類、既存OAuth / API / Secret境界green |
+
+| AC | Result | Evidence / reason |
+|---|---|---|
+| AC1〜AC12 | PASS | 専用45/45、service回帰、実Git / Actions fixture、未変更UI証跡 |
+| AC13 Windows互換fixture | PENDING | fixture設計は契約準拠。今回byteの実 `git.exe` 実行は未確認 |
+| AC14 回帰・copy inventory | PASS | 指定local commandすべて0 FAIL、assert弱体化0件 |
+| AC15 ローカル版・外部境界 | PASS | scope外変更・外部side effect 0 |
+| AC16 Windows CI external gate | PENDING | current uncommitted bytesを表すcandidate commit / run URLなし |
+
+## Findings and self-review
+
+- 新規product finding: **0件**。
+- 新規verification-infra finding: **0件**。
+- 外部gate以外の新規finding: **0件**。
+- 未解消境界: **verification-infra / external gate pending**。これはproduct failureではないが、最終PASSの根拠にもならない。
+- F1〜F4の成功経路だけでなく、pending、auth、transport、timeout、log取得失敗、dirty conflict、diverged、root mismatchの負経路と副作用停止を確認した。
+- error payloadとsearch-flow出力を検査し、raw workflow log、Secret、query付きURL、absolute local pathを証跡や公開状態へ残していない。
+- safe harbor外のcollector、attestation、schema、追加gateを要求していない。verificationがproductより大きい点は、ユーザー承認済みの今回差分として扱った。
+- 自分が起動したloopback server、watcher、長時間子processの残存はない。
+
+## Recommended orchestration route
+
+Generator / Plannerへの差し戻しは不要である。現在のproduct 47/43とverification 92/14を含む未commit candidateを1 commitへ固定し、そのcommitと外部副作用を示してユーザーの明示確認を得る。その後、同じcommitをpushし、既存 `windows-2025` jobで `node scripts/sprint-051-git-ingest-test.mjs --require-windows` を実行する。0 FAILとrun URLが同一commitへ結び付いた時点でのみ最終PASS / `done` に進める。

@@ -36,11 +36,11 @@ function classify(error) {
   if (error?.code === "branch-unconfirmed") return { code: error.code, stage: "dispatch", message: "対象branchを確認できないため、GitHub Actionsは開始していません。" };
   if (error?.stage === "dispatch") return { code: error.code, stage: error.stage, message: "GitHub Actionsを開始できませんでした。Actionsは未開始または開始未確認です。" };
   if (error?.stage === "run-correlation") return { code: error.code, stage: error.stage, message: "今回開始したGitHub Actionsのrunを確認できませんでした。古い成功runは使っていません。" };
-  if (error?.code === "workflow-conclusion-failure") return { code: error.code, stage: "actions-run", message: "今回のGitHub Actionsが失敗しました。Actionsの実行内容とAPI Tokenを確認してください。" };
   if (error?.reason === "chatwork-auth") return { code: "auth", stage: "actions-run", message: "Chatworkの認証に失敗しました。Repository Secretを確認してください。" };
   if (error?.reason === "rate-limit") return { code: "rate-limit", stage: "actions-run", message: "Chatwork APIの利用上限に達しました。時間を置いて再実行してください。" };
   if (error?.reason === "service-network") return { code: "network", stage: "actions-run", message: "Chatworkへ接続できませんでした。前回の履歴は保持しています。" };
   if (error?.reason === "chatwork-partial") return { code: "partial-room", stage: "actions-run", message: "一部または全部のルームを取得できませんでした。前回の履歴は保持しています。" };
+  if (error?.code === "workflow-conclusion-failure") return { code: error.code, stage: "actions-run", message: "今回のGitHub Actionsが失敗しました。Actionsの実行内容とAPI Tokenを確認してください。" };
   if (error?.code?.endsWith("-timeout")) return { code: error.code, stage: error.stage, message: "GitHub Actionsの確認が時間切れになり、結果は断定していません。" };
   if (error?.code?.endsWith("-auth") || error?.code?.endsWith("-transport") || error?.code?.endsWith("-killed")) return { code: error.code, stage: error.stage, message: "GitHub CLIの認証・通信・process状態を確認できませんでした。workflowの成否は断定していません。" };
   return { code: "workflow-failure", message: "自動取得処理（GitHub Actions）が成功しませんでした。前回の履歴はそのまま検索できます。" };
@@ -110,17 +110,7 @@ try {
     pollMaxIntervalMs: runPollMax,
   });
   events.push("wait");
-  try {
-    await watchCorrelatedWorkflow({ root, run: dispatchedRun, gh, timeoutMs: timeout });
-  } catch (watchError) {
-    if (!watchError.killed && watchError.code !== "ETIMEDOUT") {
-      try {
-        const logs = await run(gh, ["run", "view", String(dispatchedRun.runId), "--log-failed"]);
-        watchError.stderr = `${watchError.stderr || ""}\n${logs.stdout || ""}\n${logs.stderr || ""}`;
-      } catch { /* 権限や通信失敗は元errorで分類する */ }
-    }
-    throw watchError;
-  }
+  await watchCorrelatedWorkflow({ root, run: dispatchedRun, gh, timeoutMs: timeout });
   events.push("success-confirmed");
   await pull("pull-after-sync", dispatchedRun.branch);
   const retried = await search("retry-same-query");

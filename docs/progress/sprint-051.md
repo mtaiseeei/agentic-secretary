@@ -277,3 +277,106 @@ node scripts/sprint-051-git-ingest-test.mjs --require-windows
 ```
 
 同じRetry 2 candidate commitを `windows-2025` へ置き、上記commandが43/43、既存 `Windows path, rollback, retry, and boundary regression` がgreenになることを外部gateで確認する。今回はpush、PR、`workflow_dispatch`、Windows CI再実行、downstream、plugin install、release、version実ファイル変更を行っていないため、Windows修正結果は引き続き `pending / unverified`。新しいrun URLと同一commitの0 FAILが得られるまでSprintをdoneとはしない。
+
+## User-approved limited cycle — F1/F4完了、F2/F3はsize guardで停止
+
+Claude Code Fable 5.1 highが確認したF1／F4だけを先に修正し、直接のfake-gh回帰を実物のCLI出力へ合わせた。その時点の追加行を計測した結果、verification追加が製品追加を1行上回ったため、契約のverification-size guardとオーケストレーター指示に従い、F2／F3の旧Git fixture復元へは進んでいない。
+
+### 原因とF1／F4の変更
+
+- `watchCorrelatedWorkflow` は `gh run watch --exit-status` 非0後、`gh run view --json status,conclusion` が正常なcompleted failureを返すと、`--log-failed`を読まずreasonなしの`workflow-conclusion-failure`をthrowしていた。旧fake `gh` がJSON要求にも非JSON logを返したため、JSON parse fallbackだけで細分類が偶然成立していた。
+- `actions-run.mjs` はcompleted failureを確認した場合だけ `--log-failed` を1回取得し、workflow本文を `failureReason` だけへ渡す。公開errorは`code`、`stage`、`conclusion`、sanitized `reason`、既存のcorrelated run summaryだけで、raw log／stdout／stderr／絶対path／URL／secretを保持しない。
+- GitHub CLIのauth／transport／timeout／kill分類には、`watch`とJSON `view`そのもののcode／stderrだけを使う。workflow log内の`403`／`forbidden`等はGitHub CLI auth判定へ混ぜない。conclusion未確定時は`--log-failed`を取得しない。
+- Chatwork／Google Chatの`search-flow.mjs`にあった重複`--log-failed`取得を削除した。Chatworkはsanitized reasonをgeneric `workflow-conclusion-failure`より先に判定し、Google Chatは既存のreauthorization／admin／scope／audience／API／rate／network status導線へ戻る。
+- Sprint 014／020のfake `gh` は、`--json`なら実物同様のstatus／conclusion JSON、`--log-failed`ならサービス別fixture logを返す。両サービスでJSON view 1回、failed log 1回と、分類後にpullへ進まないことを既存assert内で確認する。
+- run correlation、branch、remote、FETCH_HEAD、Git取り込み、result-missing、UI、Windows root修正は変更していない。Voice、script簡素化、process最適化、timeout契約変更も対象外のままである。
+
+### 行数分類と停止理由
+
+`git diff --numstat HEAD`をF1／F4対象pathだけで計測した。
+
+| 区分 | 追加 | 削除 | 内訳 |
+|---|---:|---:|---|
+| 製品 | 47 | 43 | `actions-run.mjs` 44/20、Chatwork search-flow 2/12、Google Chat search-flow 1/11 |
+| 既存fake-ghの現実化 | 30 | 5 | Sprint 014 test 19/4、Sprint 020 test 11/1 |
+| F1／F4の直接回帰 | 18 | 2 | Sprint 051 test |
+| verification合計 | 48 | 7 | 既存fake現実化30行＋直接回帰18行 |
+| F2／F3 | 0 | 0 | size guard発火前に未実装で停止 |
+
+verification追加48行が製品追加47行を1行上回る。形式的な行圧縮、assert削除、旧fixtureの大量復元で閾値を迂回せず、この限定cycleをここで停止する。F2／F3の隔離`HOME`／`XDG_CONFIG_HOME`／`GIT_CONFIG_NOSYSTEM`、local／global `pull.rebase=true`・`pull.ff=false`、dirty-conflict／diverged／root-mismatchのHEAD・status・index不変と段階別後続操作0は未実装の残件である。
+
+### Targeted verification
+
+開始前Node数はオーケストレーター実測13件で40未満。重いcommandは直列実行した。
+
+| Command | Exit | Result |
+|---|---:|---|
+| 変更6 JavaScript fileの `node --check` | 0 | syntax error 0件 |
+| `node scripts/sprint-051-git-ingest-test.mjs` | 0 | 44/44、JSON conclusion後のlog 1回、raw非保持、workflow logによるgh auth汚染0、未確定時log 0を含む |
+| `node scripts/sprint-014-chatwork-test.mjs` | 0 | 59/59。sandbox内初回はloopback `listen EPERM`のため中断し、許可済みloopback面で同一commandを再実行してgreen |
+| `node scripts/sprint-020-google-chat-test.mjs` | 0 | 50/50。reauthorization、admin、scope、audience、API、permission、rate、networkが実gh同様のJSON→log各1回で到達 |
+
+size guard発火後のため、旧wrapper、Sprint 013／019／022／024、統合、copy、全syntax、全suiteはこのcycleで再実行していない。F1／F4対象の3 suite以外をgreenとは申告しない。
+
+### Windows再実行条件とexternal境界
+
+Windows run `33902137773` は開始HEAD `b7c2adbb5c588429daa1b475dec9eb2b9604cf1d` のSprint 051 43/43、既存Windows 12/12を示すが、今回の未commit F1／F4 byteの証跡ではない。F2／F3の扱いをユーザーが決め、candidateを固定した後、別の明示許可を得て同一commitをpushし、`windows-2025`で `node scripts/sprint-051-git-ingest-test.mjs --require-windows` を再実行する必要がある。
+
+このcycleではcommit、push、PR、`workflow_dispatch`、Windows CI、downstream、plugin install、release、version実ファイル変更、実API／OAuth／Repository Secret操作を行っていない。自分のserver／watcherは起動しておらず、loopbackを使った既存suiteの子processは終了している。`docs/sprints/state.md`、spec、contract、feedbackは変更していない。
+
+## User-approved F2/F3 safety regression completion
+
+ユーザーが、FableレビューのF2／F3を必要最小限で追加し、検証追加行が製品追加行を上回ることを明示承認したため、直前cycleで停止していた安全回帰を既存の実Git fixture内へ追加した。今回roundは製品変更0行のverification-onlyであり、旧308行matrix、新framework、広いCartesian matrixは復元・追加していない。
+
+### F2 — 利用者Git設定からの独立
+
+- Sprint 051の全実Git fixtureを、temp配下の `HOME`／`XDG_CONFIG_HOME`、`GIT_CONFIG_NOSYSTEM=1`、`LC_ALL=C` で実行する。
+- 隔離global configとfast-forward候補のlocal configの両方へ `pull.rebase=true`／`pull.ff=false` を設定し、対象branchのupstreamは未設定にする。
+- 取り込み前後でlocal／globalの2設定、local config全体、upstream未設定が不変であることを確認する。その相反する既定下でも、製品argvの `pull --ff-only --no-rebase origin refs/heads/main` が1回だけ実行され、fast-forwardが成功する。
+
+### F3 — 失敗時のrepository不変と停止段階
+
+- `dirty-conflict`: 実行前後のHEAD、`git status --porcelain=v1 -z`、`git ls-files --stage -z` が同一。fetch 1回、pull 0回で、rename旧pathと非ASCII pathの競合をNUL-safeに返す。
+- `diverged`: 同じ3点snapshotが同一。fetch 1回と祖先判定後に停止し、diff／status／pullは各0回であることをcommand traceで確認する。
+- `ingest-root-mismatch`: 同じ3点snapshotが同一。同期／非同期の両経路とも最初の `rev-parse --show-toplevel` 1回だけで停止し、symbolic-ref／remote／fetch／pullへ進まない。両error payloadへfixtureの絶対pathを含めない。
+
+### 行数分類
+
+`git diff --numstat HEAD` と直前handoffの記録を照合した。
+
+| 区分 | 追加 | 削除 | 内容 |
+|---|---:|---:|---|
+| 今回の製品 | 0 | 0 | 製品codeは変更していない |
+| F2／F3直接回帰 | 42 | 6 | Sprint 051 test。着手前 `+18/-2` から現在 `+60/-8` への増分 |
+| F1 fixture追随 | 2 | 1 | Sprint 024 fake-ghを実物同様のJSON view／failed log分岐へ修正 |
+| 今回verification合計 | 44 | 7 | 承認済みのverification-only例外 |
+| candidate製品合計 | 47 | 43 | 直前cycleのF1／F4製品差分を保持 |
+| candidate検証合計 | 92 | 14 | Sprint 014 `19/4`、020 `11/1`、024 `2/1`、051 `60/8` |
+
+candidate全体では検証追加92行が製品追加47行を45行上回る。これは今回ユーザーが明示承認したsize例外である。意味のあるassertの削除、不自然な1行圧縮、製品code変更による比率調整は行っていない。
+
+### ローカル検証
+
+開始前Node数はオーケストレーター実測15件で40未満。Generator権限からの `pgrep node` と代替 `ps` は `sysmond service not found`／`operation not permitted` で実測不能だったため、0件とは扱っていない。全commandを直列実行し、loopback serverを使うSprint 013のsandbox内初回だけ `listen EPERM 127.0.0.1` となった。同一commandを許可済みloopback面で再実行してgreenとし、製品failureとは分けた。
+
+| Command | Exit | Assertions / result |
+|---|---:|---|
+| `node scripts/sprint-051-git-ingest-test.mjs` | 0 | 45/45。F2／F3と既存F1／F4を含む |
+| `node scripts/sprint-035-patch-002-git-pull-test.mjs` | 0 | wrapper 9/9、内包Sprint 051 45/45 |
+| `node scripts/sprint-013-chatwork-test.mjs` | 0 | 35/35。sandbox初回EPERM後、許可面で再実行 |
+| `node scripts/sprint-014-chatwork-test.mjs` | 0 | 59/59 |
+| `node scripts/sprint-019-google-chat-test.mjs` | 0 | 51/51 |
+| `node scripts/sprint-020-google-chat-test.mjs` | 0 | 50/50 |
+| `node scripts/sprint-022-safety-test.mjs` | 0 | 69/69 |
+| `node scripts/sprint-024-data-causality-test.mjs` | 0 | 初回41/43で旧fake-ghのJSON未対応を検出。fixtureだけ最小追随後43/43 |
+| `bash scripts/sprint-035-patch-001-regression.sh` | 0 | 全wrapper／内包suite 0 fail |
+| `node scripts/sprint-020-patch-001-copy-test.mjs` | 0 | 69/69、inventory 52 |
+| `node scripts/sprint-027-copy-test.mjs` | 0 | 66/66 |
+| candidate変更JavaScript 7 fileの `node --check` | 0 | syntax error 0件 |
+| `git diff --check` | 0 | 出力0件 |
+
+Sprint 024の初回2 failureは、旧fake `gh run view` が `--json` にも非JSON log本文を返すverification fixture不整合だった。実物同様に `--json` はstatus／conclusion JSON、`--log-failed` はサービス別failed logを返す2分岐へだけ直し、既存の古い成功run拒否・network分類・秘密値非表示assertは削除していない。
+
+### Handoff
+
+ローカルmandatory suiteは0 FAIL。今回、commit、push、PR、`workflow_dispatch`、Windows CI、downstream、plugin install、release、version実ファイル変更、実API／OAuth／Repository Secret操作は行っていない。F1／F4 product差分を含む現在の未commit candidateについて、同一commitのWindows `--require-windows` 証跡は引き続き `pending / unverified` であり、外部gateなしにSprintをdoneとはしない。

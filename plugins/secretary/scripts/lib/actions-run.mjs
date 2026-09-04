@@ -48,7 +48,31 @@ function sanitizedActionsError(error, stage, fallbackCode) {
     else if (["ENOENT", "ECONNRESET", "ENETUNREACH", "EAI_AGAIN"].includes(error?.code) || /network|connection|could not resolve|http 5\d\d/.test(source)) code = `${stage}-transport`;
   }
   const clean = Object.assign(new Error("GitHub Actionsとの通信または実行確認に失敗しました。"), { code, stage });
-  const reason = failureReason(error);
+  return clean;
+}
+
+function commandFailureDiagnostic(...failures) {
+  const errors = failures.filter(Boolean);
+  const timeout = errors.find((error) => error?.code === "timeout" || error?.code === "ETIMEDOUT");
+  const coded = timeout || errors.find((error) => error?.code);
+  return {
+    code: coded?.code,
+    killed: errors.some((error) => error?.killed),
+    signal: errors.find((error) => error?.signal)?.signal,
+    // GitHub CLI自体の診断だけを使う。workflow本文はfailureReason専用で、
+    // ghの認証・通信分類へ混ぜない。
+    stderr: errors.map((error) => String(error?.stderr || "")).join("\n"),
+  };
+}
+
+function workflowConclusionError({ run, conclusion, logs }) {
+  const clean = Object.assign(new Error("GitHub Actionsのworkflowが失敗しました。"), {
+    code: "workflow-conclusion-failure",
+    stage: "actions-run",
+    conclusion,
+    correlatedRun: run,
+  });
+  const reason = failureReason(logs);
   if (reason) clean.reason = reason;
   return clean;
 }
@@ -211,29 +235,29 @@ export async function watchCorrelatedWorkflow({
   try {
     await command(gh, ["run", "watch", String(run.runId), "--exit-status"], { root, timeoutMs, label: "GitHub Actions完了待ち", runner });
     return run;
-  } catch (error) {
-    let diagnostic = error;
+  } catch (watchError) {
+    let viewed;
     try {
-      const viewed = await command(gh, ["run", "view", String(run.runId), "--json", "status,conclusion"], { root, timeoutMs, label: "GitHub Actions実行結果", runner });
-      const parsed = JSON.parse(viewed.stdout || "{}");
-      const failedConclusions = new Set(["failure", "cancelled", "timed_out", "action_required", "stale"]);
-      if (parsed?.status === "completed" && failedConclusions.has(parsed?.conclusion)) {
-        throw Object.assign(new Error("GitHub Actionsのworkflowが失敗しました。"), {
-          code: "workflow-conclusion-failure",
-          stage: "actions-run",
-          conclusion: parsed.conclusion,
-          correlatedRun: run,
-        });
-      }
-      diagnostic = { ...error, stdout: `${error?.stdout || ""}\n${viewed.stdout || ""}`, stderr: `${error?.stderr || ""}\n${viewed.stderr || ""}` };
+      viewed = await command(gh, ["run", "view", String(run.runId), "--json", "status,conclusion"], { root, timeoutMs, label: "GitHub Actions実行結果", runner });
     } catch (viewError) {
-      if (viewError?.code === "workflow-conclusion-failure") throw viewError;
-      try {
-        const logs = await command(gh, ["run", "view", String(run.runId), "--log-failed"], { root, timeoutMs, label: "GitHub Actions失敗log", runner });
-        diagnostic = { ...error, stdout: `${error?.stdout || ""}\n${logs.stdout || ""}`, stderr: `${error?.stderr || ""}\n${logs.stderr || ""}` };
-      } catch { /* 元のwatch失敗だけをsanitized分類する。 */ }
+      const clean = sanitizedActionsError(commandFailureDiagnostic(watchError, viewError), "actions-run", "actions-run-failed");
+      clean.correlatedRun = run;
+      throw clean;
     }
-    const clean = sanitizedActionsError(diagnostic, "actions-run", "actions-run-failed");
+
+    let parsed;
+    try { parsed = JSON.parse(viewed.stdout || "{}"); }
+    catch { parsed = null; }
+    const failedConclusions = new Set(["failure", "cancelled", "timed_out", "action_required", "stale"]);
+    if (parsed?.status === "completed" && failedConclusions.has(parsed?.conclusion)) {
+      let logs;
+      try {
+        logs = await command(gh, ["run", "view", String(run.runId), "--log-failed"], { root, timeoutMs, label: "GitHub Actions失敗log", runner });
+      } catch { /* conclusionは確認済みなので、log取得失敗でもworkflow失敗として返す。 */ }
+      throw workflowConclusionError({ run, conclusion: parsed.conclusion, logs });
+    }
+
+    const clean = sanitizedActionsError(commandFailureDiagnostic(watchError, viewed), "actions-run", "actions-run-failed");
     clean.correlatedRun = run;
     throw clean;
   }

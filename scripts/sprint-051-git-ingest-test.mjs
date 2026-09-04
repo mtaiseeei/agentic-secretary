@@ -12,6 +12,11 @@ import { isCurrentSyncResult } from "../plugins/secretary/skills/chatwork/script
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const work = realpathSync(mkdtempSync(join(tmpdir(), "secretary-sprint-051-")));
+const isolatedHome = join(work, "home");
+const isolatedXdg = join(work, "xdg");
+mkdirSync(isolatedHome);
+mkdirSync(isolatedXdg);
+Object.assign(process.env, { HOME: isolatedHome, XDG_CONFIG_HOME: isolatedXdg, GIT_CONFIG_NOSYSTEM: "1", LC_ALL: "C" });
 const requireWindows = process.argv.includes("--require-windows");
 let passed = 0;
 let failed = 0;
@@ -86,7 +91,18 @@ function safePayload(error) {
   return JSON.stringify(error?.toJSON?.() || error || {});
 }
 
+function repositorySnapshot(cwd) {
+  return [
+    git(cwd, ["rev-parse", "HEAD"]).stdout.trim(),
+    git(cwd, ["status", "--porcelain=v1", "-z"]).stdout,
+    git(cwd, ["ls-files", "--stage", "-z"]).stdout,
+  ];
+}
+
 try {
+  git(work, ["config", "--global", "pull.rebase", "true"]);
+  git(work, ["config", "--global", "pull.ff", "false"]);
+  check(process.env.HOME === isolatedHome && process.env.XDG_CONFIG_HOME === isolatedXdg && process.env.GIT_CONFIG_NOSYSTEM === "1" && process.env.LC_ALL === "C", "実Git fixtureを隔離HOME/XDG/system config/localeで実行");
   check(resolveGitIngestTimeout(undefined, undefined) === 60_000 && resolveGitIngestTimeout(321, "999") === 321 && resolveGitIngestTimeout("bad", "999") === 60_000 && resolveGitIngestTimeout(undefined, 654) === 654, "Git timeoutはhelper入力 > env > 60秒、無効入力は60秒");
   check(samePhysicalRoot("C:\\Repo\\", "c:/repo", "win32")
     && samePhysicalRoot("\\\\?\\C:\\Repo", "c:/repo", "win32")
@@ -114,30 +130,44 @@ try {
   remoteCommit(fast, "remote.txt");
   git(fast.candidate, ["config", "--unset", "branch.main.remote"], true);
   git(fast.candidate, ["config", "--unset", "branch.main.merge"], true);
+  git(fast.candidate, ["config", "--local", "pull.rebase", "true"]);
+  git(fast.candidate, ["config", "--local", "pull.ff", "false"]);
   writeFileSync(join(fast.candidate, "base.txt"), "tracked dirty\n");
   writeFileSync(join(fast.candidate, "staged.txt"), "staged\n"); git(fast.candidate, ["add", "staged.txt"]);
   writeFileSync(join(fast.candidate, "untracked.txt"), "untracked\n");
   const beforeStatus = git(fast.candidate, ["status", "--porcelain=v1", "-z", "--", "base.txt", "staged.txt", "untracked.txt"]).stdout;
   const beforeIndex = git(fast.candidate, ["ls-files", "--stage", "--", "staged.txt"]).stdout;
   const beforeConfig = git(fast.candidate, ["config", "--local", "--list"]).stdout;
+  const beforePolicy = ["--local", "--global"].flatMap((scope) => ["pull.rebase", "pull.ff"].map((key) => git(fast.candidate, ["config", scope, "--get", key]).stdout.trim()));
+  const beforeUpstream = git(fast.candidate, ["config", "--local", "--get-regexp", "^branch\\.main\\.(remote|merge)$"], true).stdout;
   const fastLog = [];
   const fastResult = ingestGitSync({ root: fast.candidate, git: realGit, runner: capturedRunner(fastLog) });
   check(fastResult.status === "fast-forwarded" && fastResult.after === git(fast.candidate, ["rev-parse", "FETCH_HEAD^{commit}"]).stdout.trim(), "非競合dirtyのままfast-forward");
   check(beforeStatus === git(fast.candidate, ["status", "--porcelain=v1", "-z", "--", "base.txt", "staged.txt", "untracked.txt"]).stdout && beforeIndex === git(fast.candidate, ["ls-files", "--stage", "--", "staged.txt"]).stdout, "tracked/untracked/staged差分とindexを保持");
-  check(beforeConfig === git(fast.candidate, ["config", "--local", "--list"]).stdout, "upstream未設定のままGit configを書き換えない");
+  const afterPolicy = ["--local", "--global"].flatMap((scope) => ["pull.rebase", "pull.ff"].map((key) => git(fast.candidate, ["config", scope, "--get", key]).stdout.trim()));
+  const afterUpstream = git(fast.candidate, ["config", "--local", "--get-regexp", "^branch\\.main\\.(remote|merge)$"], true).stdout;
+  check(beforeConfig === git(fast.candidate, ["config", "--local", "--list"]).stdout && beforePolicy.join() === "true,false,true,false" && afterPolicy.join() === beforePolicy.join() && beforeUpstream === "" && afterUpstream === beforeUpstream, "相反するlocal/global pull設定とupstream未設定を変更しない");
   const pulls = fastLog.filter(([command]) => command === "pull");
   check(pulls.length === 1 && pulls[0].join(" ") === "pull --ff-only --no-rebase origin refs/heads/main", "upstream非依存の明示remote/ref pull");
 
   const conflict = fixture("dirty-conflict");
   git(conflict.seed, ["mv", "rename-old.txt", "rename-new.txt"]); writeFileSync(join(conflict.seed, "日本語.txt"), "remote\n"); git(conflict.seed, ["commit", "-qam", "remote rename"]); git(conflict.seed, ["push", "-q", "origin", "main"]);
   writeFileSync(join(conflict.candidate, "rename-old.txt"), "dirty\n"); writeFileSync(join(conflict.candidate, "日本語.txt"), "dirty\n");
+  const conflictBefore = repositorySnapshot(conflict.candidate);
   const conflictLog = [];
   const conflictError = errorOf(() => ingestGitSync({ root: conflict.candidate, git: realGit, runner: capturedRunner(conflictLog) }));
-  check(conflictError?.code === "dirty-conflict" && conflictError.conflictPaths.includes("rename-old.txt") && conflictError.conflictPaths.includes("日本語.txt") && !conflictLog.some(([command]) => command === "pull"), "rename旧pathと非ASCII dirty衝突だけをNUL-safe停止");
+  check(conflictError?.code === "dirty-conflict" && conflictError.conflictPaths.includes("rename-old.txt") && conflictError.conflictPaths.includes("日本語.txt")
+    && repositorySnapshot(conflict.candidate).join("\0") === conflictBefore.join("\0") && conflictLog.filter(([command]) => command === "fetch").length === 1
+    && !conflictLog.some(([command]) => command === "pull"), "dirty衝突はfetch後にHEAD/status/index不変・pull 0でNUL-safe停止");
 
   const diverged = fixture("diverged");
   writeFileSync(join(diverged.candidate, "local.txt"), "local\n"); git(diverged.candidate, ["add", "local.txt"]); git(diverged.candidate, ["commit", "-q", "-m", "local"]); remoteCommit(diverged, "remote.txt");
-  check(errorOf(() => ingestGitSync({ root: diverged.candidate, git: realGit }))?.code === "diverged", "divergedを履歴書換えなしで停止");
+  const divergedBefore = repositorySnapshot(diverged.candidate);
+  const divergedLog = [];
+  const divergedError = errorOf(() => ingestGitSync({ root: diverged.candidate, git: realGit, runner: capturedRunner(divergedLog) }));
+  check(divergedError?.code === "diverged" && repositorySnapshot(diverged.candidate).join("\0") === divergedBefore.join("\0")
+    && divergedLog.filter(([command]) => command === "fetch").length === 1
+    && !divergedLog.some(([command]) => ["diff", "status", "pull"].includes(command)), "divergedはfetch・祖先判定後にHEAD/status/index不変、diff/status/pull 0で停止");
 
   const branches = fixture("branch-cases");
   check(errorOf(() => ingestGitSync({ root: branches.candidate, branch: "other", git: realGit }))?.code === "branch-mismatch", "branch切替をbranch-mismatchで停止");
@@ -153,9 +183,15 @@ try {
   check(missingBranch?.code === "branch-mismatch", "現在branch不一致をfetchより前に停止");
 
   const fault = fixture("faults"); remoteCommit(fault, "remote.txt");
-  const rootMismatch = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv.join(" ") === "rev-parse --show-toplevel" ? { status: 0, stdout: `${fault.seed}\n`, stderr: "" } : null) }));
-  const asyncRootMismatch = await asyncErrorOf(() => ingestGit({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv.join(" ") === "rev-parse --show-toplevel" ? { status: 0, stdout: `${fault.seed}\n`, stderr: "" } : null) }));
-  check(rootMismatch?.code === "ingest-root-mismatch" && asyncRootMismatch?.code === "ingest-root-mismatch" && !safePayload(rootMismatch).includes(fault.root), "sync/asyncとも別repoをroot不一致で拒否しpayloadに絶対pathなし");
+  const rootBefore = repositorySnapshot(fault.candidate);
+  const syncRootLog = [];
+  const asyncRootLog = [];
+  const rootIntercept = (argv) => argv.join(" ") === "rev-parse --show-toplevel" ? { status: 0, stdout: `${fault.seed}\n`, stderr: "" } : null;
+  const rootMismatch = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner(syncRootLog, rootIntercept) }));
+  const asyncRootMismatch = await asyncErrorOf(() => ingestGit({ root: fault.candidate, git: realGit, runner: capturedRunner(asyncRootLog, rootIntercept) }));
+  check(rootMismatch?.code === "ingest-root-mismatch" && asyncRootMismatch?.code === "ingest-root-mismatch" && repositorySnapshot(fault.candidate).join("\0") === rootBefore.join("\0")
+    && [syncRootLog, asyncRootLog].every((log) => log.length === 1 && log[0].join(" ") === "rev-parse --show-toplevel")
+    && !safePayload(rootMismatch).includes(fault.root) && !safePayload(asyncRootMismatch).includes(fault.root), "sync/async root不一致はHEAD/status/index不変、symbolic-ref/remote/fetch/pull前で停止し絶対path非表示");
   const inspect = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv[0] === "symbolic-ref" ? { status: 2, stdout: "", stderr: "secret raw" } : null) }));
   check(inspect?.code === "inspect-failed", "symbolic-ref予期しない非0をinspect-failed");
   const fetchMissing = errorOf(() => ingestGitSync({ root: fault.candidate, git: realGit, runner: capturedRunner([], (argv) => argv[0] === "fetch" ? { status: 128, stdout: "", stderr: "fatal: couldn't find remote ref; https://user:pass@example.invalid/x?token=secret" } : null) }));
@@ -210,8 +246,17 @@ try {
   check(timeoutError?.code === "run-correlation-unconfirmed" && timeoutClock === 1_000, "1秒CLI overrideはdeadlineでrun未確認停止");
 
   const watchRun = { runId: "88", branch: "main", workflowFile: "fixture.yml" };
-  const conclusion = await (async () => { try { await watchCorrelatedWorkflow({ root: work, run: watchRun, runner: async (_binary, argv) => { if (argv[1] === "watch") throw Object.assign(new Error("failed"), { code: 1 }); return { status: 0, stdout: '{"status":"completed","conclusion":"failure"}', stderr: "" }; } }); } catch (error) { return error; } })();
-  check(conclusion.code === "workflow-conclusion-failure" && conclusion.stage === "actions-run", "確認済みworkflow conclusion failureだけを独立分類");
+  const workflowCommands = [];
+  const conclusion = await (async () => { try { await watchCorrelatedWorkflow({ root: work, run: watchRun, runner: async (_binary, argv) => {
+    workflowCommands.push(argv.join(" "));
+    if (argv[1] === "watch") throw Object.assign(new Error("failed"), { code: 1, stderr: "watch failed" });
+    if (argv.includes("--json")) return { status: 0, stdout: '{"status":"completed","conclusion":"failure"}', stderr: "" };
+    return { status: 0, stdout: "HTTP 403 forbidden\n失敗種別: network\nSYNTHETIC_SECRET https://example.invalid/private?token=value /private/fixture/path", stderr: "" };
+  } }); } catch (error) { return error; } })();
+  const conclusionPayload = safePayload(conclusion);
+  check(conclusion.code === "workflow-conclusion-failure" && conclusion.stage === "actions-run" && conclusion.reason === "service-network"
+    && workflowCommands.filter((value) => value.includes("--json")).length === 1 && workflowCommands.filter((value) => value.includes("--log-failed")).length === 1
+    && !/SYNTHETIC_SECRET|example\.invalid|private\/fixture|stdout|stderr/.test(conclusionPayload), "実gh同様のJSON conclusion後にlogを1回だけ読み、workflow reasonだけをraw非保持で分類");
   const ghFailures = [
     [Object.assign(new Error("timeout"), { code: "timeout", killed: true }), "actions-run-timeout"],
     [Object.assign(new Error("killed"), { killed: true }), "actions-run-killed"],
@@ -222,6 +267,13 @@ try {
     const observed = await (async () => { try { await watchCorrelatedWorkflow({ root: work, run: watchRun, runner: async (_binary, argv) => { if (argv[1] === "watch") throw source; return { status: 0, stdout: "{}", stderr: "" }; } }); } catch (error) { return error; } })();
     check(observed.code === expected && observed.stage === "actions-run", `gh失敗を${expected}へsanitized分類`);
   }
+  let nonConclusionLogCalls = 0;
+  const viewAuth = await (async () => { try { await watchCorrelatedWorkflow({ root: work, run: watchRun, runner: async (_binary, argv) => {
+    if (argv[1] === "watch") throw Object.assign(new Error("failed"), { code: 1 });
+    if (argv.includes("--log-failed")) nonConclusionLogCalls += 1;
+    return { status: 0, stdout: '{"status":"in_progress","conclusion":null}', stderr: "HTTP 403 forbidden" };
+  } }); } catch (error) { return error; } })();
+  check(viewAuth.code === "actions-run-auth" && nonConclusionLogCalls === 0, "watch/JSON viewの診断だけをgh分類へ使い未確定workflow logを読まない");
   const branchError = await (async () => { try { await dispatchCorrelatedWorkflow({ root: work, workflowFile: "fixture.yml", workflowName: "Fixture", correlationId: "branch001", runner: async (_binary, argv) => argv[0] === "branch" ? { status: 0, stdout: "", stderr: "" } : { status: 0, stdout: "[]", stderr: "" } }); } catch (error) { return error; } })();
   check(branchError.code === "branch-unconfirmed" && branchError.stage === "dispatch" && branchError.actionsStarted === false, "branch未確認はdispatch前・Actions未開始");
 

@@ -234,6 +234,7 @@ fi
 exit 0
 `);
   writeFileSync(fakeGh, `#!/bin/sh
+printf '%s|%s\n' "$FAKE_GH_MODE" "$*" >> "$FAKE_GH_ROOT/gh-commands.log"
 if [ "$1 $2" = "workflow run" ]; then
   count_file="$FAKE_GH_ROOT/dispatch-count"
   count=0
@@ -266,6 +267,12 @@ if [ "$1 $2" = "run watch" ]; then
   exit 1
 fi
 if [ "$1 $2" = "run view" ]; then
+  if [ "$4" = "--json" ]; then
+    if [ "$FAKE_GH_MODE" = "timeout" ]; then echo '{"status":"in_progress","conclusion":null}'
+    else echo '{"status":"completed","conclusion":"failure"}'
+    fi
+    exit 0
+  fi
   case "$FAKE_GH_MODE" in
     reauth) echo 'GOOGLE_CHAT_ERROR=reauthorization-needed' ;;
     admin) echo 'GOOGLE_CHAT_ERROR=admin-blocked' ;;
@@ -291,7 +298,10 @@ exit 0
   check(timeoutResult.status === "sync-failed" && timeoutResult.error === "actions-run-timeout" && !timeoutResult.events.includes("pull-after-sync"), "timeoutを黙殺せず成功前pullを行わない", JSON.stringify(timeoutResult));
   for (const [mode, status, error] of [["reauth", "reauthorization-needed", "token-invalid"], ["admin", "admin-action-needed", "admin-blocked"], ["scope", "reauthorization-needed", "scope-insufficient"], ["audience", "admin-action-needed", "audience-mismatch"], ["api", "admin-action-needed", "api-disabled"], ["permission", "sync-failed", "permission-denied"], ["rate", "sync-failed", "rate-limit"], ["network", "sync-failed", "network"]]) {
     const result = JSON.parse(flow("sync", mode, `分類-${mode}`).stdout);
-    check(result.status === status && result.error === error && !result.events.includes("pull-after-sync"), `${mode}を区別し無限再試行しない`, JSON.stringify(result));
+    const commands = readFileSync(join(flowRoot, "gh-commands.log"), "utf8").split(/\r?\n/).filter((line) => line.startsWith(`${mode}|`));
+    check(result.status === status && result.error === error && !result.events.includes("pull-after-sync")
+      && commands.filter((line) => line.includes(" --json status,conclusion")).length === 1
+      && commands.filter((line) => line.includes(" --log-failed")).length === 1, `${mode}を実gh同様のJSON→log 1回で区別し無限再試行しない`, JSON.stringify(result));
   }
 } finally {
   for (const path of temporary.reverse()) rmSync(path, { recursive: true, force: true });

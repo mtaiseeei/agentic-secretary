@@ -114,17 +114,7 @@ try {
     pollMaxIntervalMs: runPollMax,
   });
   events.push("wait");
-  try {
-    await watchCorrelatedWorkflow({ root, run: dispatchedRun, gh, timeoutMs: timeout });
-  } catch (watchError) {
-    if (!watchError.killed && watchError.code !== "ETIMEDOUT") {
-      try {
-        const logs = await run(gh, ["run", "view", String(dispatchedRun.runId), "--log-failed"]);
-        watchError.stderr = `${watchError.stderr || ""}\n${logs.stdout || ""}\n${logs.stderr || ""}`;
-      } catch { /* 元の失敗を分類する */ }
-    }
-    throw watchError;
-  }
+  await watchCorrelatedWorkflow({ root, run: dispatchedRun, gh, timeoutMs: timeout });
   events.push("success-confirmed");
   await pull("pull-after-sync", dispatchedRun.branch);
   const retried = await search("retry-same-query");
