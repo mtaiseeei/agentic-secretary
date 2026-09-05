@@ -845,3 +845,100 @@ UIの新変更はないためPlaywright / screenshotの新規実行は行って�
 ## Recommended orchestration route
 
 Generator / Plannerへの差し戻しは不要である。現在のproduct 47/43とverification 92/14を含む未commit candidateを1 commitへ固定し、そのcommitと外部副作用を示してユーザーの明示確認を得る。その後、同じcommitをpushし、既存 `windows-2025` jobで `node scripts/sprint-051-git-ingest-test.mjs --require-windows` を実行する。0 FAILとrun URLが同一commitへ結び付いた時点でのみ最終PASS / `done` に進める。
+
+---
+
+# Final Windows external-gate evaluation
+
+## Final verdict
+
+**PASS**
+
+同一candidate commit `772574ce1c6423bfbb41d7b2ef52b60acd0680af` について、直前のfresh独立Evaluatorが確認したlocal product PASSと、GitHub Actions run `33939776562` のWindows成功を結び付けて確認した。AC13、AC16、C6のpendingはすべて解消した。
+
+- 新規product finding: **0件**。
+- 新規verification-infra finding: **0件**。
+- Windows external gate: **resolved**。
+- 推奨: オーケストレーターがSprint 051を `done` として記録する。
+
+## Candidate identity and worktree boundary
+
+- hostは `mac.lan`、user、architecture、home path、物理repo rootを実測した。利用者端末のabsolute pathは契約に従い本証跡へ記録しない。
+- branch: `codex/sprint-051-git-ingest`
+- local HEAD: `772574ce1c6423bfbb41d7b2ef52b60acd0680af`
+- local remote-tracking branch: `refs/remotes/origin/codex/sprint-051-git-ingest` = 同SHA、HEADとの差はahead 0 / behind 0。
+- `git ls-remote --heads origin refs/heads/codex/sprint-051-git-ingest`: 同SHA。remote fetch / push URLはread-onlyで確認し、変更していない。
+- 最終評価開始時の未commit差分はオーケストレーター所有の `docs/sprints/state.md` だけだった。staged差分とuntracked fileは0件で、product / test pathのworktree差分は0件。空のproduct / test binary diff SHA-256は `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`。
+- `state.md` の差分はLineage Dispatches更新とWindows run記録だけであり、candidate判定から除外した。編集、巻き戻し、stash、reset、restoreは行っていない。
+
+## Local evidence carried forward
+
+直前の `Fable F1〜F4 follow-up independent evaluation` は、HEAD `b7c2adbb5c588429daa1b475dec9eb2b9604cf1d` 上の7 product / test fileの未commit差分をbinary diff SHA-256 `ff0f5b11eb4f4e9752094652439b325f48d8a753288f391bfc6a4f5ea7523329` として評価した。現在commitの同じbaseから同じ7 pathへのbinary diffを再計算し、同じSHA-256になることを確認した。したがって、評価済みproduct / test byteは現在commitへそのまま固定されている。
+
+現在worktreeにもproduct / test差分がなく、Windows runも同じcommitを対象としているため、増分評価の原則に従いlocal suiteを重複実行せず、同節の次の証跡をcarry forwardした。
+
+- Sprint 051専用: 45/45、platform darwin。
+- Sprint 035 Patch 002 wrapper: 9/9、内包Sprint 051は45/45。
+- Sprint 013 / 014 / 019 / 020 / 022 / 024、統合Sprint 035 Patch 001、copy 2系統: すべてexit 0、0 FAIL。
+- candidate変更JavaScript 7 file: 7/7 syntax error 0。
+- `git diff --check`: output 0。
+- F1〜F4、必須local AC、未変更UIのcarried browser evidence: PASS。新規local browser runとは扱わない。
+
+## Windows run evidence
+
+### Run and job metadata
+
+| Item | Observed |
+|---|---|
+| Workflow | `Windows recording regression` |
+| Event | `workflow_dispatch` |
+| Run ID | `33939776562` |
+| Head branch | `codex/sprint-051-git-ingest` |
+| Head SHA | `772574ce1c6423bfbb41d7b2ef52b60acd0680af` |
+| Run status / conclusion | `completed / success` |
+| Job | `windows-native` (`101234788572`) |
+| Job status / conclusion | `completed / success` |
+| Job duration | 56秒（02:41:16Z〜02:42:12Z） |
+| Declared runner | workflowの `runs-on: windows-2025` |
+| Actual runner image | `Microsoft Windows Server 2025` / `windows-2025-vs2026` |
+| Run URL | https://github.com/mtaiseeei/agentic-secretary/actions/runs/33939776562 |
+| Job URL | https://github.com/mtaiseeei/agentic-secretary/actions/runs/33939776562/job/101234788572 |
+
+### Successful steps and assertions
+
+- `Node-native syntax`: step conclusion `success`。workflowに宣言された5つの `node --check` がPowerShell上で完了した。
+- `node scripts/sprint-038-patch-002-windows-test.mjs --require-windows`: `SPRINT038_PATCH002_WINDOWS_PASS=12 FAIL=0 OS=win32`。
+- `node scripts/sprint-051-git-ingest-test.mjs --require-windows`: `SPRINT051_PLATFORM=win32 SPRINT051_PASS=45 SPRINT051_FAIL=0`。
+- F2: `実Git fixtureを隔離HOME/XDG/system config/localeで実行` がPASS。test byte上の条件は隔離 `HOME` / `XDG_CONFIG_HOME`、`GIT_CONFIG_NOSYSTEM=1`、`LC_ALL=C`。
+- F2: `相反するlocal/global pull設定とupstream未設定を変更しない` がPASS。local / global双方の `pull.rebase=true` / `pull.ff=false` が前後不変で、明示remote / ref pullもPASS。
+- F3 dirty-conflict: fetch後にHEAD / status / index不変、pull 0、NUL-safe停止がPASS。
+- F3 diverged: fetch・祖先判定後にHEAD / status / index不変、diff / status / pull 0で停止がPASS。
+- F3 root mismatch: sync / async双方でHEAD / status / index不変、`symbolic-ref` / remote / fetch / pullより前に停止し、absolute path非表示がPASS。
+- Windows root identity、実Git sync / async、tracked / untracked / staged / index保持、privacy、timeout、run相関、F1 / F4、6 callsite、禁止Git argv 0件を含む残りのSprint 051 assertionもすべてPASSした。
+
+## AC13 / AC16 / C6 final decision
+
+| Requirement | Final result | Evidence |
+|---|---|---|
+| AC13 Windows互換fixture | **PASS** | Windows Server 2025上の実 `git.exe` fixture、Node-native構文、旧Windows 12/12、新Sprint 45/45、`--require-windows`付きで0 FAIL |
+| AC16 Windows CI external gate | **PASS** | ユーザー承認後のrun、local / remote / runの同一candidate SHA、`windows-2025`、成功run / job URL |
+| C6 無回帰 | **5/5 PASS** | carried local必須suiteが全greenで、同一commitのWindows 12/12・45/45も0 FAIL |
+
+他の適用Rubric軸とAC1〜12 / 14 / 15は、同一byteに対する直前fresh独立評価のPASSをcarry forwardする。全thresholdを満たし、Sprint全体の最終判定はPASSである。
+
+## Findings and annotation classification
+
+- product finding: **0件**。
+- verification-infra finding: **0件**。
+- blocking finding / pending gate: **0件**。
+- Check Run annotationはwarning 1件。内容は `actions/checkout@v4` と `actions/setup-node@v4` がNode.js 20 targetで、runnerがNode.js 24へ強制移行したというGitHub Actions依存actionのdeprecation通知である。製品のNode 22実行、Node-native syntax、Windows回帰、Sprint 051回帰はいずれもsuccessであり、今回のproduct failureではない。`verification-infra / non-blocking out-of-scope advisory` と分類し、新規findingには数えない。将来のworkflow依存action更新候補であり、本Sprintでversionやworkflowを追加変更する理由にはしない。
+
+## Self-review
+
+- Generatorの自己申告ではなく、local Git identity、GitHub上のbranch、Actions run / job metadata、workflow byte、job log、Check Run annotationをread-onlyで独立確認した。
+- 直前評価のbinary diff digestと現在commitのproduct / test diff digestを一致させ、同一candidate evidenceであることを確認してからlocal suiteをcarry forwardした。未確認byteへ古い証跡を流用していない。
+- オーケストレーター所有の未commit `state.md` だけをcandidate外へ分離し、product / test worktree差分0件を確認した。
+- safe harbor外のattestation、collector、追加schema、新しい証拠形式を要求していない。
+- warningをproduct failureへ誤分類せず、product / verification-infra / scope外advisoryの境界を明記した。
+- 実装、test、spec、contract、progress、stateを変更していない。本節だけをfeedbackへ追記した。
+- push、PR、workflow dispatch、downstream、plugin install、release、version実ファイル変更、外部API、OAuth、Repository Secret操作は行っていない。新しいserver、browser、watcher、長時間processも起動していない。

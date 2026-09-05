@@ -5,7 +5,7 @@
 - Current ID: sprint-051
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -77,7 +77,7 @@
 | sprint-039-patch-002 | done | [contract](sprint-039-patch-002.md) | [progress](../progress/sprint-039-patch-002.md) | [feedback](../feedback/sprint-039-patch-002.md) |
 | sprint-040 | done | [contract](sprint-040.md) | [progress](../progress/sprint-040.md) | [feedback](../feedback/sprint-040.md) |
 | sprint-040-patch-001 | done | [contract](sprint-040-patch-001.md) | [progress](../progress/sprint-040-patch-001.md) | [feedback](../feedback/sprint-040-patch-001.md) |
-| sprint-051 | awaiting-eval | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
+| sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 
 ## Deferred / Superseded
 - sprint-007: superseded — 2026-07-15 製品方針転換により白紙化、`backup/sprint-007-010-plan` に退避
@@ -85,6 +85,8 @@
 - sprint-036: superseded — Generator実装前に、呼び方候補をhost明示値だけに限定する方針から、host提供済み文脈→Git→OSを安全な除外規則で探索する方針へユーザー判断が変わったため、`sprint-037`へ置換。
 
 ## Completion
+- 2026-09-05: fresh最終Evaluatorが、local／remote branchとWindows run `33939776562` のheadShaがcandidate `772574ce1c6423bfbb41d7b2ef52b60acd0680af`で一致することを独立確認。Windows Server 2025のNode-native syntax、既存Windows 12/12、新Sprint 051 win32 45/45、F2隔離Git設定、F3 dirty／diverged／root-mismatch不変をすべてPASSとし、AC13・AC16、C6 5/5を解消した。新規product finding 0、verification-infra finding 0、外部gate resolved。Node 20 annotationは依存actionのnon-blockingな範囲外warningであり、本Sprintへ変更を混ぜない。Evaluatorの最終PASSに基づきsprint-051を`done`へ更新する。Retry Count 0、Spec-Issue Count 0、Lineage Dispatches 4、Model Tier strong、Rotate noneを保持する。
+- 2026-09-05: ユーザー明示承認後、candidate `772574ce1c6423bfbb41d7b2ef52b60acd0680af` をbranchへpushし、Windows workflow run `33939776562` を同一headShaで実行。`windows-2025` jobは56秒でsuccessし、Node-native syntax、既存Windows path／rollback／retry／boundary 12/12、新Git ingest／Actions correlation 45/45が全green。新しいF2の隔離Git設定とF3のrepository不変検査もWindows実GitでPASSした。既存fresh Evaluatorは同candidateのlocal product PASS／外部gateのみpendingと判定済みで、worktreeは同一commit・clean、remote branchも一致する。最終PASS判定のfresh Evaluator予約としてLineage Dispatchesを4へ更新し、Status awaiting-eval、Retry Count 0、Model Tier strong、Rotate noneを保持する。ActionsのNode 20 deprecation annotationは依存actionのrunner警告で今回product findingではなく、範囲外で更新しない。
 - 2026-09-05: 承認済みF2／F3 Generatorが安全回帰を既存fixture内へ限定追加。隔離HOME／XDG／system config無効／locale固定、local・globalの相反pull設定とupstream未設定の前後不変、dirty-conflict／diverged／sync・async root-mismatchのHEAD・status・index不変と段階別後続操作0を確認する。Sprint 024の旧fake `gh`も実CLI同様のJSON／failed-log分岐へ `+2/-1`だけ追随。今回verification `+44/-7`、product `0/0`、candidate全体verification `+92/-14`対product `+47/-43`の超過はユーザー承認済みで、新framework・旧308行matrix・assert削除なし。専用45/45、旧wrapper、Sprint 013／014／019／020／022／024、統合、copy、変更7 JS syntax、diff-checkは全green。Runtime resolverはfresh Evaluator `gpt-5.6-sol`／`high`を選択し、Node 18件（40未満）を確認。Status awaiting-eval、Retry Count 0、Model Tier strong、Rotate none、Evaluator実dispatch予約としてLineage Dispatchesを3へ更新する。Windows同一candidate gateは未実行。
 - 2026-09-05: ユーザーが、Fableレビューで残った安全検証F2／F3について、製品変更より検証追加が大きくなることを明示承認し「どんどん続けてください」と指示。既存F1／F4候補は保持し、旧pull設定からの独立、dirty-conflict／diverged／root-mismatch停止時のrepository不変と後続Git操作0を、旧308行matrixや新frameworkを復元せず必要最小限で追加する。Runtime resolverはhigh-riskのstrong `gpt-5.6-sol`／`high`、resume-unconfirmedのfresh isolated Generatorを選択。Node 15件（40未満）を確認し、Retry Count 0、Status active、Model Tier strong、Rotate noneのまま、実dispatch予約としてLineage Dispatchesを2へ更新する。Voice、script簡素化、F5／F6、Windows外部gate、push、PR、release、version実ファイルは対象外。
 - 2026-09-05: 限定cycle GeneratorはF1／F4の製品修正とdirect fake-`gh`現実化を完了。completed workflow failureではJSON conclusion確認後にfailed logを1回だけ読み、workflow本文をsanitized reason専用、watch／JSON viewのstderr・codeだけをGitHub CLI auth／transport分類へ使う。両search-flowの重複log取得を削除し、Chatwork reason優先とGoogle Chat既存status導線を復元。専用44/44、Sprint 014 59/59、020 50/50、変更6 JS syntax、diff-checkはgreen。製品 `+47/-43` に対し検証 `+48/-7`（既存fake現実化 `+30/-5`、直接回帰 `+18/-2`）で追加行が1行上回ったためsize guardで停止し、F2旧pull設定隔離fixture／F3失敗時副作用0 assertは0行・未実装。形式的圧縮・assert削除なし。Status active、Retry Count 0、Lineage Dispatches 1を保持し、F2／F3を追加して検証超過を承認するか、Non-scope化してEvaluatorへ進むかのユーザー判断を待つ。
