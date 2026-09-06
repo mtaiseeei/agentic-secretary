@@ -134,10 +134,40 @@ function expectedEvaluatorStatus(root, currentId = TARGET_ID) {
   const path = join(root, "docs/feedback", `${currentId}.md`);
   if (!existsSync(path)) return "not-recorded";
   const body = readFileSync(path, "utf8");
-  if (/\bVerdict:\s*\*\*PASS\*\*|\bVerdict:\s*PASS\b/iu.test(body)) return "passed";
-  if (/\bVerdict:\s*\*\*FAIL\*\*|\bVerdict:\s*FAIL\b/iu.test(body)) return "failed";
-  if (/verification-scope-issue/iu.test(body)) return "verification-scope-issue";
-  return "recorded-unclassified";
+  const values = [];
+  let fenced = null;
+  let inComment = false;
+  for (const rawLine of String(body).split(/\r?\n/u)) {
+    let line = rawLine;
+    while (line.length > 0) {
+      if (inComment) {
+        const end = line.indexOf("-->");
+        if (end < 0) { line = ""; break; }
+        line = line.slice(end + 3); inComment = false;
+        continue;
+      }
+      const start = line.indexOf("<!--");
+      if (start < 0) break;
+      const end = line.indexOf("-->", start + 4);
+      if (end < 0) { line = line.slice(0, start); inComment = true; break; }
+      line = `${line.slice(0, start)}${line.slice(end + 3)}`;
+    }
+    const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/u);
+    if (fenceMatch) {
+      if (!fenced) fenced = { char: fenceMatch[1][0], length: fenceMatch[1].length };
+      else if (fenceMatch[1][0] === fenced.char && fenceMatch[1].length >= fenced.length) fenced = null;
+      continue;
+    }
+    if (fenced) continue;
+    const field = line.match(/^\s*(?:[-*+]\s*)?(?:\*\*|__)?(?:Verdict|判定)(?:\*\*|__)?\s*[:：]\s*(.*?)\s*$/iu);
+    if (!field) continue;
+    const value = field[1].replace(/^[*_`\s]+|[*_`\s]+$/gu, "").trim();
+    if (/^(?:PASS|合格)(?:\s*[（(].*[）)])?$/iu.test(value)) values.push("passed");
+    else if (/^(?:FAIL|不合格)(?:\s*[（(].*[）)])?$/iu.test(value)) values.push("failed");
+    else if (/^verification-scope-issue(?:\s*[（(].*[）)])?$/iu.test(value)) values.push("verification-scope-issue");
+  }
+  const unique = [...new Set(values)];
+  return unique.length === 1 ? unique[0] : "recorded-unclassified";
 }
 function assertEvaluationEvidence(status, evaluatorStatus) {
   if (status === "done") {
@@ -337,6 +367,20 @@ try {
       /duplicate final TBD fallback rows are unsafe/u,
       "the test oracle itself must reject duplicate rows for the final TBD fallback ID",
     );
+
+    const verdictFixtures = [
+      ["english-pass", "# Evaluation\n\nVerdict: **PASS**\n", "passed"],
+      ["japanese-pass", "# 独立評価\n\n**判定:** 合格（Phase A）\n", "passed"],
+      ["japanese-fail", "# 増分評価\n\n**判定:** 不合格\n**分類:** verification-scope-issue\n", "failed"],
+      ["structured-scope", "# Evaluation\n\nVerdict: verification-scope-issue\n", "verification-scope-issue"],
+      ["prose-only", "# Evaluation\n\n本文では判定は不合格。verification-scope-issueを検討する。\n", "recorded-unclassified"],
+      ["fenced-example", "# Evaluation\n\n```text\n判定: 合格\n```\n", "recorded-unclassified"],
+    ];
+    for (const [name, feedbackBody, evaluatorStatus] of verdictFixtures) {
+      const root = fixture(`clarity-sr001-verdict-${name}`, { feedbackBody });
+      assert.equal(expectedEvaluatorStatus(root), evaluatorStatus, `${name} must use only a structured feedback verdict`);
+      assert.equal(source(scanRepository(root), "evaluator-validation").status, evaluatorStatus, `${name} must match the product scanner`);
+    }
 
     const futureId = "sprint-051-patch-001";
     const future = fixture("clarity-sr001-future-current", {

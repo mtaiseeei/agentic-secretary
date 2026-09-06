@@ -151,6 +151,19 @@ function spawnAsync(command, args, options = {}) {
     if (options.input) child.stdin.end(options.input); else child.stdin.end();
   });
 }
+function hookChildDiagnostic(row, index) {
+  if (row.status !== 0) return { index, status: "nonzero-exit" };
+  const body = row.stdout.trim();
+  if (!body) return { index, status: "no-output" };
+  try {
+    const output = JSON.parse(body);
+    const message = typeof output?.systemMessage === "string" ? output.systemMessage : "";
+    const safeCode = message.match(/[（(](clarity-git-identity-unavailable|clarity-git-output-invalid|clarity-root-changed|clarity-git-config-unsupported|timeout)(?:\s|\/|[）)])/u)?.[1] || null;
+    return { index, status: message.includes("degraded") ? "degraded" : "unexpected-output", safeCode };
+  } catch {
+    return { index, status: "invalid-json" };
+  }
+}
 
 const expected = registry();
 const exact = [...Array.from({ length: 10 }, (_, index) => `DR-${String(index + 1).padStart(3, "0")}`), ...Array.from({ length: 15 }, (_, index) => `GS-${String(index + 1).padStart(3, "0")}`)];
@@ -299,7 +312,7 @@ try {
       const hookRoot = join(root, ".clarity/runtime/hooks/events");
       const beforeHooks = hookRuntimeRows(hookRoot).length;
       const cliJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [cli, "event", root, "--event-json", JSON.stringify({ type: "attention.override", itemId, actor, payload: { level: "high", reason: `stress-${round}-${index}`, rank: index } }), "--json"]));
-      const hookJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [hookCli], { input: `${JSON.stringify({ hook_event_name: "PostToolUse", session_id: `s047-stress-r${round}`, turn_id: `turn-${index}`, tool_name: "Write", tool_input: { file_path: join(root, `src/stress-${round}-${index}.js`) }, cwd: root })}\n`, env: { PLUGIN_ROOT: join(repo, "plugins/secretary") } }));
+      const hookJobs = Array.from({ length: 32 }, (_, index) => spawnAsync(process.execPath, [hookCli], { input: `${JSON.stringify({ hook_event_name: "PostToolUse", session_id: `s047-stress-r${round}`, turn_id: `turn-${index}`, tool_name: "Write", tool_input: { file_path: join(root, `src/stress-${round}-${index}.js`) }, cwd: root })}\n`, env: { PLUGIN_ROOT: join(repo, "plugins/secretary"), CLARITY_HOOK_DIAGNOSTIC: "1" } }));
       const all = await Promise.all([...cliJobs, ...hookJobs]);
       assert.equal(all.length, 64); assert(all.every((row) => row.status === 0), all.filter((row) => row.status !== 0).map((row) => row.stderr).join("\n"));
       const parsedCli = all.slice(0, 32).map((row) => JSON.parse(row.stdout));
@@ -309,6 +322,9 @@ try {
       const hookUnique = new Set(hookRows.map((row) => row.eventId)).size === hookRows.length;
       const canonicalExpectedDelta = events.length - beforeEvents;
       const hookExpectedDelta = hookRows.length - beforeHooks;
+      const hookSessionId = `s047-stress-r${round}`;
+      const missingHookIndexes = Array.from({ length: 32 }, (_, index) => index).filter((index) => !hookRows.some((row) => row.sessionId === hookSessionId && row.turnId === `turn-${index}`));
+      const missingHookDiagnostics = missingHookIndexes.map((index) => hookChildDiagnostic(all[32 + index], index));
       const residueCount = () => {
         const clarityNames = readdirSync(join(root, ".clarity"));
         const runtimeNames = existsSync(join(root, ".clarity/runtime")) ? readdirSync(join(root, ".clarity/runtime")) : [];
@@ -318,7 +334,8 @@ try {
       const residueBeforeRebuild = residueCount();
       assert.equal(canonicalUnique, true); assert.equal(hookUnique, true);
       assert.equal(events.filter((row) => row.actor === actor).length, 32);
-      assert.equal(canonicalExpectedDelta, 32); assert.equal(hookExpectedDelta, 32);
+      assert.equal(canonicalExpectedDelta, 32);
+      assert.equal(hookExpectedDelta, 32, `Hook runtime delta mismatch ${JSON.stringify({ round: round + 1, expected: 32, actual: hookExpectedDelta, missing: missingHookDiagnostics })}`);
       assert.equal(residueBeforeRebuild, 0);
       const statePath = join(root, ".clarity/state.json");
       const storedStateBeforeRebuild = readFileSync(statePath);

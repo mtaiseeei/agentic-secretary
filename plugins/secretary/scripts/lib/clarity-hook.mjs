@@ -148,12 +148,13 @@ function assertRuntimeDirectoryChain(rootValue, relativeDirectory, { allowMissin
   return { root, directory: current, missing: null };
 }
 
-function inspectClarityHookRootImpl(cwdValue) {
+function inspectClarityHookRootImpl(cwdValue, { reportResolutionFailure = false } = {}) {
   const requestedCwd = resolve(cwdValue || ".");
   let current;
   try {
     current = resolveClarityRoot(requestedCwd).root;
-  } catch {
+  } catch (error) {
+    if (reportResolutionFailure) throw error;
     return null;
   }
   if (!isNormalDirectory(current)) return null;
@@ -164,7 +165,10 @@ function inspectClarityHookRootImpl(cwdValue) {
       try {
         const resolved = resolveClarityRoot(requestedRoot);
         return { root: resolved.root, rootPolicy: rootPolicyFor(resolved.root) };
-      } catch { return null; }
+      } catch (error) {
+        if (reportResolutionFailure) throw error;
+        return null;
+      }
     }
     const parent = dirname(current);
     if (parent === current) break;
@@ -173,8 +177,8 @@ function inspectClarityHookRootImpl(cwdValue) {
   return null;
 }
 
-export function findClarityRoot(cwdValue) {
-  return inspectClarityHookRoot(cwdValue)?.root || null;
+export function findClarityRoot(cwdValue, options = {}) {
+  return inspectClarityHookRoot(cwdValue, options)?.root || null;
 }
 
 function safeRelative(root, value) {
@@ -443,8 +447,8 @@ function semanticHookResultImpl(root, normalized) {
   return { action: "none" };
 }
 
-export function inspectClarityHookRoot(cwdValue) {
-  return withClarityRootRequest(() => inspectClarityHookRootImpl(cwdValue));
+export function inspectClarityHookRoot(cwdValue, options = {}) {
+  return withClarityRootRequest(() => inspectClarityHookRootImpl(cwdValue, options));
 }
 
 export function writeRuntimeEvent(rootValue, normalized, semantic, options = {}) {
@@ -469,10 +473,9 @@ export function serializeHookResult(host, event, result) {
 }
 
 export function serializeHookFailure(host, event, error = null) {
-  const safeCode = ["clarity-root-changed", "clarity-git-config-unsupported"].includes(error?.code) ? error.code : null;
-  const reason = safeCode && /^[a-z0-9-]+$/u.test(error?.details?.reason || "")
-    ? `（${safeCode} / reason: ${error.details.reason} / changed:false）`
-    : "";
+  const safeCode = ["clarity-root-changed", "clarity-git-config-unsupported", "clarity-git-identity-unavailable", "clarity-git-output-invalid", "timeout"].includes(error?.code) ? error.code : null;
+  const safeReason = safeCode && /^[a-z0-9-]+$/u.test(error?.details?.reason || "") ? error.details.reason : null;
+  const reason = safeCode ? `（${safeCode}${safeReason ? ` / reason: ${safeReason}` : ""} / changed:false）` : "";
   const message = `Project Clarity Hookはdegradedです${reason}。canonical dataは変更していません。manualの clarity status / review / checkpoint / doctorを使い、Codexでは /hooks でtrust／disabled状態を確認してください。`;
   if (event === "SessionStart") return { systemMessage: message, hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: message } };
   if (event === "Stop") return { systemMessage: message };

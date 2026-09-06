@@ -1,6 +1,6 @@
 # Sprint 054 — Project Clarityを含む0.12.0の3版公開とこのMacへの反映
 
-**ステータス:** 公開Agentic版の限定実装と承認済みfixture追随完了 - 再評価待ち
+**ステータス:** 公開Agentic版の限定実装、Windows Hook欠落対策、日本語判定fixture追随完了 - exact Windows再評価待ち
 
 ## 着手範囲
 
@@ -115,3 +115,54 @@
 
 - 差分対象は上記2 scriptと本progressのみ。製品source、spec、Sprint契約、state、feedbackは変更していない。
 - Evaluatorは011、020 adversarial／wrapper、045のgreenと、差分が安全入口やnegative assertを迂回していないことを確認する。Phase A全体の再固定・判定とC21／C22の残る証拠確認は独立Evaluator／Orchestrator側の後続とする。
+
+## Windows Hook 31/32と日本語判定の限定修正（追加承認後）
+
+### 診断
+
+- exact Windows run `34007865815`の`GS-009`は、第1 roundが32 CLI＋32 Hook、canonical／Hook delta、State rebuild、residue、時間境界をすべてPASSした。第2 roundは64 child exit 0、canonical 32、Hook JSON／ID一意性を通過した後、Hook runtime eventだけ31/32で停止した。第2 roundの後続assertと第3 roundは未実行である。
+- stress fixtureの32 Hookは`turn-0`〜`turn-31`とtouched pathが固有で、`stableEventId`の入力は重ならない。Hook eventは共通fileへの追記ではなく固有fileの`O_EXCL`作成である。
+- 一方、各Hookの初回root解決は`Hook Node → external-runner Node → git rev-parse`を起動していた。root／Git identity確認が失敗すると`inspectClarityHookRootImpl()`が`null`へ変換し、routerはstdout／stderr空、exit 0、runtime event 0で終わる。1 actorの合成fixtureで、通常時はevent 1、Git probe不能時はexit 0／出力空／event増分0を確認し、Windowsの観測形と同じ欠落経路を再現した。
+- Windowsの欠落child個別stdoutは元runに残っていないため、具体的なOS error codeは未確定である。本修正は原因を断定したretryではなく、観測済みの無言欠落経路を診断可能にし、その直前の余分なprocess段を減らす限定対策である。
+
+### 製品修正
+
+- `plugins/secretary/scripts/lib/clarity-root.mjs`にHook限定の直接Git identity probeを追加した。Hookだけを`Hook Node → git rev-parse`へ短縮し、CLI／canonical write側の`runExternalSync`経路は変更していない。
+- probeは従来と同じ1回、`5,000ms`、`1 MiB`、`shell:false`、同じargv／Git環境を使う。retry、timeout延長、lease延長、lock wait変更は0件。`SIGKILL`を明示し、timeout後にleaf processを残さない。
+- 直接停止の保証対象は通常の`git rev-parse`単体leafである。任意の`git` wrapperが独自に孫processを起動する場合のprocess-group停止を新たに保証する変更ではなく、Hookの通常probeを越える外部process設計は追加していない。
+- filesystem／Git top-level／Git dir／common dir／config digest／environment digestとwrite前root identity再検証は既存`resolveClarityRoot()`内に残し、root-changed／unsafe／timeout／max-bufferのfail-closed分類を維持した。既存のtest用Git runner注入はHook wrapperから上書きしない。
+- Hook診断を明示した既存stress時だけ、root解決failureをdegradedとして返し、許可済みの短いcodeだけを表示する。通常の未初期化Repoは引き続きstdout／stderr空のno-opで、absolute path、利用者本文、Secretを出さない。
+- `CLARITY_HOOK_DIAGNOSTIC=1`は既存Windows stressが欠落時のcodeを得るための診断専用envで、manifest／host通常起動では設定しない。常設機能、利用者設定、host inventory capabilityへは昇格していない。
+
+### 既存検証の修正
+
+- `scripts/sprint-047-test.mjs`はcase、actor、round、assert、timeoutを変えず、Hook件数不一致時だけ欠落index、`no-output`／`degraded`、許可済みsafe codeをbounded JSONのassert detailへ含める。raw stdout、payload、path、利用者本文は出さない。
+- `scripts/sprint-050-patch-005-test.mjs`の`expectedEvaluatorStatus()`を、製品scannerと同じ構造化行の規則へ揃えた。英語`Verdict`と日本語`判定`のPASS／FAIL／合格／不合格、明示的`verification-scope-issue`だけを読み、code fence、HTML comment、任意の説明文は判定根拠にしない。
+- 日本語`判定: 不合格`と本文中`verification-scope-issue`が併存するfixtureは`failed`を期待する。正当なfeedback本文と製品scannerは変更していない。
+- 既存inventoryのpaths／case／markerを変えず、実bytesが変わった`clarity-hook`、`clarity-root-policy`、`clarity-harness-scanner`の3 `contentDigest`だけを再計算した。
+
+### 低並列の自己確認
+
+| 確認 | 結果 |
+|---|---|
+| Hook直接probeのtimeout合成fixture（1 actor） | `durationMs=5058`、Hook exit 0、safe `timeout`、absolute path漏洩なし、fake Git child残留なし |
+| Hook直接probeのmax-buffer合成fixture（1 actor） | Hook exit 0、`clarity-git-output-invalid`、absolute path漏洩なし、診断出力294 bytes |
+| Hook低並列fixture | 4 actors、exit 4/4、degraded 0、stderr 0、runtime event 4/4 |
+| Hook wrapperと既存test runner注入 | injected runner 1 call、上書きなし、non-Git分類維持 |
+| 通常の未初期化Repo | exit 0、stdout／stderr空、write 0 |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface、67 case、marker／digest VALID |
+| `node scripts/sprint-049-test.mjs` | 20 PASS / 0 FAIL、critical 15、side-effect violation 0 |
+| `node scripts/sprint-047-patch-004-test.mjs` | 13 PASS / 0 FAIL、Git probe 1回、timeout 5,000ms、path canary 0 |
+| `node scripts/sprint-050-patch-003-test.mjs` | 21 PASS / 0 FAIL、external write 0、network 0 |
+| 変更5 JSの`node --check`と`git diff --check` | PASS |
+
+- 実行時のNodeは`v26.7.0`。開始前／終了後の実Node process数は21／21で、自分が起動したserver、browser、watcher、fake Gitは残していない。
+- `node scripts/sprint-050-test.mjs`も実行したが、変更対象のcaseへ入る前に既存primary meaning／severity digestの不一致で停止した。今回の製品／test差分に`docs/spec/clarity-acceptance*.md`は含まれず、この固定値は変更していないため、本修正のPASS証拠には採用せず既存不整合として引き渡す。
+- Mac禁止の`sprint-044-test.mjs`、`sprint-047-test.mjs`、`sprint-050-patch-005-test.mjs`、`agentic-regression.sh`、`agentic-archive-gate.mjs`、`sprint-048-test.mjs`、master gateと、それらへ到達するwrapperは実行していない。32 CLI＋32 Hook、Windows 3 round、100%成功はexact candidateのWindows CIで再確認が必要である。
+
+### 規模と再評価への引き渡し
+
+- この追加roundは製品／metadata `+84/-26`、既存検証 `+67/-6`（progressを除く）。製品変更を含むためverification-onlyではなく、直前のverification-only 1 roundとの連続2回条件には該当しない。新runner、framework、collector、case、matrixは0件。
+- Orchestratorは今回の全変更を含むclean candidate SHAを固定し、Macではなく既存Windows workflowでP005の`SR-001`と`SR-009`を確認する。`SR-009`は3 round各32 CLI＋32 Hook、100%、既存timeout／lease／residue／rebuildを一切緩めず評価する。失敗時は追加したsafe diagnosticだけから原因を再分類し、再実行を繰り返してgreenだけを採らない。
+- このGenerator自己確認はSprint 054、Phase A、Windows gateのPASS判定ではない。downstream、main、tag、Release、marketplace、installへ進む判断は独立EvaluatorとOrchestratorへ残す。
+- Fable 5.1 highによるread-only補助レビュー（Herdr `w4:p2`、session `b1598b34-1e1f-4883-98fd-ad88a01e84ad`）はblocker 0、medium 1、low 3。上記leaf／diagnostic env境界を記録した。括弧付き判定とindent code行は既存product scannerの未変更解釈であり、本修正では基準・意味を拡大していない。Fableはファイル編集・test実行・正式Evaluator判定を行っていない。

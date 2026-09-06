@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import {
   closeSync,
   constants,
@@ -41,6 +42,50 @@ const GIT_DISCOVERY_ENV_KEYS = [
 
 function sha256(value) {
   return createHash("sha256").update(Buffer.isBuffer(value) ? value : String(value ?? "")).digest("hex");
+}
+
+// Hookは短時間に多数起動されるため、Gitの読取専用identity probeだけは
+// external-runner Nodeを挟まず直接実行する。単一probeのtimeout／buffer／
+// shell境界は通常経路と同じままにし、CLI側のexternal process管理は変えない。
+function runHookGitProbeSync(binary, args = [], options = {}) {
+  if (binary !== "git") throw new TypeError("Clarity Hook Git probe only supports git");
+  const timeoutMs = Number(options.timeoutMs);
+  const maxBuffer = Number(options.maxBuffer);
+  if (timeoutMs !== GIT_IDENTITY_TIMEOUT_MS || maxBuffer !== GIT_IDENTITY_MAX_BUFFER) {
+    throw new TypeError("Clarity Hook Git probe limits must match the canonical identity probe");
+  }
+  const result = spawnSync(binary, args, {
+    cwd: options.cwd,
+    env: options.env || process.env,
+    input: options.input,
+    encoding: options.encoding || "utf8",
+    timeout: timeoutMs,
+    maxBuffer,
+    killSignal: "SIGKILL",
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.error) {
+    if (result.error.code === "ETIMEDOUT") {
+      throw Object.assign(new Error(`${options.label || binary}が時間切れになりました。後続処理は行っていません。`), {
+        code: "timeout", timeoutMs, killed: true,
+      });
+    }
+    if (result.error.code === "ENOBUFS") {
+      throw Object.assign(new Error(`${options.label || binary}の出力が上限を超えたため停止しました。`), { code: "max-buffer" });
+    }
+    throw result.error;
+  }
+  const output = {
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    status: result.status,
+    signal: result.signal,
+  };
+  if (result.status !== 0 && !options.allowFailure) {
+    throw Object.assign(new Error(`${options.label || binary}に失敗しました。`), { code: result.status, ...output });
+  }
+  return output;
 }
 
 function normalizeFilesystemIdentity(stat) {
@@ -609,6 +654,16 @@ export function withClarityGitProbeRunnerForTest(runner, callback) {
   if (typeof runner !== "function" || typeof callback !== "function") throw new TypeError("Clarity Git probe test runner and callback are required");
   const previous = gitProbeRunner;
   gitProbeRunner = runner;
+  try { return callback(); }
+  finally { gitProbeRunner = previous; }
+}
+
+export function withClarityHookGitProbe(callback) {
+  if (typeof callback !== "function") throw new TypeError("Clarity Hook Git probe callback is required");
+  // Test seamが明示したrunnerは上書きせず、既存の注入意味を維持する。
+  if (gitProbeRunner !== runExternalSync) return callback();
+  const previous = gitProbeRunner;
+  gitProbeRunner = runHookGitProbeSync;
   try { return callback(); }
   finally { gitProbeRunner = previous; }
 }
