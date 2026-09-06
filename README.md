@@ -207,8 +207,8 @@ People APIでは連絡先にない同僚名を補完できない場合があり�
 [CHANGELOG](plugins/secretary/CHANGELOG.md)です。
 
 現在のpublic source candidateは **0.12.0** です。Project Clarityに加え、Git取り込み、Secretary Voice、LLM中心の整理を
-同じ配布物へ揃えます。`0.12.0`はまだtag、GitHub Release、
-marketplace公開、installed cache、新しいsessionへ反映していません。public版以外のinstalled versionとも混同しません。
+同じ配布物へ揃えます。公開状態は[0.12.0 Release](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.12.0)で確認してください。
+sourceの版、marketplace公開、installed cache、新しいsessionの読込は別々に確認します。public版以外のinstalled versionとも混同しません。
 明示した低リスクの「覚えて」は、その依頼自体の承認として同じturnで一度だけ保存します。
 削除、外部送信、公開、Secret、権限変更、一括処理は従来どおり確認します。
 `0.10.1`で追加した既存workspaceのidentity migrationは変更せず、完了済みなら再実行しません。

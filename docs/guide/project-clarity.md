@@ -1,8 +1,8 @@
 # Project Clarity
 
 Project Clarityは、プロジェクトの現在地を1つのMarkdown正本へまとめ、Attention、投影、repo間link、Driftを確認する機能です。
-`0.12.0`ではpublic Agentic版のsource candidateとして収録しています。まだtag、GitHub Release、marketplace、installed cache、
-新しいsession、Yasashii版、private版へは反映していません。
+`0.12.0`ではpublic Agentic版のsource candidateとして収録しています。公開状態は[0.12.0 Release](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.12.0)で確認してください。
+tag／GitHub Release、marketplace、installed cache、新しいsession、Yasashii版、private版の反映結果は別々に確認します。
 
 ## 基本command
 
@@ -41,4 +41,4 @@ providerは次の順で扱います。
 
 Claude Code Desktop／CLI、Codex App／CLIはそれぞれ別のsurfaceとして扱います。`supported`（対応設計）、
 `verified`（そのsurfaceで実機確認済み）、`degraded`（Hookを使えず手動fallback等へ退避）を混ぜません。
-candidate `0.12.0`では4 surfaceとも実機検証前なので、対応設計であっても`verified: false`です。
+candidate `0.12.0`の同梱inventoryは作成時点の4 surfaceを`verified: false`としています。実機確認の結果は対象版・hostごとの評価記録を参照し、自分の環境での読込と区別してください。

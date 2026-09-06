@@ -9,7 +9,7 @@
 ### 変わること
 
 - Project Clarityを正式な配布物へ含め、Attention、決定と実行の現在地、Markdown／Mermaid／Xmind投影、履歴、checkpoint、診断を共通SkillとHookから利用できます。
-- GitHub ActionsやPull Requestを取り込み、実行結果と変更の関係を根拠付きで追えるようになります。
+- Chatwork／Google ChatのGitHub Actionsによる取得結果を、branchと利用者の作業中変更を確認しながら端末へ安全に取り込めるようになります。
 - Secretary Voiceにより、別の一般アシスタントとしてではなく、設定された秘書自身として一貫して応答します。
 - 日次・週次・検索結果の整理は、固定抽出だけに依存せず、取得した一次情報をLLMが目的に合わせてまとめられます。既存helperは必要な場合の安全な補助として残ります。
 
@@ -20,7 +20,7 @@
 
 ### 必要な操作
 
-- 現在は`0.12.0`の公開準備中です。Release公開後、利用中の版とscopeを確認して正式なplugin更新経路を使い、新しいsessionで読み込みを確認してください。
+- `v0.12.0`のRelease公開を確認してから、利用中の版とscopeに合う正式なplugin更新経路を使い、新しいsessionで読み込みを確認してください。
 - Claude Code向けの版別依頼文は`docs/guide/update-0.12.0.md`にあります。未公開のReleaseを推測で導入しないでください。
 
 ### 互換性上の注意

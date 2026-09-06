@@ -5,7 +5,7 @@
 - Current ID: sprint-054
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 2
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -108,10 +108,15 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: fresh独立Evaluatorの正式feedbackを受領し、公開source gateはverification-scope-issueとして未PASSを確定。検出された製品bugは0、回帰非greenの主因は011/020の既存fixture不追随。Harness規則により自動Generator/Planner修正ループへ戻さず、利用者に(a)既存fixtureだけ修正して再評価（推奨）、(b)証拠不足を受理、(c)該当検査を今回の必須から外す、の判断を求める。現在は(a)未承認として待機し、Status awaiting-eval、counter 0/0/3を保持する。公開/実導入などPhase B未実施はsourceの欠陥と区別する。
+- 2026-09-06: Windows run34006535891 / job101414668525はexact403e552でSUCCESS。032 16/0（既存15＋CRLF）、051 45/0 win32、Clarity関連全step成功、047 stressはWindows3 round×64 actor、parse/unique/rebuild100%、residue0。mainのoffline masterは22 suite中21 PASS、736 assertion中735 PASS/1 FAILで終了（JSON `/private/tmp/secretary-012-403e552-offline.json`）。011の旧16 Skill/21 surface固定期待が17 Skill/22 surfaceと不一致。独立Evaluatorは020 adversarial fakeGitが051の新しいroot/branch/remote確認を模擬せず、run相関のテスト対象まで到達しない別のverification-infraも確認した。安全入口を弱めず既存fixtureを限定修正する案と、検査を下げて受理するリスクをユーザーへ提示するため、自動Generator差戻しを止める。Retry/Spec-Issue/Lineageは0/0/3を保持し、main/Release/install未実施。
+- 2026-09-06: Evaluatorがsprint-044-test.mjs内部の50/128 concurrent Hook spawnを見落としてMacで実行した。指示違反として新規検査を停止し、結果40/0は安全準拠PASSの証拠に採用しない。開始Node21、直後19、最終15、ピーク未観測。mainもNode15、対象名`sprint-044-test|agentic-s044|clarity-hook|master-release-gate`の残留processなしを確認した。安全制約の緩和や同Macでの再実行はしない。
+- 2026-09-06: Fable限定レビューはblockerなし、medium5/low3。fresh Plannerが既存ACのPhase A技術判定／Phase B公開・導入後判定の順序を明確化し、host通常runtime metadataと利用者本文の区別、正式CLI経路を文面補正した。追加criterion/runnerなし。mainはupdate promptの更新前旧配布原本保護・版照合、README/guide/CHANGELOGの公開状態非依存の説明を直接docs修正した。これらは403e552の後続未commit差分であり、旧Windows PASSを最終候補PASSに昇格しない。公開Generatorとは別のfresh Sol/high Evaluator起動が成功し、Lineage3は実消費、child metadata未取得のためlaunch-unverified。
+- 2026-09-06: 公開Generatorを終了し、Clarity統合候補を403e552689b23d311e4d9c977e999888577ffc0bへcommitした。候補branchだけをpushし、既存Windows workflow run34006535891がexact SHAで開始した（main/tag/Release/installは未実施）。安全なoffline masterを同SHAで実行中。public source技術gateの独立Evaluatorをfresh Sol/highで起動するためLineage 2 < 10を確認し3へ予約、Status awaiting-eval。公開/install後の確認は別段階であり、source gate PASSを054全体完了へ昇格しない。
 - 2026-09-06: Generatorが4製品conflictを意味統合し、Orchestratorがworkflowの051＋Clarity、weeklyの053部分取得安全停止＋Clarity、neutral digest、READMEを実diff確認して4pathだけstageした。未解消Uは0。Claude CLIの`plugin validate plugins/secretary --strict`はexit0だがmanifest検証だけでありHook実読込PASSとは扱わない。Herdrのw4:p2（Claude session b1598b34-1e1f-4883-98fd-ad88a01e84ad、画面Fable 5.1 high）をget/readでidle確認し、054契約・更新prompt・Hook設計のread-only限定レビューを依頼した。正式Evaluatorではなく補助レビュー、Lineage消費0。archive wrapperも64 actorを呼ぶことを確認したためMacでは安全componentだけを使い、wrapper未実行を明記する。
 - 2026-09-06: 下流2版は元repoのmainを動かさず、固定Clarity headから/private/tmp/secretary-012-downstreams.xuBXh3/{yasashii-secretary,agentic-secretary-my-vault}へcodex/release-0.12.0の隔離worktreeを作成。fresh下流Planner Sol/highは子作成前thread limit拒否のため、既存generator_sprint_053_fable_fixの旧単位を閉じ、別Planner単位へfallbackした（model/effort継承・unverified、PlannerなのでLineage消費0）。所有は下流spec/新contractのみ、公開repoとstate/製品/feedbackは変更禁止。最終上流PASS SHAの固定前に下流製品を同期しない。
 - 2026-09-06: 既存planner_054_spec_mergeのPlanner単位を終了し、host容量fallbackとして別Generator単位へのfollow-upが受理された。所有範囲を製品・既存検査・054 progressだけへ切替え、spec/state/feedback編集を禁止した。Lineage 2を実dispatchとして消費。model/effortは継承・launch-unverifiedで、model保持を証明したresumeとは扱わない。最終EvaluatorはこのGeneratorと別の実行主体で行う。
