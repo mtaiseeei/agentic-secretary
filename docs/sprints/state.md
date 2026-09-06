@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 2
+- Retry Count: 3
 - Spec-Issue Count: 0
-- Lineage Dispatches: 9
+- Lineage Dispatches: 10
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -108,10 +108,12 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: fresh Evaluator Lineage10がexact fb3b652の公開Agentic Phase AをFAIL／implementation-issue、strong推薦と正式判定。Windows Server2025／Node22.23.2のP005 9/10、GS-009の製品Git identity timeout5000msが根拠。安全停止と可用性不足を分離し、安全条件を緩和しない。前回022／050 pinとFable alias findingは閉鎖し、独立022 69/69・P004 14/14、offline736/736、Claude source実読込を確認。Windows後続P004／047はskippedで新aliasのWindows PASSは未確認。Retry3／Lineage10が両上限へ到達したため、Status active（未完了・ユーザー判断待ち）、Spec-Issue0／strong／noneを保持し、追加dispatch・自動再実行を停止する。旧reset承認は再使用しない。次の限定修正へ進む場合は、上限再resetと共通process安全境界を保つWindows Git identity処理の改善について新たなユーザー確認を要する。Sol/high fresh dispatchは成功したがchild host metadata未取得なのでlaunch-unverified。main／tag／Release／installの既存ユーザー承認は維持される一方、技術gate未達のため実行条件を満たさない。3版公開／my-vault反映／installed warning解消は未実施。
+- 2026-09-06: candidate fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5をbranchへcommit/pushし、開始終了cleanでoffline master 22/22 suite・736/736 assertion PASS。050 e2e-only 4/4、registry274件の意味／割当差分0（全250case実行ではない）、candidate895fileのsource/checkout/archive一致、Claude隔離session f9e9e492-6bf8-4c9d-bad6-dc05b0d95984でpublic0.12.0・17Skill・SessionStart/Stop exit0を確認。一方Windows run34018986578/job101447948026はFAIL。P005 SR-009内の047 GS-009がGit identity timeoutMs5000の非zero childで停止、round metric出力前のため成功actor数・遅延値は未確定。再実行で失敗を消さず独立分類へ渡す。Node開始17／最大観測21／終了17、Mac高並列は未実行。Lineage9<10を確認しfresh Evaluator分10へ予約、resolverのgpt-5.6-sol/highを使用。Retry2／Spec-Issue0／strong／noneは判定まで維持。下流製品適応／main／tag／Release／installは未実施。
 - 2026-09-06: Generator9のF-A修正を受領。ancestor aliasの実Hookは修正前0件／P004 13/14、修正後1件／14/14、root自身symlinkは0件で拒否。同一requestの完全一致probe結果だけを各利用時full boundary再照合付きで再利用し、外部spawnを増やさない。022 69/69、inventory20 surface/67case整合、Node前後17、残留0。Generator8/9はともに指定Sol/high fresh起動成功、child metadata未取得でlaunch-unverified。Fable最終reviewのlow B/C/Dはprogress記録のみ。Status awaiting-eval、Retry2/Spec-Issue0/Lineage9/strong/noneを維持し、clean candidateでWindowsとoffline、既存050 e2e-only／candidateを確認する。050 full/coverage wrapperは高並列のためMac未実行と分離し、e2e-onlyの成功を全250 case実行へ昇格しない。
 - 2026-09-06: Generator8の実装・限定検査を受領（022 69/69、047p004 13/13、049 20/20）。Fable最終read-only reviewで、ancestor alias cwd==Clarity rootの同一requestが同一physical probe結果を2回要求し、消費済みfilterで後半が拒否されるhigh反例を受領。root自身symlinkの例は許可対象ではなく、実際の祖先alias fixtureで確認する。既存同一identity・再検証を保った小修正と低actor回帰だけをfresh Generatorへ渡す。旧Generatorは完了済みでresumeモデル保持未証明のため再利用しない。Lineage8<10を確認し9へ予約、resolverのstrong Sol/high、Rotate none、Retry2／Spec-Issue0を保持。Fable補助レビューは正式Evaluatorの失敗回数へ加算しない。
 - 2026-09-06: 利用者の「よいです」により、共通process安全入口を保ったHook修正と、受入済みPK-001だけに対応する050 semantic pin1箇所の更新・再検証を追加承認として受領。安全境界、子process cleanup、5秒／1MiB、actor／round／assert／Severity／割当は維持し、検証除外・任意hash追認・新runnerは行わない。host mac.lan/taisei/arm64、実root、branch、HEAD dc5f38500f5b617580eb31b93e7edb862fa18675、clean、remote、Node19を再確認。resolverはRetry2/high-risk/current strongからSol/high、Rotate none、resume保持未確認なのでfresh Generator。Lineage7<10を確認し8へ予約、Status active。共通安全層への限定修正を許可するが、単なる直接spawnの移動でprocess-tree cleanupを失う解消は認めない。独立評価後まで下流/main/tag/Release/installは保留する。

@@ -1,4 +1,4 @@
-> **現行評価:** candidate `a1b30c41bcbba36f1c1f2823ae745f70d59ca324` の増分再評価は、本ファイル末尾の「Sprint 054 増分再評価結果（現行）」を正本とする。以下のcandidate `403e552…` 評価は履歴として保持する。
+> **現行評価:** candidate `fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5` のPhase A再評価は、本ファイル末尾の「Sprint 054 Phase A 再評価 — exact `fb3b652`（現行）」を正本とする。以前のcandidate評価は履歴として保持する。
 
 # Sprint 054 評価結果（履歴: candidate `403e552…`）
 
@@ -436,4 +436,168 @@ Sprint 048割当、他249件は維持されている。現在の意味digestは
 - 要求した証跡は契約・rubricのsafe harbor内か: yes。新runner／collector／attestationは要求していない。
 - Mac禁止の044／047／048／050／master／archive系高並列入口を実行したか: no。
 - 実my-vault本文、設定、下流repo、release、installへ触れたか: no。
+- 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
+
+---
+
+# Sprint 054 Phase A 再評価 — exact `fb3b652`（現行）
+
+**判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
+
+**分類:** `implementation-issue`
+
+**評価対象:** Sprint 054 — candidate `fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5`、branch `codex/sprint-052-secretary-voice`
+
+**Escalation Recommendation:** strong
+
+## 結論
+
+前回のSprint 022 product findingとSprint 050 semantic pinは閉じた。exact candidateのoffline masterは
+22/22 suite、736/736 assertionで成功し、今回の独立した低並列確認でもSprint 022は69/69、
+Sprint 047 Patch 004は新しいactual Hook alias caseを含む14/14だった。Hookの外部processは共通
+`runExternal()`境界へ戻り、productionの直接同期process APIは0件である。
+
+しかし、同じexact candidateのWindows Server 2025因果run `34018986578`は失敗した。P005は9/10で、
+`SR-009`が呼び出した既存Sprint 047の`GS-009`において、64 actorのうち少なくとも1 childが
+Clarity rootのRepo／Git identity確認を5,000msで完了できず、製品が`code: timeout`、`changed: false`を返した。
+`scripts/sprint-047-test.mjs:317`の全child exit 0 assertionで停止したため、round別の成功actor数、
+canonical／Hook delta、lock wait、lease、residue、rebuildのmetricは出力されていない。これらを推測で
+PASS扱いしない。後続のP001／P002／P004 Git identity／Sprint 047単独stepもskippedであり、特に今回追加した
+14番目のHook ancestor-alias caseはWindows PASSの証拠を持たない。
+
+これは認証不能、runner未提供、workflow timeoutではない。既存Windows jobがexact candidateを起動し、
+製品のroot identity処理が契約内のstressで明示的なtimeout終端を返した実挙動である。rubricの
+Sprint 050 Patch 004 safe harborも「runner内candidate因果assertion failureはproduct finding」と定める。
+また、5秒境界と64 actorの100%成功が安全に両立不能だと示す比較・反復証拠はなく、直前candidate
+`af2a75e…`では同じWindows 3 roundを完走できていた。したがって現時点で
+`verification-scope-issue`へ移す根拠はなく、`implementation-issue`と分類する。
+
+安全側の`changed: false`停止、source／checkout／Git-free archiveの完全SHA parity、下流／release／install write 0は
+成立している。一方、着手時点のAC7はAgentic exact candidateのWindows nativeを0 product FAILで完了すること、
+C6は全回帰0 FAILを要求する。よって公開AgenticのPhase Aは不合格である。private／Yasashii適応、main、tag、
+Release、marketplace、正式installへ進むPhase Bは開始できず、Sprint 054全体も未完了である。
+
+## 増分スコア
+
+未変更面は、exact candidate parity、greenのoffline master、同一Sprintの既存実物証跡を引き継いだ。
+今回変更されたHook process/root面と新Windows runを増分再判定した。
+
+| 基準 | スコア | 閾値 | 判定 | 根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 3/5 | 4 | **FAIL** | Agentic Phase A必須のexact Windows runがproduct FAIL。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | Windows syntax steps、offline master、P005のSR-001〜008／010は成功。manifest／release／inventoryの既存整合証跡を引継ぎ。 |
+| C3 機能の実証 | 3/5 | 4 | **FAIL** | 契約済み64 actor実動作でroot Git identity timeoutが発生し、`GS-009`が失敗。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | 公開guide 2 promptとClarityを含む1536×1024 infographicは同candidateで内容変更なし。既存render証跡を引継ぎ。 |
+| C5 安全・規律 | 5/5 | 5 | PASS | timeout時は`changed:false`で後続処理を停止。直接同期process API 0、共通cleanup境界、5秒／1MiB、下流／release／install write 0を維持。 |
+| C6 無回帰 | 4/5 | 5 | **FAIL** | offline 736/736でも、必須Windows `GS-009`が非zero。過去Windows PASSをexact candidate PASSへ流用しない。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | 同一Windows runのSprint 032は16/0。更新導線の新しい失敗なし。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | exact SHA、895 files、44 common paths、checkout／archive parityを固定。FAIL後の公開操作0。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | 今回差分に利用者向け会話本文の変更なし。既存証跡を引継ぎ。 |
+| C19-Voice Secretary Voice | 5/5 | 5 | PASS | 今回差分なし。offline masterの既存Voice回帰を引継ぎ。 |
+| C19-Clarity 正本・状態モデル | 5/5 | 5 | PASS | 観測したtimeoutはwrite前の安全停止で、Event／Evidence／Stateの部分成功は観測していない。E2E 4/4と既存回帰を引継ぎ。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | 今回差分なし。既存証跡を引継ぎ。 |
+| C21 Clarity Hook・host parity | 4/5 | 5 | **FAIL** | exact WindowsのHook＋CLI同時実行が100%完了せず、後続metricも未確認。Claude source読込は成功したが代替にならない。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | 今回差分なし。既存046証跡を引継ぎ。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | 今回差分なし。real Xmind外部writeは契約どおりNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 4/5 | 5 | **FAIL** | 共通process安全境界は復帰したが、関連するexact Windows回帰が1件失敗。public-first gateは閉じたまま。 |
+| C26 Clarity包括scan・Windows native | 4/5 | 5 | **FAIL** | scanner step自体は成功したが、同じexact Windows jobの必須P005内でproduct FAIL。後続P004／047はskipped。 |
+
+1軸でも閾値未達なら不合格というrubricに従い、公開AgenticのPhase AをFAILとする。
+
+## 現行証跡
+
+### Candidate／offline／archive
+
+- `git rev-parse HEAD` → `fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5`。
+- 評価開始時のworking tree差分はOrchestrator所有`docs/sprints/state.md`のみ。製品／test bytesはHEADと一致。
+- `/private/tmp/secretary-012-fb3b652-candidate.json`: 895 files、tree
+  `9ac1f2c0bd2e5583adcf1e34308a451df9dd9ba479766c30065fb683b8462236`、44 common paths、common digest
+  `330a2e0506609f93ce55b3839f0f95bea66f5ba2228ed44e84f73024ab17651b`、source／detached checkout／Git-free archive parity true、
+  external／downstream write 0。
+- `/private/tmp/secretary-012-fb3b652-offline.json`: status pass、required suite 22/22、assertion 736/736、
+  failed／verification-infra／skipped／excluded各0。Orchestrator記録ではclean start／clean end、exit 0、終了Node 17。
+- `/private/tmp/secretary-012-fb3b652-e2e.json`: E2E 4/4。registryはprimary 250／CLX 20／XV 4、
+  allocation／semantic invariant true、duplicate／missing／extra 0。これは`--e2e-only`でありprimary 250件のruntime全実行ではない。
+- Claude Code隔離actual session `f9e9e492-6bf8-4c9d-bad6-dc05b0d95984`のraw出力
+  `/private/tmp/secretary-054-fb3-claude-host.log`を独立に確認。public inline source `0.12.0`、
+  Secretary 17 Skills（Clarityを含む）、SessionStart／Stop exit 0、tools／MCP空、reply OK、result error false。private正式導入や
+  実project loadedの証拠ではない。Codexのactual新candidate導入／読込は未実施で、変更のない`hooks.json` bytesに対する
+  旧candidateの隔離受理だけをcarry evidenceとする。旧installed warning解消は主張しない。
+- 公開guideのAgentic／Yasashii用one-paste promptとClarityを含む1536×1024 PNGはOrchestratorが同candidateで再確認し、
+  内容変更なし。Phase Bの実Release照合は未実施。
+
+### 独立した低並列確認
+
+- 実行前 `pgrep node | wc -l` → 17。禁止された高並列入口へのimport／spawnがないことを先に確認した。
+- `node scripts/sprint-022-safety-test.mjs` → exit 0、`SPRINT022_PASS=69 SPRINT022_FAIL=0`。
+  production direct sync API 0、共通external process集約、timeout／max-buffer後の子孫・副作用0、再試行、timer cleanupを含む。
+- `node scripts/sprint-047-patch-004-test.mjs` → exit 0、14/14。config matrix 8、direct config change 2、
+  Git probe 1、timeout 5,000ms、CLI／Hook path canary 0。`HOOK-ALIAS`はactual Hook childでancestor alias event 1、
+  root-self symlink event 0。
+- 終了後 `pgrep node | wc -l` → 17。自分が起動した子processの残留なし。
+- 独立確認後の`git status --short`は、既存のOrchestrator所有`docs/sprints/state.md`だけがmodified。
+
+### Windows native（exact candidateの因果run）
+
+- GitHub Actions run `34018986578`、job `101447948026`、URL:
+  <https://github.com/mtaiseeei/agentic-secretary/actions/runs/34018986578>。
+- `gh run view --json`でconclusion failure、head SHA exact `fb3b652…`、branch
+  `codex/sprint-052-secretary-voice`を独立確認。runnerはMicrosoft Windows Server 2025、image
+  `windows-2025-vs2026`、Node `22.23.2`。
+- 成功した関連step: syntax、workspace root physical identity `25/0`、Sprint 032 `16/0`、Windows path回帰、
+  Sprint 051 `45/0`、conversation migration `9/0`、Harness scan。
+- 失敗step: P005 `SPRINT050_PATCH005_PASS=9 FAIL=1 ... WINDOWS_VERIFIED=false`。
+  `SR-009`が`scripts/sprint-047-test.mjs`を起動し、`GS-009`で製品JSON
+  `ok:false / code:timeout / changed:false / timeoutMs:5000`を伴う非zero childを検出。
+  assertionは`scripts/sprint-047-test.mjs:317`、P005側は`:319`／`:556`。P005全体exit 1。
+- testは全child exit 0の検査時点で止まったため、`METRIC GS-009`は0行。失敗round、CLI／Hook別の成功数、
+  missing index、canonical／Hook delta、lock wait、lease、residue、rebuild、残りroundの実行有無はログから確定できない。
+- 後続のP001、P002、P004 Git config／identity、Sprint 047単独stepはskipped。これらをPASSへ数えない。
+
+## Findings
+
+| # | 重要度 | 対象区分 | 内容 | 判定への影響 |
+|---|---|---|---|---|
+| 1 | Critical | product | exact Windowsの既存`GS-009`で、Clarity root Repo／Git identity確認が5,000ms timeoutとなり、64 actorを100%完了できない。失敗round／actor内訳と後続整合metricは未出力。 | AC7、C1、C3、C6、C21、C24、C26 FAIL。全体分類を`implementation-issue`とする。 |
+
+検証基盤固有の新findingはない。`GS-009`がmetric前に停止するため失敗時の詳細が限定される点は改善余地だが、
+既存safe harborの出力で製品timeoutと合否は判定でき、新collectorや追加caseを必須にする根拠ではない。
+
+## Generatorへの指示
+
+1. 5,000ms／1 MiB、64 actor、3 round、100%、lock／lease／residue／rebuild、共通`runExternal()`のprocess-tree cleanup、
+   alias／Git identity再検証を維持したまま、Windows同時実行時のroot Git identity timeoutを製品側で解消する。
+2. timeout延長だけ、actor／round／assert削減、失敗の握りつぶし、旧identityの無条件再利用、共通安全境界からの再逸脱でgreenにしない。
+   identity-boundな共有／再利用を検討する場合も、root、Git marker／config、ancestor alias、環境の変更を待機前後・write前に拒否する。
+3. 新runner／framework／collectorは作らず、既存Sprint 022、P004 alias正負、offline master、exact Windows P005／047で確認する。
+   Windowsの新P004 alias caseが今回はskippedだったため、次の因果runではそのstepも完走させる。
+4. このFAIL中はprivate／Yasashii、main、tag、Release、marketplace、installへ進まない。
+
+`strong`推薦の根拠は、直前の直接probeがWindows stressを通した一方で共通process安全境界を破り、今回の共通境界復帰は
+安全回帰を閉じた一方で同じWindows stressを再び落としたことにある。局所的なtimeout調整ではなく、process lifecycle、
+root identity束縛、Windows高並列性を同時に満たす必要がある。model選択と、Lineage／Retry上限到達後に追加dispatchするかは
+Orchestratorとユーザーの判断に委ねる。
+
+## Phase Bへ繰り越す未評価項目
+
+- private／Yasashiiの版固有candidate適応と独立Phase A評価。
+- 3版main統合、push、`v0.12.0` tag、GitHub Release、artifact、marketplaceの公開因果性。
+- このMacへのprivate正式導入、enabled Codex新session、disabledを維持したClaude Code隔離確認。
+- 公開後の更新prompt／infographic／guide／Releaseの最終照合。
+
+これらを今回のFAIL理由へ追加してはいないが、未評価のままSprint 054全体をPASSにはしない。
+
+## Evaluator自己レビュー
+
+- 閾値と合否は一致しているか: yes。
+- 各PASSに同一candidateまたは変更なしのcarry evidenceがあるか: yes。
+- 未検証項目をPASS扱いしていないか: yes。Windows P004／047後続とPhase Bを未評価のまま保持した。
+- Windowsの失敗round、actor内訳、metricを推測で補ったか: no。
+- FAIL理由は着手時点のAC7、C6、C21、C24、C26に存在するか: yes。
+- Windows runner内candidate因果assertion failureをproduct findingとして分類したか: yes。
+- 安全停止を安全違反へ誤分類したか: no。C5は5/5とし、可用性・回帰の未達と分離した。
+- `verification-scope-issue`へ移す両立不能証拠があるか: no。現時点は実装問題として安全に解ける可能性が残る。
+- 要求した証跡は契約・rubricのsafe harbor内か: yes。新runner／collector／attestationを要求していない。
+- Mac禁止の044／047／048／050／master／archive系高並列入口を実行したか: no。
+- 実my-vault本文、private設定、下流repo、release、install、旧Harness repoへ触れたか: no。
 - 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
