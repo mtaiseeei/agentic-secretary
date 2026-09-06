@@ -1,5 +1,37 @@
 # Sprint State
 
+## 2026-09-07 private downstream Phase A 完了／履歴
+
+- private Phase Aの独立評価・状態receiptを `9b269563dd89f6552b0e382cfad724d378d51579` としてlocal commitしworking tree cleanを確認した。これはgovernanceのみのcommitで、検証済みproduct candidateはcbcf2c3のまま。receipt未push、3版main／tag／Release／install未実施。現在のgoal（private修復→Windows→fresh Phase A PASS→状態記録）の完了条件を満たした。
+
+- 2026-09-07 JST: private exact `cbcf2c32efa5d6c343958603c9d740f5f26738de`／tree `2cf4336f23a88065e853681cc277cb96bd7f8df1` にfresh独立EvaluatorがPhase A PASSを確定、mainが全文確認してprivate051をdoneへ記録した。V01／V02／P01 CLOSED、open finding0、Windows34043112835全SUCCESS、16row16/16、archive14/14。privateの今回Lineage1、Retry0、Spec0、strong／none。public Phase A PASSとcounterは不変。Yasashii044の適応・独立評価が次であり、3版公開／install未実施のためpublic054全体はactiveを維持する。
+
+- 2026-09-07 JST: ユーザー「リセットして続けて」によりprivate Lineage10→0の承認待ちを解消し、fresh独立Evaluatorを0→1で予約。exact cbcf2c3／Windows34043112835全SUCCESS候補を変更せず最後の増分評価へ進む。public counter／Phase A PASSは不変。3版公開・実PC反映は後段gateを維持する。
+
+- 2026-09-07 JST: private最終候補 `cbcf2c32efa5d6c343958603c9d740f5f26738de` のWindows34043112835/job101513294834は全SUCCESS。3round×64全exit0／parse・unique・rebuild100%／residue0、maxlock8436ms<15000、maxlease3735ms<30000、P00510/0・後続child完走、archive14/14。runtimeはa525から不変。残るprivate Phase A gateはfresh独立評価だけで、Lineage10のreset承認待ち。mainによるPASS代行・旧Evaluator FAIL書換えはせず、3版公開／install未実施を維持する。
+
+- 2026-09-07 JST: 元V02の残りrules2pinだけを修正したprivate `cbcf2c32efa5d6c343958603c9d740f5f26738de` を候補pushし、Windows34043112835/job101513294834を1回実行中。製品runtimeはa525の同時書込み成功candidateから不変、archive14/14、実分岐16row一致。private Lineage10で追加Evaluatorはreset指示待ち。公開・実PC反映は未実施で、Windows監視は継続中。
+
+- 2026-09-07 JST: private製品修正candidate `a52536c5da5fbfa2a464709ca49689341c8625b1`、Windows34041953375/job101510215918の3×64全成功により、fresh EvaluatorがF051-P01 CLOSEDを確認。全体は残る元V02のcommon-language／conversation-contract 2path旧期待でFAIL / verification-scope-issue（P0059/1、S04922/1）。製品root+20/-20の安全性確認・Claude隔離source load・archive14/14は成功。承認済みV02の残りをfresh Generator Sol/highへ委譲（private Lineage10／Retry1／Spec0）、この後の独立評価用resetを非同期確認中。public Phase A／counterは不変、後段公開・installは未実施。
+
+- 2026-09-07 JST: ユーザー「どんどんすすめろって」を、直前に提示したprivate F051-P01の限定製品修復まで進める承認として受領した。fresh Plannerが既存AC4／5修復のcore／root例外だけを契約へ追加、閾値・安全条件・証拠形式は不変。main確認後fresh strong Generator Sol/highへdispatch（private Lineage8／Retry1／Spec0）。追加push／修正候補ごとWindows1回の承認を継続し、同じ確認で止めない。public Phase Aとcounter、後段公開・install gateは保持する。
+
+- private87ecac8のfresh独立評価をmainが全文・実ログ照合し採用: FAIL / implementation-issue、F051-P01 Critical product（同時書込みround2 63/64）、V01 CLOSED、V02静的補正済み／Windows未到達でOPEN。privateはRetry1／Spec0／Lineage7／strong／none、Status active（製品修正範囲のユーザー判断待ち）。current goalのruntime0とcore／root変更禁止を無断拡張せず、安全基準を保つ限定調査・修正の追加判断へ返す。候補push／修正候補ごとWindows1回の承認は保持し、同じremote操作の確認を繰り返さない。
+
+- ユーザーがgoal達成までの候補追加pushと修正候補ごとのWindows1回を承認。private `87ecac80f858635a96ae230268090cff3e4ad5a1` を通常pushし、既存run `34037807213` / job `101498978262` を1回実行した。head一致、14:05:17 UTCにfailureで終了。P006 concurrentのround2でCLI1件が `canonical-lock-busy`（63/64 exit0）となり、後続P004／P005はskipped。今回直したV02のWindows結果は未確認。同一候補の再実行はしない。
+- private fresh独立Evaluator（Lineage7、Sol/high、launch-unverified）が実差分と実ログを確認中。core／root／concurrency testは前候補とbyte不変であり、製品変更0の現goalから新しいruntime修正へ無断拡張しない。publicのcounter／Phase A PASS、Yasashii product未着手、3版main／tag／Release／実PCinstall未実施を維持する。
+
+- private29c3acaのWindows34034045133とfresh評価はFAIL（同じV02の旧pin／分岐未修正、product0、V01解消）。承認済みV02の残りをローカル候補 `87ecac80f858635a96ae230268090cff3e4ad5a1` へ修正・commitした。runtime0、検証+7/-2と連動digest1項目、構文／inventory／release整合成功。検証のみ2ラウンド連続の比例性ガードを報告し、追加push／Windowsと次独立評価への続行判断を求める。private Phase AはまだPASSではない。
+
+- 後続の明示push承認を受け、private修正候補 `29c3aca25100ac951e4db08f5c47bdcb435588c7` を候補branchへpushし、既存Windows run `34034045133`（job `101488749873`、head一致）を1回開始した。private fresh Evaluatorが並行確認中。先の承認待ちは解消したが、Phase A合否は未確定のため後段公開／installは進めていない。
+
+- 後続ユーザー承認により、private検証2点の限定修正→既存Windows再検証→fresh独立評価をgoalとして再開した。製品変更・安全基準緩和ではなく、public Phase Aやcounterは変更しない。
+
+- public Phase AのPASS（product `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154`、receipt `a2933904602fc839c72a5e6b9294a4362eb21ad0`）は保持する。
+- private candidate `259e7ba79d09e117acc343ebe990ae7752f12382` のfresh評価は `FAIL / verification-scope-issue`。確認したproduct finding 0、検査側blocker 2（Sprint032 byte一致assert弱化、P005／049の旧snapshot期待値）。private feedback: `/private/tmp/secretary-012-downstreams.xuBXh3/agentic-secretary-my-vault/docs/feedback/sprint-051.md`。
+- exact private Windows run `34028992039` はP005 8/2でfailure。3 round×64 actor、Git／Voice／migration／logical writeは成功したが、未実行後続をPASSへ丸めない。
+- Harness規則に従い検証修正方針をユーザーへ確認する。public 054はactive、既存counterを維持。Yasashii product適応、3版main／tag／Release／実PCinstallは未実行。
+
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
