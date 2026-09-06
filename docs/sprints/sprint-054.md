@@ -58,10 +58,11 @@ Harnessのlimit resetもユーザー承認済みである。`docs/sprints/state.
 
 ### 4. private Windows concurrency FAILの限定解消
 
-private run `33760136372`の`private-CW-019`は、`scripts/sprint-050-patch-006-concurrency-test.mjs`のcanonical-lock-busy判定で失敗している。観測済みのroundでは64 actor中63成功、1 CLIが約20.9秒で`canonical-lock-busy`、成功actorの最大lock waitは約14.8秒、最大critical sectionは約2.5秒、残骸0だった。
+private run `33760136372`の初回attemptでは、`scripts/sprint-050-patch-006-concurrency-test.mjs`の`private-CW-019`がcanonical-lock-busy判定で失敗した。観測済みのroundでは64 actor中63成功、1 CLIが約20.9秒で`canonical-lock-busy`、成功actorの最大lock waitは約14.8秒、最大critical sectionは約2.5秒、残骸0だった。同一SHAのattempt 2では3 roundの各64 actor、parse／unique／rebuild、残骸0がすべてPASSし、最大lock waitは9.392／10.271／9.330秒だった。
 
 - 既存のWindows 3 round、POSIX 1 round、各round 32 CLI＋32 Hook、100%成功、canonical writeの整合性、bounded wait、残骸0という基準を維持する。
-- まず既存契約内の競合時間短縮、不要なcritical sectionの縮小、正当な再試行可能性を調べる。15秒の製品lock waitを単に延ばす、stress actor／round／assertを減らす、失敗を握りつぶす、SKIPへ変える方法は禁止する。
+- attempt 2の最終suiteは、`SR-005`のCurrent／Next Planned固定期待と、`SR-009`／`SR-010`／`S049-44`の受入済みbytesに対する旧digest固定が現行state／sourceと一致せずFAILした。製品のconcurrency欠陥と検証基盤の古い期待を分け、後者は現行の正当なstateと受入済みsource bytesへ既存fixture／expected pinを正しく束縛する。任意hashの追認、case削減、期待緩和にしない。
+- private版のmutation-scopedな再検査統合と性能対策を保持し、public coreのbyte一括上書きで落とさない。統合後のexact private candidateで同じsuiteと`private-CW-019`を再実行する。15秒の製品lock waitを単に延ばす、stress actor／round／assertを減らす、失敗を握りつぶす、SKIPへ変える方法は禁止する。
 - 安全なbounded waitと64同時writeの100%成功が現実のWindows runner上で両立不能と証拠化された場合、基準を勝手に変えず`verification-scope-issue`として、観測値と具体的な選択肢をユーザーへ返す。その状態ではprivateをPASSまたは3版公開済みにしない。
 - この64 actor stressはMac miniのnode process上限に反するため、このMacでは実行しない。exact candidateの既存Windows CIで確認し、Macでは低concurrencyの関連回帰だけを使う。
 
@@ -99,7 +100,7 @@ private run `33760136372`の`private-CW-019`は、`scripts/sprint-050-patch-006-
 9. **このMacへの正式反映（C2/C5/C6）**: private release `0.12.0`の配布bytesがCodex／Claude Codeの正式経路へ反映され、元source、scope、enabled状態を保持する。enabledなCodexの新sessionはprivate版、Clarity Skill／Hookを読み、startupの`collaborationMarker` parser errorが0件である。disabledなClaude Code projectはdisabledのままで、隔離host読込面では同じ配布bytesのparser errorが0件である。disabledを実workspaceのloaded PASSにせず、local Clarity overlayとcache直接編集は0件である。
 10. **利用者・作業中差分保護（C5）**: 実my-vault本文を読取・収集せず、利用者データ、private設定、既存dirty／staged／untracked、他pluginを変更・コピー・自動commitしない。各repoの今回所有変更だけをcommitし、未知の衝突は安全に停止する。
 11. **公開案内（C3/C4/C14）**: Claude Code用one-paste promptがAgentic／Yasashiiに各1本あり、正式ID、0.12.0、既存カスタマイズ保持、update、reload、版確認を正しく案内する。1枚のinfographicがClarityを含む4つの主な変化を平易に示し、実Releaseと矛盾しない。
-12. **限定された変更（C5/C6/C19）**: Clarityの機能、schema、4象限、Xmind、Attention、Drift、Hook責務を全面再設計せず、既知のrelease／CRLF／Hook／private concurrency統合問題と版適応に変更を限定する。新runner、framework、collector、統一attestation、全組合せmatrixを作らない。
+12. **限定された変更（C5/C6/C19-Clarity）**: Clarityの機能、schema、4象限、Xmind、Attention、Drift、Hook責務を全面再設計せず、既知のrelease／CRLF／Hook／private concurrency統合問題と版適応に変更を限定する。新runner、framework、collector、統一attestation、全組合せmatrixを作らない。
 
 ## 検証スコープ（着手時に固定）
 

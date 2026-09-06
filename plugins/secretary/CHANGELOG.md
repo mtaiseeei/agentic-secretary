@@ -1,5 +1,58 @@
 # 変更履歴
 
+## [0.12.0] - 2026-09-06
+
+### 対象者
+
+- Agentic Secretaryで、考えることと実行中の仕事を整理しながら、Gitやチャットの情報も同じ秘書へ相談したい方。
+
+### 変わること
+
+- Project Clarityを正式な配布物へ含め、Attention、決定と実行の現在地、Markdown／Mermaid／Xmind投影、履歴、checkpoint、診断を共通SkillとHookから利用できます。
+- GitHub ActionsやPull Requestを取り込み、実行結果と変更の関係を根拠付きで追えるようになります。
+- Secretary Voiceにより、別の一般アシスタントとしてではなく、設定された秘書自身として一貫して応答します。
+- 日次・週次・検索結果の整理は、固定抽出だけに依存せず、取得した一次情報をLLMが目的に合わせてまとめられます。既存helperは必要な場合の安全な補助として残ります。
+
+### 設定・ファイルへの影響
+
+- Clarityはplugin内のschema、Skill、CLI、共通Hook、inventoryを追加します。既存のmemory、project、identity、Chatwork／Google Chat設定、Gitの利用者変更を自動変更しません。
+- Hook manifestのtop-levelは両hostが認識する`description`と`hooks`だけです。Clarityの識別markerは`description`内に保持します。
+
+### 必要な操作
+
+- 現在は`0.12.0`の公開準備中です。Release公開後、利用中の版とscopeを確認して正式なplugin更新経路を使い、新しいsessionで読み込みを確認してください。
+- Claude Code向けの版別依頼文は`docs/guide/update-0.12.0.md`にあります。未公開のReleaseを推測で導入しないでください。
+
+### 互換性上の注意
+
+- Project Clarityの自動Hookが使えないhostや無効状態でも、手動commandによるfallbackを維持します。Xmindは版ごとの既定値と明示承認境界を守ります。
+- `0.11.0`以前のrelease記録、fixture、tag、Git履歴は変更しません。source検査のPASSをtag、GitHub Release、marketplace、installed cache、下流版のPASSへ昇格しません。
+
+## [0.11.0] - 2026-08-28
+
+### 対象者
+
+- public Agentic版のProject Clarity source candidateを評価する保守者。Yasashii版とprivate版への機能展開はまだ行いません。
+
+### 変わること
+
+- Project Clarityの初期化、Attention、Markdown／Mermaid／Xmind投影、Secretary-local表示、Repo間link／sync、Drift検出を共通のSkillとCLIから使えるようにします。
+- Claude CodeとCodexで共通のClarity専用Hookを配布し、Hookを使えないときも手動commandで同じ正本を確認できます。
+- このentryはAgentic先行のsource candidateです。Yasashii版とprivate版は、固定handoff後の別Harnessと独立評価が終わるまで未展開です。
+
+### 設定・ファイルへの影響
+
+- public Agentic版のXmind integrationは既定OFFです。ON時もXmind MCPを第1優先とし、local `.xmind`はpreviewと明示承認後だけ書きます。
+- 既存のmemory、project、identity、Chatwork／Google Chat設定、Gitの利用者変更は自動変更しません。
+
+### 必要な操作
+
+- 現在はpublic source candidateのため、release操作は不要です。全最終Sprintと各配布系統の独立評価後に、公開・更新手順を別途案内します。
+
+### 互換性上の注意
+
+- `0.10.2`以前のrelease記録、fixture、tag、Git履歴は変更しません。source検査のPASSをtag、GitHub Release、marketplace、installed cache、下流版のPASSへ昇格しません。
+
 ## [0.10.2] - 2026-08-26
 
 ### 対象者

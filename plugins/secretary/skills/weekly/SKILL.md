@@ -26,6 +26,8 @@ SECRETARY_PLUGIN_ROOT="$(node "$(dirname "$SECRETARY_SKILL_FILE")/../../scripts/
 
 ## 1. 週次ふりかえり
 
+<!-- agentic-secretary:clarity-collaboration:weekly:v1 -->
+
 通常の週次ふりかえりはopen PJとjournalだけを対象にし、`projects/closed/`は存在確認も探索もしない。
 closed、完了、終了、過去案件を利用者が明示した場合だけ、指定範囲を`projects` Skillへ委譲する。
 
@@ -45,6 +47,7 @@ closed、完了、終了、過去案件を利用者が明示した場合だけ�
    週全体を網羅した、0件だった、最新だとは言わない。canonical root、symlink、archive、日付範囲の安全境界で拒否された対象は
    そこで止め、直接Readで迂回しない。
 6. 閲覧だけではファイル、journal、git commitを変更しない。
+7. `node "${SECRETARY_PLUGIN_ROOT}/scripts/clarity-secretary.mjs" weekly <secretary>`を実行し、open PJのAttention増減、解消済みAttention、解消Drift、長期滞留を独立したProject Clarity sectionへ添える。前回比較が無い場合は増減を推測せず「前回集計なし」とする。closed、全Item本文、外部connectorをClarity経由で自動読込しない。
 
 ### 保存は明示されたときだけ
 

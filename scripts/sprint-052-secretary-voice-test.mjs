@@ -25,7 +25,7 @@ check("inventoryは実ファイルのhashと共通entrypointを追跡", () => {
     for (const marker of entry.requiredMarkers ?? []) assert.ok(read(entry.path).includes(marker), `${entry.path}: ${marker}`);
     if (entry.path.endsWith("/SKILL.md")) assert.ok(read(entry.path).includes("rules/plain-language.md"), entry.path);
   }
-  assert.deepEqual(inventory.surfaces.filter((entry) => entry.path.endsWith("/SKILL.md")).map((entry) => entry.path).sort(), readdirSync(join(root, "plugins/secretary/skills"), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map(({ name }) => `plugins/secretary/skills/${name}/SKILL.md`).filter((path) => existsSync(join(root, path))).sort(), "inventoryのSKILL集合が実体と一致しません"); assert.equal(inventory.surfaces.filter((entry) => entry.path.endsWith("/SKILL.md")).length, 16, "現行SKILL数"); assert.equal(inventory.voiceContract.defaultFirstPerson, "私");
+  assert.deepEqual(inventory.surfaces.filter((entry) => entry.path.endsWith("/SKILL.md")).map((entry) => entry.path).sort(), readdirSync(join(root, "plugins/secretary/skills"), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map(({ name }) => `plugins/secretary/skills/${name}/SKILL.md`).filter((path) => existsSync(join(root, path))).sort(), "inventoryのSKILL集合が実体と一致しません"); assert.equal(inventory.surfaces.filter((entry) => entry.path.endsWith("/SKILL.md")).length, 17, "現行SKILL数"); assert.equal(inventory.voiceContract.defaultFirstPerson, "私");
 });
 check("両editionは共通契約を読み、会話copyを分離", () => {
   for (const style of ["agentic", "yasashii"]) {

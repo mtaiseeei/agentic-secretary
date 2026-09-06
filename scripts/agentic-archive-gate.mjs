@@ -19,7 +19,9 @@ try {
   execFileSync("node", [join(extracted, "scripts/agentic-readability-test.mjs"), "--root", extracted], { stdio: "inherit" });
   execFileSync("node", [join(extracted, "scripts/agentic-host-gate.mjs"), "--mode", "offline"], { cwd: extracted, stdio: "inherit" });
   execFileSync("bash", [join(extracted, "scripts/sprint-039-regression.sh")], { cwd: extracted, stdio: "inherit" });
-  process.stdout.write("AGENTIC_ARCHIVE_GATE_PASS=7 FAIL=0\n");
+  execFileSync("node", [join(extracted, "scripts/sprint-048-validator.mjs"), "--root", extracted], { cwd: extracted, stdio: "inherit" });
+  execFileSync("bash", [join(extracted, "scripts/sprint-047-regression.sh")], { cwd: extracted, stdio: "inherit" });
+  process.stdout.write("AGENTIC_ARCHIVE_GATE_PASS=9 FAIL=0 CLARITY_REGRESSION=25\n");
 } finally {
   rmSync(target, { recursive: true, force: true });
 }

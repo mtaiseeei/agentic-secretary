@@ -66,6 +66,9 @@
     "wizardCopy",
     "wizardBehavior",
     "oauthScope",
-    "syncBoundary"
+    "syncBoundary",
+    "clarityOwnership",
+    "claritySideEffectBoundary",
+    "xmindApprovalBoundary"
   ]
 }
