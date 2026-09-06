@@ -1,4 +1,4 @@
-> **現行評価:** candidate `fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5` のPhase A再評価は、本ファイル末尾の「Sprint 054 Phase A 再評価 — exact `fb3b652`（現行）」を正本とする。以前のcandidate評価は履歴として保持する。
+> **現行評価:** candidate `ea2d97147d35bebfa66e005747aa03aad5378bf0` のPhase A再評価は、本ファイル末尾の「Sprint 054 Phase A 再評価 — exact `ea2d971`（現行）」を正本とする。以前のcandidate評価は履歴として保持する。
 
 # Sprint 054 評価結果（履歴: candidate `403e552…`）
 
@@ -440,7 +440,159 @@ Sprint 048割当、他249件は維持されている。現在の意味digestは
 
 ---
 
-# Sprint 054 Phase A 再評価 — exact `fb3b652`（現行）
+## candidate `ea2d971` 評価詳細（現行判定の根拠）
+
+**判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
+
+**分類:** `implementation-issue`
+
+**評価対象:** Sprint 054 — candidate `ea2d97147d35bebfa66e005747aa03aad5378bf0`、branch `codex/sprint-052-secretary-voice`
+
+**Escalation Recommendation:** strong
+
+## 結論
+
+今回の差分はCLIの`clarity event`だけにasync Git identity prefetchを適用し、Windows `GS-009`で発生していた
+32個のCLI側Node bridgeを除いた。既存のHook wrapperとHook側probeは変更されていない。exact candidateの
+offline masterは22/22 suite、736/736 assertionで成功し、変更面の低並列回帰もSprint 022が69/69、
+Sprint 047 Patch 004が14/14、Sprint 049が20/20で成功した。candidate／checkout／Git-free archiveの
+895 files、44 common pathsも一致している。
+
+しかし、同じexact candidateのWindows native因果run `34024443793`は不合格だった。P005は9/10で、
+`SR-009`が呼び出したSprint 047 `GS-009`の第2 roundにおいてCLI 32件は成立したが、Hook runtime eventは
+31/32だった。欠落したHook index 18は`status: degraded`、`safeCode: timeout`を返した。全64 childのexit 0、
+CLI JSON parse、canonical unique、Hook unique、canonical event 32件まではassertion順から成立しているが、
+Hook delta 32件のassertionで停止したため、第2 roundのresidue／rebuild／lock wait／leaseの完全metricと
+第3 roundは得られていない。後続のWindows P004／Sprint 047 stepもskippedである。
+
+これはrunner未提供、認証不能、workflow timeout、証拠形式不足ではない。exact candidateをWindows runner上で
+実行した既存safe-harbor testが、製品Hookのbounded Git identity probe timeoutと実際のruntime event欠落を
+観測している。testは契約済みの32 CLI＋32 Hook、3 round、100%成功をそのまま検査しており、fixtureや期待値が
+現在sourceからずれた証拠もない。したがって`product` findingであり、`implementation-issue`と分類する。
+安全なdegraded応答はC5の安全違反ではないが、必須イベントを記録できない可用性と回帰の未達である。
+
+同じ基準を安全に満たせないという反復・比較証拠はなく、既存の同形式Windows runには完走例もあるため、
+`verification-scope-issue`へ移す根拠はない。CLI側bridge除去で第2 roundのCLI 32件が成立したことは局所的な改善証拠だが、
+変更されていないHook側が31/32で失敗しており、Sprint 054のWindows concurrency原因が解消したとは判定しない。
+Phase AがFAILの間はprivate／Yasashii、main、tag、Release、marketplace、installへ進めない。
+
+## 増分スコア
+
+未変更面はexact candidate parity、greenのoffline master、同一Sprintの既存実物証跡を引き継ぎ、
+変更されたCLI event経路と新しいWindows runを増分再評価した。
+
+| 基準 | スコア | 閾値 | 判定 | 根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 3/5 | 4 | **FAIL** | Agentic Phase A必須のexact Windows runがproduct FAIL。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | Windows syntax／setup／update／path／Git ingest／migration／Harness scanとoffline masterが成功。 |
+| C3 機能の実証 | 3/5 | 4 | **FAIL** | 契約済み64 actor実動作の第2 roundでHook eventが31/32。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | 今回差分に公開guide／infographic／会話UXの変更なし。既存同candidate証跡を引継ぎ。 |
+| C5 安全・規律 | 5/5 | 5 | PASS | 5秒／1 MiBと共通process cleanup境界を維持し、timeoutはdegradedとして処理。下流／release／install write 0。 |
+| C6 無回帰 | 4/5 | 5 | **FAIL** | offline 736/736でも必須Windows `GS-009`が非zero。過去または第1 roundのPASSを全3 round PASSへ流用しない。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | 同一Windows runのupdate関連stepは成功し、新しい更新導線findingなし。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | exact SHA、895 files、44 common paths、source／checkout／archive parityを固定。FAIL後の公開操作0。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | 今回差分に利用者向け会話本文の変更なし。既存証跡を引継ぎ。 |
+| C19-Voice Secretary Voice | 5/5 | 5 | PASS | 今回差分なし。offline masterの既存Voice回帰を引継ぎ。 |
+| C19-Clarity 正本・状態モデル | 5/5 | 5 | PASS | 第2 roundのcanonical eventは32件成立し、観測failureはHook runtime event 1件の未記録。正本破損や部分state writeは観測していない。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | 今回差分なし。既存証跡を引継ぎ。 |
+| C21 Clarity Hook・host parity | 4/5 | 5 | **FAIL** | exact WindowsでHook eventが31/32。Hook経路のhost parityを100%実証できない。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | 今回差分なし。既存046証跡を引継ぎ。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | 今回差分なし。real Xmind外部writeは契約どおりNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 4/5 | 5 | **FAIL** | 安全境界は維持したが、Hook統合のexact Windows回帰が1件失敗。public-first gateは閉じたまま。 |
+| C26 Clarity包括scan・Windows native | 4/5 | 5 | **FAIL** | scanner stepは成功したが、同じexact Windows jobの必須P005内でproduct FAIL。後続P004／047はskipped。 |
+
+1軸でも閾値未達なら不合格というrubricに従い、公開AgenticのPhase AをFAILとする。
+
+## 現行証跡
+
+### Candidate／offline／変更面
+
+- HEADは`ea2d97147d35bebfa66e005747aa03aad5378bf0`。評価開始時の製品／test bytesはHEADと一致し、既存差分はOrchestrator所有`docs/sprints/state.md`のみ。
+- `/private/tmp/secretary-012-ea2d971-candidate.json`: tree 895 files、SHA-256
+  `1db967a7b9de8ae31c6834d22061b823c77ec97bcabf27bd1ea425fe8499ae7c`、44 common paths、common digest
+  `8e26acfba61aea2ceb10981d4f816c0b43c162edf90cdbe4790eb3e17e553930`、source clean、detached checkout clean、
+  Git-free archive、path／mode／bytes parity true、external／downstream write 0。
+- `/private/tmp/secretary-012-ea2d971-offline.json`: status pass、required suite 22/22、assertion 736/736、
+  failed／verification-infra／skipped／excluded各0。Orchestrator記録はclean start／end、exit 0、Node 21→最大25→21。
+- `/private/tmp/secretary-012-ea2d971-e2e.json`: E2E 4/4、registry primary 250／CLX 20／XV 4、
+  allocation／semantic invariant true、duplicate／missing／extra 0。これは`--e2e-only`でありprimary 250件のruntime全実行ではない。
+- Orchestratorから引き継いで照合した同candidateのGenerator実行証跡: Sprint 022 69/69、
+  Sprint 047 Patch 004 14/14、Sprint 049 20/20。
+- Evaluatorの独立した変更面実操作: 実行前後のNode数19→19で
+  `node scripts/sprint-047-patch-004-test.mjs`を1回実行し、exit 0、14/14、外部write／network 0。
+  P004はactual Hook ancestor alias、config change拒否、CLI／Hook path canary 0を含む。
+- source差分確認では、CLI eventだけが共通async probe helperを使い、Hook wrapperは変更なし。CLIのinitial snapshot failureだけ旧sync resolver、
+  await後の境界変化はfallbackせず、CLI-only unbound requestだけsync fallbackとなる。新case／framework／actor数／timing閾値の変更はない。
+- Claude Code actual host loadは前candidate `fb3b652…`の証跡だけで、parser／Skill bytes不変面のcarry evidenceに限定する。
+  `ea2d971…`のactual host load、正式install、旧Codex installed warning解消は主張しない。
+
+### Windows native（exact candidateの因果run）
+
+- GitHub Actions run `34024443793`、job `101462801082`、URL:
+  <https://github.com/mtaiseeei/agentic-secretary/actions/runs/34024443793>。
+- `gh run view --json`でconclusion failure、event `workflow_dispatch`、head SHA exact `ea2d971…`、branch
+  `codex/sprint-052-secretary-voice`を独立確認。Windows native jobでNode `22.23.2`。
+- syntax、setup、update、path、Git ingest、migration、Harness scanは成功。Clarity state structure／Secret redaction stepの
+  P005だけが`SPRINT050_PATCH005_PASS=9 FAIL=1 ... WINDOWS_VERIFIED=false`でexit 1。
+- `GS-009`第1 roundのmetric: writers 64、CLI 32、Hook 32、exit 0が64、CLI／Hook JSON parse成立、unique成立、
+  canonical／Hook expected delta 32、state rebuild／pre-rebuild full state／rebuild noop true、residue前後0。
+  max lock wait 12,427ms < 15,000ms、max lease critical 2,652ms < 30,000ms、round 15,312ms < 600,000ms。
+- 第2 roundは全child exit 0、CLI JSON parse、canonical／Hook unique、canonical event 32件まで成立した後、
+  Hook runtime deltaがexpected 32／actual 31で失敗。欠落はindex 18、`status: degraded`、`safeCode: timeout`。
+  assertionは`scripts/sprint-047-test.mjs:338`、P005全体は`SR-009`失敗。
+- 第2 roundの完全metric、第3 round、後続Windows P004／Sprint 047 stepは得られていない。これらをPASS扱いしない。
+
+## Findings
+
+| # | 重要度 | 対象区分 | 内容 | 判定への影響 |
+|---|---|---|---|---|
+| 1 | Critical | product | exact Windows `GS-009`第2 roundで、HookのGit identity probeがbounded timeoutとなり、runtime eventが31/32。 | AC7、C1、C3、C6、C21、C24、C26 FAIL。全体分類を`implementation-issue`とする。 |
+
+検証基盤固有の新findingはない。現行testはsafe harbor内のactor数、round数、閾値、出力を使い、失敗Hookの
+degraded codeとevent deltaを特定できている。第2 roundの後続metricが未出力である点は診断上の制約だが、
+新collectorや追加caseを合格条件にする必要はなく、製品failureの分類を妨げない。
+
+## Generatorへの指示
+
+1. Hook経路を中心に、なぜWindows第2 roundのidentity probeが5秒内に完了しないかを製品側で解消する。
+   今回のCLI専用prefetchをHook解決済みの根拠にしない。
+2. 5秒／1 MiB、32 CLI＋32 Hook、3 round、100%、lock／lease／residue／rebuild、共通`runExternal()`の
+   process-tree cleanup、await前後のroot／Git identity再検証を維持する。
+3. timeout延長、actor／round／assert削減、失敗の握りつぶし、root非束縛cache、共通安全境界からの再逸脱でgreenにしない。
+   次candidateは既存Sprint 022、P004 alias正負、offline master、exact Windows P005／047で確認する。
+4. このFAIL中はprivate／Yasashii、main、tag、Release、marketplace、installへ進まない。
+
+`strong`推薦は、Windows concurrency、root identity、process lifecycleを同時に満たす必要があり、直近の修正が
+CLI側負荷を減らしても未変更のHook側timeoutを残したためである。model選択、Retry／Lineage更新、次dispatchの可否は
+Orchestratorへ委ねる。
+
+## Phase Bへ繰り越す未評価項目
+
+- private／Yasashiiの版固有candidate適応と独立Phase A評価。
+- 3版main統合、push、`v0.12.0` tag、GitHub Release、artifact、marketplaceの公開因果性。
+- このMacへのprivate正式導入、enabled Codex新session、disabledを維持したClaude Code隔離確認。
+- 公開後の更新prompt／infographic／guide／Releaseの最終照合。
+
+これらを今回のFAIL理由へ追加してはいないが、未評価のままSprint 054全体をPASSにはしない。
+
+## Evaluator自己レビュー
+
+- 閾値と合否は一致しているか: yes。
+- 各PASSに同一candidateまたは変更なしのcarry evidenceがあるか: yes。
+- 未検証項目をPASS扱いしていないか: yes。Windows第2 roundの後続metric、第3 round、P004／047、Phase Bを未評価のまま保持した。
+- 第1 roundの完全成功やCLI 32件を、Hookを含む原因解消へ拡張したか: no。
+- FAIL理由は着手時点のAC7、C6、C21、C24、C26に存在するか: yes。
+- Windows runner内candidate因果assertion failureをproduct findingとして分類したか: yes。
+- 安全なdegraded timeoutをC5安全違反へ誤分類したか: no。可用性・回帰の未達と分離した。
+- `verification-scope-issue`へ移す両立不能証拠があるか: no。
+- 要求した証跡は契約・rubricのsafe harbor内か: yes。新runner／collector／attestationを要求していない。
+- Mac禁止の044／047／048／050／master／archive系高並列入口を実行したか: no。
+- 実my-vault本文、private設定、下流repo、release、install、旧Harness repoへ触れたか: no。
+- 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
+
+---
+
+# Sprint 054 Phase A 再評価 — exact `fb3b652`（履歴）
 
 **判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
 
@@ -601,3 +753,26 @@ Orchestratorとユーザーの判断に委ねる。
 - Mac禁止の044／047／048／050／master／archive系高並列入口を実行したか: no。
 - 実my-vault本文、private設定、下流repo、release、install、旧Harness repoへ触れたか: no。
 - 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
+
+---
+
+# Sprint 054 Phase A 再評価 — exact `ea2d971`（現行）
+
+**判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
+
+**分類:** `implementation-issue`
+
+**Escalation Recommendation:** strong
+
+現行判定の全スコア、candidate parity、変更面、Windows metric、Finding、Generator指示、未評価項目、自己レビューは、
+本ファイル内の「candidate `ea2d971` 評価詳細（現行判定の根拠）」を一体の証跡として参照する。
+
+決定的なFAILはexact Windows run `34024443793`のSprint 047 `GS-009`第2 roundである。全64 childはexit 0、
+CLI event 32件は成立したが、Hook runtime eventが31/32となり、欠落index 18は`status: degraded`、
+`safeCode: timeout`だった。現行testは契約済み32 CLI＋32 Hook、3 round、100%成功を検査しており、
+製品Hookの実イベント欠落を観測したため`product / implementation-issue`とする。安全なdegraded応答は
+C5違反ではないが、C1、C3、C6、C21、C24、C26は閾値未達である。
+
+今回のCLI専用prefetchはCLI側負荷を減らしたがHook wrapperは未変更であり、原因解消とは判定しない。
+第2 roundの完全metric、第3 round、後続Windows P004／047、Phase Bは未評価のまま保持する。
+`verification-scope-issue`へ移す両立不能証拠はなく、Phase A FAIL中は下流・公開・導入へ進めない。

@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -108,10 +108,13 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: reset後Evaluator2がea2d971の公開Phase Aを正式FAIL／implementation-issue、strong推薦と判定。独立確認したWindows round2のCLI32成功／Hook31（index18 timeout）を根拠とし、whole-job changed:falseやround2/3の未出力metricを成功扱いしない。Retryを1へ更新、Spec0／strong／noneを保持。Lineage2<10を確認しfresh Generator分3へ予約、resolverのSol/highでHook負荷削減R1/R2を限定実装へ渡す。R1はPostToolUse等の未使用core読込を避け、SessionStart/PreCompact/Stopの実動作を維持。R2は既存mutation単位scopeだけを再利用し、各mutation後の再検証は省かない。R3/R4、安全基準変更、runner増設は対象外。前Evaluatorの起動は成功したがchild metadata未取得でlaunch-unverified。Status active、publication/install保留を維持する。
+- 2026-09-06: ea2d971のWindows round2 Hook timeoutをFableへread-only共有し、候補R1（PostToolUse等で未使用のcore静的importを避ける）、R2（Hookに既存mutation単位revalidation scopeを適用）、R3（重複snapshot削減）、R4（windowsHide）を受領。main実コード確認ではR1とR2に具体的な重複がある。R2の「write全体を1scope」は採用せず、既存契約どおり各mkdir／open／write／unlinkの直後にscopeを閉じ、post-write検証は新しい観測で行う必要がある。R3はmulti-root境界、R4は全外部processへの影響と効果未確認があるため今回候補から外す。正式Evaluator判定前に実装せず、条件緩和・sleep/jitter・新runnerへ拡大しない。
+- 2026-09-06: candidate ea2d97147d35bebfa66e005747aa03aad5378bf0をcommit/push、Windows run34024443793/job101462801082を1回起動してFAILを確認。P005 SR-009／047 GS-009のround1は64exit0・CLI32/Hook32・parse/unique/rebuild100%・residue0、lock wait最大12427ms/15000、lease2652ms/30000。round2は全child exit0だがHook31/32、index18 degraded safeCode timeoutでFAIL、round3完了と後続P004／047stepは未確認。旧CLI bridge削減だけでWindows問題は解消していない。Macはclean start/endでoffline22/22suite736/736 PASS、050 e2e-only4/4／registry274意味割当差分0（全250runtime実行ではない）、candidate895file／44common pathのcheckout/archive一致、Node21→最大観測25→21。Lineage1<10を確認しfresh Evaluator分2へ予約、resolverのSol/high、Retry0／Spec0／strong／noneを維持して独立分類へ渡す。Fableは次の限定候補をread-only調査中で実装はしていない。
 - 2026-09-06: reset後Generator1のevent限定修正を受領。通常eventの補助Node段だけを削減し、初回snapshot不能の既存分類／await後変更停止／error消費時分類／Hookと他command不変をmainでも実diff確認。自己確認022 69/69、P004 14/14（actual CLI alias event・JSON優先・missing root・await中env変更拒否）、049 20/20、inventory20 surface/67case、Node21→21、残留0。製品+41/-5／test+37/-1で検証は製品を上回らない。Sol/high fresh起動成功、child metadata未取得でlaunch-unverified。Status awaiting-eval、Retry0／Spec0／Lineage1／strong／noneを維持し、exact candidateのWindows因果runとoffline/candidate検査へ進む。負荷減少はコード上の事実だが旧timeoutの原因確定・Windows解消は未確認。
 - 2026-09-06: Herdr実測w4:p2の既存Claude/Fable（session b1598b34-1e1f-4883-98fd-ad88a01e84ad、表示Fable5.1/high）へread-only設計reviewを依頼し、S1〜S6を受領。CLI全体ではなくGS-009で使うeventだけのasync identity prefetchを対象とし、S1のCLI無音成功禁止／初回snapshot失敗の既存分類維持、S2のprobe error消費時分類、S3の負荷軽減と原因確定の分離、S4のJSON検証順、S5のrequest内寿命と各利用再確認、S6の同期callback中だけrunner切替をGeneratorへ指示。初回snapshot失敗とawait後identity変更は区別し、後者をfallbackで受理しない。新framework／条件変更なし。Fableは実装・repo編集・検査実行なしの補助レビューで正式Evaluator判定ではない。
 - 2026-09-06: 利用者の新しい「よいです」により、上限再resetと、安全確認を保ったWindows Git identity timeoutの限定解消を承認。旧Retry3／Lineage10と独立FAIL履歴は保持し、Retry／Spec-Issue／Lineageを0へreset後、fresh Generatorの実dispatch予約でLineage1へ更新した。host mac.lan／taisei／arm64、実root、branch codex/sprint-052-secretary-voice、HEAD fb2ccee3ddb0e2ad12501829688c25f06227b69c、clean、originを再確認。resolverはhigh risk／current strongからSol/high、Rotate none、resume保持未確認のためfresh。5秒／1MiB、共通process安全境界、actor／round／assert／lock／leaseは変更せず、既存FAIL修正を同じ054で行う。Status active、Next TBDを維持。下流適応とpublication/installは従来のPhase A条件を満たすまで実行しない。
