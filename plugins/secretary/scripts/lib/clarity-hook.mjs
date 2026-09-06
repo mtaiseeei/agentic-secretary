@@ -14,12 +14,12 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { attention, history } from "./clarity-core.mjs";
 import { FilesystemBoundaryError, safeWritePath, workingRoot } from "./safe-fs.mjs";
 import {
   resolveClarityRoot,
   rootPolicyFor,
   withClarityRootObservation,
+  withClarityRootRevalidationScope,
   withClarityRootRequest,
 } from "./clarity-root.mjs";
 
@@ -277,22 +277,24 @@ function ensureRuntimeDirectory(rootValue, sessionId) {
   assertRuntimeDirectoryChain(root, ".clarity");
   for (const relativeDirectory of relativeDirectories) {
     const parentRelative = relativeDirectory.split("/").slice(0, -1).join("/");
-    assertRuntimeDirectoryChain(root, parentRelative);
     const target = join(root, ...relativeDirectory.split("/"));
-    let guarded;
-    try { guarded = safeWritePath(root, relativeDirectory); } catch {
-      return runtimeBoundary("Hook runtime directoryを作成する前に安全境界を確認できませんでした。");
-    }
-    if (guarded !== target || !samePath(root, guarded)) runtimeBoundary("Hook runtime directoryがworking root外へ解決されるため作成しません。");
-    const before = lstatOptional(target);
-    if (!before) {
-      // recursive mkdirは中間symlinkを先に辿るため使わず、検査済みの親から1階層だけ作る。
+    withClarityRootRevalidationScope(root, () => {
       assertRuntimeDirectoryChain(root, parentRelative);
-      try { mkdirSync(target, { recursive: false, mode: 0o700 }); }
-      catch (error) { if (error?.code !== "EEXIST") throw error; }
-    } else if (!before.isDirectory() || before.isSymbolicLink()) {
-      runtimeBoundary("Hook runtime pathに通常directory以外があるため作成しません。");
-    }
+      let guarded;
+      try { guarded = safeWritePath(root, relativeDirectory); } catch {
+        return runtimeBoundary("Hook runtime directoryを作成する前に安全境界を確認できませんでした。");
+      }
+      if (guarded !== target || !samePath(root, guarded)) runtimeBoundary("Hook runtime directoryがworking root外へ解決されるため作成しません。");
+      const before = lstatOptional(target);
+      if (!before) {
+        // recursive mkdirは中間symlinkを先に辿るため使わず、検査済みの親から1階層だけ作る。
+        assertRuntimeDirectoryChain(root, parentRelative);
+        try { mkdirSync(target, { recursive: false, mode: 0o700 }); }
+        catch (error) { if (error?.code !== "EEXIST") throw error; }
+      } else if (!before.isDirectory() || before.isSymbolicLink()) {
+        runtimeBoundary("Hook runtime pathに通常directory以外があるため作成しません。");
+      }
+    });
     // 同時作成またはpath差替えを検出するため、各mkdirの直後にもrootから再検証する。
     assertRuntimeDirectoryChain(root, relativeDirectory);
   }
@@ -345,9 +347,11 @@ function ownedRuntimeRecord(target, eventId) {
 
 function removeCreatedEvent(root, target, eventId, descriptorStat) {
   try {
-    const checked = assertEventTarget(root, dirname(target), eventId, { allowMissing: true });
-    const stat = checked.stat;
-    if (stat && stat.dev === descriptorStat.dev && stat.ino === descriptorStat.ino && stat.isFile() && !stat.isSymbolicLink()) unlinkSync(target);
+    withClarityRootRevalidationScope(root, () => {
+      const checked = assertEventTarget(root, dirname(target), eventId, { allowMissing: true });
+      const stat = checked.stat;
+      if (stat && stat.dev === descriptorStat.dev && stat.ino === descriptorStat.ino && stat.isFile() && !stat.isSymbolicLink()) unlinkSync(target);
+    });
   } catch { /* 元の境界errorを置き換えない。 */ }
 }
 
@@ -380,23 +384,35 @@ function writeRuntimeEventImpl(rootValue, normalized, semantic, options = {}) {
     observedAt: process.env.CLARITY_NOW || new Date().toISOString(),
   };
   options.beforeFileOpen?.({ root, directory, eventsDirectory, eventId, target: join(directory, `${eventId}.json`) });
-  // file open直前にcanonical root、全directory component、最終fileを再検証する。
-  const currentRoot = canonicalRuntimeRoot(root);
-  if (currentRoot !== root) runtimeBoundary("Hook runtime rootが途中で変わったため書き込みません。", "hook-runtime-changed");
-  const checked = assertEventTarget(root, directory, eventId);
-  const target = checked.target;
-  if (checked.stat) return { changed: false, target, record: ownedRuntimeRecord(target, eventId) };
+  const target = join(directory, `${eventId}.json`);
 
   const noFollow = typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0;
   let descriptor = null;
   let descriptorStat = null;
   try {
-    descriptor = openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600);
+    const opened = withClarityRootRevalidationScope(root, () => {
+      const mutationRoot = canonicalRuntimeRoot(root);
+      if (mutationRoot !== root) runtimeBoundary("Hook runtime rootが途中で変わったため書き込みません。", "hook-runtime-changed");
+      const mutationTarget = assertEventTarget(root, directory, eventId);
+      if (mutationTarget.stat) return { collision: mutationTarget.target, descriptor: null };
+      return {
+        collision: null,
+        descriptor: openSync(target, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | noFollow, 0o600),
+      };
+    });
+    if (opened.collision) {
+      const collision = assertEventTarget(root, directory, eventId, { allowMissing: false });
+      return { changed: false, target: collision.target, record: ownedRuntimeRecord(collision.target, eventId) };
+    }
+    descriptor = opened.descriptor;
     descriptorStat = fstatSync(descriptor);
     if (!descriptorStat.isFile()) runtimeBoundary("Hook runtime eventを通常fileとして作成できませんでした。");
-    const afterOpen = assertEventTarget(root, directory, eventId, { allowMissing: false });
-    if (afterOpen.stat.dev !== descriptorStat.dev || afterOpen.stat.ino !== descriptorStat.ino) runtimeBoundary("Hook runtime eventがopen直後に差し替えられたため書き込みません。", "hook-runtime-changed");
-    writeFileSync(descriptor, `${JSON.stringify(record)}\n`, { encoding: "utf8" });
+    withClarityRootRevalidationScope(root, () => {
+      // open mutationのscopeを閉じた後、新しい観測で全componentとinodeを再検証してからwriteする。
+      const afterOpen = assertEventTarget(root, directory, eventId, { allowMissing: false });
+      if (afterOpen.stat.dev !== descriptorStat.dev || afterOpen.stat.ino !== descriptorStat.ino) runtimeBoundary("Hook runtime eventがopen直後に差し替えられたため書き込みません。", "hook-runtime-changed");
+      writeFileSync(descriptor, `${JSON.stringify(record)}\n`, { encoding: "utf8" });
+    });
     return { changed: true, target, record };
   } catch (error) {
     if (error?.code === "EEXIST") {
@@ -430,8 +446,14 @@ function listRuntimeEvents(rootValue, sessionId) {
   return events;
 }
 
-function brief(root) {
-  const report = attention(root, { limit: 3 });
+function requiredSemanticDependency(dependencies, name) {
+  const dependency = dependencies?.[name];
+  if (typeof dependency !== "function") throw new TypeError(`Clarity Hook semantic dependency is required: ${name}`);
+  return dependency;
+}
+
+function brief(root, dependencies) {
+  const report = requiredSemanticDependency(dependencies, "attention")(root, { limit: 3 });
   const rows = (report.items || []).slice(0, 3).map((item, index) => {
     const reason = oneLine((item.reasonLabels || []).join("／"), 180) || "理由を確認してください";
     const evidence = oneLine((item.evidence || []).map((row) => row.summary).join("／"), 180) || "根拠不足";
@@ -442,17 +464,17 @@ function brief(root) {
   return (`Project Clarity Session Brief\n${rows.length ? rows.join("\n") : "今すぐ人間の判断が必要なAttentionはありません。"}${extra}\nHookが未信頼・無効・失敗の場合も、clarity status / attention / checkpoint / doctorを手動実行できます。`).slice(0, MAX_CONTEXT_CHARS);
 }
 
-function hasCheckpointAfter(root, materialEvents) {
+function hasCheckpointAfter(root, materialEvents, dependencies) {
   if (!materialEvents.length) return true;
   let canonical;
-  try { canonical = history(root); } catch { return false; }
+  try { canonical = requiredSemanticDependency(dependencies, "history")(root); } catch { return false; }
   const lastMaterial = materialEvents.map((row) => Date.parse(row.observedAt) || 0).sort((a, b) => b - a)[0] || 0;
   return canonical.events.some((row) => row.type === "checkpoint.recorded" && (Date.parse(row.occurredAt) || 0) >= lastMaterial);
 }
 
-function semanticHookResultImpl(root, normalized) {
+function semanticHookResultImpl(root, normalized, dependencies) {
   if (normalized.event === "SessionStart") {
-    const context = brief(root);
+    const context = brief(root, dependencies);
     writeRuntimeEvent(root, normalized, { kind: normalized.source === "compact" ? "compact-resume" : "session-start" });
     return { action: "context", context };
   }
@@ -466,15 +488,15 @@ function semanticHookResultImpl(root, normalized) {
   if (normalized.event === "PreCompact") {
     const events = listRuntimeEvents(root, normalized.sessionId);
     const material = events.filter((row) => row.kind === "observation" && row.material);
-    const context = brief(root);
-    writeRuntimeEvent(root, normalized, { kind: "pre-compact", pendingCheckpoint: !hasCheckpointAfter(root, material), resumeContextDigest: sha256(context) });
+    const context = brief(root, dependencies);
+    writeRuntimeEvent(root, normalized, { kind: "pre-compact", pendingCheckpoint: !hasCheckpointAfter(root, material, dependencies), resumeContextDigest: sha256(context) });
     return { action: "none" };
   }
   if (normalized.event === "Stop") {
     if (normalized.stopHookActive) return { action: "none" };
     const events = listRuntimeEvents(root, normalized.sessionId);
     const material = events.filter((row) => row.kind === "observation" && row.material);
-    if (!material.length || hasCheckpointAfter(root, material)) return { action: "none" };
+    if (!material.length || hasCheckpointAfter(root, material, dependencies)) return { action: "none" };
     writeRuntimeEvent(root, normalized, { kind: "checkpoint-request" });
     return { action: "continue", reason: "Project Clarity: materialな変更があり、まだcheckpointがありません。clarity checkpointを1回実行し、結果を確認してから終了してください。" };
   }
@@ -493,8 +515,14 @@ export function writeRuntimeEvent(rootValue, normalized, semantic, options = {})
   return withClarityRootObservation(rootValue, (handle) => writeRuntimeEventImpl(handle.root, normalized, semantic, options));
 }
 
-export function semanticHookResult(rootValue, normalized) {
-  return withClarityRootObservation(rootValue, (handle) => semanticHookResultImpl(handle.root, normalized));
+export function hookEventNeedsClarityCore(normalized) {
+  return normalized?.event === "SessionStart"
+    || normalized?.event === "PreCompact"
+    || (normalized?.event === "Stop" && !normalized?.stopHookActive);
+}
+
+export function semanticHookResult(rootValue, normalized, dependencies = {}) {
+  return withClarityRootObservation(rootValue, (handle) => semanticHookResultImpl(handle.root, normalized, dependencies));
 }
 
 export function serializeHookResult(host, event, result) {

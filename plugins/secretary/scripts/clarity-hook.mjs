@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   findClarityHookRootCandidate,
   findClarityRoot,
+  hookEventNeedsClarityCore,
   normalizeHookInput,
   parseHookPayload,
   semanticHookResult,
@@ -23,6 +24,11 @@ try {
   if (!candidate) {
     if (normalized.event === "Stop") process.stdout.write("{}\n");
   } else {
+    // Heavy semantic modules are loaded only for events that use attention or
+    // history, before the async Git probe installs its request-local runner.
+    const semanticDependencies = hookEventNeedsClarityCore(normalized)
+      ? await import("./lib/clarity-core.mjs")
+      : {};
     const execution = await withClarityHookGitProbe(candidate.probeRoots, () => withClarityRootRequest(() => {
       const root = findClarityRoot(normalized.cwd, { reportResolutionFailure: diagnostic });
       if (!root) {
@@ -30,7 +36,7 @@ try {
         return;
       }
       if (process.env.CLARITY_HOOK_FAIL === "1") throw new Error("fixture failure");
-      const semantic = semanticHookResult(root, normalized);
+      const semantic = semanticHookResult(root, normalized, semanticDependencies);
       const output = serializeHookResult(normalized.host, normalized.event, semantic);
       if (output) process.stdout.write(`${JSON.stringify(output)}\n`);
     }), { reportResolutionFailure: diagnostic });

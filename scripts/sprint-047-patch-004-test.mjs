@@ -23,7 +23,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyInit } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
-import { serializeHookFailure } from "../plugins/secretary/scripts/lib/clarity-hook.mjs";
+import { hookEventNeedsClarityCore, serializeHookFailure } from "../plugins/secretary/scripts/lib/clarity-hook.mjs";
 import {
   normalizeClarityFilesystemIdentityForTest,
   resolveClarityRoot,
@@ -251,6 +251,18 @@ try {
   });
 
   await test("HOOK-ALIAS", "Hook records through an ancestor alias but still rejects a root-self symlink", async () => {
+    const hookLibrarySource = readFileSync(join(sourceRoot, "plugins", "secretary", "scripts", "lib", "clarity-hook.mjs"), "utf8");
+    const hookEntrySource = readFileSync(clarityHook, "utf8");
+    assert.equal(hookEventNeedsClarityCore({ event: "PostToolUse" }), false);
+    assert.equal(hookEventNeedsClarityCore({ event: "SessionEnd" }), false);
+    assert.equal(hookEventNeedsClarityCore({ event: "unknown" }), false);
+    assert.equal(hookEventNeedsClarityCore({ event: "SessionStart" }), true);
+    assert.equal(hookEventNeedsClarityCore({ event: "PreCompact" }), true);
+    assert.equal(hookEventNeedsClarityCore({ event: "Stop", stopHookActive: false }), true);
+    assert.equal(hookEventNeedsClarityCore({ event: "Stop", stopHookActive: true }), false);
+    assert.doesNotMatch(hookLibrarySource, /from\s+["']\.\/clarity-core\.mjs["']/u);
+    assert.match(hookEntrySource, /hookEventNeedsClarityCore\(normalized\)[\s\S]*?await import\("\.\/lib\/clarity-core\.mjs"\)/u);
+
     const physicalWorkspace = join(fixtureRoot, "hook-physical-workspace");
     mkdirSync(physicalWorkspace);
     const physicalRepo = makeRepo(join(physicalWorkspace, "repo"));
@@ -310,6 +322,26 @@ try {
     assert.equal(positive.stdout, "");
     assert.equal(positive.stderr, "");
     assert.equal(hookEvents(physicalRepo, positiveSession).length, 1);
+
+    const runLifecycleHook = (hookEventName, extra = {}) => run(process.execPath, [clarityHook], {
+      input: `${JSON.stringify({ host: "codex", hook_event_name: hookEventName, session_id: positiveSession, cwd: aliasRepo, ...extra })}\n`,
+    });
+    const sessionStart = runLifecycleHook("SessionStart", { source: "startup" });
+    assert.equal(sessionStart.status, 0, sessionStart.stderr || sessionStart.stdout);
+    assert.match(JSON.parse(sessionStart.stdout).hookSpecificOutput.additionalContext, /clarity status \/ attention \/ checkpoint \/ doctor/u);
+    const preCompact = runLifecycleHook("PreCompact", { trigger: "auto" });
+    assert.equal(preCompact.status, 0, preCompact.stderr || preCompact.stdout);
+    assert.equal(preCompact.stdout, "");
+    const stop = runLifecycleHook("Stop");
+    assert.equal(stop.status, 0, stop.stderr || stop.stdout);
+    assert.equal(JSON.parse(stop.stdout).decision, "block");
+    const sessionEnd = runLifecycleHook("SessionEnd", { reason: "other" });
+    assert.equal(sessionEnd.status, 0, sessionEnd.stderr || sessionEnd.stdout);
+    assert.equal(sessionEnd.stdout, "");
+    const lifecycleKinds = hookEvents(physicalRepo, positiveSession)
+      .map((name) => JSON.parse(readFileSync(join(physicalRepo, ".clarity", "runtime", "hooks", "events", positiveSession, name), "utf8")).kind)
+      .sort();
+    assert.deepEqual(lifecycleKinds, ["checkpoint-request", "observation", "pre-compact", "session-end-flush", "session-start"]);
 
     const selfRoot = join(fixtureRoot, "hook-root-self-link");
     symlinkSync(physicalRepo, selfRoot, process.platform === "win32" ? "junction" : "dir");

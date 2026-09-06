@@ -279,3 +279,44 @@
 - Windowsが再びtimeoutした場合、今回の限定削減だけで原因解消を断定せず、失敗actor／roundと既存safe diagnosticの範囲で再分類する。greenになるまでの無制限再実行や基準緩和は行わない。
 - 起動方法／テスト対象URL: CLI製品のためWeb起動なし。`node plugins/secretary/scripts/clarity.mjs event <fixture-root> --event-json '<JSON>' --json`。
 - 回帰チェック: Macの安全な限定入口は上記の低並列test／inventory。全Phase Aのoffline／archive／Windows gateはOrchestrator／fresh Evaluatorがexact commitで実行する。
+
+## Windows Hook timeoutへのR1/R2限定修正
+
+**ステータス:** 修正実装完了 - 評価待ち
+
+### 実装内容
+
+- R1として、Hook libraryから`clarity-core.mjs`の静的`attention`／`history` importを外した。actual Hook entryは、Clarity初期化済み候補に対する`SessionStart`／`PreCompact`／継続判定が必要な`Stop`だけでcoreをdynamic importし、実functionを同期`semanticHookResult`へ明示注入する。`PostToolUse`／`SessionEnd`／unknown、disabled、未初期化no-opはcoreを読み込まない。
+- dynamic importはasync Git probeのrunner override、root request scope、root observation、runtime lockより前に完了する。await前candidateは探索用pathだけであり、import後に`withClarityHookGitProbe`がfresh boundary snapshotを取得し、callback内の`findClarityRoot`がrootを再解決する。await前のGit／root identity観測をwriteへ持ち越さない。
+- R2として、Hook runtimeの既存root再検証を`withClarityRootRevalidationScope`へ結線した。directory precheck→単一`mkdir`でscopeを閉じ、既存post-mkdir guardはscope外のfresh観測を維持する。`beforeFileOpen`もscope外のまま、fresh open scopeでcanonical root／全component／final targetを検査して`O_EXCL` open後に閉じ、`fstat`後のfresh write scopeで既存after-open inode検査を行って単一write後に閉じる。directory creation・open・write・cleanup unlinkを1つの大scopeへまとめていない。
+- collisionはopen scope後にfresh target検査とowner／event ID照合を行い、cleanupはdescriptorと同じdevice／inodeの通常fileだけをunlinkする。root／Git config／alias変更検知、`O_NOFOLLOW`、directory component／realpath／ownership検査、他writer非上書きは維持した。
+- R3のprefetch final guard削減とR4の`windowsHide`変更は行っていない。`runExternal()`、`shell:false`、5秒、1 MiB、process-tree cleanup、32 CLI＋32 Hook、3 round、100%、lock 15秒／lease 30秒の条件も変更していない。
+- 既存`HOOK-ALIAS` case内で全5 Hook eventをactual childとして低並列実行し、SessionStart context、PostToolUse observation、PreCompact、Stop checkpoint request、SessionEnd flushを確認した。新case ID、runner、framework、collectorは追加していない。変更bytesに対応する既存collaboration inventory 3 surfaceのdigestだけを更新した。
+
+### 低並列の自己確認
+
+| 確認 | 結果 |
+|---|---|
+| 変更3 JSの`node --check`、`git diff --check` | PASS |
+| `node scripts/sprint-047-patch-004-test.mjs` | 14 PASS / 0 FAIL。actual全5 Hook event、ancestor alias正例、root-self symlink負例、config／root変更拒否、Git probe 1回、timeout 5,000ms、path canary 0 |
+| `bash scripts/sprint-022-regression.sh` | safety 69 PASS / 0 FAIL、wrapper 8 PASS / 0 FAIL。production direct sync process API 0、timeout／max-buffer後の子孫・副作用0、再試行／timer cleanupを維持 |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface / 67 case、marker／digest VALID |
+| `node scripts/sprint-049-test.mjs` | 20 PASS / 0 FAIL、Critical 15、side-effect violation 0 |
+
+- 開始前／終了後のhost Node process数は19／19。自分が起動したserver、browser、watcher、Node子processの残留は0件だった。
+- 本roundの製品codeは`+74/-40`、既存testは`+33/-1`、inventory metadataは`+3/-3`。検証codeは製品codeを上回らず、verification-only roundでもない。
+- Mac禁止のSprint 044／047／048本体、Sprint 050 P005／full／coverage、agentic master／archive／regressionとそれらのwrapper、64 actor stressは実行していない。commit、push、Windows CI、downstream、main、tag、Release、marketplace、installも実行していない。
+
+### 自己評価とEvaluatorへの引き渡し
+
+| 基準 | 自己評価 | 理由 |
+|---|---:|---|
+| 機能完全性 | 3/5 | 指定R1/R2を実装し全5eventを低並列確認したが、決定条件のexact Windows 3 roundは未実行。 |
+| 動作安定性 | 4/5 | 022／P004／049は0 FAIL。Windows Hook 32/32をまだ実証していない。 |
+| エラーハンドリング | 5/5 | 各mutation後のfresh再検証、config／root／alias変更拒否、collision／owned cleanupを維持。 |
+| 回帰なし | 4/5 | 安全な既存低並列回帰はgreenだが、必須Windows回帰未実行のため5/5にしない。 |
+
+- Evaluatorは、Orchestratorが固定するexact candidateでWindows P005／Sprint 047を1回実行し、全3 round各CLI 32／Hook 32、parse／unique／canonical・Hook delta／State rebuild 100%、residue 0、lock wait 15秒未満、lease 30秒未満を確認する。第1 roundやCLI成功だけを全体PASSへ流用せず、P004も同じcandidateで完走を確認する。
+- exact Windows結果が出るまでは、旧run `34024443793`のHook index 18 timeout原因が閉じた、Phase AがPASSした、または下流／publicationへ進めるとは主張しない。再びtimeoutした場合もrerun-to-green、timeout延長、actor／round／assert削減、失敗の握りつぶしを行わず再分類する。
+- 起動方法／テスト対象URL: CLI製品のためWeb起動なし。Hookは`node plugins/secretary/scripts/clarity-hook.mjs`へ既存host event JSONをstdinで渡す。
+- 回帰チェック: Macの限定入口は上表。full offline／candidate archive／exact Windows gateと正式判定はOrchestrator／fresh Evaluatorへ引き渡す。
