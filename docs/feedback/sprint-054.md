@@ -1,8 +1,8 @@
 # Sprint 054 評価結果
 
-**判定:** 不合格（Phase A: 公開 Agentic source 技術 gate。Phase Bは未評価）  
-**分類:** verification-scope-issue  
-**評価対象:** Sprint 054 — candidate `403e552689b23d311e4d9c977e999888577ffc0b` の公開 Agentic source、Windows 因果 run、既存 safe-harbor 回帰  
+**判定:** 不合格（Phase A: 公開 Agentic source 技術 gate。Phase Bは未評価）
+**分類:** verification-scope-issue
+**評価対象:** Sprint 054 — candidate `403e552689b23d311e4d9c977e999888577ffc0b` の公開 Agentic source、Windows 因果 run、既存 safe-harbor 回帰
 **Escalation Recommendation:** none
 
 ## 結論
