@@ -1,6 +1,6 @@
 # Sprint 054 — Project Clarityを含む0.12.0の3版公開とこのMacへの反映
 
-**ステータス:** 公開Agentic版の限定実装完了 - 統合commit／後続評価待ち
+**ステータス:** 公開Agentic版の限定実装と承認済みfixture追随完了 - 再評価待ち
 
 ## 着手範囲
 
@@ -90,3 +90,28 @@
 ## 現在の保留
 
 - archive、Windows CI、下流2版、main統合、tag／GitHub Release、private版の実導入は本限定作業の後続とする。
+
+## Verification-only fixture追随（ユーザー選択1）
+
+- 製品コードの変更は0行。既存の検証script 2ファイルだけを変更した1 roundである（検証script差分 `+49/-8`）。新runner、framework、collector、case削減、期待閾値の緩和は0件。
+- `scripts/sprint-011-regression.sh` は実在するtemplates 5面＋17 Skillsの22 surfaceに数とlabelを合わせた。serializer参照とschema重複検査は維持した。
+- `scripts/sprint-020-adversarial-test.mjs` のfake Gitに、現行`ingestGit()`のroot、branch、remote、fetch対象、commit関係、dirty無し、fast-forward、事後確認の正常応答を追加した。run相関の正式分類 `run-correlation-unconfirmed`／`run-correlation` へ追随し、過去success、`createdAt`欠落／不正／dispatch前、pull 1回のみ、`pull-after-sync`／`retry-same-query`禁止のassertを維持・明示化した。
+
+### 限定再確認
+
+| command | 結果 |
+|---|---|
+| `bash scripts/sprint-011-regression.sh` | 73 PASS / 0 FAIL |
+| `node scripts/sprint-020-adversarial-test.mjs` | 16 PASS / 0 FAIL |
+| `bash scripts/sprint-020-regression.sh` | wrapper 16 PASS / 0 FAIL、内訳020本体 50/0、adversarial 16/0 |
+| `node scripts/sprint-045-test.mjs` | 35 PASS / 0 FAIL、registry missing / duplicate / extraはすべて0 |
+| `node --check scripts/sprint-020-adversarial-test.mjs` / `bash -n scripts/sprint-011-regression.sh` / `git diff --check` | PASS |
+
+- 上記4対象は実行前に内部spawnを確認し、すべて逐次実行した。Macで禁止されたSprint 044／047、64 actor、`agentic-regression.sh`、`agentic-archive-gate.mjs`、Sprint 048 testへの到達は0件。
+- Nodeプロセス数は開始前18〜19、Sprint 045実行中の観測23、終了後18で、開始禁止40／中断60を下回った。自分が起動したserver、browser、watcherは無い。
+- 初回の020再実行でfake Gitのpull後`FETCH_HEAD`固定不足、2回目で旧run error名の不一致を検出した。いずれもfixture内だけで修正し、最終実行は上表のとおりgreen。
+
+### 再評価への引き渡し
+
+- 差分対象は上記2 scriptと本progressのみ。製品source、spec、Sprint契約、state、feedbackは変更していない。
+- Evaluatorは011、020 adversarial／wrapper、045のgreenと、差分が安全入口やnegative assertを迂回していないことを確認する。Phase A全体の再固定・判定とC21／C22の残る証拠確認は独立Evaluator／Orchestrator側の後続とする。

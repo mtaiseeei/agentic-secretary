@@ -5,7 +5,7 @@
 - Current ID: sprint-054
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -112,6 +112,10 @@
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: 承認された011/020の限定fixture修正を受領。製品変更0行、011 73/0、020 adversarial 16/0、020 wrapper 16/0、045 35/0。新runnerやcase削減なし。Status awaiting-evalへ移し、clean candidateを固定してoffline baselineと既存Windows CIを再確認する。検証だけの修正はこの1roundであり、別の検証修正を自動で積み重ねない。
+- 2026-09-06: Claude Code 2.1.232の既存`--plugin-dir`隔離読込（session aea13c89-e343-4653-aa01-0a9f578b0842、tools/MCPなし、設定sourceなし、実my-vault外）でpublic 0.12.0、Clarityを含む17 Skillを登録、SessionStart/Stop Hookはexit0、parser errorなし。実projectのdisabled状態は変更しておらず、実my-vaultでloadedとは扱わない。
+- 2026-09-06: Codex 0.153.4の隔離session 01a074a5-c88c-7612-ac0a-2a629ef44b53で、publicとbyte一致する一時project hooks.jsonが5イベントとして認識され、PostToolUseのsource/command/3秒timeoutを実`/hooks`画面で確認。自身が作成した一時directoryの通常trust確認だけ行い、Hook trustは付与せず未実行を維持、モデルへの依頼なしで終了。既存旧private cache 0.10.3からのcollaborationMarker警告は引き続き表示されたため、全startup警告0や新plugin導入PASSとは扱わない（transient enabled=false指定でも旧cache警告は表示）。正式更新後の新session確認はPhase Bに残す。doctorのexit0もHook動作証拠には採用しない。
+- 2026-09-06: 利用者が「つづけてください。1で」と明示し、verification-scope-issueの選択肢(a)、既存011/020の2 fixture限定修正と再評価を承認した。製品安全入口、assert、case数、閾値は変更せず、新検証基盤は追加しない。開始HEAD42a750854a8f8526e736e87238b1a064e1df0c82、worktree clean、Node18を実測。fresh Generatorはresolverどおりstrong Sol/high、Rotate none、Lineage3<10のため4へ予約、Status active。検証だけの修正1roundとして規模を記録する。Retry/Spec-Issueはverification起因のため0を保持する。
 - 2026-09-06: fresh独立Evaluatorの正式feedbackを受領し、公開source gateはverification-scope-issueとして未PASSを確定。検出された製品bugは0、回帰非greenの主因は011/020の既存fixture不追随。Harness規則により自動Generator/Planner修正ループへ戻さず、利用者に(a)既存fixtureだけ修正して再評価（推奨）、(b)証拠不足を受理、(c)該当検査を今回の必須から外す、の判断を求める。現在は(a)未承認として待機し、Status awaiting-eval、counter 0/0/3を保持する。公開/実導入などPhase B未実施はsourceの欠陥と区別する。
 - 2026-09-06: Windows run34006535891 / job101414668525はexact403e552でSUCCESS。032 16/0（既存15＋CRLF）、051 45/0 win32、Clarity関連全step成功、047 stressはWindows3 round×64 actor、parse/unique/rebuild100%、residue0。mainのoffline masterは22 suite中21 PASS、736 assertion中735 PASS/1 FAILで終了（JSON `/private/tmp/secretary-012-403e552-offline.json`）。011の旧16 Skill/21 surface固定期待が17 Skill/22 surfaceと不一致。独立Evaluatorは020 adversarial fakeGitが051の新しいroot/branch/remote確認を模擬せず、run相関のテスト対象まで到達しない別のverification-infraも確認した。安全入口を弱めず既存fixtureを限定修正する案と、検査を下げて受理するリスクをユーザーへ提示するため、自動Generator差戻しを止める。Retry/Spec-Issue/Lineageは0/0/3を保持し、main/Release/install未実施。
 - 2026-09-06: Evaluatorがsprint-044-test.mjs内部の50/128 concurrent Hook spawnを見落としてMacで実行した。指示違反として新規検査を停止し、結果40/0は安全準拠PASSの証拠に採用しない。開始Node21、直後19、最終15、ピーク未観測。mainもNode15、対象名`sprint-044-test|agentic-s044|clarity-hook|master-release-gate`の残留processなしを確認した。安全制約の緩和や同Macでの再実行はしない。

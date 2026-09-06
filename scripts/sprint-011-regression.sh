@@ -105,8 +105,8 @@ done
 check "active styleの内容依存serializer唯一正本はI1-I3境界を満たす" "serializer_contract_ok '$RULES'"
 check "安全・証拠境界はstyleから分離" \
   "grep -q 'push.*明示的に指示' '$SAFETY_RULES' && grep -q '実コネクタ' '$EVIDENCE_RULES' && grep -q '接続状態.*未確認' '$EVIDENCE_RULES' && ! grep -q '実コネクタの証跡が無い' '$RULES'"
-check "templates/tones/全16スキルは正本参照だけでschema重複0" \
-  "[ '${#REFERENCE_SURFACES[@]}' -eq 21 ] && [ '$reference_bad' -eq 0 ]"
+check "templates/tones/全17スキルは正本参照だけでschema重複0" \
+  "[ '${#REFERENCE_SURFACES[@]}' -eq 22 ] && [ '$reference_bad' -eq 0 ]"
 SCHEMA_OWNER_COUNT="$(grep -Rsl '^- やったこと:' "$PLUGIN/rules" "$PLUGIN/skills" "$PLUGIN/templates" --include='*.md' | wc -l | tr -d ' ')"
 check "現役固定schema所有ファイルは0件" \
   "[ '$SCHEMA_OWNER_COUNT' -eq 0 ]"
