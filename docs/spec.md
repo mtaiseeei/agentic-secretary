@@ -67,6 +67,13 @@ private my-vaultのsourceとoffline回帰をSprint 040で揃え、push／Release
 2026-09-04の追加決定により、Chatwork／Google Chatの安全なGit取り込みは `sprint-051`、
 3つの後続PRを載せるcandidateは `0.12.0` と確定した。`sprint-041`〜`sprint-050` は並行中の
 Project Clarity系譜で予約済みであり、本系譜では再利用しない。
+2026-09-05に、秘書が自分の実行結果を第三者の報告のように話す残存問題を、
+共通rules層の **Secretary Voice** として整える方針を承認した。既定の一人称は「私」。
+秘書自身の名前による自称・名乗りは、初回設定完了・名前への質問・rename直後・同じ会話での別repo初回routingの4場面の直後の許可応答だけに限定する。
+これは音声入出力ではなく、記憶の自動保存やSkill Coachとも別機能である。
+2026-09-05に、安全に取得済みの原本を整理するread-onlyの意味判断・並べ方・提案はLLMに任せ、
+`timeline` / `weekly` / `promotion-status` の整形・診断helperを必須の関所にしない方針を承認した。
+一方、root・symlink・archive・日付・出典・訂正履歴・重複抑止と、書込み・削除・Git・整合性の決定的シームは必ず保つ。
 
 ## ひとことで
 
@@ -99,13 +106,15 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G16 | 既存workspaceも更新後に新規導入相当へ揃える | plugin更新とローカル移行を別段階として示し、previewと別確認後だけidentity、製品所有節、台帳を安全に移行する |
 | G17 | 「覚えて」を一度で安全に完了する | memory scope、hedge分離、append-only訂正、内容冪等性、checkpoint partial、3版inventory |
 | G19 | Actionsの取得結果を安全に取り込む | Chatwork／Google Chatの対象branchを明示し、upstream未設定でもfast-forward可能な結果だけをローカルへ取り込む。分岐・dirty衝突・失敗段階を区別する |
+| G20 | 秘書が自分の言葉で自然に話す | 一人称・名前の使用場面・実行状態に合う言い切りを共通rulesで統一し、人間の実体・感情・体験は捏造しない |
+| G21 | 意味判断はAI、事故防止はシームに分ける | 安全に読める原本の整理・要約・提案はLLMが行い、読取補助を必須化せず、書込み・削除・Git・整合性は決定的シームで守る |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17・G19、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F63・F82 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G17・G19〜G21、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F63・F82〜F84 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -165,6 +174,8 @@ Chatwork／Google ChatのGit取り込みを `sprint-051` と確定した。
 | [sprint-040](sprints/sprint-040.md) | 明示memory依頼のrun-once、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版conversation-core inventory | sprint-039-patch-002 |
 | [sprint-040-patch-001](sprints/sprint-040-patch-001.md) | 3版handoff manifestのpath役割完全化、機械算出した集合照合、candidate再現と下流pre-write gate | sprint-040 |
 | [sprint-051](sprints/sprint-051.md) | Chatwork／Google ChatのGit取り込み: 対象branch明示、安全分類、stage別案内、Actions run発見60秒＋指数backoff、Windows CI | sprint-040-patch-001 |
+| [sprint-052](sprints/sprint-052.md) | Secretary Voice: 秘書主体の自然な話し方、一人称設定、秘書名の使用場面4件、実行状態に忠実な返事 | sprint-051 |
+| [sprint-053](sprints/sprint-053.md) | LLM中心の読み取り・整理・提案と、必須の安全シームの分離 | sprint-052 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

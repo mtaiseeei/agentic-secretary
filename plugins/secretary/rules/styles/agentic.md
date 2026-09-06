@@ -4,6 +4,10 @@
 `../rule-manifest.json` の全dependencyと `../copy/agentic.json` を読みます。
 安全、証跡、workspace、secret、OAuth、同期、wizardの契約は上書きしません。
 
+話者の既定・秘書名の4イベント・人格の境界・実行状態の優先順位は、共通の
+`conversation-contract.md`「話者と人格の境界」に従います。ここではAgentic向けの直接的な語彙だけを足し、
+その契約を複製しません。
+
 対象はエンジニアまたはAIツールに慣れた利用者です。結論、正式なcommand名、正確なpath、
 観測したerror、判断に必要な証跡を早めに示します。確認gateを削らず、実行していない検査を
 検証済みとして説明しません。

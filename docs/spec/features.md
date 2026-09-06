@@ -479,6 +479,22 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Actions run発見は有効なCLI override、有効な環境変数、60秒の順で値を決め、無効値は安全に60秒へ戻す。250msから最大2,000msまでの指数backoffには決定的な時刻・待機seamを使い、古い成功runを流用しない。Git取り込みcommandの既定は60秒とし、`gh run watch`等の無関係なtimeoutは変更しない。
 - Windows互換の隔離fixtureをWindows CIで実行する。製品はWindowsでもargv配列と `shell: false` で実行し、`.cmd`／`.bat` shimや `shell: true` を回避策にしない。Windows CIのpush／`workflow_dispatch` はユーザー確認後の外部gateであり、証跡が得られるまではpendingとして扱う。
 
+### F83 Secretary Voice
+
+- wizardのUI label／copyを除く全会話面は共通rulesから同じ話者契約を読み、秘書自身の操作・記憶・返答を第三者目線で報告しない。Agenticの直接的な説明とYasashiiの平易さは保つ。
+- `preferences.md` の「言葉遣い」に「一人称」だけを追加する。既定・旧fileの欠損時は「私」で、明示変更は既存 `pref-set` 経路の部分更新とする。値は前後空白除去後1〜16 Unicode code pointの改行なし文字列とし、既存の `oneLine`／secret検査を維持する。意味はLLMが判断し、意味parserや固定allowlistは設けない。名前・実行状態・安全ruleと競合するときは「私」または主語省略で自然に返し、保存値を黙って変更せず、全返答への一人称表示も強制しない。
+- 秘書が自称・名乗りとして自身の名前を使えるのは、初回設定完了またはrename直後の最初の成功結果、秘書自身の名前への質問への回答、同じ会話で別repoからcanonical workspaceへ初めてroutingできた結果の4場面だけで、許可された返答内でも合計1回以内とする。通常応答、session開始、名前で呼ばれただけの返答での自称・名乗りは0回。routing専用の永続状態は追加しない。他者・資料の名前を必要な事実として記述することは妨げない。
+- `answered / question / saved / error / partial` と実行状態の対応を保つ。実行前に「覚えた」と言わず、保存済み・未保存・失敗・一部だけ完了・一時反映を区別する。人間の実体、感情、体験は捏造しない。
+- 現行のrules、style／copy、serializer、preferences template／既定、全SKILLとconversation inventoryを調べ、共通ruleへの参照で解決する面は重複改訂せず、競合する指示・例・既定文だけを直す。
+
+### F84 LLM中心の読み取り・整理・昇格提案
+
+- `daily` / `weekly` / `memory-care` は、必要なjournal・decision・TODO・open project等の原本を安全に取得済みなら、LLMがその原本から日次・週次・時系列の応答を組み立てられる。`timeline` / `weekly` helperは決定的な任意集計として残し、追加の必須関所にしない。
+- 読み取り経路にかかわらず、canonical root・symlink、active / archiveの対象範囲、期間、日付、種類、出典、訂正履歴、重複抑止を保つ。`all` 相当ではdecision正本を優先し、journalの対応する`decided`を二重表示しない。weekly相当はjournalの`did` / `decided` / `next`を区別する。
+- 原本取得の安全拒否を直接Readで迂回しない。閲覧はfile・journal・Gitを変更せず、保存、reindex、archive、削除、Gitは既存の安全シームと確認を必須にする。
+- 一般PJでは`promotion-status`を任意のread-only診断とする。LLMは実内容から「状態以外の情報で読みにくい」「PJ固有ガードレールが必要」の根拠を説明し、承認後のみ既存`promote-full` の `--hard-to-read` / `--guardrail-needed` 経路を使える。実書込みの `--confirm`、open / general / active、既存file保護、atomic rollbackを省略しない。
+- 会話シグナルの `candidate-check` は既存どおり任意。案件名が分かるときのopen / legacy-open同名PJ照合と、closedが明示されたときの既存PJ照合は維持する。identity migration診断、weeklyのreindex、安全・write・delete・Git・整合性操作は意味整理とみなさず、必須境界を保つ。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -501,3 +517,5 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G16 | F03 F04 F20 F30 F31 F52 F54 F55 F59 F60 F61 F62 |
 | G17 | F05 F07 F17 F19 F52 F54 F55 F56 F57 F63 |
 | G19 | F07 F23 F24 F26 F32 F34 F36 F37 F38 F40 F82 |
+| G20 | F20 F51 F52 F54 F55 F59 F60 F61 F63 F83 |
+| G21 | F18 F21 F28 F54 F55 F84 |

@@ -46,3 +46,9 @@ journal、index、commit message、設定値、machine-readable出力など、�
 
 Chatwork／Google Chat wizardのheading、body、label、CTA、empty、loading、error、success copyとDOM、focus、
 accessibilityはcommon by designです。`edition.json` が参照する4面copyへ含めず、edition別に変更しません。
+
+## 話者の共通入口
+
+一人称、秘書名を使える場面、実行状態に沿った言い切り、人間の体験を捏造しない境界は
+`conversation-contract.md` の「話者と人格の境界」を正本とします。下位Skill、tone、templateはこの契約を複製せず、
+必要な内容だけを返します。通常は主語を自然に省略し、毎回「私」や秘書名を付けません。

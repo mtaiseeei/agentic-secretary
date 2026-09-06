@@ -113,6 +113,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 44. **pendingの一件束縛**: 保存提案への「はい」、別話題後の「はい」、「はい、ただしX」を行う。同じ話題の了承だけが1件保存、別話題後は古い候補0件、修正付き了承は修正版を同じturnで1件保存し、再確認0件となる。
 45. **topic訂正と内容retry**: 旧topicへ「XではなくY（理由）」を保存し、旧内容byte不変、訂正event 1件を確認する。同じ意味を表記違い・別operation id・再起動後に再依頼してもtopic／decision／journal／commitが0件追加で、否定・条件・確実性が異なる別内容は誤dedupeしない。
 46. **checkpoint partial**: memory本体とjournal成功後のlocal commitを失敗させ、`partial`、保存・journal各1件、commit 0件を確認する。retryは保存・journalを増やさずcommitだけ1件、再retryは全差分0件となる。
+47. **Secretary Voice**: 既定「私」・欠損fallback、前後空白除去後1〜16 Unicode code point・改行なし・既存oneLine／secret検査を満たす明示変更、自身の名前や完了主張になる設定値からの自然なfallback、名前の自称／名乗り許可4応答と禁止代表場面、他者・引用の事実記述、保存成功／未保存／失敗／partial／一時反映、両editionの代表応答を合成会話の全文で確認する。静的markerだけで自然さを合格にしない。
 
 個人化された文面の完全一致はassertしない。設定の読込、許可された分岐、既定へのフォールバック、確認フローを評価する。
 
@@ -138,6 +139,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | C16 | 秘書identity・名前routing・rename | 英語名、stable ID、AI author、managed block、canonical resolver、同名誤routing 0件、分類preview、rollback | **5** |
 | C17 | 既存workspace identity migration | plugin更新との状態分離、read-only診断、製品所有節、台帳、自由記述保持、local checkpoint、完全rollback、冪等性 | **5** |
 | C18 | 明示memory authorization・内容冪等性 | memory scope、hedge分離、pending、append-only訂正、content dedupe、checkpoint partial、3版inventory | **5** |
+| C19 | Secretary Voice | 一人称、秘書名の自称場面、状態に忠実な返事、人間実体の非捏造、edition品質 | **5** |
 
 ## スコアアンカー
 
@@ -236,6 +238,11 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - 5: 明示された低リスクmemory依頼はuser-visible scope `memory`だけで同じturnに1回保存され、decision／topic、file、要約案の再確認0件。request hedgeとcontent hedgeが分離され、伝聞・推量・留保・訂正の意味を反転しない。pendingは一件束縛・別話題失効・修正付き了承の同turn実行を満たす。topic訂正はappend-only。同じ内容は別operation id／再起動後もmemory／journal／commit重複0件。checkpointだけの失敗は`partial`で、retryはcommitだけを完了する。3版それぞれの実内容inventoryに現行markerがあり、旧topic一律確認・exact copy・別turn確認markerが0件。source／offlineとrelease／cache／loaded versionが分離される。
 - 4以下: 明示memory依頼の内部分類確認、content hedgeを理由にした再確認・非保存、推量／伝聞の確定化、pendingの複数候補保持・別話題後実行・修正版再確認、topic上書き、同内容のtopic／decision／journal／commit重複、commit失敗retryでの保存再実行、`partial`の全失敗／全成功表示、inventory対象漏れ、file存在だけのmarker判定、禁止旧marker残存、1版PASSの他版昇格、offline PASSのlive反映済み表示のいずれかが1件でもある。→不合格。
 
+### C19 Secretary Voice【ゼロ許容】
+
+- 5: 既定・欠損時は「私」、有効な明示設定時だけ指定一人称で、秘書自身が直接話す。一人称値は前後空白除去後1〜16 Unicode code pointの改行なしで既存oneLine／secret検査を通り、意味parserや固定allowlistを持たない。自身の名前や完了主張になる文脈では保存値を変えず「私」または自然な主語省略を使い、全返答へ一人称を強制しない。自身の名前による自称・名乗りは、初回設定完了／rename直後の最初の成功結果、名前質問への回答、同じ会話で最初に成功したcanonical routing結果だけで合計1回以内、通常応答・session開始・名前で呼ばれただけの場合は0回である。routing用の永続状態を増やさず、他者・資料の名前は必要な事実として記述できる。保存等の状態を実行後の事実どおりに区別し、人間の実体・感情・体験を捏造しない。AgenticとYasashiiで意味を共通にし、版固有の直接さ・平易さを保つ。wizard UI label／copyは不変である。
+- 4以下: 秘書名で第三者的に自己報告する、許可外または許可応答後に自称・名乗りする、同じ会話のroutingで反復して名乗る、routing用の永続状態を増やす、一人称を口調・名前・役割から推測する、一人称の長さ・改行・既存secret検査を破る、設定した自身の名前や完了主張を語り手として反復する、設定値を黙って書き換える、全返答へ一人称を強制する、名前未設定で文が欠ける、他者・資料の名前まで不当に伏せる、未実行・未保存・失敗・partial・一時反映を全完了として語る、人間の実体・感情・体験を事実化する、wizard UI label／copyを変更する、または静的markerだけで自然さを合格にする事例が1件でもある。→不合格。
+
 ## Sprint 039の検証方法（safe harbor）
 
 1. 合成HOMEでCodex AGENTS通常／override／両方、Claude CLAUDE、空file、既存内容、既存・重複managed block、利用者編集、permission失敗を操作し、対象選択、前後digest、rollback、再実行差分0件を記録する。
@@ -305,6 +312,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 039-patch-001 | renameの所有path限定local Git checkpoint、commit failure injection、workspace／user-scope／Git完全rollback、push 0件、formal inventory維持、PASS後だけの固定下流handoff |
 | 039-patch-002 | v0.10.0既存workspace fixture、更新後new-session handoff、identity／AGENTS／CLAUDE／台帳の完全移行、自由記述保持、所有checkpoint、全failure rollback、rerun 0、0.10.1固定下流handoff |
 | 040 | 明示memory依頼のrun-once、request／content hedge分離、memory scopeの内部分類非確認、pending一件束縛、topic append-only訂正、content dedupe、checkpoint partial／commit-only retry、3版conversation-core inventory、offline-only検証 |
+| 052 | 既定／欠損／制約内の明示一人称、名前・完了主張との競合fallback、イベント直後の許可4応答と通常0回、同じ会話のrouting一回性、他者・資料名の事実記述、状態に忠実な返事、人間実体の非捏造、両editionの代表会話全文、wizard UI copy不変、関連する小さい回帰 |
+| 053 | 安全に取得済み原本のLLM整理、timeline／weekly／promotion-statusの任意化、日付・出典・訂正・重複抑止、フル昇格の理由と承認、保存・削除・Git・整合性シーム不変、既010／012／015とinventory／Voiceの小さい回帰 |
 
 ## 差し戻し分類
 
@@ -314,6 +323,8 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 
 ## 更新履歴
 
+- 2026-09-05: Sprint 053で既存の採点軸・閾値・証拠形式は増やさず、読取補助を必須関所にしない体験と、安全・書込み・整合性境界の不変を既存回帰と3つの意味シナリオで評価する。新runner、matrix、verification frameworkは合格条件にしない。
+- 2026-09-05: Sprint 052としてC19と検証方法47を追加。既定「私」と最小の一人称設定、秘書名による自称・名乗りの限定、状態に忠実な返事、人間の実体・感情・体験を捏造しない境界を、両editionの合成会話全文と小さい関連回帰で評価する。実downstream／host install／releaseは必須にしない。
 - 2026-08-25: Sprint 040としてC18と検証方法46を追加。明示低リスクmemory依頼をuser-visible scope `memory`だけで一度実行し、request hedgeとcontent hedge、pending一件束縛、append-only訂正、内容冪等性、checkpoint partial、3版の実内容inventoryをゼロ許容で評価する。source／offline regressionとrelease／cache／新session確認は別phaseとする。
 - 2026-08-14: Sprint 039 Patch 002としてC17とsafe harborを追加。公開済み0.10.0のplugin更新だけでは既存workspaceが新規導入相当にならない欠陥を、read-only診断、preview、別確認、製品所有identity面のatomic migration、所有path限定local checkpoint、workspace／Git rollback、rerun 0で評価する。0.10.1はAgentic→Yasashii／private固定handoff→3版PASS→release／Mac mini同期の順とする。
 - 2026-08-03: Sprint 038 Patch 001のHarness互換参照更新に合わせ、公開済み0.9.0を履歴保護しながら0.9.1を現在patch candidateとする。edition metadataを正本にbuild・README・回帰・online検査のHarness情報を照合し、Harness本体・custom agent機構の非同梱と対象外系統の無変更を評価対象にした。

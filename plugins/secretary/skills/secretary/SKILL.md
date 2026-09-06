@@ -73,6 +73,11 @@ canonical workspace rootで次を実行する。
 
 ユーザーの自然な言い回しから、やりたいことを推測し、必要な機能スキルだけを段階ロードする。
 
+日次・週次・timeline・プロジェクト昇格のread-only整理では、canonical rootから必要な原本と対象範囲が安全に取得済みなら、
+LLMがその内容を問いに合わせて整理してよい。`timeline` / `weekly` / `promotion-status` は、期間抽出・大量記録・再現可能な診断が
+有用な場合の任意helperであり、安全性を再証明するためだけに必須化しない。安全境界で拒否された対象は直接Readで迂回せず停止する。
+保存・削除・reindex・Git・昇格の書込みは、各Skillの既存helper、確認、rollbackの決定的シームから外さない。
+
 | こう言われたら | やりたいこと | 段階ロード先 |
 |---|---|---|
 | 「覚えて」「記憶して」「決めた」「案件メモに残して」「消して」「振り返って」「前回の続き」 | 記憶ケア（memory-care） | `${SECRETARY_PLUGIN_ROOT}/skills/memory-care/SKILL.md` |

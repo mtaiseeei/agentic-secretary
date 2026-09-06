@@ -188,6 +188,20 @@ check "pref-setは対象行以外をbyte保持" "cmp -s '$WORK/before-without-ta
 check "pref-setは手書き行を保持" "grep -q '手書きメモ: この行は保持する' '$PREF'"
 check "pref-setだけではjournalへ書かない" "[ \"\$(journal_lines '$SEC')\" -eq '$J0' ]"
 
+pref_first_person(){ CC_SECRETARY_NOW=2026-07-16T10:00 bash "$TOOLS" pref-set "$1" "言葉遣い" "一人称" "$2" >/dev/null 2>&1; }
+pref_first_person "$SEC" "  ぼく  "
+check "一人称は前後空白を除いて保存" "grep -q '^- 一人称: ぼく$' '$PREF'"
+pref_first_person "$SEC" "私"
+check "一人称のUnicode 1 code pointを保存" "grep -q '^- 一人称: 私$' '$PREF'"
+FP16="😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"; pref_first_person "$SEC" "$FP16"
+check "一人称のUnicode 16 code pointを保存" "grep -Fqx -- '- 一人称: $FP16' '$PREF'"
+cp "$PREF" "$WORK/first-person-reject-before.md"
+FP17="😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"; pref_first_person "$SEC" "$FP17"; FP17_RC=$?
+FP_NEWLINE=$'一行目\n二行目'; pref_first_person "$SEC" "$FP_NEWLINE"; FP_NEWLINE_RC=$?
+pref_first_person "$SEC" "token: leaked"; FP_SECRET_RC=$?
+check "一人称の17 code point・改行・secretを拒否" "[ '$FP17_RC' -eq 2 ] && [ '$FP_NEWLINE_RC' -eq 3 ] && [ '$FP_SECRET_RC' -eq 3 ]"
+check "一人称の拒否はpreferencesをbyte保持" "cmp -s '$WORK/first-person-reject-before.md' '$PREF'"
+
 cp "$PREF" "$WORK/note-before.md"
 SIZE_BEFORE="$(wc -c < "$PREF" | tr -d ' ')"
 bash "$TOOLS" pref-note-add "$SEC" "説明は結論から伝える" >/dev/null 2>&1
@@ -236,7 +250,7 @@ check "キャンセル相当の確認ターンはcommit副作用0" "[ \"\$(git -
 MISSING="$WORK/missing/secretary"; materialize "$MISSING" "未設定" "みじかく"
 rm "$MISSING/memory/preferences.md"
 bash "$TOOLS" pref-set "$MISSING" "基本" "お仕事・役割" "営業" >/dev/null 2>&1
-check "preferences欠落時はv2既定を安全に再生成" "grep -q '^- 口調: 丁寧（標準）$' '$MISSING/memory/preferences.md' && grep -q '^- 報告の詳しさ: みじかく$' '$MISSING/memory/preferences.md'"
+check "preferences欠落時はv2既定を安全に再生成" "grep -q '^- 一人称: 私$' '$MISSING/memory/preferences.md' && grep -q '^- 口調: 丁寧（標準）$' '$MISSING/memory/preferences.md' && grep -q '^- 報告の詳しさ: みじかく$' '$MISSING/memory/preferences.md'"
 check "欠落時も指定した役割だけ反映" "grep -q '^- お仕事・役割: 営業$' '$MISSING/memory/preferences.md'"
 
 PARTIAL="$WORK/partial/secretary"; materialize "$PARTIAL" "未設定" "みじかく"

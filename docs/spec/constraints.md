@@ -85,7 +85,7 @@
 
 1. 日付を使う処理は `CC_SECRETARY_NOW` で時刻を注入でき、未指定時だけ現在時刻を使う。
 2. 回帰では固定時刻を与え、ファイル名・日付境界・並び順を決定的に検証する。ロケール依存の曜日表示はしない。
-3. `timeline` はLLMを介さず、同一入力から同一Markdownを返す。
+3. `timeline` / `weekly` helper自体はLLMを介さず、同一入力から同一Markdownを返す。helperの実行やその整形結果の原文提示を、安全に取得済みの原本をLLMが整理するための必須関所にしない。
 4. reindex が200行を超える場合は、既存の終了コード契約 0/2/3 を壊さず、`exit 0` と stderr 警告で退避提案へつなぐ。
 
 ## 7. 配布構成
@@ -412,3 +412,21 @@
 9. inventoryは少なくとも会話rule／copy、`memory-care`、`secretary`、`settings`、`daily`、`projects`、workspace templates、runtime classifier、memory保存シーム、golden fixture、Sprint 010を含む現役回帰を対象とする。topic保存前の一律確認、exact copy、明示memory依頼の別turn確認を表す旧契約を、言い換え・別surfaceを含めて負検査する。
 10. Agentic、Yasashii、private my-vaultのsourceは、各版固有の文体・Notion／vault routing・repo-owned docsを保ちながら同じauthorization、安全分類、内容冪等性を持つ。共通caseは実内容markerとoffline file fixtureで3版を別々に検査し、1版のPASSを他版へ昇格しない。
 11. Sprint 040ではsourceとoffline regressionまでを完了範囲とする。push、tag、GitHub Release、marketplace、installed cache、利用者workspace、Mac mini、release後の新session／loaded version確認は別phaseであり、offline PASSをlive反映済みと表示しない。
+
+## 25. Secretary Voice境界
+
+1. 秘書は既定の一人称「私」、または `preferences.md` の「言葉遣い / 一人称」に利用者が明示した値で自然に話す。設定値は前後空白除去後1〜16 Unicode code pointの改行なし文字列とし、既存の `oneLine`／secret検査を通す。一人称としての意味はLLMが文脈で判断し、意味parserや固定allowlistを追加しない。欠損は「私」に戻し、口調・秘書名・役割から推測しない。これ以外の人格設定を増やさない。
+2. 秘書が自称・名乗りとして自身の名前を使えるのは、初回設定完了またはrenameの直後に返す最初の成功結果、秘書自身の名前への質問に対する回答、同じ会話で別repoからcanonical workspaceへ初めてroutingできた結果の4場面に限り、その許可された返答内でも合計1回以内とする。通常応答、session開始、名前で呼ばれただけの返答での自称・名乗りは0回。routingを理由に新しい永続状態を追加せず、名前未設定でも自然な返答を維持する。
+3. 同名の人間・顧客・取引先・author・引用・コード・file本文はroutingまたは名乗りの根拠にしない。この制約は、他者や資料の名前を必要な事実として記述することを禁じない。曖昧時の確認前副作用0件を維持する。
+4. 名前、実行状態、安全の各ruleは一人称設定より優先する。設定値が秘書自身の名前または完了を主張する句として働く文脈では、その値を語り手として反復せず、「私」へ戻すか主語を自然に省く。設定自体は黙って書き換えず、全返答への一人称表示も強制しない。実行前の完了、未保存の保存済み、失敗の成功、partialの全完了を主張せず、一時反映を継続記憶と呼ばない。安全確認、memory authorization、意味保存、副作用回数は不変とする。
+5. 軽い人格は一貫した話者と口調の範囲とし、人間の身体、日常生活、感情、体験、家族・友人等の実在を捏造しない。
+
+## 26. LLMに任せる読み取りと必須シームの境界
+
+1. 日次・週次・timelineの意味整理、重要度、並べ方、要約、一般PJのフル昇格の提案理由はLLMが判断できる。`timeline` / `weekly` / `promotion-status` は便利な任意補助であり、原本が安全に取得済みの場合の必須通過手順にしない。
+2. 安全に取得済みとは、canonical workspaceの実体root、symlink境界、許可されたactive / archive範囲を確認し、利用者が求めた期間・種類を十分かつ現時点で覆う原本を正当な読取経路で得ている状態を指す。出典と対象範囲がすでに確立しているのに、別helperで安全性を再証明させない。部分取得や過去の要約を週全体の網羅、0件、最新状態と言い切らない。安全シームが拒否した対象は停止し、直接Readで迂回しない。新しい安全attestation、checklist file、全root scanは要求しない。
+3. どの読取経路でも、期間、日付、種類、本文の意味、出典、訂正・変更履歴を失わない。`all` 相当はdecision正本を優先し、同じ決定のjournal `decided` を二重計上しない。weekly相当はjournalの `did` / `decided` / `next` を混ぜない。
+4. 読み取りと提案だけでfile、journal、索引、Git、project構成を変更しない。保存、reindex、archive、削除、Git、一般PJのフル昇格は既存の決定的シームと必要な明示確認を使う。
+5. `promotion-status` を省略しても、LLMは実内容に基づき「状態以外の情報で読みにくい」または「PJ固有のガードレールが必要」を理由として提案できる。承認後の実行は既存 `promote-full` へ `--hard-to-read` / `--guardrail-needed` を正直に渡し、`--confirm`、open / general / active検査、既存file保護、atomic rollbackを必須にする。
+6. 会話シグナルの `candidate-check` は既存どおり任意だが、案件名が分かるときのopen / legacy-open同名PJ照合と、closedが明示されたときの既存PJ照合は維持する。identity migration診断、weeklyの `reindex`、その他の安全・write・delete・Git・整合性操作は意味だけの補助とみなさず、省略しない。
+7. 本境界の実装は競合するSkill指示の最小改訂に留め、scriptの一括削除、別framework、意味parser、フローを固定する新ランナーを追加しない。

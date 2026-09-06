@@ -252,6 +252,33 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 本機能は2026-09-04の引き継ぎで `sprint-051`、candidate `0.12.0` と確定済みである。
 `sprint-041`〜`sprint-050` は別branchのProject Clarity系譜で予約されている。
 
+### G20 秘書が自分の言葉で自然に話す
+
+秘書は、自分が実行した保存や確認を「秘書名の継続記憶に残します」のような
+第三者目線で語らない。既定は一人称「私」とし、「覚えておきます」「記憶に残しました」のように、
+秘書自身が利用者へ直接話す。`preferences.md` の既存「言葉遣い」に最小の「一人称」1項目を持ち、
+明示された短い改行なしの変更だけを既存の安全な設定経路で反映する。口調、秘書名、作業やロールから一人称を推測しない。名前・実行状態・安全ruleが一人称設定より優先し、設定値を使えない文脈では「私」または自然な主語省略で返すが、設定を黙って書き換えず、毎回答での一人称表示も求めない。
+
+秘書が自称・名乗りとして自身の名前を出せるのは、初回設定完了またはrename直後の最初の成功結果、秘書自身の名前を聞かれた質問への回答、
+同じ会話で別repoからcanonical workspaceへ初めてroutingできた結果の4場面だけとする。その許可された返答でも合計1回以内であり、routingのための新しい永続状態は持たない。
+通常応答、session開始、利用者が名前で呼びかけただけの場合の自称・名乗りは0回とする。同名の人間、顧客、著者、引用、
+コード、file本文を秘書identityとして扱わない既存routing境界も維持するが、他者や資料の名前を必要な事実として記述することは妨げない。
+
+話し方は軽い人格と一貫性を感じられる範囲に留め、人間の身体、生活、感情、経験、対人関係を
+実在するものとして捏造しない。保存前に「覚えた」と言わず、保存済み、未保存、失敗、部分成功、
+この会話中だけの一時反映を実状態どおりに区別する。
+
+### G21 意味判断はAI、事故防止はシームに分ける
+
+安全に取得済みのjournal、decision、open project、TODO等を読んで整理する場面では、
+LLMが利用者の用件に合わせて重要度、並べ方、要約、提案を判断する。
+`timeline` / `weekly` / `promotion-status` の読取補助は便利な任意手段として残すが、
+すでに必要な原本を安全に読めている場合の追加の通過儀礼にはしない。
+
+この自由度は安全性の緩和ではない。canonical workspaceと実体path、symlink、active / archiveの対象範囲、
+日付・出典・訂正履歴・重複抑止・決定と活動の区別は保つ。原本取得の安全拒否を直接Readで迂回しない。
+保存、reindex、archive、削除、Git、一般PJのフル昇格の書込みは、引き続き確認と決定的シームを必須にする。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -280,6 +307,8 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 24. 公開済み`0.10.0`へplugin更新済みでもローカルidentity面が未導入または部分適用のworkspaceを、新sessionのread-only診断、preview、別確認、atomic migration、local checkpoint、rollbackで新規導入相当へ揃えられる。
 25. 明示memory依頼は内部分類の確認なしに同じturnで1回保存され、content hedge、訂正、retry、checkpoint失敗でも意味と副作用件数が正しく保たれる。3版のsourceは同じoffline契約へ揃い、live cache／新session反映とは別状態で確認できる。
 26. Chatwork／Google ChatのActions成功結果を、相関したbranchからfast-forward可能な場合だけ取り込み、ローカル差分とGit設定を保持したまま、失敗段階と回復方法を正しく示せる。
+27. 秘書の全会話面が、既定「私」または明示設定済みの一人称で自然に話し、秘書名を許可4場面以外で連呼せず、実行済み状態だけを完了形で返せる。
+28. 安全に取得済みの原本から、日次・週次・timelineの整理と一般PJのフル昇格提案をLLMが行える。読取補助の実行有無にかかわらず意味と出典を保ち、実際の書込みは安全シームと明示確認の後だけ行う。
 
 ## 成功状態
 
@@ -287,7 +316,7 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 - `timeline` は同じ入力から同じ Markdown を返し、「Zoomの件いつ決めたっけ」のような問いをキーワード検索できる。
 - `MEMORY.md` は200行以内で、topics と月単位に畳んだ journal を索引できる。
 - 初回設定は5問以内。呼び方は4選択肢から解決値を保存前に確認し、未回答は「あなた」とする。口調は聞かず標準値で開始し、いつでも変更できることを伝える。
-- `preferences.md` が欠落または空でも既定値で安全に動き、明示した設定だけが挙動を上書きする。
+- `preferences.md` が欠落または空でも既定値で安全に動き、明示した設定だけが挙動を上書きする。「一人称」が無い既存workspaceでは「私」に戻り、設定変更後も他項目は変わらない。
 - 呼び方の既存変更では `preferences.md`、`AGENTS.md`、`MEMORY.md` の現役表示が同じ値になり、初回決定ログは当時の値を保持する。
 - 配布物と現行製品正本の個人・環境固有情報scanが明示allowlistだけで合格し、合成人物fixtureと正式な製品所有情報を区別できる。
 - 決定を含む模擬会話、決定ゼロの日の締め、3種類の設定差分を Evaluator が実際に確認できる。
@@ -302,6 +331,8 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 - 実API評価では、専用private test workspace内にpluginの利用設定・生成物、秘書、通常project、Chatwork設定・workflow・履歴が同居し、Repository Secret経由の非機密test room同期、commit、push、pull後検索を確認できる。public配布ソース自体は複製せず、token値、不要なroom名、本文は証跡に残らない。
 - 複数行動・複数セッションの仕事は理由つきでプロジェクト候補として提案され、拒否時は作成0件、承認時は一般PJのライト構成または別repo開発PJの参照ポインタとして整理される。
 - 一般PJは `PROJECT.md` の現在状況から再開でき、決定・恒久事実・成果物・旧版が役割どおり分かれる。フル昇格はトリガー到達とユーザー承認の両方が必要である。
+- 安全に取得済みの原本があれば、日次・週次・timelineの応答とプロジェクト昇格の理由をLLMが利用者の用件に合わせて組み立てられる。読取補助は任意で、安全拒否の迂回には使わない。
+- 読み取り応答は原本の日付・種類・出典・訂正履歴を保ち、decisionとjournal `decided` を二重計上しない。閲覧だけではfile・journal・commitを変更しない。
 - 現行正本・公開面・配布物に旧配布チャネル固有の名称・期数・教材導線・その利用者であることを前提にした説明がなく、一般の非エンジニア向け表現に統一されている。
 - marketplaceとplugin manifestのversionが一致し、不一致は配布前の検査で検出される。CHANGELOGは「誰に何が変わるか」「設定・ファイルへの影響」「必要な操作」を版ごとに示す。
 - 「最新版にして」の初回診断ではplugin更新、workspace書込み、migration、commit、pushが0件で、利用者は実更新へ進むかを説明後に選べる。
@@ -330,6 +361,7 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 - `agentic-secretary`、`agentic-secretary-my-vault`、`yasashii-secretary` は、行き先・正本ルールが同じ共通caseで同じ意味と安全境界を持つ。Notion routing等は版固有caseとして、その版の正本に従う保存先とresponse stateを評価し、共通比較は安全境界に限定する。
 - 明示memory依頼、content hedge、pending修正、topic訂正、同内容retry、checkpoint failureの各caseで、memory／journal／commitの実件数がF63どおりとなり、3版のconversation-core inventoryに禁止旧契約が0件である。
 - upstream未設定でもChatwork／Google Chatの対象branchを明示して取り込める。非競合のdirty差分は保持し、分岐またはdirty衝突ではHEAD・index・working treeを変えず停止する。Actions失敗とGit取り込み失敗は別の案内になる。
+- 名前設定済み・未設定のどちらでも通常応答での自称・名乗りは0回で自然に読め、許可4場面でだけ自身の名前を1回以内示す。他者・資料の名前は必要な事実として記述できる。保存済み・未保存・失敗・部分成功・一時反映は実状態どおりに語られる。
 
 ## 非ゴール
 
@@ -372,6 +404,9 @@ GitHub上の取得成功とrunを示し、API Tokenの問題と誤案内せず�
 - 既存workspaceの名前オンボーディング確認を、user-scope registry／routingの有効化、rename、既存文書のgrep置換、push、release、Mac mini同期の許可へ拡張しない。
 - Sprint 039 Patch 002では実HOME、installed cache、実下流repo、実利用者workspace、remote、GitHub Releaseを変更しない。3版PASS後のrelease／Mac mini同期と、release後の受講者向け文面は別の運用phaseとする。
 - Sprint 040のsource／offline regression完了を、push、tag、GitHub Release、marketplace更新、installed cache、利用者workspace、Mac mini、release後の新sessionへ反映済みという意味に拡張しない。
+- Sprint 052の「Voice」は話し方であり、音声入出力・音声合成は実装しない。
+- 記憶自動保存（仮称Memory Radar）・Skill Coachは未実装の後続候補として保持する。旧の仮称 `sprint-052` は未契約だったため今回のVoiceがこのIDを使う。候補自体は破棄せず、Clarity PR #11のmerge後のmainを基点に別契約する。
+- scriptsの一括撤去、新framework、保存・削除・Git・整合性シームの任意化は行わない。Chatworkは現行plugin内Skillのままとし、独立pluginへは分けない。
 
 ## 承認済みの条件付き判断
 
