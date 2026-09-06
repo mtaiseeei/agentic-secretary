@@ -5,7 +5,7 @@
 - Current ID: sprint-054
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 4
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -108,10 +108,12 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: fresh Evaluator4のexact767a7f3公開Phase A PASSを採用。mainはfeedback全差分、独立P00414/14・02269/69、因果Windows全green、未変更面carryの範囲を確認し、未解消finding0。Sol/high child metadata未取得のためlaunch-unverified。供給するpublic source SHAは767a7f3ecb15c0ffe6d2d8f71529c74bf671c154、Git tree30b7619e7e779242dd263032c82bccd6ae91eaf1、配布tree SHA25655f555a28c89a7348db6c499e90ee93dfe8693a572075e362caa772c79b95dfc、44common digest5f7db0b20d1126151b3dc763589827f1c6a66ce10bbed209793f18123e72aabfに固定する。公開版のRetry1/Spec0/Lineage4/strong/noneを保持し、Status activeでprivate051、続いてYasashii044の版別適応・独立評価へ進む。3版Phase A未完了のためmain/tag/Release/installは未実施で、054全体doneにはしない。
+- 2026-09-06: exact candidate 767a7f3ecb15c0ffe6d2d8f71529c74bf671c154を1回のWindows run34025802596/job101466428249で検証し全step success。P00510/10、P00414/14、04725/25、3round各64exit0・CLI32/Hook32・parse/unique/rebuild100%・residue0、最大lock wait7351ms/15000・lease1534ms/30000。Macは開始終了cleanでoffline22/22suite736/736assertion PASS、050 e2e-only4/4・registry274意味/割当差分0（全250runtime実行ではない）、candidate895file/44common一致。Node開始19・最大観測23。Claude隔離session15bcbbe2-28b9-4bb4-bc51-dc9dc93a7c55でpublic0.12.0/17Skill・SessionStart/Stop exit0、parser warning0を観測。installed privateとdisabled Claude projectは未変更。Lineage3<10を確認しfresh Evaluator分4へ予約、resolver指定Sol/high、Retry1/Spec0/strong/none保持。これは独立判定前の観測であり下流適応/main/tag/Release/installはまだ開始しない。
 - 2026-09-06: reset後Generator3のR1/R2を受領し、mainでscopeが各mkdir/open/write/unlink直後に閉じ、open後のfresh write scopeで既存inode検査を行う差分を確認。不要core import回避は探索候補のみawaitを越え、identityはimport後のfresh snapshot／root再解決へ束縛する。自己確認はP00414/14（全5actual Hook event）、022 safety69/69・wrapper8/8、04920/20、inventory20 surface/67case、Node19→19・残留0。製品+74/-40／test+33/-1、既存inventory3digestのみ追随。Sol/high fresh起動成功・child metadata未取得でlaunch-unverified。Status awaiting-eval、Retry1／Spec0／Lineage3／strong／noneを保持し、固定candidateのWindows/offline/candidate確認へ進む。Herdr Fable側に未送信draftが見えたため追加promptは送らず、既存設計reviewを保持した。安全条件変更・R3/R4・下流／publication/installは実行していない。
 - 2026-09-06: reset後Evaluator2がea2d971の公開Phase Aを正式FAIL／implementation-issue、strong推薦と判定。独立確認したWindows round2のCLI32成功／Hook31（index18 timeout）を根拠とし、whole-job changed:falseやround2/3の未出力metricを成功扱いしない。Retryを1へ更新、Spec0／strong／noneを保持。Lineage2<10を確認しfresh Generator分3へ予約、resolverのSol/highでHook負荷削減R1/R2を限定実装へ渡す。R1はPostToolUse等の未使用core読込を避け、SessionStart/PreCompact/Stopの実動作を維持。R2は既存mutation単位scopeだけを再利用し、各mutation後の再検証は省かない。R3/R4、安全基準変更、runner増設は対象外。前Evaluatorの起動は成功したがchild metadata未取得でlaunch-unverified。Status active、publication/install保留を維持する。
 - 2026-09-06: ea2d971のWindows round2 Hook timeoutをFableへread-only共有し、候補R1（PostToolUse等で未使用のcore静的importを避ける）、R2（Hookに既存mutation単位revalidation scopeを適用）、R3（重複snapshot削減）、R4（windowsHide）を受領。main実コード確認ではR1とR2に具体的な重複がある。R2の「write全体を1scope」は採用せず、既存契約どおり各mkdir／open／write／unlinkの直後にscopeを閉じ、post-write検証は新しい観測で行う必要がある。R3はmulti-root境界、R4は全外部processへの影響と効果未確認があるため今回候補から外す。正式Evaluator判定前に実装せず、条件緩和・sleep/jitter・新runnerへ拡大しない。

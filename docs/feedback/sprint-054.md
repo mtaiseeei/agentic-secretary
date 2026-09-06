@@ -1,4 +1,4 @@
-> **現行評価:** candidate `ea2d97147d35bebfa66e005747aa03aad5378bf0` のPhase A再評価は、本ファイル末尾の「Sprint 054 Phase A 再評価 — exact `ea2d971`（現行）」を正本とする。以前のcandidate評価は履歴として保持する。
+> **現行評価:** candidate `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154` の公開Agentic Phase A再評価は、本ファイル末尾の「Sprint 054 Phase A 再評価 — exact `767a7f3`（現行）」を正本とする。以前のcandidate評価は履歴として保持する。
 
 # Sprint 054 評価結果（履歴: candidate `403e552…`）
 
@@ -440,7 +440,7 @@ Sprint 048割当、他249件は維持されている。現在の意味digestは
 
 ---
 
-## candidate `ea2d971` 評価詳細（現行判定の根拠）
+## candidate `ea2d971` 評価詳細（履歴）
 
 **判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
 
@@ -756,7 +756,7 @@ Orchestratorとユーザーの判断に委ねる。
 
 ---
 
-# Sprint 054 Phase A 再評価 — exact `ea2d971`（現行）
+# Sprint 054 Phase A 再評価 — exact `ea2d971`（履歴）
 
 **判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
 
@@ -764,8 +764,8 @@ Orchestratorとユーザーの判断に委ねる。
 
 **Escalation Recommendation:** strong
 
-現行判定の全スコア、candidate parity、変更面、Windows metric、Finding、Generator指示、未評価項目、自己レビューは、
-本ファイル内の「candidate `ea2d971` 評価詳細（現行判定の根拠）」を一体の証跡として参照する。
+当時の全スコア、candidate parity、変更面、Windows metric、Finding、Generator指示、未評価項目、自己レビューは、
+本ファイル内の「candidate `ea2d971` 評価詳細（履歴）」を一体の証跡として参照する。
 
 決定的なFAILはexact Windows run `34024443793`のSprint 047 `GS-009`第2 roundである。全64 childはexit 0、
 CLI event 32件は成立したが、Hook runtime eventが31/32となり、欠落index 18は`status: degraded`、
@@ -776,3 +776,165 @@ C5違反ではないが、C1、C3、C6、C21、C24、C26は閾値未達である
 今回のCLI専用prefetchはCLI側負荷を減らしたがHook wrapperは未変更であり、原因解消とは判定しない。
 第2 roundの完全metric、第3 round、後続Windows P004／047、Phase Bは未評価のまま保持する。
 `verification-scope-issue`へ移す両立不能証拠はなく、Phase A FAIL中は下流・公開・導入へ進めない。
+
+---
+
+# Sprint 054 Phase A 再評価 — exact `767a7f3`（現行）
+
+**判定:** 合格（公開Agentic sourceのPhase A技術gateのみ。Sprint 054全体とPhase Bは未完了）
+
+**評価対象:** Sprint 054 — candidate `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154`、branch `codex/sprint-052-secretary-voice`
+
+**Escalation Recommendation:** none
+
+## 結論
+
+公開Agenticのexact candidateはPhase A技術gateに合格した。前回`ea2d971…`の決定的なFAILだった
+Windows `GS-009`第2 roundのHook runtime `31/32`／Git identity probe timeoutは、同じ基準を維持した
+因果run `34025802596`で閉じた。3 roundすべてがCLI 32＋Hook 32、全child exit 0、canonical／Hook delta 32、
+JSON parse／ID unique／State rebuild 100%、residue 0で完了した。最大lock waitは7,351ms < 15,000ms、
+最大lease criticalは1,534ms < 30,000msだった。単なる再実行成功ではなく、Hookの不要なcore読込と
+mutation境界内の重複再検証を限定して減らした新しい製品bytesに対するexact Windows runである。
+
+実diffでは、`clarity-core.mjs`の静的読込をHook libraryから外し、`SessionStart`／`PreCompact`／
+checkpoint判定が必要な`Stop`だけがcoreをdynamic importする。`PostToolUse`／`SessionEnd`／unknown、
+disabled、未初期化no-opはcoreを読まない。import後にGit probeのfresh snapshotとroot再解決を行うため、
+await前の候補探索結果をwrite identityとして再利用していない。
+
+root再検証の共有は、各mkdir、exclusive open、descriptor write、cleanup unlinkという単一mutationの同期scopeに
+限定される。scope終了後のpost-mkdir検査、open後のwrite scope、collision確認は新しい観測から始まり、
+write前にはopen済みdescriptorのdevice／inode一致を再確認する。directory作成からwriteまでを1つのscopeへ
+まとめておらず、root／ancestor alias／Git directory／configの変更検知、`O_NOFOLLOW`、`O_EXCL`、
+他writer非上書き、自己所有fileだけのcleanupを維持する。製品codeは`+74/-40`、既存testは`+33/-1`、
+metadataは既存3 digestの追随だけで、新case ID、runner、framework、collector、actor／round／timeout／assertの
+削減はない。
+
+同一candidateのoffline masterは22/22 suite・736/736 assertionでgreen、candidate／detached checkout／
+Git-free archiveは895 files・44 common pathsで一致した。今回の独立した低並列実操作でもP004は14/14、
+Sprint 022 safetyは69/69だった。P004はactual childで5 Hook eventすべてを実行し、ancestor alias正例と
+root-self symlink負例を同時に確認した。したがって前回のproduct findingは閉じ、現行のproduct／
+verification-infra findingは0件である。
+
+この判定は公開AgenticのPhase Aだけを下流適応へ進められるgateである。private my-vaultとYasashiiの
+版固有candidate適応・各Phase A、3版main統合、tag／Release／marketplace、正式installとnew session確認は
+まだ行っていない。これらを今回のPASS理由へ混ぜず、Sprint 054全体を合格または完了とはしない。
+
+## 増分スコア
+
+変更面は実diff、低並列actual Hook、安全回帰、exact Windows runで再評価した。byte不変面は、greenの
+same-candidate master／candidate parityを条件に同一Sprintの記録済み証跡を引き継いだ。
+
+| 基準 | スコア | 閾値 | 判定 | 根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 4/5 | 4 | PASS | 公開Agentic Phase Aの統合source、関連回帰、archive、Windows gateがexact candidateで成立。後続2版とPhase Bは別gate。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | Windows全step success、P004 14/14、offline 736/736。manifest／inventoryの構文・digest不整合0。 |
+| C3 機能の実証 | 5/5 | 4 | PASS | actual 5 Hook eventとWindows 3 round×CLI 32／Hook 32が全件成功。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | guide／README／prompt／infographic bytesは`ea2d971…`から不変。既存render証跡を限定carry。 |
+| C5 安全・規律 | 5/5 | 5 | PASS | mutationごとのfresh境界、inode検査、共通external process cleanup、5秒／1MiB、zero-write negativeを維持。実利用者／下流／release write 0。 |
+| C6 無回帰 | 5/5 | 5 | PASS | same-candidate offline 22/22・736/736、Windows job全step、独立P004／022が0 FAIL。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | exact WindowsのSprint 032は16/0。今回diffに更新導線変更なし。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | exact SHA、895 files、44 common paths、source／checkout／Git-free archive parityを固定。公開済み履歴変更とPhase B write 0。 |
+| C13 edition分離・互換 | 5/5 | 5 | PASS | public commonの限定変更のみ。candidate handoffのexcluded／protected pathを維持し、下流write 0。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | 利用者向け会話・案内bytesは変更なし。same-candidate master greenを条件に既存可読性証跡をcarry。 |
+| C19-Voice Secretary Voice | 5/5 | 5 | PASS | Voice source変更なし。same-candidate masterの既存回帰green。 |
+| C19-Clarity 正本・状態モデル | 5/5 | 5 | PASS | Windows 3 roundでcanonical delta 32、unique、State rebuild／noop、residue 0。E2E 4/4も維持。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | SessionStart／PreCompact／Stopで実coreを注入し既存context／checkpoint意味を維持。Attention／projection source変更なし。 |
+| C21 Clarity Hook・host parity | 5/5 | 5 | PASS | actual 5 event、Windows Hook 32/32×3 round、Claude隔離source loadが成功。Codex parser面は変更のないhooks JSONの既存受理証跡に限定してcarry。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | 関連source変更なし。same-candidate master greenを条件にSprint 046の既存証跡をcarry。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | 関連source／画像変更なし。real Xmind外部writeは契約どおりNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | Hook／root／process安全回帰がgreenで、exact public gate前の下流／release／install write 0。 |
+| C26 Clarity包括scan・Windows native | 5/5 | 5 | PASS | exact Windows P004 16/0、P005 10/0、P004 Git identity 14/14、Sprint 047 25/25、Windows verified true。 |
+
+全対象軸が閾値以上であるため、公開Agentic sourceのPhase A技術gateをPASSとする。
+
+## 現行証跡
+
+### Candidate／offline／archive（Orchestrator実行のsame-candidate証跡）
+
+- `git rev-parse HEAD` → `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154`。
+- 評価開始時のworking tree差分はOrchestrator所有`docs/sprints/state.md`のLineage予約だけ。製品／test bytesはHEADと一致。
+- `/private/tmp/secretary-012-767a7f3-candidate.json`: tree 895 files、SHA-256
+  `55f555a28c89a7348db6c499e90ee93dfe8693a572075e362caa772c79b95dfc`、44 common paths、common digest
+  `5f7db0b20d1126151b3dc763589827f1c6a66ce10bbed209793f18123e72aabf`、source clean、detached checkout clean、
+  Git-free archive、path／mode／bytes parity true、external／downstream write 0。
+- `/private/tmp/secretary-012-767a7f3-offline.json`: status pass、required suite 22/22、assertion 736/736、
+  failed／verification-infra／skipped／excluded各0、exit 0。開始・終了時cleanはOrchestratorが実測し、
+  本Evaluatorはreportを再読した。長時間master自体は再実行していない。
+- `/private/tmp/secretary-012-767a7f3-e2e.json`: E2E-001〜004は4/4。registryはprimary 250／CLX 20／XV 4、
+  allocation／semantic invariant true、duplicate／missing／extra 0。これは`--e2e-only`であり、primary 250件すべての
+  runtime実行とは扱わない。
+
+### 独立した変更面・安全回帰
+
+- 実行前 `pgrep node | wc -l` → 17。P004／022のsourceとspawn入口を先に確認し、禁止された044／047／048、
+  050 P005／full／coverage、master／archive／regression wrapperへ到達しないことを確認した。
+- `node scripts/sprint-047-patch-004-test.mjs` → exit 0、14/14。config matrix 8、direct config change 2、
+  zero-write negative 12、Git probe/request 1、timeout 5,000ms、CLI／Hook path canary 0、network／external write 0。
+  `HOOK-ALIAS`はactual childでPostToolUse、SessionStart、PreCompact、Stop、SessionEndを実行し、runtime kindを
+  `observation`／`session-start`／`pre-compact`／`checkpoint-request`／`session-end-flush`として確認した。
+- `node scripts/sprint-022-safety-test.mjs` → exit 0、69/69。production direct sync process API 0、共通external
+  process境界、timeout／max-buffer後の子孫・副作用0、再試行、listener／timer cleanupを確認した。
+- 実行後 `pgrep node | wc -l` → 17。自分が起動したNode子processの残留なし。
+- `git diff --check` → exit 0。独立検査後の`git status --short`は既存`docs/sprints/state.md`と本feedbackだけで、
+  製品／testへの未commit変更はない。
+
+### Windows native（独立取得）
+
+- GitHub Actions run `34025802596`／job `101466428249`、URL:
+  <https://github.com/mtaiseeei/agentic-secretary/actions/runs/34025802596>。
+- `gh run view`でrun／jobとも`completed / success`、head SHA exact `767a7f3…`、Microsoft Windows Server 2025、
+  image `windows-2025-vs2026`、Node `22.23.2`を独立確認した。
+- P005 `10/10`、Harness P004 `16/16`、Git identity P002 `12/12`、Git config／identity P004 `14/14`、
+  Sprint 047 `25/25`。Sprint 047はCritical 16/16、AC 7/7、supplemental 2。
+- `GS-009` round 1／2／3はいずれもwriters 64、CLI 32、Hook 32、exit 64/64、canonical／Hook expected delta 32、
+  parse／unique／State rebuild 100%、pre-rebuild full state／rebuild noop true、residue before／after 0。
+  最大lock waitは7,351ms／15,000ms、最大lease criticalは1,534ms／30,000ms。
+- Sprint 032 `16/0`、Sprint 051 `45/0`、conversation migration `9/0`など、job内の全stepがsuccess。
+
+### host読込とbyte不変面のcarry範囲
+
+- `/private/tmp/secretary-054-767a7f3-observations.md`のClaude Code 2.1.232隔離実行を再読した。
+  session `15bcbbe2-28b9-4bb4-bc51-dc9dc93a7c55`は`--plugin-dir`でexact public source `0.12.0`、
+  Clarityを含む17 Skillsを読み、SessionStart／Stopはexit 0、parser warning 0、最終result error false。
+  これはinstalled private `0.12.0`、disabled Claude projectのloaded状態、または実my-vault確認の証拠ではない。
+  実settings／my-vault本文は読んでいない。
+- `ea2d971…`からの実diffにREADME、公開guide、2本のone-paste prompt、CHANGELOG、manifest、marketplace、
+  release inventory、`hooks/hooks.json`、infographicは含まれない。したがって既存のAgentic／Yasashii prompt全文、
+  1536×1024 infographic render（Clarityを含む4改善と安全確認）、README／guide導線、0.12.0 release整合、
+  Hook top-level `description`／`hooks`と5 event declarationの証跡をbyte不変面に限定してcarryした。
+- publication後のremote main／tag／Release／artifact／marketplace実体との照合、installed private bytes、
+  enabled Codex new sessionはPhase Bへ残す。3 remote mainは本Phase A評価中に変更されていない。
+
+## Findings／バグ一覧
+
+現行candidateについて、Phase A判定を妨げる`product` finding、`verification-infra` finding、バグは0件。
+前回`ea2d971…`のHook timeoutは上記の因果Windows runで閉じた。以前のFAIL本文は履歴として保持する。
+
+## Phase Bと後続版へ繰り越す未評価項目
+
+- private my-vaultへの版固有適応と、そのexact candidateのprivate concurrencyを含む独立Phase A評価。
+- Yasashiiへの版固有適応と、そのexact candidateのedition／Windows／archiveを含む独立Phase A評価。
+- 3版すべてのPhase A PASS後のmain統合・push、`v0.12.0` tag、GitHub Release、artifact、marketplaceの公開因果性。
+- このMacへのprivate正式導入、enabled Codex new session、disabledを維持したClaude Code隔離確認。
+- 公開後の2版prompt／infographic／guide／Releaseの最終照合。
+
+これらは契約どおり次段階でしか確定できないため、公開Agentic Phase Aの減点やFAIL理由にはしていない。
+ただし未評価のままSprint 054全体をPASSまたは`done`にはしない。
+
+## Evaluator自己レビュー
+
+- 閾値と合否は一致しているか: yes。
+- 各PASSにsame-candidate証拠またはbyte不変を確認したcarry evidenceがあるか: yes。
+- 前回FAILを単なるrerun-to-greenで閉じず、変更後exact candidateの因果runで閉じたか: yes。
+- Windows 3 roundの一部だけを全体へ昇格したか: no。3 roundすべての完全metricを確認した。
+- P004のcase数だけでなくactual 5 Hook eventを操作したか: yes。
+- R1のawait前候補をwrite identityとして再利用していないか確認したか: yes。
+- R2が単一mutationを越えて再検証を共有せず、open後のfresh write scopeでinode検査することを確認したか: yes。
+- Phase B、private、Yasashii、installed new sessionをPASS扱いしたか: no。
+- E2E-only 4/4をprimary 250 runtime全実行へ昇格したか: no。
+- 各finding・バグに対象区分を付けたか: n-a（現行finding／バグ0件）。
+- dispatch時のSol/high指定をruntime metadata確認済みと主張したか: no。child metadataは未取得で、launch-verifiedとは記録していない。
+- 要求した証跡は契約・rubricのsafe harbor内か: yes。新runner／framework／collector／attestationを要求していない。
+- Mac禁止の044／047／048／050 P005／full／coverage、master／archive／regression wrapperを実行したか: no。
+- 実my-vault本文、private設定、下流repo、release、install、旧Harness repoへ触れたか: no。
+- 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
