@@ -475,6 +475,7 @@ else{spawn(process.execPath,[process.argv[1],"--child"],{stdio:"ignore",env:proc
   check("productionの直接execFileSync・spawnSync inventoryは0件", directSyncUsers.length === 0, directSyncUsers.map((path) => path.slice(repo.length + 1)).join(", "));
   const routedSources = [
     "scripts/lib/safe-git.mjs",
+    "scripts/lib/clarity-root.mjs",
     "scripts/update-apply.mjs",
     "scripts/workspace-repo.mjs",
     "skills/chatwork/scripts/wizard-server.mjs",

@@ -15,7 +15,7 @@ import {
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { attention, history } from "./clarity-core.mjs";
-import { FilesystemBoundaryError, safeWritePath } from "./safe-fs.mjs";
+import { FilesystemBoundaryError, safeWritePath, workingRoot } from "./safe-fs.mjs";
 import {
   resolveClarityRoot,
   rootPolicyFor,
@@ -165,6 +165,44 @@ function inspectClarityHookRootImpl(cwdValue, { reportResolutionFailure = false 
       try {
         const resolved = resolveClarityRoot(requestedRoot);
         return { root: resolved.root, rootPolicy: rootPolicyFor(resolved.root) };
+      } catch (error) {
+        if (reportResolutionFailure) throw error;
+        return null;
+      }
+    }
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  return null;
+}
+
+// Locate only the nearest initialized Clarity root before the Hook's one
+// asynchronous Git probe. The full root/Git observation is still created by
+// resolveClarityRoot after the bounded probe has completed.
+export function findClarityHookRootCandidate(cwdValue, { reportResolutionFailure = false } = {}) {
+  const requestedCwd = resolve(cwdValue || ".");
+  let current;
+  try { current = workingRoot(requestedCwd, { allowAncestorSymlinks: true }); }
+  catch (error) {
+    if (reportResolutionFailure) throw error;
+    return null;
+  }
+  if (!isNormalDirectory(current)) return null;
+  for (let depth = 0; depth < 64; depth += 1) {
+    const clarity = join(current, ".clarity");
+    if (isNormalDirectory(clarity) && isNormalFile(join(clarity, "project.json")) && isNormalFile(join(clarity, "state.json"))) {
+      const requestedRoot = resolve(requestedCwd, ...Array.from({ length: depth }, () => ".."));
+      try {
+        const physicalRoot = workingRoot(requestedRoot, { allowAncestorSymlinks: true });
+        if (physicalRoot !== current) {
+          throw new FilesystemBoundaryError("Clarity working rootのaliasまたは実体を安全に確認できません。", "working-root-unsafe", { changed: false });
+        }
+        return {
+          requestedCwd,
+          requestedRoot,
+          probeRoots: [...new Set([requestedCwd, requestedRoot])],
+        };
       } catch (error) {
         if (reportResolutionFailure) throw error;
         return null;

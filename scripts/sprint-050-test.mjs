@@ -71,7 +71,7 @@ const BASELINE = Object.freeze({
     finalRecheck: "abf90c7918340a363ef1acfa478bf081fc41ea5cd8333d9727b78c909d6d06b6",
   }),
   semantic: Object.freeze({
-    primary: "f3782f008a362f4a7d9d38afeb48cda97ced61062e69fd062093132277ccf979",
+    primary: "6c073e574638b2e9382e0521a936c9b4605eea7ccc03dbabd21d0953d5b0bba8",
     collaboration: "42c4e7e07c20739870d6d33d4cfa5e235d91539acdf55296d78ee70ae66e831e",
     visual: "e3144191159711a4d4623ad58f7973b4d4e3ca3f3eb290e5876d9ba8f6374a1a",
   }),

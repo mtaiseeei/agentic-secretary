@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
+  existsSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -21,6 +22,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { applyInit } from "../plugins/secretary/scripts/lib/clarity-core.mjs";
 import { serializeHookFailure } from "../plugins/secretary/scripts/lib/clarity-hook.mjs";
 import {
   normalizeClarityFilesystemIdentityForTest,
@@ -35,6 +37,7 @@ import { safeWritePath } from "../plugins/secretary/scripts/lib/safe-fs.mjs";
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const fixtureRoot = realpathSync(mkdtempSync(join(tmpdir(), "clarity-patch-004-")));
 const clarityCli = join(sourceRoot, "plugins", "secretary", "scripts", "clarity.mjs");
+const clarityHook = join(sourceRoot, "plugins", "secretary", "scripts", "clarity-hook.mjs");
 const results = [];
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 let zeroWriteNegatives = 0;
@@ -73,6 +76,11 @@ function makeRepo(path) {
   git(path, "add", "README.md");
   git(path, "commit", "-qm", "fixture");
   return path;
+}
+
+function hookEvents(root, sessionId) {
+  const directory = join(root, ".clarity", "runtime", "hooks", "events", sessionId);
+  return existsSync(directory) ? readdirSync(directory).filter((name) => name.endsWith(".json")) : [];
 }
 
 function gitDirectories(root) {
@@ -239,6 +247,53 @@ try {
       assert.equal(calls[0].options.env.GIT_OPTIONAL_LOCKS, "0");
       assert.deepEqual(operationSnapshot(handle.root), before);
     }
+  });
+
+  await test("HOOK-ALIAS", "Hook records through an ancestor alias but still rejects a root-self symlink", () => {
+    const physicalWorkspace = join(fixtureRoot, "hook-physical-workspace");
+    mkdirSync(physicalWorkspace);
+    const physicalRepo = makeRepo(join(physicalWorkspace, "repo"));
+    applyInit(physicalRepo);
+    const aliasWorkspace = join(fixtureRoot, "hook-alias-workspace");
+    symlinkSync(physicalWorkspace, aliasWorkspace, process.platform === "win32" ? "junction" : "dir");
+    const aliasRepo = join(aliasWorkspace, "repo");
+    const positiveSession = "ancestor-alias-depth-zero";
+    const positive = run(process.execPath, [clarityHook], {
+      input: `${JSON.stringify({
+        host: "codex",
+        hook_event_name: "PostToolUse",
+        session_id: positiveSession,
+        turn_id: "turn-positive",
+        cwd: aliasRepo,
+        tool_name: "Write",
+        tool_input: { file_path: join(aliasRepo, "README.md") },
+        tool_response: { exit_code: 0 },
+      })}\n`,
+    });
+    assert.equal(positive.status, 0, positive.stderr || positive.stdout);
+    assert.equal(positive.stdout, "");
+    assert.equal(positive.stderr, "");
+    assert.equal(hookEvents(physicalRepo, positiveSession).length, 1);
+
+    const selfRoot = join(fixtureRoot, "hook-root-self-link");
+    symlinkSync(physicalRepo, selfRoot, process.platform === "win32" ? "junction" : "dir");
+    const negativeSession = "root-self-symlink";
+    const negative = run(process.execPath, [clarityHook], {
+      input: `${JSON.stringify({
+        host: "codex",
+        hook_event_name: "PostToolUse",
+        session_id: negativeSession,
+        turn_id: "turn-negative",
+        cwd: selfRoot,
+        tool_name: "Write",
+        tool_input: { file_path: join(selfRoot, "README.md") },
+        tool_response: { exit_code: 0 },
+      })}\n`,
+    });
+    assert.equal(negative.status, 0, negative.stderr || negative.stdout);
+    assert.equal(negative.stdout, "");
+    assert.equal(negative.stderr, "");
+    assert.deepEqual(hookEvents(physicalRepo, negativeSession), []);
   });
 
   await test("CFG-CHANGE", "direct regular config bytes change is rejected at the next write boundary", () => {

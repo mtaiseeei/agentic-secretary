@@ -166,3 +166,69 @@
 - Orchestratorは今回の全変更を含むclean candidate SHAを固定し、Macではなく既存Windows workflowでP005の`SR-001`と`SR-009`を確認する。`SR-009`は3 round各32 CLI＋32 Hook、100%、既存timeout／lease／residue／rebuildを一切緩めず評価する。失敗時は追加したsafe diagnosticだけから原因を再分類し、再実行を繰り返してgreenだけを採らない。
 - このGenerator自己確認はSprint 054、Phase A、Windows gateのPASS判定ではない。downstream、main、tag、Release、marketplace、installへ進む判断は独立EvaluatorとOrchestratorへ残す。
 - Fable 5.1 highによるread-only補助レビュー（Herdr `w4:p2`、session `b1598b34-1e1f-4883-98fd-ad88a01e84ad`）はblocker 0、medium 1、low 3。上記leaf／diagnostic env境界を記録した。括弧付き判定とindent code行は既存product scannerの未変更解釈であり、本修正では基準・意味を拡大していない。Fableはファイル編集・test実行・正式Evaluator判定を行っていない。
+
+## Hook Git probeの共通process安全境界への復帰とSprint 050 pin追随
+
+### 製品修正
+
+- `clarity-root.mjs`からHook限定の直接`spawnSync`を撤去した。Hook入口だけは既存の非同期`runExternal()`を直接awaitし、通常rootでは`Hook Node → git`の1 leafを維持する。CLIと他の同期root APIは既存`runExternalSync()`のままである。
+- Git probe requestは1つのpure helperから生成し、既存と同じ`git rev-parse` argv、`5,000ms`、`1 MiB`、`allowFailure:true`、`GIT_OPTIONAL_LOCKS=0`、`GIT_TERMINAL_PROMPT=0`へ固定した。`runExternal()`の`shell:false`、POSIX process group、SIGTERM→SIGKILL、max-buffer、listener／timer cleanupをそのまま使い、独自timeout実装は追加していない。
+- await前と各await直後、同期callback開始直前、prefetch結果の消費直前に、requested／physical root、filesystem identity、ancestor alias、全ancestorの`.git` marker、top／git dir／common dir、common／worktree config、Git discovery環境を照合する。待機中に変わった状態を新しいbaselineとして採用せず、write前の既存revalidationも維持した。
+- prefetch結果はbinary、完全argv（`-C` rootを含む）、cwd、input、encoding、timeout、max-buffer、allowFailure、label、完全envへ束縛する。同じ同期Hook request内で完全一致する同一identity probeだけは、各利用時のfull boundary再確認を通して再利用できる。global runnerの差替えはawait完了後の同期callback中だけで、`finally`で戻す。test用runnerが注入済みなら上書きしない。
+- Hookのfilesystem-only候補探索は既存のdepth 64、親Clarity探索、ancestor alias限定許可、root自身とroot内`.clarity`／project／state symlink拒否を保つ。通常rootはprobe 1回、subdirectoryから親rootを探す場合は旧意味どおりdistinct physical pathごとに逐次、最大2回とし、nested Git repoのcwd結果を親Clarity rootへ流用しない。先頭probeがtimeout／max-buffer／spawn errorなら後続parent probeを開始しない。
+- 未初期化または通常の安全拒否は従来どおり無言no-op、`Stop`だけ`{}`を返す。明示済み`CLARITY_HOOK_DIAGNOSTIC=1`の既存stress経路だけsafe code付きdegradedを返し、path、env、stderr、Git出力を露出しない。
+
+### 検証基盤の限定修正
+
+- `scripts/sprint-022-safety-test.mjs`の既存「主要production callsiteを共通安全境界へ集約」assertへ`clarity-root.mjs`を加えた。既存の同test内にあるtimeout／max-buffer時の孫process、後続副作用、再試行、listener／timer cleanup負例をHookが使う同じ`runExternal()`へ結線した。case、閾値、runnerは追加・削減していない。
+- `scripts/sprint-050-test.mjs`の`BASELINE.semantic.primary`だけを、受入済み現行値`6c073e574638b2e9382e0521a936c9b4605eea7ccc03dbabd21d0953d5b0bba8`へ更新した。`5f08d45…`とのprimary 250行比較は差分`PK-001`だけで、Critical、Sprint 048割当、他249行は不変だった。`e961833`の契約と`sprint-050-patch-002`の独立PASSもread-only確認した。allocation、CLX／XV semantic、final recheck、mutation拒否、runnerは変更していない。
+- 製品3pathの変更に伴うcollaboration inventoryは`clarity-hook`と`clarity-root-policy`の既存digestだけを再計算した。surface、path、marker、caseは変更していない。
+
+### 低並列の自己確認
+
+| 確認 | 結果 |
+|---|---|
+| 変更5 JSの`node --check`、`git diff --check` | PASS |
+| `node scripts/sprint-022-safety-test.mjs` | 69 PASS / 0 FAIL。direct production sync API 0、timeout／max-buffer後の孫process・副作用0、再試行とtimer cleanupを含む |
+| `node scripts/sprint-047-patch-004-test.mjs` | 13 PASS / 0 FAIL。config matrix 8、direct config change 2、probe 1、5秒、path canary 0 |
+| Hook subdirectory／nested Git repo内cwd | 各1 actor PASS。親Clarity rootを正しく解決しdegraded 0 |
+| Hook timeoutのfake Git wrapper＋孫process | 1 actor、約6.1秒でsafe timeout。孫process、後続副作用、fixture residue 0 |
+| Hook max-buffer | 1 actor、約0.7秒で`clarity-git-output-invalid`。timeout前に終了 |
+| await中の`.git/config`差替え | 1 actor、`clarity-root-changed / repo-git-identity-changed`、runtime write 0 |
+| 通常silent Stop／test runner注入 | unsupported configでも`{}`、注入runner 1 callで上書きなし |
+| primary 250の旧accepted source比較 | 250 unique、意味差はPK-001だけ、Severity Critical不変、現digest`6c073e…` |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface / 67 case、marker／digest VALID |
+| `node scripts/sprint-049-test.mjs` | 20 PASS / 0 FAIL、Critical 15、side-effect violation 0 |
+
+- 実行前のhost Node数は19、Sprint 022実行中の観測も19で、開始禁止40／即時中断60を下回った。自分が起動したserver、browser、watcher、fake Git、孫processは残していない。
+- Orchestrator所有`state.md`を除く現diffは、製品／metadataが`+194/-73`、検証scriptが`+2/-1`で、検証コードが製品コードを上回っていない。verification-only roundでもない。
+
+### 未実行とEvaluatorへの引き渡し
+
+- Mac禁止のSprint 044、Sprint 047、Sprint 048 test、Sprint 050 full／coverage-only／P005、agentic master／archive／regressionと、それらへ到達するwrapperは実行していない。case数、32 CLI＋32 Hook、3 round、timeout、lease、lock wait、100%閾値は変更していない。
+- clean candidate固定後のfull offline master、Sprint 050 `--e2e-only`、candidate／archive確認、exact Windows P005／047はOrchestratorへ引き渡す。Windowsでは前回と同じ3 round各32 CLI＋32 Hook、canonical／Hook delta、parse／unique／rebuild、residue 0、wait 15秒未満、lease 30秒未満を再評価する。
+- 本作業は公開Agentic sourceの限定修正であり、Phase AまたはSprint 054全体のPASSを意味しない。private／Yasashii、main、tag、Release、marketplace、install、実workspaceは変更していない。
+
+## Fable最終レビュー F-A — ancestor alias rootの同一probe再利用
+
+### 再現と修正
+
+- Fable最終read-onlyレビューのhigh F-Aを、既存低並列`Sprint 047 Patch 004`へactual Hook child 1 actorで追加した。構成は`alias-workspace -> physical-workspace`で、cwdはalias配下の実directory `repo`そのもの（depth 0）。working root自身をsymlinkにする構成とは分離した。
+- 修正前はHook childがexit 0／stdout・stderr 0のままruntime event `0`件となり、追加caseだけが`0 !== 1`で失敗した。同じalias requestをroot探索中に2回解決する一方、1回だけprefetchしたGit identity結果を`consumed` filterが2回目に渡さず、silent no-opへ閉じていた。
+- `clarity-root.mjs`のprefetch request照合から消費済みfilterだけを外した。同じ同期Hook callback内でbinary、完全argv、cwd、input、encoding、5秒、1 MiB、allowFailure、label、完全envが一致するrequestだけが同じ結果を再利用でき、各利用時にrequested／physical root、filesystem identity、ancestor alias、Git marker／directory／config、envを再確認する。外部spawnは増えず、通常rootの単一probe、POSIX process-group cleanup、CLI経路は不変である。
+- 修正後は同じactual Hook childがruntime event `1`件を記録した。別のactual Hook childでworking root自身をsymlinkにしたnegativeはexit 0／stdout・stderr 0／runtime event `0`件のままで、root-self symlinkを許可していない。
+
+### 限定自己確認
+
+| 確認 | 結果 |
+|---|---|
+| 修正前 `node scripts/sprint-047-patch-004-test.mjs` | 13 PASS / 1 FAIL。唯一のFAILは`HOOK-ALIAS`のevent `0 !== 1` |
+| 修正後 `node scripts/sprint-047-patch-004-test.mjs` | 14 PASS / 0 FAIL。ancestor alias正例 event 1、root-self symlink負例 event 0 |
+| `node scripts/sprint-022-safety-test.mjs` | 69 PASS / 0 FAIL。直接同期process API 0と共通process cleanup境界を維持 |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface / 67 case、marker／digest VALID |
+| 変更source／testの`node --check`、`git diff --check` | PASS |
+
+- 変更bytesに対応し、既存inventoryは`clarity-root-policy`と、既存低並列testを収載する`clarity-harness-scanner`のdigestだけを再計算した。surface、path、marker、case IDは変更していない。
+- Fable low F-Bは候補walkが旧implより安全側に閉じる差であり変更しない。F-Cはdiagnostic reasonが粗いだけで漏えい・誤許可がなく変更しない。F-Dの`.git` symlink拒否は既存どおりで、許可へ広げない。
+- 現worktree累計は製品／metadata約`+196/-73`に対し検証約`+57/-1`で、検証コードは製品コードを上回っていない。本follow-upは小さい製品修正と既存suite内の正負回帰を含み、verification-only連続roundではない。新suite／runner／framework／case IDは0件。
+- Mac禁止の044／047／048／050 full／coverage／P005、master／archive／regression wrapper、Windows CIは実行していない。commit、candidate push、Windows／master、Phase A判定、downstream／release／installはOrchestratorへ残す。
