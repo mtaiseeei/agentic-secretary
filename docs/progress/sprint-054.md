@@ -1,6 +1,6 @@
 # Sprint 054 — Project Clarityを含む0.12.0の3版公開とこのMacへの反映
 
-**ステータス:** 公開Agentic版の限定実装、Windows Hook欠落対策、日本語判定fixture追随完了 - exact Windows再評価待ち
+**ステータス:** 公開Agentic版の限定実装、Windows Hook／CLI Git identity process削減完了 - exact Windows再評価待ち
 
 ## 着手範囲
 
@@ -232,3 +232,50 @@
 - Fable low F-Bは候補walkが旧implより安全側に閉じる差であり変更しない。F-Cはdiagnostic reasonが粗いだけで漏えい・誤許可がなく変更しない。F-Dの`.git` symlink拒否は既存どおりで、許可へ広げない。
 - 現worktree累計は製品／metadata約`+196/-73`に対し検証約`+57/-1`で、検証コードは製品コードを上回っていない。本follow-upは小さい製品修正と既存suite内の正負回帰を含み、verification-only連続roundではない。新suite／runner／framework／case IDは0件。
 - Mac禁止の044／047／048／050 full／coverage／P005、master／archive／regression wrapper、Windows CIは実行していない。commit、candidate push、Windows／master、Phase A判定、downstream／release／installはOrchestratorへ残す。
+
+## Windows Git identity timeoutへのevent限定process削減
+
+### 原因範囲と実装
+
+- exact Windows run `34018986578`／job `101447948026`では、P005の`SR-009`から起動されたSprint 047 `GS-009`が、Clarity root Git identityの`timeoutMs: 5000`を返してmetric出力前に停止した。失敗actorがCLIかHookか、round、成功件数は出力されていないため、今回のprocess削減を実証済み原因とは断定しない。
+- コード上、`GS-009`の32 CLI actorはすべて`clarity event`であり、初回root解決に`CLI Node → external-runner Node → git rev-parse`を使う一方、32 Hook actorは既に`Hook Node → git rev-parse`へ短縮済みだった。観測された`event` commandだけを既存の非同期Git probeへ結線し、通常経路を`CLI Node → git rev-parse`へ短縮した。他のCLI command、Hook、multi-root操作、GitHub read adapterは変更していない。
+- `event` JSONはroot probe前に1回だけ構文解析する。root必須、JSON構文、root identity、canonical/payload validation、write、root policyという従来の順序を維持した。unknown commandと他commandのvalidation順序は変更していない。
+- 初回snapshotを作れない場合はCLIだけ既存の同期resolverへ戻し、従来の`working-root-unsafe`等の正規化を維持する。prefetch済みrequestと同期resolverのrequestが一致しない場合もCLIだけ既存同期runnerへ戻す。Hookは従来どおりunbound requestを安全拒否し、silent no-opの意味を変えていない。
+- await開始後にroot、filesystem identity、ancestor alias、Git marker、top-level／Git dir／common dir、config、Git discovery環境が変わった場合はfallbackせず`clarity-root-changed`で停止する。cached responseを同期callbackで使う直前にも同じ境界を再確認し、write前のreference-based revalidationを保持した。
+- 外部Git errorはawait直後に別分類せず、同期resolverがbound responseを消費した時点で従来の`probeGitIdentity()`へ渡す。`timeout`の`5000ms` details、`max-buffer`の1 MiB分類、non-Git、malformed output、spawn failureのfail-closed意味を維持した。
+- `runExternal()`の`shell:false`、既存process-tree cleanup、1回、5,000ms、1 MiB、Git prompt/network抑止をそのまま使う。timeout延長、retry、actor／round／assert、lock wait／lease、canonical write、root alias許可範囲の変更は0件である。
+
+### 既存回帰への限定追加
+
+- `scripts/sprint-047-patch-004-test.mjs`の既存`HOOK-ALIAS` case内に、ancestor aliasからのactual CLI `event`成功とroot policy、invalid JSONがroot probeより先に`usage`となること、missing rootが既存`working-root-unsafe`を保つことを追加した。
+- 同case内で、非同期probe開始直後にGit discovery環境を変えるとcallbackを実行せず`clarity-root-changed / repo-git-identity-changed`になることを確認した。新しいcase ID、runner、framework、collector、matrixは追加していない。
+- 変更bytesに合わせ、既存collaboration inventoryの`clarity-root-policy`と`clarity-harness-scanner`のdigestだけを更新した。surface、path、marker、case IDは不変である。
+
+### 低並列の自己確認
+
+| 確認 | 結果 |
+|---|---|
+| 変更3 JSの`node --check` | PASS |
+| `node scripts/sprint-047-patch-004-test.mjs` | 14 PASS / 0 FAIL。actual CLI event、alias正例、root-self symlink負例、初回fallback、await後変更拒否を同じ既存case内で確認 |
+| `node scripts/sprint-022-safety-test.mjs` | 69 PASS / 0 FAIL。共通external process境界、timeout／max-buffer後の子孫・副作用0、再試行、timer cleanupを維持 |
+| `node scripts/sprint-049-inventory.mjs validate` | 20 surface / 67 case、marker／digest VALID |
+| `node scripts/sprint-049-test.mjs` | 20 PASS / 0 FAIL、Critical 15、side-effect violation 0 |
+| `git diff --check` | PASS |
+
+- 開始前／終了後のhost Node process数は21／21で、禁止開始値40未満、自分が起動した子processの残留は0件だった。64 actor stress、Sprint 044／047／048本体、Sprint 050 full／coverage／P005、agentic master／archive／regressionとそれらのwrapperはMacで実行していない。
+- このroundのOrchestrator所有`state.md`と本progressを除く差分は、製品code`+41/-5`、metadata`+2/-2`、既存test`+37/-1`。検証codeは製品codeを上回らず、製品変更を含むためverification-only roundではない。
+- main／tag／Release／marketplace／install、private／Yasashii、CI dispatch、push、commitは実行していない。Orchestratorは今回bytesをcommitしてexact candidateを固定後、既存Windows workflowのP005／Sprint 047／P004を1回の因果runで確認する。3 round×32 CLI＋32 Hook、100%、5秒／1 MiB、lock／lease／residue／rebuildの基準は変更しない。
+
+### 自己評価とEvaluatorへの引き渡し
+
+| 基準 | 自己評価 | 理由 |
+|---|---:|---|
+| 機能完全性 | 3/5 | Windows timeoutの不要process段は限定削減したが、exact Windows run未実行のためAC7完了を主張しない。 |
+| 動作安定性 | 4/5 | 低並列のactual CLI／Hook、初回fallback、await後変更拒否、process安全回帰はgreen。Windows 64 actorは未確認。 |
+| エラーハンドリング | 5/5 | 初回観測不能は従来分類へ戻し、待機後のidentity変更はcallback前に停止。timeout／max-buffer分類を維持。 |
+| 回帰なし | 4/5 | 既存低並列回帰は0 FAILだが、必須Windows回帰が未実行のため5/5にしない。 |
+
+- Evaluatorは、exact candidateのWindows nativeで`GS-009`の全3 round、各32 CLI＋32 Hookがexit 0、canonical／Hook delta 32、parse／unique／rebuild、residue 0、既存wait／lease marginを満たすことを確認する。続くP004 actual CLI event／Hook alias caseもWindows上で14/14完走させる。
+- Windowsが再びtimeoutした場合、今回の限定削減だけで原因解消を断定せず、失敗actor／roundと既存safe diagnosticの範囲で再分類する。greenになるまでの無制限再実行や基準緩和は行わない。
+- 起動方法／テスト対象URL: CLI製品のためWeb起動なし。`node plugins/secretary/scripts/clarity.mjs event <fixture-root> --event-json '<JSON>' --json`。
+- 回帰チェック: Macの安全な限定入口は上記の低並列test／inventory。全Phase Aのoffline／archive／Windows gateはOrchestrator／fresh Evaluatorがexact commitで実行する。

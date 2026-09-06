@@ -29,6 +29,7 @@ import {
   resolveClarityRoot,
   sameClarityFilesystemIdentityForTest,
   serializeClarityCliFailure,
+  withClarityCliEventGitProbe,
   withClarityGitProbeRunnerForTest,
   withClarityRootRequest,
 } from "../plugins/secretary/scripts/lib/clarity-root.mjs";
@@ -249,7 +250,7 @@ try {
     }
   });
 
-  await test("HOOK-ALIAS", "Hook records through an ancestor alias but still rejects a root-self symlink", () => {
+  await test("HOOK-ALIAS", "Hook records through an ancestor alias but still rejects a root-self symlink", async () => {
     const physicalWorkspace = join(fixtureRoot, "hook-physical-workspace");
     mkdirSync(physicalWorkspace);
     const physicalRepo = makeRepo(join(physicalWorkspace, "repo"));
@@ -257,6 +258,41 @@ try {
     const aliasWorkspace = join(fixtureRoot, "hook-alias-workspace");
     symlinkSync(physicalWorkspace, aliasWorkspace, process.platform === "win32" ? "junction" : "dir");
     const aliasRepo = join(aliasWorkspace, "repo");
+    const itemId = JSON.parse(readFileSync(join(physicalRepo, ".clarity", "state.json"), "utf8")).items[0].itemId;
+    const cliEventInput = JSON.stringify({
+      type: "attention.override",
+      itemId,
+      actor: "cli-event-prefetch",
+      payload: { level: "high", reason: "bounded CLI event probe", rank: 1 },
+    });
+    const cliEvent = run(process.execPath, [clarityCli, "event", aliasRepo, "--event-json", cliEventInput, "--json"]);
+    assert.equal(cliEvent.status, 0, cliEvent.stderr || cliEvent.stdout);
+    assert.equal(JSON.parse(cliEvent.stdout).rootPolicy.ancestorAliasCount, 1);
+    assert.match(readFileSync(clarityCli, "utf8"), /command === "event"\) await withClarityCliEventGitProbe\(root, execute\)/u);
+
+    const missingRoot = join(fixtureRoot, "cli-event-missing-root");
+    const invalidJson = run(process.execPath, [clarityCli, "event", missingRoot, "--event-json", "{", "--json"]);
+    assert.equal(invalidJson.status, 2);
+    assert.equal(JSON.parse(invalidJson.stderr).code, "usage");
+    const missingRootResult = run(process.execPath, [clarityCli, "event", missingRoot, "--event-json", cliEventInput, "--json"]);
+    assert.notEqual(missingRootResult.status, 0);
+    assert.equal(JSON.parse(missingRootResult.stderr).code, "working-root-unsafe");
+    assert.equal(existsSync(missingRoot), false);
+
+    let awaitedCallback = false;
+    const priorGitDir = process.env.GIT_DIR;
+    const changedDuringAwait = withClarityCliEventGitProbe(physicalRepo, () => { awaitedCallback = true; });
+    process.env.GIT_DIR = join(fixtureRoot, "changed-after-probe-start");
+    let changedError;
+    try { await changedDuringAwait; } catch (error) { changedError = error; }
+    finally {
+      if (priorGitDir === undefined) delete process.env.GIT_DIR;
+      else process.env.GIT_DIR = priorGitDir;
+    }
+    assert.equal(changedError?.code, "clarity-root-changed");
+    assert.equal(changedError?.details?.reason, "repo-git-identity-changed");
+    assert.equal(awaitedCallback, false);
+
     const positiveSession = "ancestor-alias-depth-zero";
     const positive = run(process.execPath, [clarityHook], {
       input: `${JSON.stringify({

@@ -675,7 +675,11 @@ export function withClarityGitProbeRunnerForTest(runner, callback) {
   finally { gitProbeRunner = previous; }
 }
 
-export async function withClarityHookGitProbe(rootValues, callback, { reportResolutionFailure = false } = {}) {
+async function withClarityGitProbe(rootValues, callback, {
+  reportResolutionFailure = false,
+  fallbackInitialSnapshotToSync = false,
+  fallbackUnboundRequestToSync = false,
+} = {}) {
   if (typeof callback !== "function") throw new TypeError("Clarity Hook Git probe callback is required");
   // Test seamが明示したrunnerは上書きせず、既存の注入意味を維持する。
   if (gitProbeRunner !== runExternalSync) return { executed: true, value: callback() };
@@ -684,7 +688,17 @@ export async function withClarityHookGitProbe(rootValues, callback, { reportReso
   const physicalRoots = new Set();
   try {
     for (const rootValue of values) {
-      const before = hookProbeBoundarySnapshot(rootValue);
+      let before;
+      try { before = hookProbeBoundarySnapshot(rootValue); }
+      catch (error) {
+        // CLI keeps its established resolver/error normalization when the
+        // optimization cannot establish an initial boundary. A change after
+        // an awaited probe is never eligible for this fallback.
+        if (fallbackInitialSnapshotToSync && prefetched.length === 0) {
+          return { executed: true, value: callback() };
+        }
+        throw error;
+      }
       if (physicalRoots.has(before.physicalRoot)) continue;
       physicalRoots.add(before.physicalRoot);
       const { binary, args, options } = gitIdentityProbeRequest(before.physicalRoot);
@@ -725,6 +739,7 @@ export async function withClarityHookGitProbe(rootValues, callback, { reportReso
         && sameEnvironment;
     });
     if (!entry) {
+      if (fallbackUnboundRequestToSync) return runExternalSync(binary, actualArgs, actualOptions);
       throw Object.assign(new Error("Clarity Hook Git probe request changed before use."), { code: "clarity-git-identity-unavailable" });
     }
     // Alias-root discovery legitimately resolves the same requested root twice
@@ -742,6 +757,18 @@ export async function withClarityHookGitProbe(rootValues, callback, { reportReso
   } finally {
     gitProbeRunner = previous;
   }
+}
+
+export function withClarityHookGitProbe(rootValues, callback, options = {}) {
+  return withClarityGitProbe(rootValues, callback, options);
+}
+
+export function withClarityCliEventGitProbe(rootValue, callback) {
+  return withClarityGitProbe(rootValue, callback, {
+    reportResolutionFailure: true,
+    fallbackInitialSnapshotToSync: true,
+    fallbackUnboundRequestToSync: true,
+  });
 }
 
 export function withClarityRootRevalidationObserverForTest(observer, callback) {

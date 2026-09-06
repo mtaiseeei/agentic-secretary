@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 3
+- Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 10
+- Lineage Dispatches: 1
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -108,10 +108,13 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: reset後Generator1のevent限定修正を受領。通常eventの補助Node段だけを削減し、初回snapshot不能の既存分類／await後変更停止／error消費時分類／Hookと他command不変をmainでも実diff確認。自己確認022 69/69、P004 14/14（actual CLI alias event・JSON優先・missing root・await中env変更拒否）、049 20/20、inventory20 surface/67case、Node21→21、残留0。製品+41/-5／test+37/-1で検証は製品を上回らない。Sol/high fresh起動成功、child metadata未取得でlaunch-unverified。Status awaiting-eval、Retry0／Spec0／Lineage1／strong／noneを維持し、exact candidateのWindows因果runとoffline/candidate検査へ進む。負荷減少はコード上の事実だが旧timeoutの原因確定・Windows解消は未確認。
+- 2026-09-06: Herdr実測w4:p2の既存Claude/Fable（session b1598b34-1e1f-4883-98fd-ad88a01e84ad、表示Fable5.1/high）へread-only設計reviewを依頼し、S1〜S6を受領。CLI全体ではなくGS-009で使うeventだけのasync identity prefetchを対象とし、S1のCLI無音成功禁止／初回snapshot失敗の既存分類維持、S2のprobe error消費時分類、S3の負荷軽減と原因確定の分離、S4のJSON検証順、S5のrequest内寿命と各利用再確認、S6の同期callback中だけrunner切替をGeneratorへ指示。初回snapshot失敗とawait後identity変更は区別し、後者をfallbackで受理しない。新framework／条件変更なし。Fableは実装・repo編集・検査実行なしの補助レビューで正式Evaluator判定ではない。
+- 2026-09-06: 利用者の新しい「よいです」により、上限再resetと、安全確認を保ったWindows Git identity timeoutの限定解消を承認。旧Retry3／Lineage10と独立FAIL履歴は保持し、Retry／Spec-Issue／Lineageを0へreset後、fresh Generatorの実dispatch予約でLineage1へ更新した。host mac.lan／taisei／arm64、実root、branch codex/sprint-052-secretary-voice、HEAD fb2ccee3ddb0e2ad12501829688c25f06227b69c、clean、originを再確認。resolverはhigh risk／current strongからSol/high、Rotate none、resume保持未確認のためfresh。5秒／1MiB、共通process安全境界、actor／round／assert／lock／leaseは変更せず、既存FAIL修正を同じ054で行う。Status active、Next TBDを維持。下流適応とpublication/installは従来のPhase A条件を満たすまで実行しない。
 - 2026-09-06: fresh Evaluator Lineage10がexact fb3b652の公開Agentic Phase AをFAIL／implementation-issue、strong推薦と正式判定。Windows Server2025／Node22.23.2のP005 9/10、GS-009の製品Git identity timeout5000msが根拠。安全停止と可用性不足を分離し、安全条件を緩和しない。前回022／050 pinとFable alias findingは閉鎖し、独立022 69/69・P004 14/14、offline736/736、Claude source実読込を確認。Windows後続P004／047はskippedで新aliasのWindows PASSは未確認。Retry3／Lineage10が両上限へ到達したため、Status active（未完了・ユーザー判断待ち）、Spec-Issue0／strong／noneを保持し、追加dispatch・自動再実行を停止する。旧reset承認は再使用しない。次の限定修正へ進む場合は、上限再resetと共通process安全境界を保つWindows Git identity処理の改善について新たなユーザー確認を要する。Sol/high fresh dispatchは成功したがchild host metadata未取得なのでlaunch-unverified。main／tag／Release／installの既存ユーザー承認は維持される一方、技術gate未達のため実行条件を満たさない。3版公開／my-vault反映／installed warning解消は未実施。
 - 2026-09-06: candidate fb3b652ef7a16ccc2a15b7a1d11d3c572ef2def5をbranchへcommit/pushし、開始終了cleanでoffline master 22/22 suite・736/736 assertion PASS。050 e2e-only 4/4、registry274件の意味／割当差分0（全250case実行ではない）、candidate895fileのsource/checkout/archive一致、Claude隔離session f9e9e492-6bf8-4c9d-bad6-dc05b0d95984でpublic0.12.0・17Skill・SessionStart/Stop exit0を確認。一方Windows run34018986578/job101447948026はFAIL。P005 SR-009内の047 GS-009がGit identity timeoutMs5000の非zero childで停止、round metric出力前のため成功actor数・遅延値は未確定。再実行で失敗を消さず独立分類へ渡す。Node開始17／最大観測21／終了17、Mac高並列は未実行。Lineage9<10を確認しfresh Evaluator分10へ予約、resolverのgpt-5.6-sol/highを使用。Retry2／Spec-Issue0／strong／noneは判定まで維持。下流製品適応／main／tag／Release／installは未実施。
 - 2026-09-06: Generator9のF-A修正を受領。ancestor aliasの実Hookは修正前0件／P004 13/14、修正後1件／14/14、root自身symlinkは0件で拒否。同一requestの完全一致probe結果だけを各利用時full boundary再照合付きで再利用し、外部spawnを増やさない。022 69/69、inventory20 surface/67case整合、Node前後17、残留0。Generator8/9はともに指定Sol/high fresh起動成功、child metadata未取得でlaunch-unverified。Fable最終reviewのlow B/C/Dはprogress記録のみ。Status awaiting-eval、Retry2/Spec-Issue0/Lineage9/strong/noneを維持し、clean candidateでWindowsとoffline、既存050 e2e-only／candidateを確認する。050 full/coverage wrapperは高並列のためMac未実行と分離し、e2e-onlyの成功を全250 case実行へ昇格しない。
