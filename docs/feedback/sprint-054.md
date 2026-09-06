@@ -267,3 +267,173 @@ Harnessの`verification-scope-issue`手順に従い、Orchestratorは (a) 上記
 - Phase AとPhase Bを混同していないか: yes。現行判定は公開Agentic source Phase Aだけで、Sprint 054全体は未完了。
 - 既存safe-harborを弱めたり、新runner／framework／collectorを要求したか: no。
 - 実装・test・spec・stateへ越境したか: no。Evaluator所有の本feedbackだけを更新した。
+
+---
+
+# Sprint 054 Phase A 再評価 — exact `af2a75e`
+
+**判定:** 不合格（公開Agentic sourceのPhase A技術gate。Phase Bは未評価）
+
+**分類:** `implementation-issue`
+
+**評価対象:** Sprint 054 — candidate `af2a75ee843fbf6a232f58eef81fdd63e9d4bfb8`
+
+**Escalation Recommendation:** none
+
+## 結論
+
+前回のWindows `31/32`欠落に対する修正は、exact candidateのWindows Server 2025実行で成立した。
+run `34011160155`／job `101427127061`は同じHEADで成功し、P005は`10/0`、Sprint 047は
+3 roundすべて32 CLI＋32 Hook、canonical／Hook delta 32/32、parse／unique／State rebuild 100%、
+residue 0だった。P005の日本語`判定` fixtureもこのrunで通過した。前回のWindows product findingは
+再実行だけで消したのではなく、製品sourceを変更した後の因果runで閉じた。
+
+ただし、その製品修正はHookのGit identity確認に`spawnSync`を直接導入し、Sprint 022で受入済みの
+外部process共通安全境界を回帰させた。Orchestratorの最初のoffline masterは
+22 suite中21 PASS、736 assertion中735 PASSで、`sprint-022-path-timeout`だけが失敗した。
+今回、その動的testをexact candidateで1回だけ単体再現し、`SPRINT022_PASS=68 FAIL=1`、exit 1を得た。
+失敗は時間上限やhost負荷ではなく、`plugins/secretary/scripts/lib/clarity-root.mjs`が
+productionの直接`spawnSync`利用として検出されたものだった。開始Node 21、実行中25、終了21で、
+process残留や上限超過はない。
+
+これは古いfixtureの文字列だけがずれたものではない。Sprint 022はtimeout後の子process tree、listener、
+timer、後続副作用0件と、安全な再試行を共通`external-ops.mjs`へ集約することを受入済みで、同回帰は
+直接同期process APIの再混入を明示的に守っている。今回の直接probeは5秒、1 MiB、`shell:false`、
+`SIGKILL`で直接leafを止めるが、既存共通helperのprocess-group cleanup境界には入らない。
+Generator自身も任意の`git` wrapperが孫processを作る場合は新しい保証対象外と記録している。
+ユーザー承認はWindows Hook欠落とP005期待の最小修正であり、この既存安全境界の緩和やallowlist追加ではない。
+
+したがってC5とC6は必須閾値未達で、Phase Aは不合格である。Windows成功、candidate parity、host source読込、
+未変更面の過去PASSを、この新しいproduct regressionの代替にはしない。private／Yasashii適応、main、tag、
+Release、marketplace、正式installへ進むPhase Bは引き続き未評価であり、Sprint 054全体も未完了である。
+
+別件として、Sprint 050のprimary semantic digest pinも非greenのままである。現在のprimary定義で変わったのは、
+受入済みSprint 050 Patch 002がPK-001を「Claude標準Hookの重複宣言なし」へ更新した箇所だけで、ID、Critical、
+Sprint 048割当、他249件は維持されている。現在の意味digestは
+`6c073e574638b2e9382e0521a936c9b4605eea7ccc03dbabd21d0953d5b0bba8`だが、
+`scripts/sprint-050-test.mjs`は旧pin
+`f3782f008a362f4a7d9d38afeb48cda97ced61062e69fd062093132277ccf979`を期待する。
+これは製品挙動ではなく`verification-infra` findingである。ただしSprint 054契約が既存Sprint 050入口を
+明示し、C6が全回帰greenを要求する以上、既知FAILを黙ってPASSにはできない。
+
+## 増分スコア
+
+未変更面は、exact candidate parityとWindows因果run、および前節までの同一Sprint証跡を引き継いだ。
+変更・失敗に関係する軸だけを増分再判定した。
+
+| 基準 | スコア | 閾値 | 判定 | 根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 3/5 | 4 | **FAIL** | Phase A必須の既存回帰が1件失敗し、Sprint 050入口も既知非green。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | Windowsのsyntax、P005、032、051、P004等は同じSHAで成功。Hook／inventory JSONも因果runで受理。 |
+| C3 機能の実証 | 3/5 | 4 | **FAIL** | Windows Hook修正は実証したが、既存Sprint 022の動的assertがexact candidateで失敗。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | 今回差分に公開copy／画像変更なし。前回の案内・render証跡を引継ぎ。 |
+| C5 安全・規律 | 4/5 | 5 | **FAIL** | productionの直接同期process API再混入が、受入済み共通安全境界の回帰として検出された。 |
+| C6 無回帰 | 4/5 | 5 | **FAIL** | offline master 21/22・735/736、単体022 68/69。Sprint 050 semantic pinも非green。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | WindowsのSprint 032は16/0。更新導線自体の新しい失敗は観測していない。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | exact SHA／895 files／44 common pathsを固定し、FAIL後の下流・release・install write 0を維持。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | 今回差分で利用者向け会話・案内本文は変更していない。 |
+| C19-Voice Secretary Voice | 5/5 | 5 | PASS | 今回差分にVoice sourceなし。exact candidateの既存offline／履歴証跡を引継ぎ。 |
+| C19-Clarity 正本・状態モデル | 5/5 | 5 | PASS | Windows 3 roundでcanonical 32/32、unique、rebuild、residue 0を実証。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | 今回差分にAttention／projection UX変更なし。 |
+| C21 Clarity Hook・host parity | 5/5 | 5 | PASS | Windowsで3 round各Hook 32/32。Claudeはexact `af2a75e`の隔離session `9cd47e8c-22d7-4820-8d21-ee63f9640e06`で実読込。Codex `/hooks`受理は旧candidateの隔離session `01a074a5-c88c-7612-ac0a-2a629ef44b53`から、今回変更のない`hooks.json` bytesだけをcarry evidenceとして採用。正式installed更新と旧warning解消はPhase B。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | 今回差分なし。前回046 34/34＋補助2/2の証跡を引継ぎ。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | 今回差分なし。real Xmind外部writeは契約どおりNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 4/5 | 5 | **FAIL** | Hook root probeが受入済み外部process共通安全境界を外れ、public Phase A gateが非green。下流write 0は維持。 |
+| C26 Clarity包括scan・Windows native | 5/5 | 5 | PASS | exact Windows runでP004 16/0、P005 10/0、Windows verified true。 |
+
+1軸でも閾値未達なら不合格というrubricに従い、公開AgenticのPhase AをFAILとする。
+
+## 現行証跡
+
+### CandidateとWindows native
+
+- `git rev-parse HEAD` → `af2a75ee843fbf6a232f58eef81fdd63e9d4bfb8`。
+- working treeの差分はOrchestrator所有`docs/sprints/state.md`のLineage予約だけ。製品／test bytesはHEADと一致。
+- `/private/tmp/secretary-012-af2a75e-candidate.json` → 895 files、tree
+  `e9110c4ed594f394269d675db024043c39fab5aed6a4c72217a63d9030a73d4d`、44 common paths、
+  common digest `ebce27e1786ce6b7ceed333f2fa0b308a6271c34251dc4e8558d56eea07daa88`、
+  source／detached checkout／Git-free archive parity true、downstream／external write 0。
+- GitHub Actions run `34011160155`／job `101427127061`を`gh run view`で独立確認。
+  conclusion `success`、head SHAはexact candidate、Microsoft Windows Server 2025、Node `22.23.2`。
+- Windows P005 `10/0`、Sprint 047 `25/0`、Critical `16/16`、AC `7/7`、supplemental 2。
+- GS-009 round 1/2/3はいずれもwriters 64、CLI 32、Hook 32、canonical／Hook delta 32、parse／unique／rebuild 100%、
+  residue before／after 0。最大lock waitは7854／8728／8223ms < 15000ms、最大lease criticalは
+  1610／1086／951ms < 30000ms。
+- Windowsのその他の同一job: Sprint 032 `16/0`、Sprint 051 `45/0`（win32）、
+  P004 Harness scanner `16/0`、P007 `25/0`、P002 `12/0`、P004 Git identity `13/0`。
+
+### offline masterとSprint 022単体再現
+
+- Orchestratorのexact clean-start／clean-end offline report
+  `/private/tmp/secretary-012-af2a75e-offline.json` → status `fail`、22 suite中21 PASS、
+  736 assertion中735 PASS、failed 1、verification-infra 0、exit 1。
+- 失敗suite `sprint-022-path-timeout` → wrapper 7 PASS／1 FAIL、duration 10,307ms、exit 1。
+- 今回の独立実行は`node scripts/sprint-022-safety-test.mjs`を1回だけ。exit 1、
+  `SPRINT022_PASS=68 SPRINT022_FAIL=1`。唯一のFAILは
+  `productionの直接execFileSync・spawnSync inventoryは0件: plugins/secretary/scripts/lib/clarity-root.mjs`。
+- Node数は開始21、実行中25、終了21。40の開始停止基準／60の即時中断基準を下回り、残processなし。
+- `clarity-root.mjs`は`spawnSync`を直接importし、Hook用runnerで5,000ms／1 MiB／`SIGKILL`／`shell:false`を設定。
+  Sprint 022回帰は`external-ops.mjs`だけを例外として、それ以外のproductionに直接`execFileSync`／`spawnSync`／
+  `execSync`が0件であることを検査する。Sprint 022の受入済みprogressも、このinventoryを
+  「直接同期process APIの再混入を検出する」回帰として明記している。
+- 初回offline FAILと単体再現は同じ原因で整合する。単体再現の成功を得るまで繰り返す操作は行っていない。
+
+### Sprint 050 semantic pin
+
+- `docs/spec/clarity-acceptance-cases.md`の現行PK-001はCriticalで、期待は
+  `version／description／skills整合、標準hooks/hooks.jsonの重複宣言なし`。
+- `docs/feedback/sprint-050-patch-002.md`はこの意味変更を独立PASS済みとして記録し、ID／Severity／割当を維持している。
+- `scripts/sprint-050-test.mjs`のprimary semantic pinは旧値`f3782f...`のまま。履歴比較で現行primary 250の
+  実digestは`6c073e...`、差は受入済みPK-001だけである。
+- Macで`sprint-050-test.mjs`／`--coverage-only`／candidate wrapperは実行していない。これらは
+  Sprint 044／047の高並列入口へ到達し得るため禁止を維持した。既知不一致をPASSにも、製品bugにもしていない。
+
+## Findings
+
+| # | 重要度 | 対象区分 | 内容 | 判定への影響 |
+|---|---|---|---|---|
+| 1 | Critical | product | Hook限定Git probeがproduction sourceで`spawnSync`を直接使用し、受入済みSprint 022の共通外部process安全境界を回帰。 | C5／C6／C24 FAIL。全体分類を`implementation-issue`とする。 |
+| 2 | Major | verification-infra | Sprint 050のprimary semantic digest pinが、受入済みPK-001意味更新へ追随していない。 | C6をPASSへ昇格できない。製品source修正とは分け、ユーザー判断なしに自動更新しない。 |
+
+前回findingのWindows Hook 31/32とP005日本語判定誤読は、exact candidateの因果Windows runで再発せず、
+現行findingとしては閉じた。元のFAIL記録は前節までに保持する。
+
+## 最小の次対応
+
+1. product側は、Hookの`Node → git`単一probeという目的、5秒／1 MiB／`shell:false`、1回だけ、
+   root identity再検証、診断の非機密性、Windows 32＋32×3 roundを維持したまま、外部process起動を
+   受入済みの共通安全境界へ戻す。`sprint-022-safety-test.mjs`へ`clarity-root.mjs`をallowlist追加する、
+   direct-sync inventoryを削る、または孫process保証を説明だけで外す方法では閉じない。
+2. 修正後は新frameworkを作らず、Sprint 022単体、Hookの既存低並列境界、exact Windows P005／047、
+   offline masterを再確認する。actor、round、assert、timeout、leaseを弱めない。
+3. 050 pinは別の`verification-infra`判断として、次から選ぶ必要がある。
+   - 推奨: 受入済みPK-001だけが意味差であることを固定したうえで、既存semantic digest pinだけを現行正本へ再束縛する。
+     ID／Severity／Sprint割当、他249件、mutation拒否、case数、runnerを変えない。
+   - リスク受容: 既知のSprint 050非greenを明記して`done-by-user-decision`相当でPhase Aを進める。
+   - Non-scope: 今回だけSprint 050全入口を必須から外す。最終250件の意味改変検出が弱くなる。
+
+050は検証基盤だけの追加修正なので、Harnessの`verification-scope-issue`選択を経ず自動で積み上げない。
+一方、Finding 1は製品実装の既存安全回帰であり、全体の自動遷移分類は`implementation-issue`である。
+
+## Phase Bへ繰り越す未評価項目
+
+- private／Yasashiiの版固有candidate適応と独立Phase A評価。
+- 3版main統合、push、`v0.12.0` tag、GitHub Release、artifact、marketplaceの公開因果性。
+- このMacへのprivate正式導入、enabled Codex新session、disabledを維持したClaude Code隔離確認。
+- 公開後の更新prompt／infographic／guide／Releaseの最終照合。
+
+これらをPhase AのFAIL理由へ追加してはいないが、未評価のままSprint 054全体をPASSにはしない。
+
+## Evaluator自己レビュー
+
+- 閾値と合否は一致しているか: yes。
+- 各PASSに同一candidateまたは変更なしのcarry evidenceがあるか: yes。
+- 未検証Phase BをPASS扱いしていないか: yes。
+- 元のWindows 31/32と今回の22 failureを、後続greenで消していないか: yes。
+- Sprint 022のFAILをhost timingと誤分類していないか: yes。exact単体で同じsource pathを1回再現した。
+- Finding 1を単なるfixture不一致にしていないか: yes。受入済みprocess cleanup／共通化契約と照合した。
+- 050 pinをproduct bugへ誤分類していないか: yes。受入済みPK-001変更だけのverification-infraとして分離した。
+- 要求した証跡は契約・rubricのsafe harbor内か: yes。新runner／collector／attestationは要求していない。
+- Mac禁止の044／047／048／050／master／archive系高並列入口を実行したか: no。
+- 実my-vault本文、設定、下流repo、release、installへ触れたか: no。
+- 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。

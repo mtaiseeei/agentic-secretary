@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 1
+- Retry Count: 2
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
+- Lineage Dispatches: 7
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -112,6 +112,8 @@
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: fresh Evaluator Lineage7がaf2a75eのPhase AをFAIL / implementation-issueと判定。Windows P005/047の旧findingは同SHAで解消したが、独立022単体68/69の唯一のFAILはclarity-root.mjsのproduction直接spawnSync再混入。共通external-opsのtimeout後process tree cleanup境界を外れるためproduct回帰であり、例外追加／assert削除では閉じない。Retry Countを2へ更新、Spec-Issue0／Lineage7／strong／Rotate noneを保持。native Sol/high fresh起動は成功しcounter実消費、child model metadata未取得なのでlaunch-unverified。別Major verification-infraは受入済みPK-001への050 semantic pin追随漏れ。安全入口を保った製品修正は必要だが、検証のみの追加修正を黙って積み上げず、既存pin1箇所を正本へ再束縛する最小対応のユーザー確認まで次dispatchを保留する。ケース数／Severity／割当／timeout／actor／round／安全条件は維持し、新runnerは作らない。EvaluatorのC21表記は同担当が再評価なしで訂正: Claudeは今回af2a75e実読込、Codexは旧sessionの今回未変更hooks.json bytes受理をcarryした証拠であり、正式install／旧warning解消は未実施。下流適応/main/tag/Release/install未実施。
+- 2026-09-06: exact af2a75ee843fbf6a232f58eef81fdd63e9d4bfb8をcandidate branchへpush、既存Windows run34011160155/job101427127061はsuccess。P005 10/0、047の3roundで各64/64・Hook32/32・canonical32/32・parse/unique/rebuild100%・residue0、lock wait最大8728ms <15000、lease最大1610ms <30000。candidate-checkは895fileのsource/checkout/archive一致、外部／下流write0。Claude2.1.232隔離session9cd47e8c-22d7-4820-8d21-ee63f9640e06はpublic0.12.0の17Skill・Clarity登録、SessionStart/Stop exit0、tools/MCPなし、実設定／導入状態未変更。一方offline masterは21/22suite・735/736assertion・exit1、022 path/timeout wrapperの動的回帰1件がFAIL（開始終了clean）。失敗を再実行成功で消さず、050 stale semantic pinと合わせ独立Evaluatorへ原因分類を依頼する。Node21→最大観測25→21、Mac高並列は未実施。Lineage6<10を確認し7へ予約、native capability指定resolverのEvaluator gpt-5.6-sol/high/freshで起動する。Model Tier strong／Retry1／Spec-Issue0は分類確定まで保持。
 - 2026-09-06: Lineage6のfresh GeneratorからHook限定の直接Git probe、既存047のbounded診断、P005日本語判定期待修正を受領。5秒／1MiB／shell:false／SIGKILL、単一probe、32CLI＋32Hook×3round、lock／lease／assertは維持。Fable補助レビューはblocker0、残るleaf停止保証と診断envの境界はprogressに記録。製品／metadata +84/-26、既存検証 +67/-6でverification-onlyではない。Status awaiting-eval、candidate固定後に既存Windowsで再確認する。追加観測として050旧gateのprimary semantic digestが不一致。履歴比較ではe961833の受入済みPK-001（Claude標準Hookの重複宣言解消）の期待文変更だけが既存primary 250内の差分であり、固定digestは未更新だった。未実行／不一致をPASSにせず、独立評価で扱いを明示する。050のcoverageは044／047の高並列を内包するためMacでは実行禁止。下流/main/tag/Release/installはまだ実施しない。
 - 2026-09-06: 利用者の「続けて」を、直前に提示したWindows Hook記録不足と日本語評価期待helperの2点を既存安全条件のまま最小修正する追加承認として受領。既存AC達成修正として054内に保持し、新機能・actor/round/assert削減・timeout延長・新検証基盤は追加しない。host mac.lan/taisei/arm64、実root、branch、HEAD c34aea9cb92a283162217da41bf2cf6f74a8d189、clean、remoteを再確認、Node18。resolverはhigh-risk/Retry1/current strongからfresh Generator gpt-5.6-sol/high・Rotate none。Lineage5<10を確認し6へ予約、Status active。直接原因の観測から始め、推測だけの修正や成功するまでのCI再試行はしない。修正コードと検証コードの規模を報告し、独立Evaluatorによる再判定前に下流/main/release/installへ進まない。
 - 2026-09-06: fresh独立Evaluatorがexact a1b30c4のPhase AをFAIL / implementation-issueと判定。Windows GS009は第1round64/64成功後、第2roundのHook記録31/32で停止（全child exit0、canonical32、uniqueまでは成立。失敗roundのrebuild/residue/timingは未証明）、第3round未実施。直接原因は個別Hook出力がログにないため未確定で、製品findingとして保持する。別のSR001は日本語の正当な判定を期待helperが読み違えるverification-infraであり、feedbackや製品scannerをテスト都合で変えない。独立046は34/34＋補助2/2、外部通信0、Node18→18。Retry Countを1、Spec-Issue0/Lineage5/strong/Rotate noneを保持。今回の利用者承認は011/020限定だったため、追加の製品原因修正とP005期待helper修正を自動dispatchせず、最小範囲・既存条件維持で追加対応する承認を求める。下流適応/main/tag/Release/install未実施、旧0.10.3起動警告は実機で未解消のまま。評価記録のround別メトリクス表記のみ同Evaluatorに事実訂正を依頼（再評価/再テストではなく新dispatch消費なし）。
