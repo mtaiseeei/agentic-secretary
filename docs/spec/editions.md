@@ -1,5 +1,10 @@
 # Editions
 
+## 現在のrelease契約（2026-09-06）
+
+現在candidateは、受入済みSprint 051 / 052 / 053とProject Clarityを3配布系統へ届ける `0.12.0` とする。Clarityはprivate端末だけのlocal overlayではなく、Agentic、Yasashii、private my-vaultそれぞれの検証済みsource、tag、Release artifactへ含める。公開・main統合・このMacへの反映の正本は [Sprint 054](../sprints/sprint-054.md)。以下の過去candidate番号と当時の外部操作未承認記録は履歴であり、今回の版や許可へ再利用しない。
+今回ユーザーが明示承認した3版の必要なcommit、candidate branch push、Clarity PRとmainの統合、main push、`v0.12.0` tag、GitHub Release、marketplace反映、このMacのCodex／Claude Codeへのprivate版反映に限り、過去の未承認停止を更新する。各版の最終candidateを独立評価し、3版すべての必須gateがPASSした後だけmain／tag／Releaseへ進む。版固有正本、利用者データ、private設定、既存dirty、scope／enabled状態を保持し、実my-vault本文は読まない。
+
 ## 目的
 
 共通の安全性と機能を保ちながら、利用者に合わせた2つの完成品を提供する。

@@ -74,6 +74,10 @@ Project Clarity系譜で予約済みであり、本系譜では再利用しな�
 2026-09-05に、安全に取得済みの原本を整理するread-onlyの意味判断・並べ方・提案はLLMに任せ、
 `timeline` / `weekly` / `promotion-status` の整形・診断helperを必須の関所にしない方針を承認した。
 一方、root・symlink・archive・日付・出典・訂正履歴・重複抑止と、書込み・削除・Git・整合性の決定的シームは必ず保つ。
+2026-09-06に、受入済みSprint 051／052／053と各版のProject Clarity候補を意味統合し、Agentic、Yasashii、private my-vaultを
+Clarity込みの`0.12.0`として公開する方針を承認した。Clarityをprivate端末だけのlocal overlayにはせず、3版それぞれの
+検証済みsource、tag、Release artifactへ含める。3版のcommit／merge／push／tag／Releaseと、このMacのCodex／Claude Codeへの
+private版反映はSprint 054の範囲で承認済みである。版固有正本、利用者データ、private設定、既存dirty、scope／enabledを保持する。
 
 ## ひとことで
 
@@ -176,6 +180,7 @@ Chatwork／Google ChatのGit取り込みを `sprint-051` と確定した。
 | [sprint-051](sprints/sprint-051.md) | Chatwork／Google ChatのGit取り込み: 対象branch明示、安全分類、stage別案内、Actions run発見60秒＋指数backoff、Windows CI | sprint-040-patch-001 |
 | [sprint-052](sprints/sprint-052.md) | Secretary Voice: 秘書主体の自然な話し方、一人称設定、秘書名の使用場面4件、実行状態に忠実な返事 | sprint-051 |
 | [sprint-053](sprints/sprint-053.md) | LLM中心の読み取り・整理・提案と、必須の安全シームの分離 | sprint-052 |
+| [sprint-054](sprints/sprint-054.md) | Project Clarityを含む0.12.0の3版統合・独立評価・公開、このMacのprivate版反映、Claude Code向け更新案内 | sprint-051／052／053と各版Clarity候補 |
 
 既存 sprint-001〜006 と各 patch の契約・progress・feedback は履歴として保持する。
 sprint-007 は製品方針転換で白紙化され、旧計画と実装は `backup/sprint-007-010-plan` に退避済みである。

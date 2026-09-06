@@ -2,17 +2,23 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-053
-- Retry Count: 1
+- Current ID: sprint-054
+- Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 5
-- Model Tier: standard
-- Rotate: none
+- Lineage Dispatches: 1
+- Model Tier: strong
+- Rotate: model-escalation
 - Next Planned: TBD
 
 <!-- 2026-07-08: sprint-001 は再評価で合格（初回はクレジット方針の spec/実装不一致で不合格 →
      ユーザー確認で単段クレジットに正本改訂、回帰assert強化のうえ合格）。
      合格時の残課題「templates/ のインストール後パス解決」を sprint-001-patch-001 として処理してから sprint-002 へ。 -->
+
+## Release continuation authorization
+
+- 2026-09-06（追加承認）: 利用者が今回作成したClarityも反映するよう明示指定。下記の旧「公開Clarity PRを含めない」範囲を更新し、Agentic #11 / Yasashii #12 / private #10の最新候補を今回の3版リリースへ統合する。Codex起動時のhooks `collaborationMarker` parse warningも修正・両host確認の対象とする。旧private先行版をローカルoverlayだけで維持する方針は置き換える。既存データ・dirty・scope・enabled・公開範囲の保護は維持する。
+- 2026-09-06: 利用者がcommit・mainへのmerge・release・このPCのmy-vault反映を明示承認。Codex/Claude Code両host対応、公開更新promptはClaude Codeのみ。my-vaultは本人だけが使うprivate版であり、一般配布対象とは分ける。既存の記憶・設定・dirty差分・導入済みClarity・enabled状態を維持し、公開Clarity PRのmergeを本承認に含めない。
+- 2026-09-06: 利用者の「Harnessの上限はリセットしていい」に従い、Retry Count / Spec-Issue Count / Lineage Dispatchesを0へリセットした。Sprint 053の履歴と最終PASS、旧Lineage 5は保持する。native spawnのagent thread limitはHarness counterと別制限であり、リセット済みとは扱わない。fresh Planner launchは子作成前に拒否されたためdispatch消費0。調査Agentを独立Planner作業単位へ切り替えるfallbackで契約準備中、継承model/effortはunverified。
 
 ## スプリント一覧
 | ID | Status | Contract | Progress | Feedback |
@@ -80,6 +86,13 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
+| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+
+## Sprint 054 orchestration
+
+- 2026-09-06: Clarity追加依頼により初回Generatorを編集開始前に停止（製品・test・progress変更0）。実起動済みのLineage 1は保持し、Retry / Spec-Issueは加算せずfresh Plannerへ契約改訂を依頼。起動指定はgpt-5.6-sol / high、child host metadata未取得のためlaunch-unverified。public #11 exact HEAD 84e7eda41a887bac4a291379c7147e6193cd5442のWindows run33760135090は032更新検査3 FAIL、private #10 exact HEAD8539bb785046e1ef41cecbfdeb7f1da8f6b5c7e3のrun33760136372はprivate-CW-019がlock待機上限でFAIL。Yasashii #12 exact HEAD21d28913a8c7e8fcaa4299d5f235e44555407cc9のrun33760136563はPASS。PR本文の過去PASSを最新候補PASSとして扱わない。64 Node同時spawnのprivate stressはMacで実行せず、既存Windows CIを使う。
+- 2026-09-06: Clarity統合前57a1f5c候補の既存offline masterが完了。22 suite中21 PASS / historical sandbox loopback EPERM 6件をverification-infraとして分離、729 assertions PASS / product FAIL 0、JSON全体status pass。証拠 `/private/tmp/secretary-012-release-initial-offline.json`。Clarity統合後の配布判定には流用しない。自分が開始したmaster processは終了を確認。
+- 2026-09-06: Plannerの52行契約とedition現行版補足を主担当が確認。製品方向は既存承認どおり、0.12.0の配布準備・下流保護・公開・本人専用Mac反映を別結果として扱う。入力commitは57a1f5c。新mainかつ利用者のreset指定によりRetry/Spec-Issueを0とし、初回Generator予約でLineage1。Risk highのresolverはstrong / model-escalation / gpt-5.6-sol highを選択。native fresh起動を試し、同期的なchild未作成拒否ならcounterを消費せず別work-unit fallbackへ戻す。未公開Clarity PRは対象外。
 
 ## Sprint 053 orchestration
 
