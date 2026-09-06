@@ -1,4 +1,6 @@
-# Sprint 054 評価結果
+> **現行評価:** candidate `a1b30c41bcbba36f1c1f2823ae745f70d59ca324` の増分再評価は、本ファイル末尾の「Sprint 054 増分再評価結果（現行）」を正本とする。以下のcandidate `403e552…` 評価は履歴として保持する。
+
+# Sprint 054 評価結果（履歴: candidate `403e552…`）
 
 **判定:** 不合格（Phase A: 公開 Agentic source 技術 gate。Phase Bは未評価）
 **分類:** verification-scope-issue
@@ -157,3 +159,111 @@ Harnessの`verification-scope-issue`手順に従い、Orchestratorは (a) 上記
 - 分類根拠: Phase Aで製品実挙動の失敗は確認できず、C6非greenの主因が既存fixtureの現在sourceへの未追随であるため`verification-scope-issue`。Phase Bの公開・導入は判定理由へ混ぜず、未評価として残す。
 - 実装やコード修正へ越境していないか: yes
 - 高並列検査の誤実行を隠していないか: yes。結果を安全準拠PASSから除外し、再実行を禁止した。
+
+---
+
+# Sprint 054 増分再評価結果（現行）
+
+**判定:** 不合格（Phase A: 公開 Agentic source 技術 gate。Phase Bは未評価）
+**分類:** implementation-issue
+**評価対象:** Sprint 054 — candidate `a1b30c41bcbba36f1c1f2823ae745f70d59ca324`、branch `codex/sprint-052-secretary-voice`
+**Escalation Recommendation:** strong（ユーザーが製品修正を承認した場合のみ。自動差し戻し・自動実装はしない）
+
+## 結論
+
+承認済みだったSprint 011／020の2 fixture限定修正は、exact candidateのoffline masterで **22/22 suite、736/736 assertion、verification-infra 0、exit 0** となり、旧評価の主blockerを解消した。今回独立実行したSprint 046も **primary 34/34、supplemental 2/2、remote command 0、canary変更なし** で合格した。
+
+しかし、exact candidateの新しいWindows native runはP005でFAILした。`SR-009`が内包する`GS-009`では、第1 roundが32 CLI＋32 Hookを含む全assertに成功した後、第2 roundでHook runtime eventだけ **31/32** となった。第2 roundでも64 child processのexit 0、canonical event 32/32、JSON parse、canonical／Hook ID一意性まではassertを通過したが、Hook件数assertで停止したため、そのroundのState rebuild／residue／時間上限は未検証である。現行契約と既存testは、Windows 3 roundそれぞれで32 CLI＋32 Hook、100%成功を必須にしており、第3 roundは実行されていない。
+
+個別Hook childのstdout／degraded理由はWindowsログに残っておらず、1件が記録されなかった直接原因は確定できない。Hook entrypointは例外時にもdegraded JSONを返してexit 0にするため、「全child exit 0」だけでは32件の記録完了を証明しない。ただし、原因不明を理由に既存の32件要件を31件へ緩めることはできない。新しいWindows実測で製品のHook記録が契約値を満たさなかったため、このfindingを`product`、全体を`implementation-issue`とする。
+
+同runの`SR-001`は別の`verification-infra` findingである。P005側の期待値helperは英語の`Verdict: PASS/FAIL`しか認識せず、現行feedbackの日本語`判定: 不合格`を見落とし、本文中の`verification-scope-issue`を期待statusにした。製品scannerは`判定`と`不合格`を正しく読み、実際のrole statusを`failed`としたため、製品側の観測が正しい。正当なfeedbackを書き換えてtestへ合わせてはならない。
+
+以上により、公開AgenticのPhase A技術gateは不合格である。Phase Bのprivate／Yasashii適応、main／tag／Release／marketplace、正式installとnew session確認は未評価であり、Sprint 054全体を完了とはしない。
+
+## 増分スコア
+
+未変更面は、製品runtime bytesが履歴candidate `403e552…` と同一で、exact candidateのoffline masterがgreenであることを条件に、上記の履歴証跡を引き継いだ。新しい証拠で判定が変わる軸を次に示す。
+
+| 基準 | スコア | 閾値 | 判定 | 増分根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 3/5 | 4 | **FAIL** | Phase A必須のexact Windows gateでHook 31/32。必須成果が未達。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | exact candidateのoffline masterは22/22。Windowsでもsetup、syntax、update、Sprint 032、migrationは成功。 |
+| C3 機能の実証 | 3/5 | 4 | **FAIL** | Windowsの実Hook記録assertが失敗。grepや推測ではなくnative runの観測値で判定。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | runtime／案内の意味は履歴候補から変更なし。Phase A／Bの説明だけが明確化された。 |
+| C5 安全・規律 | 5/5 | 5 | PASS | 第1 roundはcanonical JSON、State rebuild、unique、residue 0を実証。第2 roundもcanonical parse／unique／32件までは成立し、安全違反は観測していない。実利用者本文、下流、install、releaseへの評価側writeなし。 |
+| C6 無回帰 | 4/5 | 5 | **FAIL** | offline masterは736/736だが、必須Windows P005は8 PASS／2 FAILで非green。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | Windows update関連stepとSprint 032は成功。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | exact SHAを固定し、Phase A FAIL後のmain／tag／Release／下流適応へ進んでいない。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | Phase A／Bの案内補正を含む既存readability証拠を維持。 |
+| C19-Voice | 5/5 | 5 | PASS | 製品bytes不変、offline master green。 |
+| C19-Clarity | 5/5 | 5 | PASS | 第1 roundでcanonical event 32/32とState rebuildが成立し、第2 roundもcanonical event 32/32。失敗は別軸C21のHook runtime記録。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | 製品bytes不変、履歴の実行証拠を引継ぎ。 |
+| C21 Clarity Hook・host parity | 4/5 | 5 | **FAIL** | Windows第1 roundは64/64成功したが、第2 roundでHook 31/32。Codexはsource JSON受理まででHook未実行のため、この証拠だけでも5/5へは昇格しない。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | `node scripts/sprint-046-test.mjs`が34/34＋補助2/2、remote command 0、canary unchanged。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | 製品bytes不変。履歴どおりreal Xmind外部writeは契約上のNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 4/5 | 5 | **FAIL** | Hook runtimeの既存回帰が1件欠落し、public Phase A独立PASSに未到達。下流write 0は維持。 |
+| C26 Clarity包括scan・Windows native | 4/5 | 5 | **FAIL** | exact candidateのWindows native runがP005で停止。SR-001はverification-infraだが、SR-009はproduct FAIL。 |
+
+1軸でも閾値未達なら不合格というrubricに従い、Phase AをFAILとする。
+
+## 現行証跡
+
+### Candidate差分とoffline基準
+
+- `git rev-parse HEAD` → `a1b30c41bcbba36f1c1f2823ae745f70d59ca324`。
+- `403e552689b23d311e4d9c977e999888577ffc0b..a1b30c4…`で、public plugin／adapter／workflowのruntime bytesは不変。差分はPhase説明文書と、ユーザーが承認した既存011／020 fixture追随である。
+- Orchestrator実行 `/private/tmp/secretary-012-a1b30c4-offline.json`: `status=pass`、22/22 required suite、736/736 assertion、failed／verificationInfra／skipped／excluded各0。開始・終了時clean、exit 0。
+- Git-free archive `/private/tmp/secretary-012-a1b30c4-archive.E7D3lF/extracted`（`.git`なし）: release 14/0、Sprint 048 validator 25/0、Sprint 033 archive 18/0、readability 12/0。Macで64 actorへ到達するwrapperはNOT-RUN。
+
+### Windows native（exact candidateの新規run）
+
+- GitHub Actions run `34007865815`、job `101418285832`: conclusion `failure`、head SHA `a1b30c41bcbba36f1c1f2823ae745f70d59ca324`。
+- URL: <https://github.com/mtaiseeei/agentic-secretary/actions/runs/34007865815>
+- setup、syntax、update、Sprint 032、Sprint 051 Git ingest、conversation migration、P004 Harness scannerはsuccess。
+- P005: `SPRINT050_PATCH005_PASS=8 FAIL=2 ... WINDOWS_VERIFIED=false`。
+- `SR-001`: `scripts/sprint-050-patch-005-test.mjs:180`でEvaluator role statusの期待不一致。
+- `SR-009` → nested `GS-009`: `scripts/sprint-047-test.mjs:321`で`31 !== 32`。
+- 第1 round成功metric: writers 64、child exits 64/64、canonical delta 32、Hook delta 32、canonical／Hook unique true、State rebuild true、pre-rebuild full state true、rebuild noop true、residue before／after 0、max canonical lock wait 11471ms < 15000ms、max lease critical 3037ms < 30000ms、round 17448ms < 600000ms。
+- 第2 round失敗: child exits 64/64、canonical／Hook JSON parseとID一意性、canonical delta 32まではassertを通過した。続くHook deltaが31となり、`scripts/sprint-047-test.mjs:321`の32件assertで停止。第2 roundのState rebuild／residue／時間上限と、第3 roundは未実行。
+- P005失敗後、後続のP001／P002／P004／Sprint 047単独stepはskipped。過去のexact `403e552…` Windows PASSは履歴として保持するが、新しいexact candidate FAILの代わりにはしない。
+
+### Sprint 046の不足証拠を補完
+
+- 実行前 `pgrep node | wc -l` → 18（40以下、sandbox外の実測）。
+- sourceを先に確認し、禁止対象044／047／048、master、archive wrapperへの到達がない単体scriptであることを確認した。
+- `node scripts/sprint-046-test.mjs` → exit 0、`SPRINT046_TEST_PASS=34 FAIL=0 ... SUPPLEMENTAL=2 REMOTE_COMMANDS=0 CANARY=UNCHANGED`。
+- 終了後 `pgrep node | wc -l` → 18。開始前から増加なし。
+- 一時fixtureだけを使い、実利用者workspace本文・network・下流repoは扱っていない。
+
+### host読込証拠の境界
+
+- Claude Code 2.1.232の隔離`--plugin-dir`読込はpublic source 0.12.0、17 Skills、SessionStart／Stop exit 0、parser errorなし。実projectのdisabled状態は変えておらず、実my-vaultでloadedとは扱わない。
+- Codex 0.153.4の隔離projectはpublicとbyte一致するhooks JSONを5 eventとして認識し、command／3秒timeoutを表示した。untrustedのままHookは未実行であり、installed new pluginやstartup warning 0の証拠ではない。旧private 0.10.3の元のparser warningは残る。
+- したがって、これらはPhase A source受理の補助証拠であり、Phase Bの正式導入・new session確認ではない。
+
+## finding一覧
+
+| # | 重要度 | 対象区分 | 内容 | 既存契約との関係 |
+|---|---|---|---|---|
+| 1 | Critical | product | Windows `GS-009`でHook runtime eventが32件中31件。直接原因は個別ログ不足のため未確定。 | 32 CLI＋32 Hook、3 round、100%成功という既存要件に未達。31件許容やtimeout／境界変更は未承認の製品・仕様判断。 |
+| 2 | Major | verification-infra | P005の`expectedEvaluatorStatus()`が日本語`判定: 不合格`を解釈せず、本文中の分類語をstatusとして期待する。 | 正当なfeedbackと製品scannerは変更せず、期待helperを日本語Verdict正本へ追随させる必要がある。承認済み011／020 fixture修正の外。 |
+
+## 再現と次の判断
+
+今回のMacでは高並列testを再実行しない。再現証拠は上記Windows runを使う。
+
+1. `SR-009`を閉じるには、32件要件を維持したままWindowsで失われたHook記録の直接原因を観測し、製品側を修正する必要がある。原因ログがない現時点でtimeout、actor数、round数、assertを緩めない。
+2. `SR-001`は製品scannerへ合わせ、既存P005期待helperが日本語`判定: 合格／不合格`を正しくstatus化する限定的なverification修正が必要である。feedback本文を英語へ改変してgreenにしない。
+3. どちらもユーザーが承認した011／020の2 fixture限定修正には含まれない。追加対応の明示判断前に、自動Generator差し戻し、公開、下流適応、installへ進まない。
+
+## Evaluator自己レビュー
+
+- 閾値と合否は一致しているか: yes。
+- 新Windows FAILを過去PASSや再実行成功で置換していないか: yes。
+- 個別Hook原因を推測で確定していないか: yes。観測できた31/32だけをfindingとした。
+- `product`／`verification-infra`を分けたか: yes。SR-009はproduct、SR-001はverification-infra。
+- ユーザー承認済み範囲を拡張していないか: yes。追加修正は提案に留めた。
+- Phase AとPhase Bを混同していないか: yes。現行判定は公開Agentic source Phase Aだけで、Sprint 054全体は未完了。
+- 既存safe-harborを弱めたり、新runner／framework／collectorを要求したか: no。
+- 実装・test・spec・stateへ越境したか: no。Evaluator所有の本feedbackだけを更新した。

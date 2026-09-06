@@ -3,9 +3,9 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 0
+- Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
+- Lineage Dispatches: 5
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -112,6 +112,8 @@
 
 ## Sprint 054 orchestration
 
+- 2026-09-06: fresh独立Evaluatorがexact a1b30c4のPhase AをFAIL / implementation-issueと判定。Windows GS009は第1round64/64成功後、第2roundのHook記録31/32で停止（全child exit0、canonical32、uniqueまでは成立。失敗roundのrebuild/residue/timingは未証明）、第3round未実施。直接原因は個別Hook出力がログにないため未確定で、製品findingとして保持する。別のSR001は日本語の正当な判定を期待helperが読み違えるverification-infraであり、feedbackや製品scannerをテスト都合で変えない。独立046は34/34＋補助2/2、外部通信0、Node18→18。Retry Countを1、Spec-Issue0/Lineage5/strong/Rotate noneを保持。今回の利用者承認は011/020限定だったため、追加の製品原因修正とP005期待helper修正を自動dispatchせず、最小範囲・既存条件維持で追加対応する承認を求める。下流適応/main/tag/Release/install未実施、旧0.10.3起動警告は実機で未解消のまま。評価記録のround別メトリクス表記のみ同Evaluatorに事実訂正を依頼（再評価/再テストではなく新dispatch消費なし）。
+- 2026-09-06: exact a1b30c41bcbba36f1c1f2823ae745f70d59ca324でoffline masterは22/22 suite、736/736 assertion、infra0、exit0。開始・終了時ともworktree clean。Git-free archive（`/private/tmp/secretary-012-a1b30c4-archive.E7D3lF/extracted`）はrelease14/0、048 validator25/0、033 18/0、readability12/0。一方、新規Windows run34007865815/job101418285832はP005でFAIL（SR001評価分類期待不一致、SR009内GS009のHook記録31/32）、後続stepは未実施。過去Windows PASSで置換せず、fresh独立Evaluatorへ原因分類とPhase A再判定を渡す。Node18、Lineage4<10のため5へ予約、resolverのEvaluator Sol/high・freshを適用、Retry/Spec-Issueは分類確定前なので0を保持する。
 - 2026-09-06: 承認された011/020の限定fixture修正を受領。製品変更0行、011 73/0、020 adversarial 16/0、020 wrapper 16/0、045 35/0。新runnerやcase削減なし。Status awaiting-evalへ移し、clean candidateを固定してoffline baselineと既存Windows CIを再確認する。検証だけの修正はこの1roundであり、別の検証修正を自動で積み重ねない。
 - 2026-09-06: Claude Code 2.1.232の既存`--plugin-dir`隔離読込（session aea13c89-e343-4653-aa01-0a9f578b0842、tools/MCPなし、設定sourceなし、実my-vault外）でpublic 0.12.0、Clarityを含む17 Skillを登録、SessionStart/Stop Hookはexit0、parser errorなし。実projectのdisabled状態は変更しておらず、実my-vaultでloadedとは扱わない。
 - 2026-09-06: Codex 0.153.4の隔離session 01a074a5-c88c-7612-ac0a-2a629ef44b53で、publicとbyte一致する一時project hooks.jsonが5イベントとして認識され、PostToolUseのsource/command/3秒timeoutを実`/hooks`画面で確認。自身が作成した一時directoryの通常trust確認だけ行い、Hook trustは付与せず未実行を維持、モデルへの依頼なしで終了。既存旧private cache 0.10.3からのcollaborationMarker警告は引き続き表示されたため、全startup警告0や新plugin導入PASSとは扱わない（transient enabled=false指定でも旧cache警告は表示）。正式更新後の新session確認はPhase Bに残す。doctorのexit0もHook動作証拠には採用しない。
