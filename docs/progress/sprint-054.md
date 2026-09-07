@@ -320,3 +320,60 @@
 - exact Windows結果が出るまでは、旧run `34024443793`のHook index 18 timeout原因が閉じた、Phase AがPASSした、または下流／publicationへ進めるとは主張しない。再びtimeoutした場合もrerun-to-green、timeout延長、actor／round／assert削減、失敗の握りつぶしを行わず再分類する。
 - 起動方法／テスト対象URL: CLI製品のためWeb起動なし。Hookは`node plugins/secretary/scripts/clarity-hook.mjs`へ既存host event JSONをstdinで渡す。
 - 回帰チェック: Macの限定入口は上表。full offline／candidate archive／exact Windows gateと正式判定はOrchestrator／fresh Evaluatorへ引き渡す。
+
+## Phase B publication／installation handoff（2026-09-07）
+
+**ステータス:** 3版publicationとprivate 0.12.0の正式導入は完了。Codexの新規Clarity Hook 5件は通常UIで利用者review待ちのため、Phase B全体は未完了・独立評価待ち。
+
+### Phase A candidateから公開tagまでのbyte境界
+
+3版とも、公開前remote mainとClarity PR headはPhase A candidateの祖先であり、candidateから公開tagまでに増えたのは各roleのgovernance記録だけである。plugin tree、Claude／Codex marketplace、manifest、更新guide、infographic、CHANGELOG、HookはPhase Aで検証したbytesから変えていない。
+
+| Edition | Phase A candidate／tree | 公開main＝tag／tree | candidate→tagの実diff |
+|---|---|---|---|
+| Agentic public | `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154`／`30b7619e7e779242dd263032c82bccd6ae91eaf1` | `b2a244ee9b3ee4be62cef58f3266a82194ec055c`／`3dc0911435f7ab0a7247700994af12ab613eae1f` | `docs/feedback/sprint-054.md`、`docs/sprints/state.md`のみ |
+| private my-vault | `cbcf2c32efa5d6c343958603c9d740f5f26738de`／`2cf4336f23a88065e853681cc277cb96bd7f8df1` | `9b269563dd89f6552b0e382cfad724d378d51579`／`17f757fb0cd56b53bb2c1bb35012b2ce4ae806b4` | `docs/feedback/sprint-051.md`、`docs/sprints/state.md`のみ |
+| Yasashii | `27b570d51757e225e7d7a71f42755ce3f999eede`／`1d3f4696f3ceddfc05095c99d3c63fb65e4d1957` | `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`／`96144ac75708edd384c9f34c3c8bbc3df5958c6b` | `docs/feedback/sprint-044.md`、`docs/sprints/state.md`のみ |
+
+- Agentic／private／YasashiiのClarity PR #11／#10／#12は、通常fast-forward後にGitHub上で`MERGED`となった。PR本文・branch・commentは削除または書換えしていない。
+- candidate branchとmainは通常pushだけで進め、force push、履歴書換え、tag移動は0件。main push後に各版の新規lightweight tag `v0.12.0`を作成した。
+- tag上のplugin treeは各Phase A candidateのplugin treeと一致した。remote main／tag／Release targetは版ごとに上表の同一完全SHAを指す。
+
+### GitHub Release、artifact、marketplace
+
+| Edition | Release／artifact | SHA-256 | Git-free archive gate |
+|---|---|---|---:|
+| Agentic public | [v0.12.0](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.12.0)／`agentic-secretary-0.12.0.tar.gz` | `823260bdf8e3a26fe6e579dd14dafb1ce660d1d8532f8440aa293440d6918c0a` | 14 PASS / 0 FAIL |
+| private my-vault | [v0.12.0](https://github.com/mtaiseeei/agentic-secretary-my-vault/releases/tag/v0.12.0)／`agentic-secretary-my-vault-0.12.0.tar.gz` | `c3c55d16694254cf218324bc2dd80427af3f265682582d36c5d9c80fa434430f` | 14 PASS / 0 FAIL |
+| Yasashii | [v0.12.0](https://github.com/mtaiseeei/yasashii-secretary/releases/tag/v0.12.0)／`yasashii-secretary-0.12.0.tar.gz` | `0bbb14d0d9a2a81ef8efe421c4c0c57a35e9b4403a810263bffdfb2ba0746cc1` | 14 PASS / 0 FAIL |
+
+- 3 Releaseは`draft=false`、`prerelease=false`で新規公開した。公開assetを別directoryへ再downloadし、手元のarchiveおよびGitHub APIの`sha256:` digestと3件とも一致した。
+- remote mainのClaude marketplaceはAgentic／privateが正式ID`agentic-secretary`、Yasashiiが`yasashii-secretary`を参照し、3版ともmarketplace entryとClaude／Codex plugin manifestは`0.12.0`で一致する。Codex repository marketplaceは同じlocal plugin sourceを参照する。
+- 3版のHook top-level keyは`description`／`hooks`だけで、Clarity marker、5 event、manual fallbackを保持する。Project Clarityは全artifactの正式plugin treeに含まれ、private限定overlayではない。
+- Release notesは版差を保ち、Project Clarity、Git取り込み、Secretary Voice、LLM／AI中心の読み取り・整理という4改善を記載した。公開guideのAgentic／Yasashii one-paste promptと1536×1024 infographicはPhase A candidateからbyte不変で、実Release URL／versionと一致する。
+- `plugins/secretary/release-inventory.json`内のsource-stage statusは、検証済み配布bytesを公開後に書換えない契約に従いcandidate時点の記録を保持する。実publication stateの根拠は上記remote main／tag／Release／asset／marketplace照合であり、source-stage fieldを公開済みへ読み替えない。
+
+### このMacのprivate 0.12.0正式反映
+
+- Orchestratorがprivate Release artifactのSHA-256 `c3c55d...430f`を独立確認し、展開したplugin treeと検証済みprivate sourceの差分0を確認した。
+- 既存の非Git product snapshot全体を、利用者dataとは別のversion付きsibling backupへrenameして保持した。public progressにはlocal absolute pathを残さず、正確な復元先はprivate install evidenceに保持する。
+- 同じ登録済みproduct pathへexact Release bytesをstagingから置き、Codexの正式`plugin add`経路を実行した。commandはexit 0、version `0.12.0`、enabled `true`、source／scope不変で、installed cacheとRelease plugin treeの差分は0件だった。
+- Claude Codeは既存project scopeの正式`plugin update`経路を実行した。commandはexit 0、version `0.12.0`となり、enabled `false`を維持した。installed cacheとRelease plugin treeの差分は0件であり、disabled projectを実workspace loaded PASSへ昇格していない。
+- cache directoryの直接編集、trust bypass、remove、scope／enabled切替、他plugin更新は0件。実my-vault本文、利用者設定の自由記述、memory、既存dirty、Secretを読取・copy・変更していない。
+
+### 新session／Hook trustの現在状態
+
+- Codex `0.153.4`の通常設定を使ったephemeral read-only new thread `01a07a36-2a5c-7c12-ae4a-54e4854135d5`はexit 0。tool実行0で、catalogにClarity Skillとprivate固有`notion-tasks`が存在し、旧`collaborationMarker` parser warningは0件だった。stderrはstdin追加入力の案内39 byteだけである。
+- Claude Code `2.1.232`の隔離session `da8f0da0-43f9-42cd-9cea-b51af0b9d008`は、exact installed `0.12.0`、private 21 Skillsを読み、SessionStart／Stop Hookはexit 0、stderr空、result `OK`だった。これはdisabledの実projectをloaded扱いする証拠ではない。
+- Codex new-session logのSHA-256は`79acba2118ab5d90ce0726b59363e0180fa3dece7cff396f614d2ea2d40aa1ff`、Claude隔離load logは`3ccac7fc433fb50120e0f1ae8560a56fa7d4c2672bd456a5450d23b422ca4a0c`。いずれもprivate install evidenceとして保持し、Release notesへlocal pathを載せていない。
+- Codex通常TUIの`/hooks`観測session `01a07a37-1d5f-7ab2-b05b-90177a4c93f7`では、0.12.0から追加されたClarity Hook 5件が`review required`だった。例としてPostToolUseはtarget plugin由来の`node clarity-hook.mjs`、timeout 3秒として表示された。
+- 利用者のtrustを推測せず、5件のtoggle、承認、bypassは行わずTUIを終了した。このため「installed 0.12.0のcatalog／parser互換」は確認済みだが、「通常Codex sessionで5 Hookがruntime-active」は未確認である。
+
+### 残る権限ブロッカー、rollback、Evaluator引き渡し
+
+1. 利用者がCodexの通常`/hooks` UIで、今回のtarget plugin由来Clarity Hook 5件をreviewし、信頼する場合だけ明示承認する必要がある。承認前に自動toggle、設定file編集、trust bypassは行わない。
+2. 承認後のfresh sessionで5 eventの有効状態とstartup parser warning 0を確認し、fresh独立EvaluatorがPhase B全体を判定する。publication／install成功だけでSprint 054全体をPASSまたは`done`にしない。
+3. local rollback元は0.12.0反映前のproduct snapshot全体で、private evidenceに正確なversion付きsibling pathを保持する。復元はscope／enabled／sourceを再確認し、別の明示許可を得た正式host経路で行う。現在は復元操作を行わない。
+4. remoteの`v0.12.0` tagとReleaseは移動・上書き・削除しない。公開後に欠陥が見つかった場合は、既存releaseを改変せず新しいpatch versionで修正する。
+5. safe archive検査は各版の`archive-release-gate.mjs`だけを用いた。Mac禁止の64 actor stress、Sprint 044／047／048／050 P005／full／coverage、master／deep wrapperは実行していない。今回のpublication roundは製品・test変更0であり、検証済みproduct bytesをそのまま配布した。
+6. 終了時のhost Node process数は25で開始上限40未満。今回起動したCodex／Claude probe processの残留は0で、server／browser／watcherは起動していない。
