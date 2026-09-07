@@ -1,5 +1,11 @@
 # Sprint State
 
+## 2026-09-07 追加依頼 — Claude Code private版も有効化
+
+- ユーザー「ClaudeCodeもやってくれないと」を受け、従来保持していたdisabled状態から、my-vault projectの`agentic-secretary@agentic-secretary`だけを正式`claude plugin enable --scope project`で有効化した。CLI exit0、metadataはversion0.12.0／scope project／enabled true。元sourceと製品bytesは不変、他pluginや自由記述設定・利用者本文は非接触。
+- 隔離したClaude Code session `01d7a303-e6d8-41b9-b75e-7f351eeece62`で同じinstalled0.12.0のClarity Skill、SessionStart／Stop exit0、stderr空、result OKを確認した。実my-vault本文を自動読込する通常sessionは起動していない。既に開いている利用者sessionのreloadは未実施で、新sessionから有効設定を利用する。
+- これは公開済み製品の追加開発ではなく、ユーザーが明示依頼したhost設定変更である。Sprint054の当時のdisabled保持という評価証跡は変更せず、現在の有効状態を本節に記録する。
+
 ## 2026-09-07 Sprint 054 完了 — 3版0.12.0公開・このMac正式反映
 
 - fresh独立EvaluatorのPhase B／Sprint054全体PASSを全文確認して採用した。AC8〜AC11全PASS、全対象rubric閾値達成、現行product／verification-infra finding0件。054をdone、Retry0／Spec0へ更新し、Lineage6／strong／noneを保持する。Next PlannedはTBD。
