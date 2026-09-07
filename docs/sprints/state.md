@@ -2,6 +2,12 @@
 
 ## 2026-09-07 private downstream Phase A 完了／履歴
 
+- Yasashii146d932のfresh評価全文を確認、Phase A FAIL / verification-scope-issue。V-03はworkflow変更に直接因果するcurrent digest1値漏れ、product finding0。V-01解消／V-02適用済みだがWindows update未到達、Lineage7／Retry0／Spec0を維持。関連hash限定整合のユーザー回答待ち。public／private Phase A PASSとcounterは不変。
+
+- 032履歴比較2か所のCRLF限定修正を承認後、Yasashii146d932を候補pushしWindows34082572913/job101620533431を1回実行。Mac03216/0、overlay／archive14/0は成功したが、WindowsはHS-016の古いinventory hashでHS15/1、更新検査等はskipped。追跡対象のworkflow変更に直接連動する記録漏れとreadonly確認。mainの確認不足を説明し、関連current hashの限定整合と追加push／修正候補ごとWindows1回を質問した。Yasashii Lineage7／Retry0／Spec0、fresh評価中。3版公開／install未実施。
+
+- ユーザー続行承認後、Yasashii V-02の履歴取得設定だけをfresh Generator Sol/high（Lineage5／Retry0／Spec0）で修正し、local candidate `c1265f4542c5b64466776e819de35070ed12b186`に保存。checkout fetch-depth:0の2行、YAML／historical0.7.0／diff成功、製品0。Windows前のreadonly比較で032の旧CHANGELOG／migration比較2か所もCRLF差だけで不一致と確認し、限定修正に含める可否を追加質問。未承認箇所は不変、push／Windowsはその回答後へ保留。3版公開／install未実施、public／private Phase A PASSとcounterは不変。
+
 - Yasashii f64d775のfresh評価全文を確認しcurrent Phase A FAIL / verification-scope-issueを採用。V-01解消、V-02はCI depth1と履歴依存検査の不一致、product finding0。Mac完全履歴update16/0。Yasashii Retry0／Spec0／Lineage4を保持、追加の履歴取得設定修正の承認待ち。public／private Phase A PASSと公開054のcounterは不変。
 
 - Yasashii修正候補 `f64d775043a6fb02161c6d9038d7ee722b9429c1` をcommit／候補pushしWindows34076583606/job101603781877を1回実行。Voice3/0となり改行問題は解消。native12／HS16／Git45／migration9も全成功だが、次のupdate検査が旧0.7.0履歴を取得できず準備段階で0/1。fresh Evaluator（Yasashii Lineage4）が正式分類中。既存CIの履歴取得設定だけの限定修正を追加質問し、未承認の変更はしない。3版main／Release／install未実施。
