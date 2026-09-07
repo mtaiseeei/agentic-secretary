@@ -1,5 +1,13 @@
 # Sprint State
 
+## 2026-09-07 0.12.0公開・実導入完了／Codex Hook信頼確認待ち
+
+- 3版のPhase A PASS後に通常fast-forwardでmainへ統合し、新規`v0.12.0` tag／GitHub Release／artifactを公開した。公開SHAはpublic `b2a244ee9b3ee4be62cef58f3266a82194ec055c`、private `9b269563dd89f6552b0e382cfad724d378d51579`、Yasashii `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`。各archive14/0、GitHub asset digest一致、Clarity PR #11／#10／#12はMERGED。配布bytesの変更・force push・tag移動は0件。
+- このMacのprivate版を同一登録元の正式経路でCodex／Claude Codeとも`0.12.0`へ更新した。旧product snapshotはversion付きsiblingへ保持、cache直接編集なし。Codex enabled=true、Claude project enabled=false、source／scopeを維持し、両cacheは公開plugin bytesと差分0。実my-vault本文・記憶・自由記述設定は非接触。
+- Codex新session `01a07a36-2a5c-7c12-ae4a-54e4854135d5`はClarity／private notion-tasksを認識し、旧collaborationMarker parser警告0。Claude隔離session `da8f0da0-43f9-42cd-9cea-b51af0b9d008`は0.12.0／21 Skills、SessionStart／Stop exit0、stderr空。disabledな実projectのloaded PASSとは扱わない。
+- Codex通常`/hooks`でClarityの5 eventが新規のreview requiredと判明。信頼設定を変更せず終了し、target pluginの5 Hookだけを通常UIで信頼する許可をユーザーへ確認する。これは権限待ちであり製品FAILではない。runtime-active証拠とfresh Phase B独立評価は未了のため054はactive、Retry1／Spec0／Lineage5／strong／noneを保持する。
+- publication／installationのGenerator記録はcandidate branch上の`acb4aa1105978d919e172224be0d940a360719e2`。公開main／tagは不変で、未了のPhase BをPASSまたはdoneへ昇格しない。
+
 ## 2026-09-07 private downstream Phase A 完了／履歴
 
 - Yasashii27b570d／tree1d3f4696がfresh独立Phase A PASS、receipt `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`で保存。全3版のPhase Aが成立（public767a7f3／receipt a293390、private cbcf2c3／receipt9b269563）。public054はPhase Bへ進むが全体activeを保持。既承認の3版main通常統合／push、新v0.12.0 tag／Release／artifactの作業単位をfresh Generator Sol/highで開始するためpublic Lineage4→5を予約、Retry1／Spec0／strong／none、launch-unverified。製品配布bytesは固定、実PCinstallは公開一致確認後に別途実行する。
