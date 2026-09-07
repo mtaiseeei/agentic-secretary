@@ -2,6 +2,20 @@
 
 ## 2026-09-07 private downstream Phase A 完了／履歴
 
+- Yasashii f64d775のfresh評価全文を確認しcurrent Phase A FAIL / verification-scope-issueを採用。V-01解消、V-02はCI depth1と履歴依存検査の不一致、product finding0。Mac完全履歴update16/0。Yasashii Retry0／Spec0／Lineage4を保持、追加の履歴取得設定修正の承認待ち。public／private Phase A PASSと公開054のcounterは不変。
+
+- Yasashii修正候補 `f64d775043a6fb02161c6d9038d7ee722b9429c1` をcommit／候補pushしWindows34076583606/job101603781877を1回実行。Voice3/0となり改行問題は解消。native12／HS16／Git45／migration9も全成功だが、次のupdate検査が旧0.7.0履歴を取得できず準備段階で0/1。fresh Evaluator（Yasashii Lineage4）が正式分類中。既存CIの履歴取得設定だけの限定修正を追加質問し、未承認の変更はしない。3版main／Release／install未実施。
+
+- Yasashii V-01限定検査修正と候補push／Windows1回／fresh独立評価をユーザー「よいです」で承認。fresh Generator Sol/highへdispatch、Yasashii Lineage2→3、Retry0／Spec0／strong／none。製品runtime・期待値・安全条件を変えずCRLF正規化と因果するoverlayだけを修正する。publicのcounter／Phase A PASSは不変。
+
+- Yasashii a38d7dcのfresh独立評価を全文確認し、Phase A FAIL / verification-scope-issueを採用した。製品finding0、V-01は052検査のCRLF/raw hashだけ（blocking1件）。同候補WindowsはVoice2/1／後続update未実行であり、公開gate未成立。Yasashii Retry0／Spec0／Lineage2を維持し、提示済みの限定検査修正と修正候補push／Windows1回／fresh評価のユーザー判断を待つ。public／private Phase A PASSは保持し、3版main／Release／installは未実施。
+
+- Yasashii044候補 `a38d7dc6bef58e2bcfd9433c8b29e9d557447b24`／tree `79420843e3c869fbe4fc9987e53d9ebbd4dcc5e7` をcommit／候補pushし、既存Windows34070811154/job101587680262を1回実行。Git45、HS16、native12、migration9は成功、Voice2/1でWindows改行由来のraw hash照合不一致、後続updateはskipped。fresh独立Evaluator（Yasashii Lineage2、Sol/high）が正式判定中。改行の検査側修正に限定した続行可否を非同期確認し、未承認の追加実装は開始しない。
+- main exact archive14/14とClaude source-isolated load（sessionea7e79c9-84ec-4f4e-a7d1-af5bd6fd32f8、Yasashii0.12.0、17 Skills、SessionStart／Stop exit0・parser警告0）は成功。これは通常install／実workspace／Codex実機の証拠ではない。3版main／tag／Release／installはまだ実行していない。
+
+- 2026-09-07 JST: 続行指示を受けYasashii044をfresh Generator Sol/highへdispatch（新main、Retry0／Spec0／Lineage1／strong／none、launch-unverified）。固定public767a7f3とprivate Phase A PASSを供給し、Yasashii固有表現・overlay・generic storageを保って適応中。旧043 Patch003の未了基準は044へ引き受け、superseded履歴をYasashii stateへ記録した。
+- FableのHerdr w4:p2／Claude session b1598b34-1e1f-4883-98fd-ad88a01e84adをlive get/readで確認したが、R1〜R4を保存する未送信draftが残るため入力を送らず保護した。今回は独立Evaluatorを別途使用する。caller環境にID変数はなかったためpane current --currentのopaque IDでw4:p5／w4:t5を確認し、focused paneは使っていない。
+
 - private Phase Aの独立評価・状態receiptを `9b269563dd89f6552b0e382cfad724d378d51579` としてlocal commitしworking tree cleanを確認した。これはgovernanceのみのcommitで、検証済みproduct candidateはcbcf2c3のまま。receipt未push、3版main／tag／Release／install未実施。現在のgoal（private修復→Windows→fresh Phase A PASS→状態記録）の完了条件を満たした。
 
 - 2026-09-07 JST: private exact `cbcf2c32efa5d6c343958603c9d740f5f26738de`／tree `2cf4336f23a88065e853681cc277cb96bd7f8df1` にfresh独立EvaluatorがPhase A PASSを確定、mainが全文確認してprivate051をdoneへ記録した。V01／V02／P01 CLOSED、open finding0、Windows34043112835全SUCCESS、16row16/16、archive14/14。privateの今回Lineage1、Retry0、Spec0、strong／none。public Phase A PASSとcounterは不変。Yasashii044の適応・独立評価が次であり、3版公開／install未実施のためpublic054全体はactiveを維持する。
