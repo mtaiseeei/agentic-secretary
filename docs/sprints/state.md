@@ -1,5 +1,12 @@
 # Sprint State
 
+## 2026-09-07 Sprint 054 完了 — 3版0.12.0公開・このMac正式反映
+
+- fresh独立EvaluatorのPhase B／Sprint054全体PASSを全文確認して採用した。AC8〜AC11全PASS、全対象rubric閾値達成、現行product／verification-infra finding0件。054をdone、Retry0／Spec0へ更新し、Lineage6／strong／noneを保持する。Next PlannedはTBD。
+- Evaluator通常Codex session `01a07a65-bb84-7f02-9a5e-eb3dc2759704`でもClarity5 eventのInstalled＝Activeとtarget source／3秒／Trustedを確認した。parser警告0、Codex0.12.0有効、Claude0.12.0 project無効保持＋隔離読込成功。利用者本文・記憶・自由記述設定・Secretは非接触。
+- 公開3版のcandidate→tagはgovernance差分だけ、製品bytes不変、remote／Release asset digest一致、独立Git-free gate各14/14。2本のClaude更新promptと図解も実Releaseと一致した。証跡はfeedback054の「Phase B 最終評価」に保存し、過去FAILを保持した。
+- 最終feedback／state／progressを含むgovernance receiptだけを通常fast-forwardでpublic mainへ保存する。公開tag `v0.12.0`、Release／asset、製品manifest／marketplace／plugin bytesは移動・上書きしない。先行progressの信頼確認待ちは当時の履歴であり、本節と最終feedbackが現在の完了状態を示す。
+
 ## 2026-09-07 Clarity Hook信頼承認／Phase B最終独立評価
 
 - ユーザー「信頼」を、target pluginのClarity用5 Hookだけを通常画面で信頼する明示承認として受領。Codex0.153.4通常TUI session `01a07a5d-a990-7961-9151-3df33a688a15`で各eventのsource／command／3秒timeoutを確認し、PostToolUse／PreCompact／SessionStart／SessionEnd／Stopを1件ずつ信頼した。trust-all、bypass、他Hook toggle、直接config編集は行わない。全5件がActiveとなりreview待ちは0件、他HookのActive数は不変。
@@ -75,7 +82,7 @@
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
 - Current ID: sprint-054
-- Retry Count: 1
+- Retry Count: 0
 - Spec-Issue Count: 0
 - Lineage Dispatches: 6
 - Model Tier: strong
@@ -180,7 +187,7 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | done | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 

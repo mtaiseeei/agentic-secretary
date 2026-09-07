@@ -938,3 +938,168 @@ same-candidate master／candidate parityを条件に同一Sprintの記録済み�
 - Mac禁止の044／047／048／050 P005／full／coverage、master／archive／regression wrapperを実行したか: no。
 - 実my-vault本文、private設定、下流repo、release、install、旧Harness repoへ触れたか: no。
 - 実装、test、spec、progress、stateへ越境したか: no。本feedbackだけを更新した。
+
+---
+
+# Sprint 054 Phase B 最終評価 — 3版公開／正式導入
+
+**判定:** 合格（Phase BおよびSprint 054全体）
+
+**評価対象:** Sprint 054 Phase B — public candidate `767a7f3ecb15c0ffe6d2d8f71529c74bf671c154`、
+private candidate `cbcf2c32efa5d6c343958603c9d740f5f26738de`、Yasashii candidate
+`27b570d51757e225e7d7a71f42755ce3f999eede`から公開された`v0.12.0`
+
+**Escalation Recommendation:** none
+
+## 結論
+
+Phase BのAC8〜AC11はすべて成立した。3版とも独立Phase A PASSのexact candidateからtagまでの実diffは
+feedback／stateだけで、製品plugin treeはbyte不変だった。remote `main`と`v0.12.0`は各公開commitに一致し、
+GitHub Releaseは3件とも公開済み、非draft・非prereleaseである。各Release assetのSHA-256はローカルの
+公開用tarと一致し、Git-free extractionに対する既存の小さいrelease gateは各14/14だった。
+
+Macの正式導入では、private 0.12.0の登録済みproduct snapshot、Codex cache、Claude cacheの製品bytesが
+Release extractionと一致した。Codexは0.12.0／enabled、Claude Codeは0.12.0／project scope／disabledを維持している。
+更新前snapshotも残り、実利用者の本文・記憶・自由記述・secret・settings本文は読まず、変更もしなかった。
+
+ユーザーが明示的に「信頼」と承認したClarity用5 Hookだけについて、通常Codex TUIの新しいsessionから
+`/hooks`を開き直した。PostToolUse 2/2、PreCompact 1/1、SessionStart 5/5、SessionEnd 1/1、Stop 3/3が
+Installed＝Activeであり、対象Hookのsourceは`Plugin - agentic-secretary@agentic-secretary`、commandは
+`clarity-hook.mjs`、timeout 3秒、Trustedだった。toggle／trust-all／config変更は行っていない。別の通常new sessionでも
+Clarityとprivate Notion task Skillが同時に読み込まれ、tool実行なしでexit 0だった。Claude Codeは実projectを
+loadせず、isolated source loadでprivate 21 SkillsとSessionStart／Stop exit 0を確認した。
+
+更新guideにはAgentic／Yasashiiそれぞれ1本のClaude Code用one-paste promptがあり、正規repo／plugin ID／scope、
+0.12.0 Release照合、既存customizationと利用者データの保持、限定backup、正式update、reload／再起動後の読込確認、
+失敗時の安全停止を版別に明記している。1536×1024のinfographicは実renderで読みやすく、秘書自身の返事、
+AIによる柔軟な整理、チャット取得、Clarityの4改善と継続する安全確認を一画面で伝えている。
+
+Phase Aで未完了としていた下流2版、公開因果性、正式導入、fresh host読込、最終guide照合がすべて閉じたため、
+Sprint 054全体をPASSとする。現行の`product` finding、`verification-infra` finding、既知バグは0件である。
+過去のFAIL記録は上の履歴として変更せず保持する。
+
+## Phase B Acceptance Criteria
+
+| AC | 判定 | 根拠 |
+|---|---|---|
+| AC8 公開因果性 | PASS | 3版のcandidate→tag実diffはgovernance文書だけでplugin tree差分0。remote main＝tag＝公開commit、3 Release公開済み、asset digest一致、Git-free gate各14/14。 |
+| AC9 Mac正式導入・host読込 | PASS | private 0.12.0のproduct snapshot／両host cacheはRelease製品bytesと一致。Codex 0.12.0 enabledのfresh `/hooks`で5 event Active、通常new session読込成功。Claude 0.12.0 project disabledを維持し、isolated source load成功。 |
+| AC10 利用者保護 | PASS | 更新前snapshotを保持。実my-vault本文、記憶、自由記述、secret、settings本文へのread／write 0。他plugin、scope、enabled状態、無関係なHookを変更せず、cache直接編集・bypass・trust-all 0。 |
+| AC11 更新案内・infographic | PASS | 版別one-paste prompt 2本を全文照合。公開Release、製品manifest／CHANGELOGとの0.12.0整合を確認。1536×1024 PNGを実renderし、4改善と安全確認が明瞭。 |
+
+## Sprint 054 最終スコア
+
+Phase Aの各版PASSは、candidate→公開tagで製品／test bytesが不変であることを実diffで確認した面だけcarryした。
+Phase Bで変化した公開物、導入状態、host読込、guide／画像は今回実測した。
+
+| 基準 | スコア | 閾値 | 判定 | 最終根拠 |
+|---|---:|---:|---|---|
+| C1 完成度 | 5/5 | 4 | PASS | AC1〜AC12を3版Phase Aと今回Phase Bで完了。未評価の必須ACなし。 |
+| C2 構文・整合 | 5/5 | 5 | PASS | 3版Phase A green、公開assetのrelease gate各14/14、manifest／tag／asset不一致0。 |
+| C3 機能の実証 | 5/5 | 4 | PASS | public Windows 3 round、private／Yasashii独立Phase A、Macのfresh Codex HookとClaude隔離読込が成立。 |
+| C4 非エンジニア体験 | 4/5 | 4 | PASS | 版別one-paste promptと一画面infographicを公開後に最終照合し、更新判断と安全停止を平易に提示。 |
+| C5 安全・規律 | 5/5 | 5 | PASS | Phase A安全回帰を維持し、Phase Bでも本文／secret非読取、限定trust、disabled／scope保持、cache編集・bypass 0。 |
+| C6 無回帰 | 5/5 | 5 | PASS | public 22/22 suite・736/736、E2E 4/4、3版Windows PASSをbyte不変carryし、公開archive gateも全件green。 |
+| C10 更新の安全性 | 5/5 | 5 | PASS | update guideは版・source・scope・dirty状態と3-way ownershipを先に確認し、customized／不一致時に停止する。正式導入も既存状態を保持。 |
+| C12 release履歴・candidate整合 | 5/5 | 5 | PASS | 3版ともexact candidate→tagの製品差分0、main＝tag、Release targetとasset digest一致。 |
+| C13 edition分離・互換 | 5/5 | 5 | PASS | public／private／Yasashiiを別candidate・別Phase A・別Release assetとして検証し、版別ID／導線を混同していない。 |
+| C14 Markdown可読性 | 5/5 | 5 | PASS | guideの見出し、注意、版別prompt、画像、公式参照が明瞭で、Phase Aの会話／案内回帰もgreen。 |
+| C19-Voice Secretary Voice | 5/5 | 5 | PASS | 3版Phase AのVoice回帰を不変carryし、infographicとguideも秘書自身としての自然な返事を明示。 |
+| C19-Clarity 正本・状態モデル | 5/5 | 5 | PASS | Phase Aのcanonical／state rebuild／noop／residue回帰を不変carryし、公開・導入後のClarity Skill読込を確認。 |
+| C20 Attention・Clarity UX | 4/5 | 4 | PASS | Hook 5 eventをfresh hostでActive確認し、画像は決定・実行・いま考えることを利用者向けに可視化。 |
+| C21 Clarity Hook・host parity | 5/5 | 5 | PASS | Windows、Claude isolated、通常Codex `/hooks`とnew sessionの両host証拠が揃い、5 event source／active状態を確認。 |
+| C22 federated link・sync・Drift | 5/5 | 5 | PASS | 関連sourceはPhase A candidateから不変で、3版の独立回帰greenを限定carry。 |
+| C23 projection・Xmind | 4/5 | 4 | PASS | projection source／画像はPhase Aから不変。real Xmind外部writeは契約どおりNOT-RUN。 |
+| C24 Clarity安全・統合・public-first | 5/5 | 5 | PASS | public gate→下流gate→3版公開→限定installの順序を守り、利用者データへの製品write 0。 |
+| C26 Clarity包括scan・Windows native | 5/5 | 5 | PASS | public run `34025802596`、private `34043112835`、Yasashii `34083455091`がexact candidateでPASSし、公開後の製品bytesも不変。 |
+
+全対象軸が閾値以上であり、zero-tolerance軸の未達はない。
+
+## Phase B 現行証跡
+
+### 3版publication／artifact
+
+- public: candidate `767a7f3…` → main／tag `b2a244ee9b3ee4be62cef58f3266a82194ec055c`。
+  Windows run `34025802596` PASS。Release asset `agentic-secretary-0.12.0.tar.gz`のSHA-256は
+  `823260bdf8e3a26fe6e579dd14dafb1ce660d1d8532f8440aa293440d6918c0a`。
+- private: candidate `cbcf2c3…` → main／tag `9b269563dd89f6552b0e382cfad724d378d51579`。
+  Windows run `34043112835` PASS。asset SHA-256は
+  `c3c55d16694254cf218324bc2dd80427af3f265682582d36c5d9c80fa434430f`。
+- Yasashii: candidate `27b570d…` → main／tag `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`。
+  Windows run `34083455091` PASS。asset SHA-256は
+  `0bbb14d0d9a2a81ef8efe421c4c0c57a35e9b4403a810263bffdfb2ba0746cc1`。
+- `git ls-remote`とRelease APIを独立取得し、3 remoteの`main`／`refs/tags/v0.12.0`／Release targetを照合した。
+  3 Releaseはいずれも`draft=false`、`prerelease=false`、asset 1件。ローカル公開用tarのdigestは上記と一致した。
+- 各candidate→tagの`git diff --name-status`は`docs/feedback/sprint-*`と`docs/sprints/state.md`だけ。
+  `git diff --quiet <candidate>:plugins/secretary <tag>:plugins/secretary`は3版ともexit 0。
+  public tag→評価時HEADもprogress／stateだけで、plugin treeは不変だった。
+- 3 archiveの`node scripts/archive-release-gate.mjs <extraction>`は各exit 0、
+  `ARCHIVE_RELEASE_PASS=14 ARCHIVE_RELEASE_FAIL=0`。`.git`不在、version／manifest／forkedFrom／plugin source／
+  marketplace／Skill inventory／CHANGELOG／migration整合を確認した。
+
+### Mac正式導入／host読込
+
+- `codex plugin list --marketplace agentic-secretary --json`の対象entryはversion `0.12.0`、installed true、
+  enabled true。登録sourceは`agentic-secretary-private-clarity-9577bdf`のproduct snapshotで不変。
+- 実project cwdで`claude plugin list --json`を対象IDだけfilterし、version `0.12.0`、scope `project`、
+  enabled falseを確認した。settings本文は読んでいない。
+- private Release extractionの`plugins/secretary`と、登録product snapshot、Codex cache、Claude cacheの
+  product bytesを`diff -qr`で照合し差分0。Claude cache固有の空`.in_use` directoryはhost管理metadataであり、
+  製品比較から除外した。3箇所の`hooks/hooks.json` SHA-256はすべて
+  `c9ce232f8d6a77d713f9febb55cb56b7f135fe4e371a45e316101017b77279ca`。
+- 更新前snapshot `agentic-secretary-private-clarity-9577bdf.pre-0.12.0-20260907`の保持を確認した。
+  実利用者本文、記憶、自由記述、secret、settings本文は評価対象外としてアクセスしていない。
+- 通常Codex TUI session `01a07a65-bb84-7f02-9a5e-eb3dc2759704`をpublic repoで新規起動し、`/hooks`を
+  read-only確認した。対象5 eventはInstalled＝Active。PostToolUseの対象entryでplugin source、
+  `clarity-hook.mjs`、3秒、Trustedを再確認し、一覧を閉じてexit 0。HOME／CODEX_HOME override、
+  danger flag、trust／toggle操作は0。
+- 先行する明示承認session `01a07a5d-a990-7961-9151-3df33a688a15`の記録では、同じplugin source／
+  `clarity-hook.mjs`／3秒を5 event個別に確認し、対象だけをTrustedにした。最終一覧は上記active count、review 0、
+  他Hook不変だった。
+- post-trust通常new session `01a07a5f-31fc-7463-b819-b7a2b680cd18`はexit 0、tool実行0で
+  `agentic-secretary:clarity`とprivate `agentic-secretary:notion-tasks`を同時認識した。JSONL SHA-256は
+  `1bf6f21125b27d57b48371633c9aeefdb1907f523765bc0289eb35516a893945`、stderrはstdin notice 39 bytesだけ。
+- Claude Code isolated session `da8f0da0-43f9-42cd-9cea-b51af0b9d008`はprivate 0.12.0、21 Skills、
+  SessionStart／Stop exit 0、result OK、stderr 0。これはactual project loadedの主張には使用していない。
+- session前後の`pgrep node | wc -l`は29→31で安全閾値40未満。通常TUIはexit 0で終了し、dev server／browserは
+  起動していない。禁止されたMac stress／full／master wrapperも実行していない。
+
+### 更新guide／visual
+
+- `docs/guide/update-0.12.0.md`を全文確認し、Agentic版とYasashii版のone-paste promptが各1本あること、
+  Release未公開／不一致／新しい正式版／別editionでは停止すること、正式ID・既存scope限定のupdate、
+  旧配布原本を使った3-way照合、customization／user data／dirty Git／他pluginの保護、reloadまたは再起動後の
+  読込確認、復元先の報告を確認した。
+- `docs/guide/assets/secretary-0.12.0-overview-clarity.png`は1536×1024 RGB PNG、SHA-256
+  `f77c11586d357845f002137de650422b2a8a470ad2757cbe2031304dbd433666`。原寸renderで欠け・重なり・判読不能文字はなく、
+  4改善と安全確認が視線順に整理されている。
+
+## Findings／バグ一覧
+
+現行公開物と導入状態に、`product` finding、`verification-infra` finding、既知バグは0件。
+Claude cacheの空`.in_use`はhostが所有するruntime markerで、Release製品bytesの不一致ではない。
+
+## NOT-RUN／境界
+
+- 実my-vaultの本文、MEMORY、journal、project本文、自由記述、secret、settings本文は非閲覧・非変更。
+- disabledのClaude Code pluginを有効化せず、actual project sessionを起動していない。isolated source loadだけを
+  Claude host証拠として使用した。
+- real Xmind／チャット／Clarityの実利用者データwriteは未実行。Phase Aの契約済み安全回帰と今回のactive host状態で判定した。
+- Phase Aの重いoffline／Windows／downstream suiteは製品bytes不変を確認してcarryし、Macで再実行していない。
+
+## Evaluator自己レビュー
+
+- AC8〜AC11を公開後の実体で確認したか: yes。
+- 3版のPhase A PASSを、candidate→tagの製品bytes不変確認なしにcarryしたか: no。
+- remote main／tag／Release／assetをローカル主張だけで済ませたか: no。remote/APIとdigestを独立取得した。
+- actual install metadataとRelease製品bytesを照合したか: yes。
+- fresh normal Codex `/hooks`でActiveと対象sourceを確認したか: yes。
+- trust-all、unrelated toggle、cache edit、bypass、HOME／CODEX_HOME override、danger flagを使ったか: no。
+- disabled Claudeを有効化、またはisolated source loadをactual project loadedへ昇格したか: no。
+- 実利用者本文、記憶、自由記述、secret、settings本文を読んだか: no。
+- 画像をファイル存在だけでPASSにしたか: no。1536×1024原寸renderを実見した。
+- 新しいevidence format、runner、collector、matrix、未契約gateをPASS条件へ追加したか: no。
+- Findingを対象区分なしで記録したか: n-a（現行finding 0件）。`.in_use`はhost metadataとして説明した。
+- 過去のFAILを削除・改変、またはGenerator自己評価を最終判定に使ったか: no。
+- 閾値と最終PASSは一致し、未検証の必須ACが残っていないか: yes。
+- 実装、test、spec、progress、stateへ越境したか: no。本feedbackへの追記だけを行った。
