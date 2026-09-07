@@ -1,5 +1,11 @@
 # Sprint State
 
+## 2026-09-07 Clarity Hook信頼承認／Phase B最終独立評価
+
+- ユーザー「信頼」を、target pluginのClarity用5 Hookだけを通常画面で信頼する明示承認として受領。Codex0.153.4通常TUI session `01a07a5d-a990-7961-9151-3df33a688a15`で各eventのsource／command／3秒timeoutを確認し、PostToolUse／PreCompact／SessionStart／SessionEnd／Stopを1件ずつ信頼した。trust-all、bypass、他Hook toggle、直接config編集は行わない。全5件がActiveとなりreview待ちは0件、他HookのActive数は不変。
+- 信頼後の通常新session `01a07a5f-31fc-7463-b819-b7a2b680cd18`はexit0、ツール実行0、Clarity／private notion-tasks catalogあり、旧parser警告0。配布bytes／source／scope／plugin enabledは不変。最後の権限待ちは解消したが全体判定はfresh Evaluatorへ渡す。
+- public054をawaiting-evalへ遷移し、Lineage5→6を予約。Retry1／Spec0／strong／noneを保持。runtime resolverのEvaluatorはgpt-5.6-sol／high、fresh、dispatch-attemptでありlaunch-unverified。受入済みPhase Aと今回の公開／導入／通常Hook信頼の証拠を既存ACの範囲で独立確認する。
+
 ## 2026-09-07 0.12.0公開・実導入完了／Codex Hook信頼確認待ち
 
 - 3版のPhase A PASS後に通常fast-forwardでmainへ統合し、新規`v0.12.0` tag／GitHub Release／artifactを公開した。公開SHAはpublic `b2a244ee9b3ee4be62cef58f3266a82194ec055c`、private `9b269563dd89f6552b0e382cfad724d378d51579`、Yasashii `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`。各archive14/0、GitHub asset digest一致、Clarity PR #11／#10／#12はMERGED。配布bytesの変更・force push・tag移動は0件。
@@ -71,7 +77,7 @@
 - Current ID: sprint-054
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 5
+- Lineage Dispatches: 6
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -174,7 +180,7 @@
 | sprint-051 | done | [contract](sprint-051.md) | [progress](../progress/sprint-051.md) | [feedback](../feedback/sprint-051.md) |
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
-| sprint-054 | active | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-054 | awaiting-eval | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 
 ## Sprint 054 orchestration
 
