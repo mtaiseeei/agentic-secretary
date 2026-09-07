@@ -2,6 +2,12 @@
 
 ## 2026-09-07 private downstream Phase A 完了／履歴
 
+- Yasashii27b570d／tree1d3f4696がfresh独立Phase A PASS、receipt `b80f5da4b173ec2e3b1c6404e21b29f7d99240c5`で保存。全3版のPhase Aが成立（public767a7f3／receipt a293390、private cbcf2c3／receipt9b269563）。public054はPhase Bへ進むが全体activeを保持。既承認の3版main通常統合／push、新v0.12.0 tag／Release／artifactの作業単位をfresh Generator Sol/highで開始するためpublic Lineage4→5を予約、Retry1／Spec0／strong／none、launch-unverified。製品配布bytesは固定、実PCinstallは公開一致確認後に別途実行する。
+
+- Yasashii27b570d（inventory current digest1値）を候補push、Windows34083455091/job101622961863が全step success。native12／HS16／Git45／migration9／Voice3／update16すべて0FAIL、SKIP0／NOTRUN0、archive14/0。fresh独立Evaluator（Yasashii Lineage9、Sol/high）が最終判定中。3版Phase A揃いの宣言は判定後に行い、公開／installは未実施。
+
+- V-03のCI変更に直接連動するcurrent hash整合・追加push／修正候補ごとのWindows1回・fresh独立評価をユーザー「よいです」で承認。Yasashii fresh Generator Sol/highをLineage8で開始、Retry0／Spec0／strong／none。既存digest関数による1値更新と関連する既存検査だけに限定。private PASS receipt9b269563のclean／stateを再確認、private実利用者データ非接触。
+
 - Yasashii146d932のfresh評価全文を確認、Phase A FAIL / verification-scope-issue。V-03はworkflow変更に直接因果するcurrent digest1値漏れ、product finding0。V-01解消／V-02適用済みだがWindows update未到達、Lineage7／Retry0／Spec0を維持。関連hash限定整合のユーザー回答待ち。public／private Phase A PASSとcounterは不変。
 
 - 032履歴比較2か所のCRLF限定修正を承認後、Yasashii146d932を候補pushしWindows34082572913/job101620533431を1回実行。Mac03216/0、overlay／archive14/0は成功したが、WindowsはHS-016の古いinventory hashでHS15/1、更新検査等はskipped。追跡対象のworkflow変更に直接連動する記録漏れとreadonly確認。mainの確認不足を説明し、関連current hashの限定整合と追加push／修正候補ごとWindows1回を質問した。Yasashii Lineage7／Retry0／Spec0、fresh評価中。3版公開／install未実施。
@@ -57,7 +63,7 @@
 - Current ID: sprint-054
 - Retry Count: 1
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
+- Lineage Dispatches: 5
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
