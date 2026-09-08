@@ -3,7 +3,7 @@
   "collaborationMarker": "agentic-secretary:clarity-collaboration:handoff:v1",
   "kind": "agentic-secretary-clarity-fixed-handoff",
   "sourceEdition": "agentic-secretary",
-  "candidateVersion": "0.12.0",
+  "candidateVersion": "0.13.0",
   "publicationStatus": "pending-public-evaluator-pass",
   "acceptedSource": null,
   "commonPaths": [

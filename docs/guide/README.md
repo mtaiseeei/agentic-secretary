@@ -12,6 +12,7 @@ host別install手順を読み、必要な詳細をこのガイドで確認して
 - [はじめ方（インストールと初回体験）](getting-started.md)
 - [できること（機能の使い方）](features.md)
 - [Project Clarity（正本・Attention・投影・Drift）](project-clarity.md)
+- [0.13.0への更新依頼文（Claude Code用）](update-0.13.0.md)
 - [0.12.0への更新依頼文（Claude Code用）](update-0.12.0.md)
 - [更新状況を確認する](updates.md)
 - [外部サービスにつなぐ（コネクタ）](connectors.md)
