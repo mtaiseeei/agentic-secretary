@@ -63,7 +63,7 @@ export function validateHandoffTemplate(rootValue = SCRIPT_ROOT, manifestValue =
   const root = resolve(rootValue);
   const manifest = manifestValue ?? JSON.parse(readFileSync(join(root, TEMPLATE_PATH), "utf8"));
   if (manifest.schemaVersion !== 1 || manifest.kind !== "agentic-secretary-clarity-fixed-handoff") fail("handoff-schema");
-  if (manifest.sourceEdition !== "agentic-secretary" || manifest.candidateVersion !== "0.12.0") fail("handoff-identity");
+  if (manifest.sourceEdition !== "agentic-secretary" || manifest.candidateVersion !== "0.13.0") fail("handoff-identity");
   if (manifest.publicationStatus !== "pending-public-evaluator-pass" || manifest.acceptedSource !== null) fail("handoff-premature-acceptance");
   const commonPaths = uniqueStrings(manifest.commonPaths, "common-paths");
   for (const path of commonPaths) {
