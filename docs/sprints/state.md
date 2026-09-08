@@ -116,7 +116,7 @@
 - Current ID: sprint-056
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 2
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -222,10 +222,14 @@
 | sprint-054 | done | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
-| sprint-056 | active | [contract](sprint-056.md) | - | - |
+| sprint-056 | active | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
 
 ## Sprint 056 orchestration
 
+- 2026-09-08: fresh独立Evaluatorのpublic Phase A feedback全文と自己reviewを確認し、exact `5e26432307a2f247d244dcb2766e870400d006f2` のPASSを採用した。対象8軸全5/5、finding0、独立直接回帰8/8＋5/5、小archive14/14、受入7path／906file tree／158file plugin／44common一致。Node33→33、自己fixture cleanup済み。public056全体はactive、Retry0／Spec0／Lineage2／strong／noneを保持し、private052へ進む。AC4/5・公開AC7・導入AC8は未了として保持する。
+- 2026-09-08: public Phase A Evaluator `release_056_public_evaluator` child `01a0801f-7f0c-74e2-b11e-2430b18d4d59` はhost metadataでSol/high/default一致、launch-verified。直前Node35。Generator progress commit `c17a486316918961c04fe332775fc709f613e477` はsource candidateからprogressだけの差分で、配布bytesは不変。
+- 2026-09-08: public Phase A Generatorの引き渡しを全文確認。candidate `5e26432307a2f247d244dcb2766e870400d006f2`／tree `417586847bdf64b9be6a8461b2fd0455d1807aca` を固定した。受入済み5製品と055／Patch feedbackは配布更新前後で差分0。小回帰8/8＋5/5、構文、release integrity、既存inventory／handoff validator、小archive14/14が成功。archive SHA256 `cc96db50c6d43deb801d71eda3b2582067c596e8cc5ef10b502b2238c38616b1`、mainが実Clarity path混入0を確認した。
+- public Phase Aをawaiting-evalへ移し、Lineage1<10を確認してfresh独立Evaluator分を2へ予約した。resolver Evaluator Sol/high／native fresh、Retry0／Spec0／strong／noneを保持。起動前の直近Node36、子metadata確認までlaunch-unverified。評価は056の配布保持・整合面だけで、055／Patchの合否を再審査しない。三版全体と導入の完了判定はまだ行わない。
 - 2026-09-08: public Phase A Generator `release_056_public_generator` child `01a0800f-2d17-7db0-be4f-9438a88e14a2` はhost metadataでgpt-5.6-sol／high／default一致を確認しlaunch-verified。Planner `release_056_planner` child `01a08001-3143-7763-9825-bf5a4acb33a2` も同じ指定一致で完了した。mainはstateのみを更新し、Generatorは配布候補とprogressを担当する。
 - 2026-09-08: fresh Plannerのpublic056／private052／Yasashii045契約を確認し、承認済み0.13.0三版公開・両host導入の範囲として確定した。Codexの未観測scopeは推定せず、Claudeのproject scopeと各hostの観測済みsource／enabledを保持する。既存rubricは今回の対象面だけへ適用し、旧Windows／full suite条件を持ち込まない。
 - 新main056を開始し、旧044-patch-001のdone／Lineage7と055のdone／Lineage2を履歴に保持する。新しい系譜は0から開始、上限10未満を確認しpublic Phase A Generator分を1へ予約した。Retry0／Spec0／strong／Rotate none。installed resolverはhigh-risk-sprintでSol/high／native freshを返し、起動前Node32。子metadata確認まではlaunch-unverified。Phase A三版独立PASSまではmain公開・tag・Release・installへ進まない。
