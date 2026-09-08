@@ -121,6 +121,9 @@ Project Clarity系譜で予約済みであり、本系譜では再利用しな�
 Clarity込みの`0.12.0`として公開する方針を承認した。Clarityをprivate端末だけのlocal overlayにはせず、3版それぞれの
 検証済みsource、tag、Release artifactへ含める。3版のcommit／merge／push／tag／Releaseと、このMacのCodex／Claude Codeへの
 private版反映はSprint 054の範囲で承認済みである。版固有正本、利用者データ、private設定、既存dirty、scope／enabledを保持する。
+2026-09-07のClarity実利用で、正本が健全でも元要件の登録が不完全になり得ること、緑象限とvalidation完了が混同されること、
+同じsource locatorの異なるclaimが誤って結び付くことを確認した。Sprint 055では、利用者が選んだsourceからのfeature／claim単位の
+確認付き取り込み、Markdown／Mermaidの正直なvalidation表示、自然言語からの追記型訂正をpublic共通面だけで改善する。
 
 ## ひとことで
 
@@ -156,13 +159,14 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | G20 | 秘書が自分の言葉で自然に話す | 一人称・名前の使用場面・実行状態に合う言い切りを共通rulesで統一し、人間の実体・感情・体験は捏造しない |
 | G21 | 意味判断はAI、事故防止はシームに分ける | 安全に読める原本の整理・要約・提案はLLMが行い、読取補助を必須化せず、書込み・削除・Git・整合性は決定的シームで守る |
 | G18 | Project Clarity | 決定×実行、Attention、Drift、4モード、Clarity専用Hook、projection、Harness-aware init、public-first固定handoff |
+| G22 | Clarityを実利用で直しやすくする | 選択sourceの要件取り込み、validationの正直な表示、履歴を失わない自然言語訂正 |
 
 ## 詳細仕様
 
 | ファイル | 内容 |
 |---|---|
-| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G21、成功状態、非ゴール |
-| [features.md](spec/features.md) | F01〜F84 とユーザーから見た振る舞い |
+| [product.md](spec/product.md) | 目的、対象ユーザー、G1〜G22、成功状態、非ゴール |
+| [features.md](spec/features.md) | F01〜F87 とユーザーから見た振る舞い |
 | [constraints.md](spec/constraints.md) | 安全・記憶保護・secret・single private repo・同期同意などの不変条件 |
 | [domain.md](spec/domain.md) | 三層記憶、一般／開発プロジェクト、更新台帳、timeline、Chatwork／Google Chatの取得・検索状態、時刻・索引・Git規約 |
 | [ui.md](spec/ui.md) | 対話UX、危険に応じた確認、内容依存の応答、更新・プロジェクト・wizardの利用者向け体験 |
@@ -170,6 +174,7 @@ Gmail等の公式コネクタは従来どおり都度参照し、Chatworkと明�
 | [editions.md](spec/editions.md) | agentic／private my-vault／yasashiiの3配布系統、共通面、限定差分、互換・同期・公開gate |
 | [clarity-acceptance.md](spec/clarity-acceptance.md) | Project Clarityのprimary 250、CLX 20、XV 4、Patch専用caseの単一割当、最終E2E／全回帰 |
 | [clarity-acceptance-cases.md](spec/clarity-acceptance-cases.md) | Project Clarityのprimary 250 case、追加case、E2E 4本を収載したrepo内の実行正本 |
+| [clarity-usability.md](spec/clarity-usability.md) | Sprint 055のF85〜F87、要件coverage、validated completion、訂正の限定override |
 
 ## スプリント
 
@@ -228,10 +233,13 @@ Chatwork／Google ChatのGit取り込みを `sprint-051` と確定した。
 | [sprint-052](sprints/sprint-052.md) | Secretary Voice: 秘書主体の自然な話し方、一人称設定、秘書名の使用場面4件、実行状態に忠実な返事 | sprint-051 |
 | [sprint-053](sprints/sprint-053.md) | LLM中心の読み取り・整理・提案と、必須の安全シームの分離 | sprint-052 |
 | [sprint-054](sprints/sprint-054.md) | Project Clarityを含む0.12.0の3版統合・独立評価・公開、このMacのprivate版反映、Claude Code向け更新案内 | sprint-051／052／053と各版Clarity候補 |
+| [sprint-055](sprints/sprint-055.md) | Clarityの選択source要件取り込み、正直なvalidation表示、履歴を保つ自然言語訂正 | sprint-054 done。旧050-patch-007は別途awaiting-eval |
+| [sprint-056](sprints/sprint-056.md) | 受入済みSprint 055／Stop Hook修正を0.13.0として3版へ段階適応・独立評価し、公開後にこのMacのprivate版を正式導入 | sprint-055／sprint-044-patch-001 done |
 | [sprint-041](sprints/sprint-041.md) | Clarity core、Standalone init、Decision／Evidence、4象限 | sprint-040-patch-001 |
 | [sprint-042](sprints/sprint-042.md) | Attention、doctor／migration、bounded UX | sprint-041 |
 | [sprint-043](sprints/sprint-043.md) | Markdown／Mermaid、Xmind ON／OFF、MCP-first provider選択、承認付きlocal fallback、固定4象限visual | sprint-042 |
 | [sprint-044](sprints/sprint-044.md) | Claude Code／Codex共通のClarity専用command-only Hookとmanual fallback | sprint-043 |
+| [sprint-044-patch-001](sprints/sprint-044-patch-001.md) | Stop Hook出力を利用者承認と誤認せず、変更禁止と既存承認の範囲を正しく維持する | sprint-044 done-by-user-decision。旧live未達は別履歴として保持 |
 | [sprint-045](sprints/sprint-045.md) | generic Secretary-local、daily／weekly／Portfolio、既存正本回帰 | sprint-044 |
 | [sprint-046](sprints/sprint-046.md) | reciprocal link、pull sync、authority、conflict | sprint-045 |
 | [sprint-047](sprints/sprint-047.md) | Drift DetectionとGit／filesystem／Secret hardening | sprint-046 |

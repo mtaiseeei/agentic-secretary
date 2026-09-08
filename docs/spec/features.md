@@ -1,6 +1,6 @@
 # Features
 
-機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合、F58はWindows保存互換、F59〜F61は秘書identity／routing／rename、F62は既存workspaceの名前オンボーディング完全移行、F63は明示memory依頼の一度きり実行、F82はChatwork／Google ChatのActions結果を安全にローカルへ取り込む機能である。
+機能IDと、ユーザーから見える振る舞いの正本。F01〜F16 は受け入れ済みの既存機能、F17〜F22 は 2026-07-15 方針転換、F23〜F27 は 2026-07-16 のsingle-repo Git-first + Chatwork方針、F28 は 2026-07-17 の一般プロジェクト管理方針、F29 は配布チャネルから独立した製品説明、F30〜F31 は更新の説明と実行を分ける安全な更新体験、F32〜F35 は各社所有Google Cloudプロジェクトを使うGoogle Chat同期、F36〜F43 は `0.7.0` の配布前監査を閉じたrelease hardening、F44〜F50 は公開済み `0.8.0` で2 editionへ安全に分離した履歴と、次candidateへ引き継ぐ配布境界、F51は両edition共通の会話可読性、F52は4つの正式対象ホストへ拡張できるホスト非依存の共通本体とhost adapter、F53は利用者中立の呼び方と配布物、F54〜F57は2026-07-31承認の人間らしい会話フローと3配布系統の意味整合、F58はWindows保存互換、F59〜F61は秘書identity／routing／rename、F62は既存workspaceの名前オンボーディング完全移行、F63は明示memory依頼の一度きり実行、F82はChatwork／Google ChatのActions結果を安全にローカルへ取り込む機能、F83はSecretary Voice、F84はLLM中心の整理、F85〜F87はClarity実利用の要件取り込み・状態表示・訂正である。
 
 ## 既存機能（F01〜F16）
 
@@ -540,6 +540,7 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - SessionStart、PostToolUse、PreCompact、compact後の再開、Stop、SessionEndを扱うが、Hook内でnetwork、LLM、Xmind生成、全Repo scanを行わない。
 - Clarity未初期化・未linked Repoでは高速no-opとし、同時発火でもevent破損や重複checkpointを起こさない。
 - Codex trust未承認／無効とClaude plugin無効を正常なdegraded状態として表示し、host別に実機検証する。
+- Hookの検出結果、継続要求、理由文は利用者の新しいauthorizationではない。既存の変更禁止・read-only・path制限を維持し、Clarity writeに必要な承認がなければ対象と影響を示して確認する。一方、現在の利用者が対象・操作・範囲を明示した承認は、同じ文脈の別Agentから正確に引き継がれた場合も有効な範囲内で維持し、同一操作を再確認しない。
 - 共通routerはClarity eventだけを扱う。projects、daily、weekly、memory-care、updateその他のSkill用Hookを追加せず、自然会話の保存候補をHookで意味判定しない。
 
 ### F71 Markdown／Mermaid projection
@@ -636,6 +637,22 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 - Windows verifiedは`.github/workflows/windows-recording-regression.yml`の既存`windows-native` jobでscanner、init preview、identity、安全negativeを直接実行した場合だけ付与する。既存0.9.2回帰と`timeout-minutes: 10`を維持し、symlinkとjunctionのcapability／SKIP理由を別集計する。別OS上のWindows風文字列fixtureをnative PASSへ昇格せず、macOS／LinuxとSprint 041／050 Patch 003の回帰を維持する。
 - Windows runはexternal live gateであり、offline preview／fixtureのnetwork／external write 0とは分離する。許可済み操作はexact candidate branchの`origin`への通常pushと、そのcandidateを対象にした既存PR CI／必要時workflow dispatchだけである。未実行／CI利用不能は`windowsVerified=false`のverification未達、runner内のcandidate因果assertion失敗はproduct findingとして区別する。
 
+## Clarity実利用の改善（F85〜F87）
+
+詳細な差分仕様と既存Clarity仕様に対する限定overrideは`docs/spec/clarity-usability.md`を正本とする。
+
+### F85 選択sourceからの要件取り込み
+
+- 利用者が選んだsource／sectionから、AIがfeature／claim単位の候補、根拠、gapをpreviewし、確認後だけ保存する。
+
+### F86 validationを分けた正直なMarkdown／Mermaid
+
+- 既存4象限を保ち、Validationとvalidated completion、active／excluded／historical Item件数を別表示する。
+
+### F87 自然言語からの追記型訂正
+
+- title、claim、Evidence associationを自然な依頼から訂正し、旧ID、理由、履歴をreplay可能なまま保つ。
+
 ## Gテーマと機能の対応
 
 | テーマ | 主な機能 |
@@ -661,3 +678,4 @@ Markdown箇条書きにする。単純成功は自然な短文でよく、固定
 | G20 | F20 F51 F52 F54 F55 F59 F60 F61 F63 F83 |
 | G21 | F18 F21 F28 F54 F55 F84 |
 | G18 | F28 F51 F52 F54 F64 F65 F66 F67 F68 F69 F70 F71 F72 F73 F74 F75 F76 F77 F78 F79 F80 F81 |
+| G22 | F65 F66 F68 F69 F71 F78 F85 F86 F87 |

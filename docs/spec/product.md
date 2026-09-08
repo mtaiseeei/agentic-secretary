@@ -297,6 +297,14 @@ Clarityの初期化は、Repo全体を無制限に読むことではなく、現
 macOSだけでなくWindows nativeでも同じ意味と安全境界でpreviewでき、実行していないsymlink／junction caseを
 対応済みと表示しない。
 
+### G22 Clarityを実利用で直しやすくする
+
+利用者が明示選択したsourceをAIが安全に読み、文書単位ではなくfeature／claim単位の要件候補、source／section、
+未確認範囲をpreviewする。承認後だけ保存し、正本がhealthyであることを要件coverageの完全性と取り違えない。
+
+現在地は既存のDecision×Executionによる4象限を保ちながら、Validationとvalidated completionを別に示す。
+誤ったtitle、claim、Evidence associationは自然な会話から対象・理由・影響を確認し、旧IDと履歴を残して訂正できる。
+
 ## ゴール
 
 1. 非エンジニアが説明に沿って導入し、初回5問以内で `secretary/` を安全に生成したうえで、1つのprivate GitHub repoを作成・初回pushできる。
@@ -332,6 +340,7 @@ macOSだけでなくWindows nativeでも同じ意味と安全境界でpreviewで
 31. Claude Code／CodexのHookが正常時に軽量な観測・再開支援を行い、未信頼・無効・失敗時は正常なdegraded状態としてmanual Skillへ戻れる。Hookはnetwork、LLM、重い全Repo解析を行わない。
 32. Mermaid、Markdownに加え、Xmind integration ON時はprovider resolverがMCP-firstでcloud mapまたは明示承認後のlocal native `.xmind`を選び、同じ状態と固定4象限visualを可視化できる。いずれも正本ではなく再生成可能なprojectionであり、Xmind編集は人間確認前のproposalに留まる。
 33. public `agentic-secretary`は、独立Evaluator PASS、または元feedbackと残余リスクへ束縛したユーザー判断の明示的例外のどちらかを正直な別statusで固定し、そのexact SHA／digestだけをprivate my-vault、次にYasashiiの別Harnessへ渡せる。例外をPASSへ昇格せず、public版へprivate固有のvault／Notion実装を混ぜない。
+34. 利用者が選んだsourceからClarity要件をfeature／claim単位で確認して登録し、validationを象限と分けて確認し、誤登録を履歴付きで訂正できる。
 
 ## 成功状態
 
@@ -393,6 +402,7 @@ macOSだけでなくWindows nativeでも同じ意味と安全境界でpreviewで
 - public版の独立PASS、または元feedback・未達・明示承認へ束縛した`public-user-decision-risk-accepted`のいずれかと、固定SHA／digest、protected path、rollbackが揃う前にprivate／Yasashiiへ反映しない。ユーザー判断経路をEvaluator PASSと表示せず、release／marketplace／cache／pushをPlanningまたは実装Sprintの完了へ混ぜない。
 - 2 MiBを超えるHarness Repoでも、一般`src/`／`scripts/`が先に容量を使い切らず、state、spec、Current Sprint contract／progress／feedbackのcoverageをpreviewから確認できる。progressは自己報告、feedbackは独立検証として区別され、feedbackがまだ無い状態をscan-limitと誤表示しない。
 - Clarity scanner／init previewはWindows native runnerでdrive letter、backslash、空白、日本語、CRLF、case-insensitive衝突を安全に処理する。symlinkとjunctionはcapabilityを別々に観測し、実行不能caseは種類ごとの理由付きSKIPまたはNOT-RUNとして、Windows verifiedへ数えない部分を明示する。
+- Clarityの要件取り込みは選択source／sectionと未確認範囲を示し、承認前は変更0件である。Markdown／Mermaidはvalidation状態とvalidated completion、active Matrix対象／excluded／historical Item／全Itemの件数を分け、訂正後も旧ID・理由・Evidence associationをreplayできる。
 
 ## 非ゴール
 

@@ -309,6 +309,13 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 - private固有case IDはpublic stageではadapter seam、private literal非混入、固定handoffを評価する。実`05/02/10_sources/Notion`と実顧客fixture／提供PDF／提供Xmindはprivate版の別Harnessで再実行し、public PASSへ偽装しない。`XM-012`／`E2E-002`のpublic評価は同構造の匿名fixtureを使う。
 - 実行command、exit code、case ID、期待／観測、fixture root、前後digest、PASS／FAIL／NOT-RUN理由、host／provider状態があれば十分とする。新しいcollector、統一attestation、実顧客data、無許可network／release／downstream writeを追加条件にしない。
 
+## Sprint 044 Patch 001の適用範囲（safe harbor）
+
+- 本Patchで採点する既存軸はC1、C2、C3、C5、C6、C15、C21、C24とする。閾値は変更しない。C15はHook／tool／引用文と実在する利用者承認の判別、承認済み範囲の継承、未承認時の`question`／write 0を対象にする。C21はStop一度限り、2回目no-op、disabled／manual fallbackと共通出力を対象にする。C24は変更禁止、read-only、対象path、Clarity canonical／Git／外部状態の保護だけを対象にする。
+- 隔離した小規模Node／CLI fixtureと共通Skill／Hook出力を使った代表会話判断で、未承認、既存承認、別Agentから正確に引き継いだ承認、包括的な開発続行、変更禁止、read-only、path制限を確認する。実行command、exit code、入力の要点、期待したauthorization判断、観測した応答状態、副作用件数、fixture前後snapshotがあれば十分とする。
+- Base Sprint 044のStop一度限り／2回目no-op、manual fallback、disabled時write 0を小さい代表fixtureで確認する。`scripts/sprint-044-test.mjs`全体の100／128並列、Sprint 050全回帰、64 actor、CI、network、実installed host／session、新runner／collector／attestationは合格条件にしない。
+- Sprint 044のClaude Desktop／Codex App／compact-resume／Windows等の未検証面と`done-by-user-decision`履歴、Sprint 055の受入結果は再採点しない。旧contract／feedback／evidenceを変更せず、本Patchの差分と直接回帰だけを判定する。
+
 ## Sprint 050 Patch 003の検証方法（safe harbor）
 
 - synthetic Secretary workspace、local正本Git Repo、remote-only pointer、missing／unsafe／unreadable、Secret／binary／巨大file／内部symlink fixtureでCF-001〜007を実行する。status／daily／weekly／Portfolioごとに観測source、最初に読むファイル、Repo identity／Git current state、Clarity状態、observed at、freshness、excluded／uninspected、unavailable理由を記録する。
@@ -418,6 +425,7 @@ wizardはrunning UIをbrowserで操作し、desktop／mobileのスクリーン�
 | 042 | 35件。AT 17／IM 8／UX 10: 合成State／EvidenceによるAttention、migration、bounded Japanese UX、core idempotency |
 | 043 | primary 26件＋XV 4件。MM 10／XM 15／IM 1／XV 4: deterministic Markdown／Mermaid、MCP-first resolver、承認付きlocal fallback、fixed visual、map retry |
 | 044 | 40件。HC 17／HX 14／HP 7／AT 1／IM 1: 共通Clarity Hook、bounded SessionStart、trust doctor、host parity |
+| 044-patch-001 | Stop Hook出力と利用者authorizationの分離、既存承認の範囲内継承、変更禁止／read-only／path制限、Stop one-shotとmanual／disabled回帰を小規模fixtureで確認 |
 | 045 | 35件。SL 12／PF 11／RG 12: generic Secretary-local、Decision seam再評価、daily／weekly／Portfolio、既存Skill正本回帰 |
 | 046 | 34件。LK 16／SY 13／IM 4／PF 1: reciprocal link、pull sync、authority、retry／doctor／stale Portfolio、AT-008／009再評価 |
 | 047 | 25件。DR 10／GS 15: Drift Detection、AT-003／004再評価、Git／filesystem／Secret／concurrency hardening |

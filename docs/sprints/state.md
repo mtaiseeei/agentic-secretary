@@ -1,5 +1,31 @@
 # Sprint State
 
+## 2026-09-08 Sprint 055＋Stop権限修正の3版公開・このMac導入 — 新承認
+
+- 利用者は「Sprint055とHook修正のcommit→3版公開→このMacへの導入まで進める認識でよいですか？」に「はい」と明示承認した。Agentic／private／Yasashiiの必要な候補commit・push・版適応・通常main統合・新tag／Release／artifactと、このMacのCodex／Claude Codeへの正式導入まで続行し、同じ許可を再質問しない。旧055／044-patch-001の独立PASSは保持する。
+- 次main候補 `sprint-056` をfresh Plannerへ契約化依頼。GitHub live読取で3版のlatestがすべてv0.12.0と確認した。機能追加を含む次候補を0.13.0として準備し、既存tag／Release／配布bytesを上書きしない。契約確定まではCurrent044-patch-001 done／Lineage7を維持する。
+- private開発repoはmain e9bc1882247403c90b47ce593f3bb25d7b79e99dでclean、Yasashii開発repoはmain9e9bd8ae205018c9f93f9dbb522fc8af91acf819でclean。実my-vault本文・記憶・自由記述設定、実`.clarity/`／`CLARITY.md`は非接触。公開repoへprivate本文・固有値を混ぜず、force push／tag移動／履歴削除／cache直接編集／他者通知は行わない。開始前Node29。
+
+## 2026-09-08 Stop Hook権限境界Patch — 続行承認
+
+- 利用者はmainの「Hook出力を利用者の承認と誤認せず、変更禁止を守る。この範囲で契約作成→実装→独立評価まで進めてよいですか？」に「はい。」と明示承認した。初回の読取専用準備は終了し、Stop Hookの最小修正を通常Patch候補 `sprint-044-patch-001` としてfresh Plannerへ契約化を依頼する。公開・導入・commit・push・version・downstreamは承認に含めない。
+- native再開準備のPlannerは実仕事を完了。host metadataでmain `01a07e96-3882-78f0-9e3a-859edf249e26` がAstra/high、child `01a07e99-09a5-7351-8234-886614206f3f` がSol/high・defaultと一致した。今回もinstalled resolverのPlanner Sol/highをnative freshでdispatchし、契約化中はCurrent 055／Lineage2を保持する。PlannerはGenerator/Evaluatorのdispatch予算を消費しない。
+- 055はdone・Retry0／Spec0／Lineage2／strong／noneの受入記録を保持する。044系譜の直近予算は `history/state-before-054-release.md` の2026-08-28 Retry2評価でLineage5と確認したため、Patch実装時は5から再開し、0へリセットしない。044のdone-by-user-decisionと未検証履歴、050-patch-007 awaiting-evalは不変。
+- 実 `.clarity/`／`CLARITY.md`、実my-vault本文・記憶・自由記述設定は非接触。Hook/tool出力・引用は新しい利用者承認ではなく、現在の変更禁止を上書きしない。既存の実在する承認は対象・操作・範囲内で保持し、同一承認を重ねて要求しない。開発session限定のhooks無効化を維持し、永続設定・trust・installed bytesは変更しない。開始前Node実測24。
+
+## 2026-09-08 新しいmainセッションへの引き継ぎ
+
+- ユーザーの新しいHerdrタブで通常Harnessを再開する依頼を受け、`harness-astra`（w4:tJ／w4:pJ）を新規作成。起動argvとTUIでgpt-6-astra／highを確認した。旧main／Claude／auditタブは保持する。旧mainのnative枠をresetしたのではなく、新sessionへ移行するもので、native子起動の成否は新mainが実際のPlanner作業で確認する。
+- 引き継ぎ文書は `/private/tmp/agentic-secretary-harness-restart-20260908.md`。初回は読取確認とfresh Plannerによる次の作業範囲整理だけで、未承認のStop Hook修正・契約編集・Generator・公開／導入は開始しない。新mainへの送信後、旧mainはrepo編集を止め、以後state所有者は新mainとする。055 done／counter／未commit差分／実Clarityデータを保持する。
+- 既知Stop Hook問題の暫定回避として、この開発sessionだけ`--disable hooks`。永続config／trust／plugin bytes／Harness設定は変更しない。起動前Node19。子担当モデルは現行configを維持し、元のHerdr用capabilityではなく新sessionのnative面を再観測する。
+
+## 2026-09-07 Clarity実利用からの改善 — 契約準備
+
+- ユーザー「確認していって。さらにこの弱点を改善しよう！」により、要件単位の会話登録、検証状況と対象件数の明確化、履歴を守る訂正入口のローカル改善を開始。3つの利用フローにまたがるため次main `sprint-055`としてPlannerが契約を準備する。054の公開・導入PASSを再開／取消せず、Memory Radar／Skill Coach本体、downstream、commit／push／release／install／version反映は今回に含めない。
+- 旧`050-patch-007`は評価待ちの事実を保持し、実行順は最新依頼の055を優先する。旧Patchをdoneへ昇格しない。契約確定まではCurrent ID／既存counterを変更せず、Generatorを開始しない。
+- 実行先はmac.lan／taisei／arm64、実root `/Volumes/ExternalSSD/workspace/agentic-secretary`、branch `codex/sprint-052-secretary-voice`、HEAD `22cc215f76f8eae889d99715f75c76ba5c1e228b`、remote `https://github.com/mtaiseeei/agentic-secretary.git`を読取確認。開始時の未追跡`.clarity/`と`CLARITY.md`は承認済み実記録として保護し、製品検証は隔離fixtureだけで行う。
+- 最初のPlannerは方向確認後の文書化待ちが長くなり、ファイル変更0の時点でmainが中断。host障害を確認したものではない。fresh Planner Sol/highへ契約作成を限定して再dispatchした。両者ともGenerator／EvaluatorではなくLineage消費0。resolverの正確な指定で起動を試みたがchild metadata未取得のためlaunch-unverified。再dispatch前Node19。
+
 ## 2026-09-07 追加依頼 — Claude Code private版も有効化
 
 - ユーザー「ClaudeCodeもやってくれないと」を受け、従来保持していたdisabled状態から、my-vault projectの`agentic-secretary@agentic-secretary`だけを正式`claude plugin enable --scope project`で有効化した。CLI exit0、metadataはversion0.12.0／scope project／enabled true。元sourceと製品bytesは不変、他pluginや自由記述設定・利用者本文は非接触。
@@ -87,10 +113,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-054
+- Current ID: sprint-056
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 6
+- Lineage Dispatches: 1
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -194,6 +220,41 @@
 | sprint-052 | done | [contract](sprint-052.md) | [progress](../progress/sprint-052.md) | [feedback](../feedback/sprint-052.md) |
 | sprint-053 | done | [contract](sprint-053.md) | [progress](../progress/sprint-053.md) | [feedback](../feedback/sprint-053.md) |
 | sprint-054 | done | [contract](sprint-054.md) | [progress](../progress/sprint-054.md) | [feedback](../feedback/sprint-054.md) |
+| sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
+| sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
+| sprint-056 | active | [contract](sprint-056.md) | - | - |
+
+## Sprint 056 orchestration
+
+- 2026-09-08: public Phase A Generator `release_056_public_generator` child `01a0800f-2d17-7db0-be4f-9438a88e14a2` はhost metadataでgpt-5.6-sol／high／default一致を確認しlaunch-verified。Planner `release_056_planner` child `01a08001-3143-7763-9825-bf5a4acb33a2` も同じ指定一致で完了した。mainはstateのみを更新し、Generatorは配布候補とprogressを担当する。
+- 2026-09-08: fresh Plannerのpublic056／private052／Yasashii045契約を確認し、承認済み0.13.0三版公開・両host導入の範囲として確定した。Codexの未観測scopeは推定せず、Claudeのproject scopeと各hostの観測済みsource／enabledを保持する。既存rubricは今回の対象面だけへ適用し、旧Windows／full suite条件を持ち込まない。
+- 新main056を開始し、旧044-patch-001のdone／Lineage7と055のdone／Lineage2を履歴に保持する。新しい系譜は0から開始、上限10未満を確認しpublic Phase A Generator分を1へ予約した。Retry0／Spec0／strong／Rotate none。installed resolverはhigh-risk-sprintでSol/high／native freshを返し、起動前Node32。子metadata確認まではlaunch-unverified。Phase A三版独立PASSまではmain公開・tag・Release・installへ進まない。
+
+## Sprint 044 Patch 001 orchestration
+
+- 2026-09-08: fresh独立Evaluatorのfeedback全文を確認しPASSを採用、Patchをdoneとした。AC1〜9、Patch限定8軸C1/C2/C3/C5/C6/C15/C21/C24は全5/5で閾値達成、product／verification-infra finding0。独立回帰5/5、同root/sessionのStop初回block／2回目no-op、承認済みmanual checkpoint saved→同operation retry unchanged、10代表会話で未承認・現禁止・承認継承・非転用を確認した。Node開始終了25、自己fixture cleanup済み。
+- 最終候補6fileは評価dispatch時とbyte一致、baselineの旧044／055保護対象9fileは不変。Clarity Skillは追加6行以外がbaselineと完全一致し、055機能を保持した。Currentは本Patch done、Retry0／Spec0／Lineage7／strong／none、Next TBDを維持する。旧044のdone-by-user-decision、055の独立PASSとLineage2、050-patch-007 awaiting-evalは不変。実installed host会話・full044／050／055・CI／network・実Clarity・commit／公開／導入／downstreamは未実施で、今回のローカルPASSへ含めない。
+- 2026-09-08: fresh独立Evaluator `hook_patch_evaluator` のchild `01a07fb9-b215-7151-bc82-ce6354b1b47e` はhost metadataでSol/high/default一致、launch-verified。候補snapshotは `/private/tmp/secretary-stop-patch-candidate-w1y1m6xj`。製品・test・契約を固定し、Evaluatorだけが今回feedbackを書き、mainだけがstateを更新する。
+- 2026-09-08: Generatorの実装・handoffを受領。製品はHook文面1行置換＋Skill6行追加、小回帰5/5と構文確認成功、Node開始終了26、自己作成fixture削除済み。検査172行が製品7行を上回ることを独立評価dispatch前に利用者へ報告した。新検証基盤ではなく、5ケースのisolated setup／snapshot／cleanupであり追加拡張しない。055と旧044保護対象のbyte一致を確認し、PyYAML不足の任意validator未実行を合否と分離する。
+- 2026-09-08: 候補を固定しawaiting-evalへ移行。Lineage6<10を確認してfresh独立Evaluator分を7へ予約。resolverはEvaluator Sol/high／native direct freshを返した。実装担当の自己評価を判定根拠にせず、契約済み小回帰と実Hook出力・共通Skillの代表会話、限定差分から独立評価する。起動前Node26。055再評価・full044・live host・公開／導入は対象外。
+- 2026-09-08: native fresh Generator `hook_patch_generator` のchild `01a07fae-66b5-72b1-bc61-5c026a30c8ec` はhost metadataでSol/high/defaultに一致し、launch-verified。製品のStop文面・共通Skill、専用小回帰、progressだけを担当する。055の比較用baselineは `/private/tmp/secretary-stop-patch-baseline-qb_6x2kv` へ保存し、実Clarityデータは読まずに保護する。
+- 2026-09-08: fresh Planner `hook_patch_planner` の契約・横断制約・Patch限定rubricを確認し、承認済み最小範囲に一致すると判断した。child `01a07fa5-87c1-7861-91ea-577e4efc834c` はhost metadataでSol/high/default一致、launch-verified。Hook由来通知だけを扱い、ホスト本来のsystem/developer権限を否定しない。既存Stop one-shotと承認済み範囲の継承を維持する。
+- 2026-09-08: 利用者が承認したStop権限修正を次作業としてCurrentへ移し、旧044 Lineage5<10を確認してfresh Generator分を6へ予約した。055 done／Lineage2の履歴、044 done-by-user-decision、050-patch-007 awaiting-evalは不変。resolverはhigh-risk-sprintによりstrong／Sol/high／Rotate none、resume保持未確認のためnative freshとする。起動前Node26。未承認の公開・導入・実Clarity writeは行わない。
+
+## Sprint 055 orchestration
+
+- ユーザー「上限はリセットしてもいいですよ」を、今回の上限解消への許可として受領。実際に拒否されたのはCodex内蔵のagent thread枠で、現在の公開操作にはclose／resetがない。native一覧は完了Planner1＋中断2を保持している。HarnessはLineage2/10、Retry0／Spec0で上限未到達のため、無関係なcounterはリセットしない。今回のreset実行0、設定上限の引上げ0、055のdoneと証跡を保持する。
+- fresh独立Evaluatorのfeedback全文と実証跡を照合し、055をdoneへ記録。AC1〜11／必須8シナリオがPASS、product／verification-infra finding0件。C2/C5/C6/C19/C20/C24は5、C23は4で全閾値達成。独立回帰055 8/8＋043 29/0（XM-007のみ許容NOT-RUN）、別fixtureの46 Event／12 Evidence／15 Item、replay一致、active11＋historical4＝total15、緑の検証済み完了1件を確認した。Retry0／Spec0／Lineage2／strong／noneを保持する。
+- 製品4fileと専用検査の実測SHA256を評価対象と照合し、候補変更なし。評価書初稿のcore hash末尾1文字の転記漏れは同Evaluatorが記録だけ訂正し、製品FAIL／再評価／追加dispatchとは扱わない。実Clarityの4正本とCLARITY.mdは開始時SHA256のまま。自作HerdrのGenerator w4:tG／Evaluator w4:tHは各完了後に閉じ、既存user Claude／旧audit／mainタブは保持した。Evaluator最終確認はNode13、残存子プロセスなし。
+- このdoneはローカル共通Clarityの3フロー改善だけであり、新version／commit／push／release／install／downstreamは未実施。実installed Codex／Claude Codeの今回候補の会話と実Xmind MCP liveは未検証。Stop Hookの権限誤解釈問題は別Patchのユーザー判断待ちで未修正、Memory Radar／Skill Coach／旧050-patch-007の状態も変更しない。
+- fresh Herdr `clarity-evaluator`（w4:tH／w4:pH）を起動し、返されたargvとlive TUIがresolver指定のgpt-5.6-sol／highに一致したためlaunch-verified。起動前Node19。request正本は`/private/tmp/secretary-055-evaluator-request.md`、feedbackと隔離証跡だけを書き、実装・spec・state・live Clarity・my-vaultは変更しない。
+- Generator最終報告と候補固定を確認。Lineage1<10を確認し、fresh独立Evaluator分を2へ予約。resolverのEvaluator Sol/high／freshをHerdr w4:pHへ指定し、Generatorとは別sessionで実操作評価する。Retry0／Spec0／strong／noneを保持し、起動metadata確認まではlaunch-unverified。既存user Claudeタブと旧auditタブは非接触、開発session限定のhooks無効化を継続する。
+- Generatorの製品差分とprogress全文を確認し、候補を固定してawaiting-evalへ移行。小規模回帰は055 8/8、043 29/29＋外部live XM-007 NOT-RUN、構文／diff-check成功。製品+582/-16に対し専用検査237行で比例性を維持する。これは自己評価であり独立PASSではない。主担当の実Clarity read-only projectionでもactive9／historical9／total18、unknown4／pending1／passed4、検証済み完了4を確認し、4正本とCLARITY.mdのSHA256は開始時から不変。PyYAML不足による補助Skill validator未実行は記録し、依存導入・検証範囲拡大は行わない。
+- Generator `clarity-generator`（w4:pG、fresh session `01a07bd1-79df-7c10-be9e-77c49762b66c`）が開始。起動argvとlive TUIのSol/high一致を確認し、このHerdr dispatchはlaunch-verified。作業権限は055製品／小規模回帰／progressのみ、spec／state／feedback／実Clarityデータの変更は禁止。今回発見したStop Hook問題の後続Patch化は非同期で利用者に確認中であり、055には混ぜない。
+- Herdr Plannerの終了時、installed Clarity Stop Hookのcheckpoint要求を新しい利用者承認と誤解釈する挙動を観測。mainが保存実行前に中断し、`.clarity`の4正本と`CLARITY.md`のSHA256不変を確認した。Hookによる権限上書きの危険は新観測であり055契約外の未修正事項として保持する。完了済みPlanner用w4:tFを閉じ、Generator用w4:tG／w4:pGをfresh作成。CLIの公式`--disable hooks`をこの開発sessionだけに指定し、persistent config／trust／installed pluginは変更しない。
+- Lineage0<10を確認し、fresh Generator分を1へ予約してactiveへ移行。resolverはhigh-risk-sprintによりSol/high、Model Tier strong／Rotate noneを返した。Herdrのfresh独立sessionへ指定どおりdispatchする。事前Node19、native thread上限とモデル利用不能は区別し、モデル変更やcodex exec fallbackは行わない。
+- 契約をmainが確認し、取り込み・表示・訂正の3フローを固定。source metadataと短いclaim要約、根拠付きvalidated completion、Item単位logical writeと部分成功を分離した。fresh Plannerによる件数定義の限定修正で、idea／deferredの既存Matrix所属を維持する。新mainにつきRetry0／Spec0／Lineage0からplannedで開始し、直前Generator tier strong／Rotate noneは維持する。
+- native fresh Planner追加dispatchは`agent thread limit reached`により子生成前拒否、Lineage消費0。Herdr fresh Planner `clarity-planner`（w4:pF、session `01a07bce-4e9e-73f1-94e8-48aaf8827c22`）を別作業単位として使用し、live TUIで指定Sol/highと一致を確認した。以後もGeneratorとEvaluatorを別のfresh sessionに分離し、既存audit／Claudeタブは保護する。
 
 ## Sprint 054 orchestration
 
