@@ -1,6 +1,14 @@
 # Sprint State
 
+## 2026-09-11 Windows更新migration検証完了
+
+- fresh独立EvaluatorのPatch002 PASSを採用。C1/C3/C6各5/5、AC1〜8 PASS、対象product finding0。候補2897453でMacとWindowsともmigration46/0・release13/0・03216/0、Windows旧helper9/0。Windows run34505741310の専用job102967366791がsuccess。Status done、Retry0／Spec0／Lineage9／strong／none。
+- 全workflowにはClarity SR001（progress未commit）とSR009内GS009（未変更同時書込テストのHook1件timeout）が残った。今回対象の成功と区別し、全体PASSとはしない。記録commitでSR001を解消し、同じ製品bytesのCI結果を確認する。負荷テスト自体の修正・閾値緩和は行わない。
+- process監視はmainの権限付き実測で独立評価前26、評価後29。feedbackの0という値はsandbox制約の可能性があるためhost全体の件数として採用しない。自ら起動したdev server／browser／watcherなし、実Clarity記録は非接触。
+
 ## 2026-09-11 Windows CIでの追加検証 — 続行承認
+
+- GeneratorのMac46/0・13/0・16/0とWindows同検査成功を確認。current digest整合後候補2897453をpush、run34505741310が実行中。product/testsを固定し、fresh独立Evaluator Sol/highへ増分評価を依頼する。Lineage8 < 10を確認して9へ予約、awaiting-eval／Retry0／Spec0／strong／none、launch-unverified。
 
 - Patch002契約を確認しCurrentを切り替え、fresh Generator Sol/high（high risk）へ実装を委譲する。Lineage7 < 10を確認し8へ予約。Retry0／Spec0／strong／noneを保持、launch-unverified。
 - 候補3570511のWindows run34505323871でmigration46/0、release13/0、旧helper9/0、03216/0が成功。後続050-patch004はinventory-digest-staleで15/1。001のrelease-inventoryガイド追加と今回workflow変更に直接対応するcollaboration-inventoryのcurrent contentDigest5値を既存digestSurfaceで更新する。挙動・基準を変えない記録整合の直接修正であり、既存assertは保持する。
@@ -144,7 +152,7 @@
 - Current ID: sprint-056-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 8
+- Lineage Dispatches: 9
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -251,7 +259,7 @@
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
-| sprint-056-patch-002 | active | [contract](sprint-056-patch-002.md) | - | - |
+| sprint-056-patch-002 | done | [contract](sprint-056-patch-002.md) | [progress](../progress/sprint-056-patch-002.md) | [feedback](../feedback/sprint-056-patch-002.md) |
 | sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 
 ## Sprint 056 orchestration
