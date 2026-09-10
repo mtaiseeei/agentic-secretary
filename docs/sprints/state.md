@@ -1,5 +1,28 @@
 # Sprint State
 
+## 2026-09-11 Windows CIでの追加検証 — 続行承認
+
+- 利用者「いいじゃん。それでテストしよ。」を受け、修正候補のcommit・専用branchへのpush・draft PRとGitHub ActionsでのWindows実行を進める。既存の独立PASSを保持し、アプリ挙動を変えないCI設定・追加検証として扱う。
+- 既存Windows workflowに専用jobを追加し、migration44件・release/archive13件・以前のWindows migration回帰9件を実行する。結果は実行後に記録する。
+- main統合・tag・Release・installed cache・実利用者workspaceの更新は今回の検証に含めない。実`.clarity/`／`CLARITY.md`は非接触。
+
+## 2026-09-10 Sprint 056 Patch 001 完了 — 更新migration修正候補
+
+- fresh独立EvaluatorのRetry1 PASSを全文確認して採用。AC1〜11すべてPASS、C1/C2/C3/C5/C6/C10/C12すべて閾値達成、未解消product／verification-infra finding0件。初回FAILとB-01/B-02の履歴はfeedbackに保持した。
+- migration44/44、release/archive13/13、旧03010/10、038-patch0039/9の計76件、release integrity、diff-checkが成功。独立negativeでも必須marker欠落と別edge間ID重複をcheckout／archiveが拒否し、runtimeの重複拒否はexit3・workspace/session bytes不変だった。
+- 再評価中の製品／test／guide33ファイルのhash変更0件、manifest／marketplace／CHANGELOGのversion差分0件を主担当が確認。Status done、Retry0／Spec0、Lineage7／strong／noneを保持する。旧050-patch-007 awaiting-eval等の別系譜は不変。
+- 本完了は現repoの修正候補・復旧ガイド・独立評価まで。修正版version決定、commit／push／公開、downstream適応、installed cache／実利用者workspaceの更新は未実施。Windows nativeはNOT-RUNでありWindows実機検証済みとはしない。実`.clarity/`／`CLARITY.md`は非接触。主担当最終Node22、自ら起動したdev server／browser／watcherなし。
+
+## 2026-09-10 更新migration欠落の修正 — 契約準備
+
+- Windows利用者の0.10.1→0.13.0更新で、plugin更新後のresumeがmigration経路不在によりexit 3となる報告を調査し、利用者「進めてもらっていいですか」で修正・再開対応・再発防止検査の続行を承認した。通常Patch `sprint-056-patch-001` をfresh Plannerへ契約化依頼。現在の056 doneとLineage3を保持し、契約確定後に切り替える。
+- 対象は現repo内の修正候補・案内・独立評価。公開済みtag／配布物、downstream、実ユーザーworkspace／installed cache、実`.clarity/`／`CLARITY.md`は変更しない。公開／push／利用者端末での更新は後段の作業として分ける。
+- 実測hostはmac.lan／taisei／arm64／home `/Users/taisei`。開始時Node23。native dispatchにSol/highを正確に指定、child metadata未取得のためlaunch-unverified。PlannerはLineageを消費しない。停止済みsessionの保護commit・backup・選択を保持する高risk修正としてGeneratorはstrongを解決する。
+- 契約を確認し、旧target向けhistorical回帰を維持する補足をfresh Plannerが着手前に確定した。Currentを056-patch-001へ変更し、056 done／旧050-patch-007 awaiting-evalを保持する。Lineage3 < 10を確認し、fresh Generator Sol/highの実dispatchに4を予約・消費。Retry0／Spec0／strong／none、Node23。実装は契約の範囲内だけとし、Windows native不可はNOT-RUNとして記録する。
+- Generatorの実装handoffを確認。focused CLI44/44、release/archive9/9、旧03010/10、主担当実行038-patch0039/9、release integrity／diff-check成功。これは独立PASSではない。実製品version・公開済みbytes・実workspaceは不変。Lineage4 < 10を確認し、fresh Evaluator Sol/highの実dispatchに5を予約、Status awaiting-eval、Retry0／Spec0／strong／noneを保持する。launch-unverified。
+- fresh EvaluatorのFAILを採用。通常回帰はすべて成功したが、AC8/F41の公開前guardが必須marker欠落と別edge間operation ID重複をPASSするB-01/B-02（Major product / implementation-issue）を独立再現した。feedbackは保持し、既存契約内の限定修正へ戻す。Retry0→1、Spec0／strong／noneを維持、Lineage5 < 10を確認してfresh Generator Sol/highに6を予約。終了Node24。新規基準・新規Sprint・公開は追加しない。
+- Retry1の限定修正を受領。実diffはupdate runtime、release validator、focused release testとprogressだけ。metadata必須条件と全経路ID一意性を補完し、migration44/44、release13/13、03010/10、0389/9、integrity／diff-check成功。製品runtime変更を含み、検証コードのみの反復ではない。Node22。Lineage6 < 10を確認しfresh独立Evaluator Sol/highへ7を予約、awaiting-eval／Retry1／Spec0／strong／noneを保持。前回FAILを削除せず増分再評価する。
+
 ## 2026-09-08 Sprint 055＋Stop権限修正の3版公開・このMac導入 — 新承認
 
 - 利用者は「Sprint055とHook修正のcommit→3版公開→このMacへの導入まで進める認識でよいですか？」に「はい」と明示承認した。Agentic／private／Yasashiiの必要な候補commit・push・版適応・通常main統合・新tag／Release／artifactと、このMacのCodex／Claude Codeへの正式導入まで続行し、同じ許可を再質問しない。旧055／044-patch-001の独立PASSは保持する。
@@ -113,10 +136,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-056
+- Current ID: sprint-056-patch-001
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 3
+- Lineage Dispatches: 7
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -223,6 +246,7 @@
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
+| sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 
 ## Sprint 056 orchestration
 

@@ -124,6 +124,11 @@ private版反映はSprint 054の範囲で承認済みである。版固有正本
 2026-09-07のClarity実利用で、正本が健全でも元要件の登録が不完全になり得ること、緑象限とvalidation完了が混同されること、
 同じsource locatorの異なるclaimが誤って結び付くことを確認した。Sprint 055では、利用者が選んだsourceからのfeature／claim単位の
 確認付き取り込み、Markdown／Mermaidの正直なvalidation表示、自然言語からの追記型訂正をpublic共通面だけで改善する。
+2026-09-10に、公開済み`0.13.0`のversion別migration graphが`0.8.0→0.9.0`で途切れ、`0.10.1→0.13.0`と
+`0.12.0→0.13.0`の更新再開がworkspace変更前に停止する欠陥を確認した。Sprint 056 Patch 001では、公開済み
+`0.8.0`以降の各対応版から現行版までの到達性、旧／現行templateに基づく管理節の安全な更新、変更0件を更新済みと
+誤表示しない台帳、`0.13.0`を対象に中断した保護済みsessionの修正版への回復、rollback、およびcheckout／Git-free archiveの
+公開前到達性検査を整える。公開済みtag／artifactは変更せず、新versionの公開、push、install、実workspace適用は別工程とする。
 
 ## ひとことで
 
@@ -235,6 +240,7 @@ Chatwork／Google ChatのGit取り込みを `sprint-051` と確定した。
 | [sprint-054](sprints/sprint-054.md) | Project Clarityを含む0.12.0の3版統合・独立評価・公開、このMacのprivate版反映、Claude Code向け更新案内 | sprint-051／052／053と各版Clarity候補 |
 | [sprint-055](sprints/sprint-055.md) | Clarityの選択source要件取り込み、正直なvalidation表示、履歴を保つ自然言語訂正 | sprint-054 done。旧050-patch-007は別途awaiting-eval |
 | [sprint-056](sprints/sprint-056.md) | 受入済みSprint 055／Stop Hook修正を0.13.0として3版へ段階適応・独立評価し、公開後にこのMacのprivate版を正式導入 | sprint-055／sprint-044-patch-001 done |
+| [sprint-056-patch-001](sprints/sprint-056-patch-001.md) | 0.13.0更新migrationの欠落を修復し、公開済み対応版からの到達性・管理節更新・中断session回復・rollbackを安全に成立させる | sprint-056 done |
 | [sprint-041](sprints/sprint-041.md) | Clarity core、Standalone init、Decision／Evidence、4象限 | sprint-040-patch-001 |
 | [sprint-042](sprints/sprint-042.md) | Attention、doctor／migration、bounded UX | sprint-041 |
 | [sprint-043](sprints/sprint-043.md) | Markdown／Mermaid、Xmind ON／OFF、MCP-first provider選択、承認付きlocal fallback、固定4象限visual | sprint-042 |

@@ -22,11 +22,13 @@ const marketPath = join(root, ".claude-plugin", "marketplace.json");
 const pluginPath = join(root, "plugins", "secretary", ".claude-plugin", "plugin.json");
 const codexMarketPath = join(root, ".agents", "plugins", "marketplace.json");
 const codexPluginPath = join(root, "plugins", "secretary", ".codex-plugin", "plugin.json");
+const supportedMigrationPath = join(root, "plugins", "secretary", "migrations", "supported.json");
 try {
   const market = JSON.parse(readFileSync(marketPath, "utf8"));
   const plugin = JSON.parse(readFileSync(pluginPath, "utf8"));
   const codexMarket = JSON.parse(readFileSync(codexMarketPath, "utf8"));
   const codexPlugin = JSON.parse(readFileSync(codexPluginPath, "utf8"));
+  const supportedMigration = JSON.parse(readFileSync(supportedMigrationPath, "utf8"));
   const entry = market.plugins?.[0] || {};
   const codexEntry = codexMarket.plugins?.[0] || {};
   check("current Claude and Codex candidate version is 0.13.0", entry.version === "0.13.0" && plugin.version === "0.13.0" && codexPlugin.version === "0.13.0");
@@ -35,6 +37,7 @@ try {
   check("plugin source is present", entry.source === "./plugins/secretary" && existsSync(join(root, entry.source.slice(2))));
   check("Codex marketplace uses the formal local source", codexMarket.name === "agentic-secretary" && codexEntry.name === "agentic-secretary" && codexEntry.source?.source === "local" && codexEntry.source?.path === "./plugins/secretary");
   check("Codex manifest uses the shared skills tree", codexPlugin.name === "agentic-secretary" && codexPlugin.skills === "./skills/" && readdirSync(join(root, "plugins/secretary/skills")).filter((name) => existsSync(join(root, "plugins/secretary/skills", name, "SKILL.md"))).length === 17);
+  check("all published update sources are declared for migration reachability", JSON.stringify(supportedMigration.supportedFrom) === JSON.stringify(["0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.10.0", "0.10.1", "0.10.2", "0.12.0"]));
 } catch (error) {
   check(`distribution manifests parse (${error.message})`, false);
 }
