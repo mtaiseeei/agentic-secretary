@@ -3,6 +3,7 @@
 ## 2026-09-11 Windows CIでの追加検証 — 続行承認
 
 - Patch002契約を確認しCurrentを切り替え、fresh Generator Sol/high（high risk）へ実装を委譲する。Lineage7 < 10を確認し8へ予約。Retry0／Spec0／strong／noneを保持、launch-unverified。
+- 候補3570511のWindows run34505323871でmigration46/0、release13/0、旧helper9/0、03216/0が成功。後続050-patch004はinventory-digest-staleで15/1。001のrelease-inventoryガイド追加と今回workflow変更に直接対応するcollaboration-inventoryのcurrent contentDigest5値を既存digestSurfaceで更新する。挙動・基準を変えない記録整合の直接修正であり、既存assertは保持する。
 
 - 利用者「いいじゃん。それでテストしよ。」を受け、修正候補のcommit・専用branchへのpush・draft PRとGitHub ActionsでのWindows実行を進める。既存の独立PASSを保持し、アプリ挙動を変えないCI設定・追加検証として扱う。
 - 既存Windows workflowに専用jobを追加し、migration44件・release/archive13件・以前のWindows migration回帰9件を実行する。結果は実行後に記録する。
