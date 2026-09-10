@@ -121,6 +121,10 @@ function sha256File(path) {
   return sha256Buffer(readFileSync(path));
 }
 
+function normalizeDistributionText(value) {
+  return value.replace(/\r\n/gu, "\n");
+}
+
 function compareVersions(left, right) {
   const a = left.split(".").map(Number);
   const b = right.split(".").map(Number);
@@ -808,7 +812,7 @@ function loadMigration(pluginRoot, fromVersion, toVersion) {
         catch { fail("migration旧assetが見つからないため停止しました。", EXIT_REFUSED); }
         if (!oldAssetPath.startsWith(`${migrationRoot}${sep}`)) fail("migration旧assetがplugin外を指すため停止しました。", EXIT_REFUSED);
         if (operation.oldAssetSha256 !== undefined) {
-          const expectedFingerprint = sha256Buffer(readFileSync(oldAssetPath, "utf8").trimEnd()).replace(/^sha256:/, "");
+          const expectedFingerprint = sha256Buffer(normalizeDistributionText(readFileSync(oldAssetPath, "utf8")).trimEnd()).replace(/^sha256:/, "");
           if (operation.oldAssetSha256 !== expectedFingerprint) fail("migration旧asset fingerprintが一致しないため停止しました。", EXIT_REFUSED);
         }
       }

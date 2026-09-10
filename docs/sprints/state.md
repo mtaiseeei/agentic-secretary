@@ -2,8 +2,12 @@
 
 ## 2026-09-11 Windows CIでの追加検証 — 続行承認
 
+- Patch002契約を確認しCurrentを切り替え、fresh Generator Sol/high（high risk）へ実装を委譲する。Lineage7 < 10を確認し8へ予約。Retry0／Spec0／strong／noneを保持、launch-unverified。
+
 - 利用者「いいじゃん。それでテストしよ。」を受け、修正候補のcommit・専用branchへのpush・draft PRとGitHub ActionsでのWindows実行を進める。既存の独立PASSを保持し、アプリ挙動を変えないCI設定・追加検証として扱う。
 - 既存Windows workflowに専用jobを追加し、migration44件・release/archive13件・以前のWindows migration回帰9件を実行する。結果は実行後に記録する。
+- 候補f62c881／draft PR #12／Windows run34503854806を実行。Node22.23.2 win32 x64で旧helper9/0は成功。新migrationはCRLF化した旧assetのfingerprint不一致、release/archiveはCRLF CHANGELOGの見出し不検出で失敗。032は現行0.13.0に対する旧0.12.0固定期待3件が失敗した。Macでも同じassetのLF照合成功・CRLF照合失敗・改行正規化後成功を再現した。
+- 製品runtimeの改行対応が必要なため、新Patch056-patch-002をfresh Planner Sol/highで契約化中。旧Patch001のMac独立PASSは過去の証拠として保持する。Lineage7を維持し、実装前に契約を確定する。
 - main統合・tag・Release・installed cache・実利用者workspaceの更新は今回の検証に含めない。実`.clarity/`／`CLARITY.md`は非接触。
 
 ## 2026-09-10 Sprint 056 Patch 001 完了 — 更新migration修正候補
@@ -136,10 +140,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-056-patch-001
+- Current ID: sprint-056-patch-002
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 7
+- Lineage Dispatches: 8
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -246,6 +250,7 @@
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
+| sprint-056-patch-002 | active | [contract](sprint-056-patch-002.md) | - | - |
 | sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 
 ## Sprint 056 orchestration

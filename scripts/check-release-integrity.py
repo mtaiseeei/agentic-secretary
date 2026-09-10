@@ -166,8 +166,8 @@ def validate(root: Path) -> list[str]:
         legacy_changelog_path = legacy_root / "CHANGELOG.md"
         changelog_bytes = changelog_path.read_bytes()
         legacy_changelog_bytes = legacy_changelog_path.read_bytes()
-        changelog = changelog_bytes.decode()
-        legacy_changelog = legacy_changelog_bytes.decode()
+        changelog = changelog_bytes.decode().replace("\r\n", "\n")
+        legacy_changelog = legacy_changelog_bytes.decode().replace("\r\n", "\n")
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         return [f"release surface unreadable: {error}"]
 

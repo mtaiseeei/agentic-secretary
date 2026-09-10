@@ -65,6 +65,7 @@ function makeWorkspace(name, fromVersion, { oldTarget = "0.13.0", crlf = false, 
   const records = ["secretary/AGENTS.md", "secretary/CLAUDE.md"].map((path) => ({ path, installedVersion: fromVersion, baselineHash: fileSha(join(workspace, path)), templateVariables: {} }));
   json(join(workspace, config.update.ledgerPath), { schemaVersion: 2, edition: config.edition, records });
   execFileSync("git", ["init", "-q", "-b", "main"], { cwd: workspace });
+  git(workspace, ["config", "core.autocrlf", "false"]);
   git(workspace, ["config", "user.name", "Migration Fixture"]);
   git(workspace, ["config", "user.email", "migration@example.invalid"]);
   git(workspace, ["add", "."]); git(workspace, ["commit", "-qm", "initial"]);
@@ -214,6 +215,23 @@ try {
     const result = invoke("resume", fixture.workspace, plugin);
     check(`unsupported ${unsupported} refuses with zero workspace writes`, result.status === 3 && readFileSync(join(fixture.workspace, "secretary/AGENTS.md")).equals(before) && /対応版ではありません|対応するversion別migration|downgrade/u.test(result.stderr));
   }
+
+  const crlfPlugin = configurePlugin("crlf-distribution-target", "0.13.0");
+  const crlfAsset = join(crlfPlugin, "migrations/assets/memory-request-v1.md");
+  writeFileSync(crlfAsset, readFileSync(crlfAsset, "utf8").replace(/(?<!\r)\n/gu, "\r\n"));
+  const crlfDistribution = makeWorkspace("crlf-distribution", "0.10.1");
+  const crlfDry = invoke("resume", crlfDistribution.workspace, crlfPlugin);
+  check("CRLF distribution asset matches the LF fingerprint", crlfDry.status === 0 && parsed(crlfDry).plan?.items.some((item) => item.id === "memory-request-v2"), crlfDry.stderr);
+
+  const tamperedPlugin = configurePlugin("tampered-distribution-target", "0.13.0");
+  const tamperedAsset = join(tamperedPlugin, "migrations/assets/memory-request-v1.md");
+  writeFileSync(tamperedAsset, readFileSync(tamperedAsset, "utf8").replace("記憶", "改ざん"));
+  const tampered = makeWorkspace("tampered-distribution", "0.10.1");
+  const tamperedBefore = readFileSync(tampered.sessionPath);
+  const tamperedWorkspaceBefore = inspectTree(tampered.workspace).treeHash;
+  const tamperedHeadBefore = git(tampered.workspace, ["rev-parse", "HEAD"]);
+  const tamperedResult = invoke("resume", tampered.workspace, tamperedPlugin);
+  check("non-line-ending distribution tampering is refused before writes", tamperedResult.status === 3 && /fingerprint/u.test(tamperedResult.stderr) && readFileSync(tampered.sessionPath).equals(tamperedBefore) && inspectTree(tampered.workspace).treeHash === tamperedWorkspaceBefore && git(tampered.workspace, ["rev-parse", "HEAD"]) === tamperedHeadBefore);
 } finally {
   rmSync(fixtureRoot, { recursive: true, force: true });
 }

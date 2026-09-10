@@ -50,8 +50,13 @@ try {
   const checkout = run("python3", [join(root, "scripts/check-release-integrity.py"), "--root", root], root);
   check("checkout release integrity validates all supported paths", checkout.status === 0, `${checkout.stdout}${checkout.stderr}`);
   const cleanArchive = archive("clean");
+  const canonicalChangelog = join(cleanArchive, "plugins/secretary/CHANGELOG.md");
+  const legacyChangelog = join(cleanArchive, "plugins/yasashii-secretary/CHANGELOG.md");
+  const crlfChangelog = readFileSync(canonicalChangelog, "utf8").replace(/(?<!\r)\n/gu, "\r\n");
+  writeFileSync(canonicalChangelog, crlfChangelog);
+  writeFileSync(legacyChangelog, crlfChangelog);
   const archiveGate = run(process.execPath, [join(cleanArchive, "scripts/archive-release-gate.mjs"), "--root", cleanArchive], cleanArchive);
-  check("Git-free archive validates the same migration bytes", archiveGate.status === 0 && /ARCHIVE_RELEASE_FAIL=0/u.test(archiveGate.stdout), `${archiveGate.stdout}${archiveGate.stderr}`);
+  check("Git-free archive validates CRLF CHANGELOG with identical canonical/legacy bytes", archiveGate.status === 0 && readFileSync(canonicalChangelog).equals(readFileSync(legacyChangelog)) && /ARCHIVE_RELEASE_FAIL=0/u.test(archiveGate.stdout), `${archiveGate.stdout}${archiveGate.stderr}`);
 
   rejected("missing edge is rejected", (target) => rmSync(join(target, "plugins/secretary/migrations/0.10.2-to-0.12.0.json")));
   rejected("cycle or downgrade edge is rejected", (target) => writeFileSync(join(target, "plugins/secretary/migrations/0.13.0-to-0.12.0.json"), `${JSON.stringify({ schemaVersion: 1, fromVersion: "0.13.0", toVersion: "0.12.0", contentChanged: false, operations: [] }, null, 2)}\n`));
