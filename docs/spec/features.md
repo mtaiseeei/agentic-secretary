@@ -169,6 +169,8 @@
 - 配布時の基準から変更された管理対象ファイルをファイルごとに示し、各ファイルの既定選択を「現状を残す」とする。利用者が明示選択したファイルだけ置き換える。
 - plugin更新後に、必要なreload／restartを利用者が迷わない順序で案内する。更新後の版、管理対象ファイル、主要機能を検証してから成功と報告する。
 - version別migrationはdry-runで予定変更を先に示し、冪等、つまり同じ移行を複数回実行しても結果が変わらないようにする。対象外ファイル、私的内容、secretを変更しない。
+- 公開済み対応版から現行版までのversion別migrationは、途中のpatch／minor版を飛ばす更新でも連続した経路として解決できる。対応版は公開履歴から明示し、経路がない版や公開を確認できない版はworkspace変更前に安全停止する。
+- migration manifestの存在だけで更新可能とみなさない。管理対象のtemplate内容が変わる版では、旧template由来と安全に証明できる節だけを現行節へ更新し、利用者編集や所有不明部分を保持する。内容変更のない版を通過しただけでは、管理ファイルを更新済み、変更済み、またはmigration件数として数えない。
 - 台帳が存在しない0.2.0利用者は、現状ファイルを新規配布物として決めつけず、安全な初回判定を行うbootstrap経路から更新する。
 - 台帳なし既存利用者のbootstrap判定は基準hashを確定するための既存機能であり、同一versionを更新可能にするsame-version bootstrap bridgeとして使わない。
 - 失敗または利用者の希望時は、更新直前のローカルcommitを基準にrollbackできる。pushは別の操作として扱い、秘書が勝手に行わない。
@@ -274,6 +276,7 @@
 - master offline suiteは受入済み機能の正本とし、少なくともSprint 015のプロジェクト境界とSprint 020 Patch 002のGoogle Cloud準備を実行する。子suiteの存在確認だけ、実行漏れ、失敗の握りつぶしを認めない。
 - master suiteはGit checkoutと、`.git`がないGit archive相当の配布物の両方で実行できる。Git履歴を検査する項目は、checkoutで必須の検査とarchiveで利用可能な配布物検査を区別して結果を示す。
 - release integrity、manifest、CHANGELOG、migration、配布チャネル非依存、MIT・単段クレジット、`forkedFrom`、authorを1つの配布前結果として確認できる。
+- release integrityとGit-free archive検査は、公開済み対応版の集合と現行版を入力に、各版から現行版まで有効なmigration経路があることを確認する。特定の古いmigration fileが存在するだけの検査や、空のoperationsを内容更新成功として数える検査では合格にしない。
 
 ### F42 wizard accessibilityと公開説明の整合
 

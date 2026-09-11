@@ -71,7 +71,7 @@
       "edition": "public-seam-private-implementation-protected",
       "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json", "adapters/downstream-clarity-handoff.json"],
       "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
-      "contentDigest": "56c6e66afb294acaa3e8052aade517eb01d292d54538091aa626c94ce82ca8c3",
+      "contentDigest": "b4dcb367a783a4b0a7b4f35fd2e0ca0183b2b45fd6d8380f0e39ac6c268aedfd",
       "tests": ["CLX-009", "CLX-010"],
       "delegation": "Explicit local task to project-tools:add-todo; explicit downstream task to fixed adapter",
       "noTouch": ["automatic task creation", "Notion schema", "downstream protected Skill"]
@@ -104,7 +104,7 @@
       "edition": "agentic-host-routing-with-fixed-downstream-handoff",
       "paths": ["plugins/secretary/skills/update/SKILL.md", "plugins/secretary/release-inventory.json"],
       "markers": [{"path": "plugins/secretary/skills/update/SKILL.md", "token": "agentic-secretary:clarity-collaboration:update:v1"}],
-      "contentDigest": "adc4dae4b5478e8d64c78e58ae625a26f15ba9210439a77ddd78a8ba6c1cc933",
+      "contentDigest": "1e9a311528753d68741d2af7807e8d583d4398d46ec2bb597046161ed5f9728c",
       "tests": ["CLX-013"],
       "delegation": "Explicit plugin update request enters existing read-only diagnose and separate confirmation flow",
       "noTouch": ["Hook-triggered update", "per-session network", "automatic migration", "release promotion"]
@@ -137,7 +137,7 @@
       "edition": "public-common-host-contract",
       "paths": ["plugins/secretary/host-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json"],
       "markers": [{"path": "plugins/secretary/host-inventory.json", "token": "agentic-secretary:clarity-collaboration:host:v1"}],
-      "contentDigest": "dcf869aa0ef62a69e3fc5ab59eb4b33571c54cdb4eef4ff09965880c7ab1a902",
+      "contentDigest": "28c35264ffa89643c1feb716afe75ba927b08c5ecbf4b87c62c73a348001544d",
       "tests": ["CLX-016"],
       "delegation": "Manual fallback remains available when Hook is untrusted, disabled, or failed",
       "noTouch": ["cross-host verified promotion", "trust inference", "canonical write in degraded state"]
@@ -148,7 +148,7 @@
       "edition": "public-first-then-private-then-yasashii",
       "paths": ["adapters/downstream-clarity-handoff.json", "plugins/secretary/release-inventory.json", "adapters/agentic-overlay.json"],
       "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}, {"path": "adapters/agentic-overlay.json", "token": "agentic-secretary:clarity-collaboration:agentic-overlay:v1"}],
-      "contentDigest": "bd3bc31883b7d81251276eab7d575b26cb17063b3e8e8708ca090ec3f811572c",
+      "contentDigest": "77dcb77bc39608df7f37d68205960c1a6e38a8486d5dd2b632170ff8f1ba69f6",
       "tests": ["CLX-017", "CLX-020"],
       "delegation": "Apply only in each downstream separate Harness after accepted public source is fixed",
       "noTouch": ["private protected path", "Yasashii protected path", "downstream state", "release", "cache"]
@@ -181,7 +181,7 @@
       "edition": "agentic-off-private-on-yasashii-off",
       "paths": ["plugins/secretary/release-inventory.json", "adapters/downstream-clarity-handoff.json", "plugins/secretary/skills/clarity/SKILL.md"],
       "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}],
-      "contentDigest": "c755af8e76380e1d568a2aea160707cd6809aa98be7f72c995ccc0121ffeefb0",
+      "contentDigest": "abca92fbed413e17b64d6e642580ad5e7075e284137a9f7149a166f743f7ad95",
       "tests": ["CLX-014", "CLX-017", "CLX-020"],
       "delegation": "ON selects capable MCP first; local native only after explicit preview approval",
       "noTouch": ["automatic local fallback", "unapproved cloud write", "unapproved local write", "edition-specific visual"]
@@ -192,7 +192,7 @@
       "edition": "public-source-candidate",
       "paths": ["plugins/secretary/release-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json", ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"],
       "markers": [{"path": "plugins/secretary/release-inventory.json", "token": "agentic-secretary:clarity-collaboration:release:v1"}],
-      "contentDigest": "c3957e2d1bfb618c047429ff664049c11b13f1451676c83d1d6e28399b679958",
+      "contentDigest": "64fb308d3f0a2c0510d4cd76d459485a1bef6f1469eae50b92749c79e6062562",
       "tests": ["CLX-016", "CLX-017", "CLX-020"],
       "delegation": "Release and downstream stages remain separately gated",
       "noTouch": ["tag", "GitHub Release", "marketplace publish", "installed cache", "loaded session"]
@@ -225,7 +225,7 @@
       "edition": "public-common-core-windows-native",
       "paths": ["plugins/secretary/scripts/clarity.mjs", "plugins/secretary/scripts/lib/clarity-core.mjs", "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", ".github/workflows/windows-recording-regression.yml", "scripts/sprint-047-patch-001-test.mjs", "scripts/sprint-047-patch-002-test.mjs", "scripts/sprint-047-patch-004-test.mjs", "scripts/sprint-047-test.mjs", "scripts/sprint-050-patch-004-test.mjs", "scripts/sprint-050-patch-005-test.mjs"],
       "markers": [{"path": "plugins/secretary/scripts/lib/clarity-harness-scan.mjs", "token": "agentic-secretary:clarity-harness-authoritative-scan:v1"}],
-      "contentDigest": "65c2e31cc919a53bb9cd779c8340311e5e2cc5127c9514118e3aab863b90323f",
+      "contentDigest": "bb3697802e7a64a5c97051acec6c148eebd3d38ed97d31c9cfff9347d59da61b",
       "tests": ["HS-001", "HS-002", "HS-003", "HS-004", "HS-005", "HS-006", "HS-007", "HS-008", "HS-009", "HS-010", "HS-011", "HS-012", "HS-013", "HS-014", "HS-015", "HS-016", "SR-001", "SR-002", "SR-003", "SR-004", "SR-005", "SR-006", "SR-007", "SR-008", "SR-009", "SR-010"],
       "delegation": "Scan only local bounded sources; Windows verified requires the native workflow entry",
       "noTouch": ["unbounded repository read", "Secret body", "symlink or junction target", "Git write", "network", "downstream", "release"]

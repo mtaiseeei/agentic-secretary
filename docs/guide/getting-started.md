@@ -48,10 +48,10 @@ codex plugin list --marketplace agentic-secretary
 `AGENTS.md`、skills手動コピー、`config.toml` はrepository-localの開発・隔離test・fallback用です。
 正式なCodex plugin導入の代わりにはなりません。
 
-## 0.13.0 source candidateについて
+## 0.13.1 source candidateについて
 
-Project Clarityの要件取り込み、Validationを分けた状態表示、安全な追記型訂正と、Hook出力を利用者承認として扱わない境界を含む現在のpublic source candidateは`0.13.0`です。source、manifest、CHANGELOG、
-inventory、clean checkout／Git-free archiveの検査対象を示す版です。公開後の状態は[0.13.0 Release](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.0)で確認してください。
+現在のpublic source candidateは`0.13.1`です。`0.13.0`で停止し得たworkspace migrationの到達性、未変更sessionの回復、Windows CRLF配布assetの照合を修正し、Project Clarityの既存機能と安全境界を維持します。source、manifest、CHANGELOG、
+inventory、clean checkout／Git-free archiveの検査対象を示す版です。公開後の状態は[0.13.1 Release](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.1)で確認してください。
 tag／GitHub Release、marketplace公開・refresh、installed cache、新しいsessionのloaded versionはそれぞれ別に確認します。
 public版のsource candidateと、private版やYasashii版のinstalled version／評価状態は別々に扱います。
 

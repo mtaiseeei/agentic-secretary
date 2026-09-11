@@ -163,6 +163,10 @@
 10. 更新後はversion、管理対象ファイル、主要導線を検証し、失敗を成功と報告しない。失敗時は更新直前commitを基準にrollbackできる手順と影響を示す。
 11. 更新に伴うpushは自動で行わない。private workspace、記憶保護、一般PJ／別repo開発PJ、Chatwork／Google Chatのsecret・同期同意、配布チャネル非依存の境界を変更理由で緩めない。
 12. Google Chat、OAuth、Google Chat同期、Google Chat設定画面はF30/F31の対象外とし、更新導線へ混在させない。
+13. `0.8.0`以降の公開済み対応版は、`0.8.0`、`0.9.0`、`0.9.1`、`0.9.2`、`0.10.0`、`0.10.1`、`0.10.2`、`0.12.0`とする。各版から現行版までmigration graphが到達できなければ更新を開始しない。targetが`0.13.0`以降の現行系である更新では、tagのない`0.11.x`、未公開版、未知版、`0.7.0`以前を推測で対応扱いにせず、正確な版と変更0件を示して安全停止する。この制限で、既存回帰が検証する`0.6.0→0.7.0`等の旧target向けmigration／bootstrap契約を削除・拒否へ書き換えない。
+14. 管理対象templateに意味変更があるmigrationは、配布済み旧templateと現行templateの対応する所有節に基づく。完全一致、既知fingerprint、または一意な製品所有markerで由来を確認できる範囲だけを変更し、利用者記述、周辺行、他のmanaged block、改行、modeを保持する。空のoperationsや経路通過は管理ファイルの内容変更、適用件数、`changedPaths`に数えない。
+15. 保護済み更新sessionが旧target版を指したまま修正版pluginを読み込んだ場合は、元版、旧target、修正版、保護commit、workspace変更履歴、plugin backupを検証してから回復する。workspace migrationが0件のpending sessionだけを安全に新targetへ収束させ、部分適用済みsessionは旧planを別版へ流用せずrollbackまたは理由付き停止とする。回復後のrollbackはsession開始前のworkspaceとplugin版を復元し、版ずれやbackup不明を成功扱いにしない。
+16. Sprint 056 Patch 001で新規追加するfocused fixtureはOS固有shell、固定separator、実home pathに依存させない。mandatory regressionの`scripts/sprint-030-update-config-test.mjs`は歴史的なshell mockを含む既存検査として書き換えずMacで実行できればよく、Windows nativeを実行できない場合は理由付き`NOT-RUN`を許容してverifiedと表示しない。
 
 ## 12. Google Chat OAuth・同期境界
 

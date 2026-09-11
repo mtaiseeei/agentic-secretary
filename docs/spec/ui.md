@@ -329,6 +329,8 @@ Chatworkと同じ共通wizard骨格を使い、全画面の可視見出しとacc
 - `customized` または `unknown-baseline` のファイルは1件ずつ「現状を残す（既定）／新版へ置き換える／差分を見る／中止」を選べるようにする。まとめて上書きを既定にしない。
 - migrationはdry-runの追加・変更・維持対象を平易に示し、もう一度確認してから実行する。
 - plugin更新後にreload／restartが必要なら、理由と再開方法を示す。再開後はversion、migration、主要導線を検証してから成功を報告する。
+- 更新再開時に読み込まれた修正版が中断sessionの予定版と異なる場合は、元版、当初予定版、現在の修正版、workspace migrationの有無を平易に示す。安全に引き継げる場合は同じ保護地点から新しいdry-runへ進み、引き継げない場合は変更0件または部分適用状態と、rollbackを含む次の一手を示す。
+- 対応外versionやmigration経路欠落では「対応するversion別migrationを確認できません」だけで終えず、確認できた現在版／候補版、workspace変更0件、再試行に必要な対応版または公開ガイドへの導線を示す。公開前の修正版を公開済み、導入可能、更新完了とは表示しない。
 - 失敗時はpluginとworkspaceのどちらが変わったかを分け、直前commitと更新前versionを使うrollback手順を示す。pushは別操作として確認なしに行わない。
 
 ### 既存workspaceの会話契約migration
