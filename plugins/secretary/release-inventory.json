@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "collaborationMarker": "agentic-secretary:clarity-collaboration:release:v1",
   "edition": "agentic-secretary",
-  "candidateVersion": "0.13.0",
+  "candidateVersion": "0.13.1",
   "publicationStatus": "source-candidate-unverified",
   "releaseState": {
     "sourcePrepared": true,
@@ -101,6 +101,7 @@
     "docs/guide/README.md",
     "docs/guide/getting-started.md",
     "docs/guide/project-clarity.md",
+    "docs/guide/update-0.13.1.md",
     "docs/guide/update-0.13.0.md",
     "docs/guide/update-0.13.0-migration-recovery.md",
     "docs/guide/update-0.12.0.md",

@@ -2,7 +2,7 @@
 
 公開済み`0.13.0`では、plugin本体の更新が成功しても、`0.10.1`や`0.12.0`などからworkspace管理節を移すversion経路が見つからず、`update-apply.mjs resume`がexit 3で停止する場合があります。「workspace migrationは行っていません」という表示、空の`migration.changedPaths`、falseの`ledgerChanged`／`markerChanged`は未変更sessionの候補を絞る手掛かりです。最終判断は、修正版のrunnerが管理対象file、台帳、marker、保護commit、workspace HEADを照合した結果に従ってください。更新前に作ったpushなしの保護commitとplugin backupは削除しないでください。
 
-修正版が正式公開されるまでは、公開済み`v0.13.0`のtag、Release、artifactを修正版として扱わず、同じversionを入れ直して回復しようとしないでください。修正版のversionとReleaseを確認できた後、新しいpluginを正式な更新機能で同じscopeへ読み込み、同じworkspaceで次を実行します。
+修正版は`0.13.1`です。`v0.13.1` Releaseが正式公開されるまでは、公開済み`v0.13.0`のtag、Release、artifactを修正版として扱わず、同じversionを入れ直して回復しようとしないでください。[0.13.1 Release](https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.1)と配布versionの一致を確認した後、新しいpluginを正式な更新機能で同じscopeへ読み込み、同じworkspaceで次を実行します。
 
 `<修正版plugin root>`は、正式更新とreload後にClaude Codeが実際に読み込んだ修正版pluginのrootへ置き換えます。
 

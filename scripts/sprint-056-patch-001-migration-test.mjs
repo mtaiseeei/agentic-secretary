@@ -8,10 +8,15 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const sourcePlugin = join(root, "plugins/secretary");
+const option = (name) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : null;
+};
+const sourcePlugin = resolve(option("--plugin-root") || join(root, "plugins/secretary"));
 const cli = join(sourcePlugin, "scripts/update-apply.mjs");
 const fixtureRoot = realpathSync(mkdtempSync(join(process.env.TMPDIR || tmpdir(), "sprint056-patch001-")));
-const supported = ["0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.10.0", "0.10.1", "0.10.2", "0.12.0"];
+const historicalSupported = ["0.8.0", "0.9.0", "0.9.1", "0.9.2", "0.10.0", "0.10.1", "0.10.2", "0.12.0"];
+const currentSupported = [...historicalSupported, "0.13.0"];
 const config = JSON.parse(readFileSync(join(sourcePlugin, "edition.json"), "utf8"));
 let pass = 0;
 let fail = 0;
@@ -25,17 +30,16 @@ function sha(value) { return `sha256:${createHash("sha256").update(value).digest
 function fileSha(path) { return sha(readFileSync(path)); }
 function git(cwd, args) { return execFileSync("git", args, { cwd, encoding: "utf8" }).trim(); }
 function templateAt(version, name) {
-  const releasedFixture = supported.includes(version) ? version : "0.8.0";
+  const releasedFixture = currentSupported.includes(version) ? version : "0.8.0";
   return execFileSync("git", ["show", `v${releasedFixture}:plugins/secretary/templates/${name}`], { cwd: root, encoding: "utf8" });
 }
-function configurePlugin(name, version, { futureEdge = false } = {}) {
+function configurePlugin(name, version) {
   const target = join(fixtureRoot, name);
   cpSync(sourcePlugin, target, { recursive: true });
   const manifestPath = join(target, ".claude-plugin/plugin.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   manifest.version = version;
   json(manifestPath, manifest);
-  if (futureEdge) json(join(target, "migrations/0.13.0-to-0.13.1.json"), { schemaVersion: 1, fromVersion: "0.13.0", toVersion: "0.13.1", contentChanged: false, operations: [], note: "fixture future patch" });
   return target;
 }
 function inspectTree(pluginRoot) {
@@ -100,7 +104,7 @@ function parsed(result) { try { return JSON.parse(result.stdout); } catch { retu
 function mutateSession(fixture, change) { const value = JSON.parse(readFileSync(fixture.sessionPath, "utf8")); change(value); json(fixture.sessionPath, value); }
 
 try {
-  for (const fromVersion of supported) {
+  for (const fromVersion of historicalSupported) {
     const plugin = configurePlugin(`target-${fromVersion}`, "0.13.0");
     const fixture = makeWorkspace(`workspace-${fromVersion}`, fromVersion, { crlf: fromVersion === "0.10.1" });
     const beforeManagedBytes = readFileSync(join(fixture.workspace, "secretary/AGENTS.md"));
@@ -120,6 +124,28 @@ try {
       check("0.10.1 management sections reach current meaning", finalAgents.includes("request hedgeとcontent hedgeを分ける") && finalAgents.includes("Project Clarityは任意です") && !finalAgents.includes("推測、曖昧、引用、伝聞、仮定、訂正、取り消し"));
     }
     if (fromVersion === "0.12.0") check("0.12.0 empty hop has zero content writes", dryData.plan?.contentWriteCount === 0 && appliedData.contentWriteCount === 0 && readFileSync(join(fixture.workspace, "secretary/AGENTS.md")).equals(beforeManagedBytes) && lstatSync(join(fixture.workspace, "secretary/AGENTS.md")).mtimeMs === beforeManagedMtime);
+  }
+
+  for (const fromVersion of currentSupported) {
+    const plugin = configurePlugin(`current-target-${fromVersion}`, "0.13.1");
+    const fixture = makeWorkspace(`current-workspace-${fromVersion}`, fromVersion, { oldTarget: "0.13.1", crlf: fromVersion === "0.10.1" });
+    const beforeManaged = ["secretary/AGENTS.md", "secretary/CLAUDE.md"].map((path) => ({
+      path,
+      bytes: readFileSync(join(fixture.workspace, path)),
+      mtime: lstatSync(join(fixture.workspace, path)).mtimeMs,
+    }));
+    const firstDry = invoke("resume", fixture.workspace, plugin);
+    const firstPlan = parsed(firstDry).plan;
+    const secondDry = invoke("resume", fixture.workspace, plugin);
+    const secondPlan = parsed(secondDry).plan;
+    const applied = invoke("resume", fixture.workspace, plugin, ["--apply", "--plan-hash", firstPlan?.planHash ?? "missing"]);
+    const appliedSession = JSON.parse(readFileSync(fixture.sessionPath, "utf8"));
+    const again = invoke("resume", fixture.workspace, plugin);
+    check(`${fromVersion}->0.13.1 real distribution path is finite and deterministic`, firstDry.status === 0 && secondDry.status === 0 && firstPlan?.fromVersion === fromVersion && firstPlan?.toVersion === "0.13.1" && firstPlan?.versionPath?.[0] === fromVersion && firstPlan?.versionPath?.at(-1) === "0.13.1" && JSON.stringify(firstPlan?.versionPath) === JSON.stringify(secondPlan?.versionPath));
+    check(`${fromVersion}->0.13.1 dry-run/apply/idempotent`, applied.status === 0 && again.status === 0 && parsed(again).migrationCount === 0, `${firstDry.stderr}${applied.stderr}${again.stderr}`);
+    if (fromVersion === "0.13.0") {
+      check("0.13.0->0.13.1 empty hop has zero workspace content writes", firstPlan?.contentWriteCount === 0 && parsed(applied).contentWriteCount === 0 && appliedSession.migration?.changedPaths?.length === 0 && beforeManaged.every(({ path, bytes, mtime }) => readFileSync(join(fixture.workspace, path)).equals(bytes) && lstatSync(join(fixture.workspace, path)).mtimeMs === mtime));
+    }
   }
 
   const negativePlugin = configurePlugin("negative-target", "0.13.0");
@@ -190,7 +216,7 @@ try {
   check("partial ledger interruption resumes without duplicate content writes", interrupted.status === 4 && interruptedSession.migration.ledgerChanged === true && resumed.status === 0 && resumedSession.migration.contentWriteCount === partialDry.plan.contentWriteCount);
   check("partial resume keeps rollback ownership for ledger and managed files", partialRolled.status === 0 && readFileSync(join(partialResume.workspace, "secretary/AGENTS.md"), "utf8") === partialResume.beforeAgents);
 
-  const futurePlugin = configurePlugin("target-0.13.1", "0.13.1", { futureEdge: true });
+  const futurePlugin = configurePlugin("target-0.13.1", "0.13.1");
   const recovery = makeWorkspace("pending-recovery", "0.10.1", { oldTarget: "0.13.0" });
   const recoveredDry = invoke("resume", recovery.workspace, futurePlugin);
   const recoveredData = parsed(recoveredDry);
@@ -202,7 +228,7 @@ try {
   process.stdout.write(`RECOVERY 0.10.1->0.13.0=>0.13.1 phase=${recoveredSession.phase} protection=${recoveredSession.protectionCommit === recovery.protectionCommit} backupTree=${recoveredSession.pluginBackup.treeHash === recovery.backupTree} contentWrites=${parsed(recoveredApply).contentWriteCount ?? -1}\n`);
   check("recovered session applies then restores original workspace/plugin", recoveredApply.status === 0 && rolled.status === 0 && rolledData.workspaceRestored === true && rolledData.pluginRestored === true && readFileSync(join(recovery.workspace, "secretary/AGENTS.md"), "utf8") === recovery.beforeAgents && JSON.parse(readFileSync(join(futurePlugin, ".claude-plugin/plugin.json"), "utf8")).version === "0.10.1");
 
-  const partialPlugin = configurePlugin("partial-target", "0.13.1", { futureEdge: true });
+  const partialPlugin = configurePlugin("partial-target", "0.13.1");
   const partial = makeWorkspace("partial-recovery", "0.10.1", { oldTarget: "0.13.0", partial: true });
   const partialBefore = readFileSync(partial.sessionPath);
   const refusedPartial = invoke("resume", partial.workspace, partialPlugin);

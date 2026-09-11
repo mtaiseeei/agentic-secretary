@@ -71,7 +71,7 @@
       "edition": "public-seam-private-implementation-protected",
       "paths": ["plugins/secretary/skills/projects/SKILL.md", "plugins/secretary/scripts/clarity-secretary.mjs", "plugins/secretary/scripts/lib/clarity-secretary.mjs", "plugins/secretary/clarity/secretary-adapter.json", "adapters/downstream-clarity-handoff.json"],
       "markers": [{"path": "plugins/secretary/skills/projects/SKILL.md", "token": "agentic-secretary:clarity-collaboration:projects:v1"}],
-      "contentDigest": "56c6e66afb294acaa3e8052aade517eb01d292d54538091aa626c94ce82ca8c3",
+      "contentDigest": "b4dcb367a783a4b0a7b4f35fd2e0ca0183b2b45fd6d8380f0e39ac6c268aedfd",
       "tests": ["CLX-009", "CLX-010"],
       "delegation": "Explicit local task to project-tools:add-todo; explicit downstream task to fixed adapter",
       "noTouch": ["automatic task creation", "Notion schema", "downstream protected Skill"]
@@ -104,7 +104,7 @@
       "edition": "agentic-host-routing-with-fixed-downstream-handoff",
       "paths": ["plugins/secretary/skills/update/SKILL.md", "plugins/secretary/release-inventory.json"],
       "markers": [{"path": "plugins/secretary/skills/update/SKILL.md", "token": "agentic-secretary:clarity-collaboration:update:v1"}],
-      "contentDigest": "ebb5b140f84a72e8753da7eddf2b1aeeef4a04cd590856e943ed90aa59dd5017",
+      "contentDigest": "1e9a311528753d68741d2af7807e8d583d4398d46ec2bb597046161ed5f9728c",
       "tests": ["CLX-013"],
       "delegation": "Explicit plugin update request enters existing read-only diagnose and separate confirmation flow",
       "noTouch": ["Hook-triggered update", "per-session network", "automatic migration", "release promotion"]
@@ -137,7 +137,7 @@
       "edition": "public-common-host-contract",
       "paths": ["plugins/secretary/host-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json"],
       "markers": [{"path": "plugins/secretary/host-inventory.json", "token": "agentic-secretary:clarity-collaboration:host:v1"}],
-      "contentDigest": "dcf869aa0ef62a69e3fc5ab59eb4b33571c54cdb4eef4ff09965880c7ab1a902",
+      "contentDigest": "28c35264ffa89643c1feb716afe75ba927b08c5ecbf4b87c62c73a348001544d",
       "tests": ["CLX-016"],
       "delegation": "Manual fallback remains available when Hook is untrusted, disabled, or failed",
       "noTouch": ["cross-host verified promotion", "trust inference", "canonical write in degraded state"]
@@ -148,7 +148,7 @@
       "edition": "public-first-then-private-then-yasashii",
       "paths": ["adapters/downstream-clarity-handoff.json", "plugins/secretary/release-inventory.json", "adapters/agentic-overlay.json"],
       "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}, {"path": "adapters/agentic-overlay.json", "token": "agentic-secretary:clarity-collaboration:agentic-overlay:v1"}],
-      "contentDigest": "f2e6dbb7e362e8a00c3d64a9cf59e01603a0d51e7c7e639b4096002d068c0a8e",
+      "contentDigest": "77dcb77bc39608df7f37d68205960c1a6e38a8486d5dd2b632170ff8f1ba69f6",
       "tests": ["CLX-017", "CLX-020"],
       "delegation": "Apply only in each downstream separate Harness after accepted public source is fixed",
       "noTouch": ["private protected path", "Yasashii protected path", "downstream state", "release", "cache"]
@@ -181,7 +181,7 @@
       "edition": "agentic-off-private-on-yasashii-off",
       "paths": ["plugins/secretary/release-inventory.json", "adapters/downstream-clarity-handoff.json", "plugins/secretary/skills/clarity/SKILL.md"],
       "markers": [{"path": "adapters/downstream-clarity-handoff.json", "token": "agentic-secretary:clarity-collaboration:handoff:v1"}],
-      "contentDigest": "eba09214a73d48b633b4ae7bd63a3f50aa4875a2043911b4de2df37ea769b5f4",
+      "contentDigest": "abca92fbed413e17b64d6e642580ad5e7075e284137a9f7149a166f743f7ad95",
       "tests": ["CLX-014", "CLX-017", "CLX-020"],
       "delegation": "ON selects capable MCP first; local native only after explicit preview approval",
       "noTouch": ["automatic local fallback", "unapproved cloud write", "unapproved local write", "edition-specific visual"]
@@ -192,7 +192,7 @@
       "edition": "public-source-candidate",
       "paths": ["plugins/secretary/release-inventory.json", "plugins/secretary/.claude-plugin/plugin.json", "plugins/secretary/.codex-plugin/plugin.json", ".claude-plugin/marketplace.json", ".agents/plugins/marketplace.json"],
       "markers": [{"path": "plugins/secretary/release-inventory.json", "token": "agentic-secretary:clarity-collaboration:release:v1"}],
-      "contentDigest": "df8b60931b14fb646a6538da7e7558fc3918087c1b97633aa4d6056517070d01",
+      "contentDigest": "64fb308d3f0a2c0510d4cd76d459485a1bef6f1469eae50b92749c79e6062562",
       "tests": ["CLX-016", "CLX-017", "CLX-020"],
       "delegation": "Release and downstream stages remain separately gated",
       "noTouch": ["tag", "GitHub Release", "marketplace publish", "installed cache", "loaded session"]

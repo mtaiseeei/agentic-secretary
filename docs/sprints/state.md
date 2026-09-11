@@ -1,5 +1,13 @@
 # Sprint State
 
+## 2026-09-11 更新migration修正版のAgentic／Yasashii公開 — 新承認
+
+- public057／Yas046契約を確定。独立した新しい公開単位として057のLineageを0から開始し、fresh Generator Sol/highの実dispatchに1を予約。Current057 active／Retry0／Spec0／strong／none、launch-unverified。Yas046はpublic Phase A PASS待ちでplanned。
+
+- 利用者「よし、リリースして。yasashii版にも流し込んで。」により、AgenticとYasashiiへの修正反映、必要なcandidate commit／通常push／PR／main統合、新しいv0.13.1 tag／Release／artifact公開を承認済みとして続行する。両版のlive latestはv0.13.0。private版・このMacへのinstallは依頼範囲に加えない。
+- 入力はPR #12の9d45e47とWindows run34506823738全体success。既存056-patch001/002の独立PASSを保持し、新しい公開単位057とYasashii046をPlannerが契約化する。旧056系譜Lineage9は履歴として保持する。
+- 原repoの既存Harness設定／guidance4ファイルのdirty変更と実Clarity記録を保護し、publicは/private/tmp/secretary-release-0131-public、Yasashiiは/private/tmp/secretary-release-0131-yasashiiで作業する。公開済みtag／asset、利用者workspace、installed cache、実Clarity、private値は非接触。
+
 ## 2026-09-11 Windows更新migration検証完了
 
 - fresh独立EvaluatorのPatch002 PASSを採用。C1/C3/C6各5/5、AC1〜8 PASS、対象product finding0。候補2897453でMacとWindowsともmigration46/0・release13/0・03216/0、Windows旧helper9/0。Windows run34505741310の専用job102967366791がsuccess。Status done、Retry0／Spec0／Lineage9／strong／none。
@@ -149,10 +157,10 @@
 
 <!-- オーケストレーターだけが書く進行状態の正本 -->
 
-- Current ID: sprint-056-patch-002
+- Current ID: sprint-057
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 9
+- Lineage Dispatches: 1
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -259,6 +267,7 @@
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
+| sprint-057 | active | [contract](sprint-057.md) | - | - |
 | sprint-056-patch-002 | done | [contract](sprint-056-patch-002.md) | [progress](../progress/sprint-056-patch-002.md) | [feedback](../feedback/sprint-056-patch-002.md) |
 | sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 
