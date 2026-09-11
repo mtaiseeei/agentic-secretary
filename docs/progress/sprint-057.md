@@ -62,3 +62,13 @@
 - Git-free artifact: `node <source>/scripts/sprint-056-patch-001-migration-test.mjs --plugin-root <artifact>/plugins/secretary`。runner自体の`git show`はsource履歴、CLIと配布物はartifactを使う。
 - Phase Aではexact candidate SHA／tree、Mac結果、因果するWindows update job、Git-free archiveのfile inventory／digestを確認する。Phase A PASS前にmain／tag／Releaseへ進めない。
 - Phase Bでは別のfresh Evaluatorがremote main、`v0.13.1` tag、Release metadata、ダウンロードした実artifactのbytesと代表migrationをread-onlyで確認する。
+
+## Phase A candidate／Windows receipt（candidate後の未commit記録）
+
+- 固定candidate: full SHA `05fcfa31ce5e76639cd1f4f492c1f26f2308c26d`、Git tree `53a3561c3f5eee68f556df6413aef1f48da6d11c`。worktree cleanで固定後、主担当が同じSHAを既存PR #12 headへ通常pushした。amend前の`75e7503`は使用していない。
+- exact `git archive` tar: `/private/tmp/secretary-057-exact-archive.Ow8cVq/candidate-final.tar`、SHA-256 `1b1295a268fba20f994b5a6eb90ee90c37902eb2a9ad44a1ffe1ccfe34419eb8`、tar entry 1070。展開rootのarchive gateは15 PASS / 0 FAIL、release integrity PASS、`.git`なし、canonical／legacy CHANGELOG byte一致。
+- exact archiveのplugin treeは、`--plugin-root`で65 PASS / 0 FAILを実行したamend前archiveのplugin treeと`diff -qr`差分0。amend差分はOrchestrator所有`docs/sprints/state.md`末尾の余分な空行1件だけで、製品／test bytesは同一。
+- Windows workflow run `34557176699`はexact head SHAが上記candidateと一致。Sprint 057専用job `windows-update-migration` / job `103132195821`は2026-09-11T03:06:28Z開始、03:08:37Z終了、SUCCESS。
+- 専用jobではsetup-node、setup-python、native Windows runtime確認、`Supported update migrations and pending recovery`、`Release and archive migration guards`、`Previous Windows conversation migration regression`の全stepがSUCCESS。workflow定義どおりNode 22／Python UTF-8 modeを使う。ログ本文はworkflow全体進行中のため取得待ちで、Macの件数や過去runをWindows件数へ流用していない。
+- 同runの別job `windows-native` / job `103132195975`では`Existing update gate regression (Sprint 032)`、Windows path／rollback、Git ingest、conversation migration、Clarity Harness scanまでSUCCESSを確認した。後続Clarity検査を実行中であり、workflow全体はこのreceipt時点で`in_progress`。専用jobのSUCCESSとworkflow全体の最終結果を分けて扱う。
+- このreceiptはcandidate固定後のため未commitで引き渡す。candidateの再commit／再pushは行わず、fresh Phase A Evaluatorがexact source、archive、Windows結果を独立判定する。

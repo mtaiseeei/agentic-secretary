@@ -2,6 +2,14 @@
 
 ## 2026-09-11 更新migration修正版のAgentic／Yasashii公開 — 新承認
 
+- Phase B別fresh Evaluatorのfeedback全文を確認しoverall PASSを採用、057 done。公開main/tag4d86d47d6ebada92ecd0b731b41320202569bd93はPhase Aと同tree。実download SHA256 eae8b5dc25127f245745985ddba786726314165cc7f62fcaffdf42024a74b7f3、candidateとの1071 entry差分0、integrity PASS／archive15/0／migration65/0、旧0.13.0 Release不変、finding0。Retry0／Spec0／Lineage3／strong／noneを保持。この後の通常main pushは評価・進行・handoffの3記録だけで、公開tagと製品bytesを変更しない。Yasashii046は別repoで継続中。
+
+- PR12を通常mergeしmain4d86d47d6ebada92ecd0b731b41320202569bd93（candidateと同tree53a3561c3f5eee68f556df6413aef1f48da6d11c）へ統合。新v0.13.1 tag／Release／agentic-secretary-0.13.1.tar.gzを公開。Lineage2 < 10を確認しPhase Aとは別fresh Evaluator Sol/highの実dispatchで3へ更新。実download artifact評価待ち、057未完了、launch-unverified。
+
+- Phase A独立feedback全文を確認しPASS採用。candidate05fcfa31ce5e76639cd1f4f492c1f26f2308c26d / tree53a3561c3f5eee68f556df6413aef1f48da6d11c、Mac全対象とWindows34557176699両job成功、finding0。許可済み通常main統合と新v0.13.1公開へ進む。公開後の別fresh評価までは057未完了。
+
+- Phase A candidate `05fcfa31ce5e76639cd1f4f492c1f26f2308c26d`をPR12へ通常push。Windows run34557176699を開始。Lineage1 < 10を確認しfresh独立Evaluator Sol/highへの実dispatchで2へ更新、awaiting-eval。製品bytesを固定し、state/feedbackのみ公開後の記録commitへ分離する。launch-unverified。
+
 - public057／Yas046契約を確定。独立した新しい公開単位として057のLineageを0から開始し、fresh Generator Sol/highの実dispatchに1を予約。Current057 active／Retry0／Spec0／strong／none、launch-unverified。Yas046はpublic Phase A PASS待ちでplanned。
 
 - 利用者「よし、リリースして。yasashii版にも流し込んで。」により、AgenticとYasashiiへの修正反映、必要なcandidate commit／通常push／PR／main統合、新しいv0.13.1 tag／Release／artifact公開を承認済みとして続行する。両版のlive latestはv0.13.0。private版・このMacへのinstallは依頼範囲に加えない。
@@ -160,7 +168,7 @@
 - Current ID: sprint-057
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 1
+- Lineage Dispatches: 3
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -267,7 +275,7 @@
 | sprint-055 | done | [contract](sprint-055.md) | [progress](../progress/sprint-055.md) | [feedback](../feedback/sprint-055.md) |
 | sprint-044-patch-001 | done | [contract](sprint-044-patch-001.md) | [progress](../progress/sprint-044-patch-001.md) | [feedback](../feedback/sprint-044-patch-001.md) |
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
-| sprint-057 | active | [contract](sprint-057.md) | - | - |
+| sprint-057 | done | [contract](sprint-057.md) | [progress](../progress/sprint-057.md) | [feedback](../feedback/sprint-057.md) |
 | sprint-056-patch-002 | done | [contract](sprint-056-patch-002.md) | [progress](../progress/sprint-056-patch-002.md) | [feedback](../feedback/sprint-056-patch-002.md) |
 | sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 
