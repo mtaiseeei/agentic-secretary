@@ -55,3 +55,10 @@
 - current collaboration inventory20面67casesのdigest/marker PASS。system Ruby/Psych 17 Skills name/description型PASS。generic PyYAML quick validationは依存不足INCOMPLETEのまま区別。`git diff --check` PASS。
 - Windows既存update jobは新059 migration、既存release guard、既存conversation migrationに限定。workflow_dispatchの `update_only=true` は無関係なwindows-native jobをskipし、従来の既定呼出は保持する。旧固定candidate全migration scriptは履歴として保持し、今回の追加ゲートにしない。
 - 正式更新経路は現在のCLI helpとSkillで照合。Codexはmarketplace upgrade／host Plugin UI、Claudeは対象plugin updateと既存scope、新sessionでversion確認。架空のplugin update CLIは追加しない。
+
+### Windows増分修理1（verification-infra）
+
+- 初回candidate `19211cf5dce6db09e095f50524b4c2ecc9a00664` のWindows run34674495396/job103501798053はmigration23 PASS/2 FAIL。LF/CRLF実apply、rerun、rollback、partial、保持・拒否の操作はPASS。release/archive guardと既存conversation migrationもPASS。
+- 失敗は `git show` のLF原本とWindows checkoutのCRLF asset/templateをraw比較していた2assert。template/asset比較だけ既存runtimeと同様に改行を正規化し、workspace実bytes保持のassertと製品コード・asset・期待する意味は変更しない。許可済みの1回の局所検証修理で、追加条件や全量再検証は導入しない。
+
+- 修理後Mac当該migration検査25 PASS / 0 FAIL、Node33→33。製品／migration assetは初回candidateとbyte一致、再評価は検証修理差分と新candidateのWindows結果へ限定する。

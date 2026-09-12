@@ -31,6 +31,9 @@ function shaText(value) { return createHash("sha256").update(value.replace(/\r\n
 function fileSha(path) { return shaBytes(readFileSync(path)); }
 function git(cwd, args) { return execFileSync("git", args, { cwd, encoding: "utf8" }).trim(); }
 function released(path) { return execFileSync("git", ["show", `v0.13.1:${path}`], { cwd: root, encoding: "utf8" }); }
+// Git blobs use LF while Windows checkouts may use CRLF. Normalize only
+// template/asset comparisons; workspace byte-preservation assertions stay raw.
+function normalizedText(body) { return body.replace(/\r\n?/gu, "\n"); }
 function count(body, needle) { return body.split(needle).length - 1; }
 function onlyCrlf(body) { return body.includes("\r\n") && !body.replace(/\r\n/gu, "").includes("\n"); }
 
@@ -156,13 +159,13 @@ try {
     "secretary/CLAUDE.md": released("plugins/secretary/templates/CLAUDE.md"),
   };
   const currentTemplates = {
-    "secretary/AGENTS.md": readFileSync(join(sourcePlugin, "templates/AGENTS.md"), "utf8"),
-    "secretary/CLAUDE.md": readFileSync(join(sourcePlugin, "templates/CLAUDE.md"), "utf8"),
+    "secretary/AGENTS.md": normalizedText(readFileSync(join(sourcePlugin, "templates/AGENTS.md"), "utf8")),
+    "secretary/CLAUDE.md": normalizedText(readFileSync(join(sourcePlugin, "templates/CLAUDE.md"), "utf8")),
   };
   check("declared template fingerprints come from the published 0.13.1 tag", migration.operations.every((operation) => operation.templateFingerprint === shaText(oldTemplates[operation.path])));
   check("immutable old assets and current assets are exact unique template sections", migration.operations.every((operation) => {
-    const oldAsset = readFileSync(join(migrationRoot, operation.oldAsset), "utf8").trimEnd();
-    const newAsset = readFileSync(join(migrationRoot, operation.asset), "utf8").trimEnd();
+    const oldAsset = normalizedText(readFileSync(join(migrationRoot, operation.oldAsset), "utf8")).trimEnd();
+    const newAsset = normalizedText(readFileSync(join(migrationRoot, operation.asset), "utf8")).trimEnd();
     return operation.oldAssetSha256 === shaText(oldAsset)
       && count(oldTemplates[operation.path], oldAsset) === 1
       && count(currentTemplates[operation.path], newAsset) === 1
@@ -170,8 +173,8 @@ try {
   }));
   const migratedTemplates = { ...oldTemplates };
   for (const operation of migration.operations) {
-    const oldAsset = readFileSync(join(migrationRoot, operation.oldAsset), "utf8").trimEnd();
-    const newAsset = readFileSync(join(migrationRoot, operation.asset), "utf8").trimEnd();
+    const oldAsset = normalizedText(readFileSync(join(migrationRoot, operation.oldAsset), "utf8")).trimEnd();
+    const newAsset = normalizedText(readFileSync(join(migrationRoot, operation.asset), "utf8")).trimEnd();
     migratedTemplates[operation.path] = migratedTemplates[operation.path].replace(oldAsset, newAsset);
   }
   check("the four operations reproduce the full current AGENTS and CLAUDE templates", Object.keys(currentTemplates).every((path) => migratedTemplates[path] === currentTemplates[path]));
