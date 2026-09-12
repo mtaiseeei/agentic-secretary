@@ -2,6 +2,10 @@
 
 ## 2026-09-12 Astra指示改善の追加承認・正式リリース
 
+- Sprint059 done。独立A PASSと別fresh独立B PASSが成立。実download artifactはtag archiveと964 files全bytes一致、SHA256一致、archive/integrity15/0、17 Skills、代表route9/0・副作用0、実artifact migration/checkpoint25/0。新規finding0。公開tag target `cd4700c3d541525d00bb69732d7c0f94c11feb37`（tree `282b7278220fd2acf0e6c8759435c6d6951fa286`）、https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.2 。asset SHA256 `0422045e44236cb65490192ac34365822eb6365465941d1bfaff81ebb946bab7`／16532090 bytes。初回WindowsFAIL/V059-01全文はfeedback旧評価節保持。最終検証は[Phase B](../feedback/sprint-059-phase-b.md)。current genericPyYAMLはINCOMPLETE（Ruby17型PASS）、cache／全workspace更新と未実施hostは合格へ昇格しない。
+
+- Phase A fresh増分PASSを受領し、exact `cd4700c3d541525d00bb69732d7c0f94c11feb37`をmainへ通常fast-forward、新v0.13.2 tag／Releaseを公開。https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.2 。Release API draft=false/prerelease=false、asset SHA256 `0422045e44236cb65490192ac34365822eb6365465941d1bfaff81ebb946bab7`。Lineage4 < 10を確認し5、別fresh Evaluator Sol/highへ実downloadartifactのPhaseBのみ委譲。まだdoneではない。
+
 - Phase A初回19211cfはWindows static比較2件でFAIL / verification-scope-issue。product finding0、実migration操作PASSを保持。許可済みbounded検証修理1回（比較のみEOL正規化）、Mac再確認25/0、Node33→33。Retry／Spec0不変、次のfresh増分Evaluator用Lineage3 < 10を確認して4。新SHAのWindows対象job後、未変更製品証拠を引継ぎ独立再確認する。
 
 - Phase A実装凍結。migration25/0、release guard13/0、collaboration20/0、inventory20面67cases、Ruby17/0、diff-check PASS。Lineage2 < 10を確認し3、fresh Evaluator Sol/highへ引渡す。Windowsはこのcandidateの既存update jobだけを取得する。公開前でありtag／Releaseは未作成。
@@ -182,7 +186,7 @@
 - Current ID: sprint-059
 - Retry Count: 0
 - Spec-Issue Count: 0
-- Lineage Dispatches: 4
+- Lineage Dispatches: 5
 - Model Tier: strong
 - Rotate: none
 - Next Planned: TBD
@@ -291,7 +295,7 @@
 | sprint-056 | done | [contract](sprint-056.md) | [progress](../progress/sprint-056.md) | [feedback](../feedback/sprint-056.md) |
 | sprint-057 | done | [contract](sprint-057.md) | [progress](../progress/sprint-057.md) | [feedback](../feedback/sprint-057.md) |
 | sprint-058 | done | [contract](sprint-058.md) | [progress](../progress/sprint-058.md) | [feedback](../feedback/sprint-058.md) |
-| sprint-059 | awaiting-eval | [contract](sprint-059.md) | [progress](../progress/sprint-059.md) | [feedback](../feedback/sprint-059.md) |
+| sprint-059 | done | [contract](sprint-059.md) | [progress](../progress/sprint-059.md) | [feedback](../feedback/sprint-059.md) |
 | sprint-056-patch-002 | done | [contract](sprint-056-patch-002.md) | [progress](../progress/sprint-056-patch-002.md) | [feedback](../feedback/sprint-056-patch-002.md) |
 | sprint-056-patch-001 | done | [contract](sprint-056-patch-001.md) | [progress](../progress/sprint-056-patch-001.md) | [feedback](../feedback/sprint-056-patch-001.md) |
 

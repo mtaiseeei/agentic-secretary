@@ -62,3 +62,7 @@
 - 失敗は `git show` のLF原本とWindows checkoutのCRLF asset/templateをraw比較していた2assert。template/asset比較だけ既存runtimeと同様に改行を正規化し、workspace実bytes保持のassertと製品コード・asset・期待する意味は変更しない。許可済みの1回の局所検証修理で、追加条件や全量再検証は導入しない。
 
 - 修理後Mac当該migration検査25 PASS / 0 FAIL、Node33→33。製品／migration assetは初回candidateとbyte一致、再評価は検証修理差分と新candidateのWindows結果へ限定する。
+
+### 正式公開と独立確認の受領
+
+- v0.13.2公開target `cd4700c3d541525d00bb69732d7c0f94c11feb37`。Release URLとasset digestはstate/auditに確定。独立Aと別fresh BがPASS、実artifactの964 files一致とmigration/checkpoint25/0を受領。評価判定の正本はfeedback、最終stateの所有はOrchestrator。

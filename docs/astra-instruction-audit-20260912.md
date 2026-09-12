@@ -122,3 +122,13 @@ Ruby/Psychのfrontmatter検査はPyYAML版の代替syntax／型証拠であり�
 - 追加の実害を解消: `CLAUDE.md`の古いHarness checkout全面read禁止を、利用者承認済みcanonicalのread-only参照と別owner write禁止へ適応。固定Harness0.5.0説明を現configの上限へ置換。initializerのno-overwriteと明示承認された局所保守を区別した。Macの実測、Node40/60、Playwright2以下、共通lock、他PJ非接触を保持する。
 - 対象: root `AGENTS.md`、`CLAUDE.md`、`docs/harness-guidance.md`。参照した正本はHarness担当の`plugins/harness/templates/AGENTS.md`、`templates/docs/harness-guidance.md`、`skills/harness-loop/references/scope.md`。旧installedにsplit referenceが無い場合も実在entryを使い、欠落pathを必須にしない。
 - 局所検証: `git diff --check -- AGENTS.md CLAUDE.md docs/harness-guidance.md` はexit0。旧一律差戻し、global clean要求、既存自動check必須、全面接触禁止、固定0.5.0の現行矛盾表現は3fileから除去。安全規則を全文削除する短縮は未実施のまま残すが、その方法自体は今回の完了条件ではない。独立評価で実害ある未修正の有無を確認する。
+
+## 公開後の確定記録（Sprint059）
+
+- v0.13.2正式公開: https://github.com/mtaiseeei/agentic-secretary/releases/tag/v0.13.2 。対象commit `cd4700c3d541525d00bb69732d7c0f94c11feb37`、tree `282b7278220fd2acf0e6c8759435c6d6951fa286`。asset `agentic-secretary-0.13.2.tar.gz` SHA256 `0422045e44236cb65490192ac34365822eb6365465941d1bfaff81ebb946bab7`。
+- Phase A: fresh独立PASS。初回Windows run34674495396のstatic EOL比較23/2 FAILとV059-01は `docs/feedback/sprint-059.md` の旧評価節に全文保持。製品のWindows migration操作は初回からPASSで、比較だけの修理後run34674715963/job103502385965は全step success。
+- root guidance: review拒否対象はAGENTSとdocs/harness-guidanceの大幅短縮（削除再作成／大幅置換）。理由は承認範囲を超えて重要な運用・安全・所有・counter規則を弱めるため。安全保持した局所代替で5/7/9/10/14、固定版、承認済み参照、初期化no-overwriteの矛盾を解消。独立Aが安全・role・counter保持とproduct finding0を確認し、今回依頼に実害のある未修正矛盾は0件。全文短縮は利用者が不要と確定したため実施しない。
+- 元checkoutは開始時の各root3path hashを照合し、局所差分だけを重ねた。Agentic46／Yas33の開始dirty snapshotで、その3path以外に変化なし。元checkoutへのpull／checkout切替／commitは行わず、公開は最新remote由来の隔離candidateのみで実施。installed cacheや実利用者workspaceへの一括migrationは未実施。
+- Phase Bの公開実artifact判定は `docs/feedback/sprint-059-phase-b.md`、最終状態は `docs/sprints/state.md` を参照。generic PyYAML依存不足はINCOMPLETE、system Ruby/Psych17 Skills型検査はPASS。未実施hostのlive確認を既存host成功から昇格しない。
+
+- 最終確定: 別fresh独立Phase B PASS。実artifact964 filesはtag archiveと完全一致、archive/integrity15/0、17 Skills、代表route9/0、副作用0、実artifact migration/checkpoint25/0。Sprint059をdoneへ確定した。
