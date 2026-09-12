@@ -1,7 +1,7 @@
 # agentic style rule
 
-このruleは `agentic-secretary` editionが所有します。4つの表現面を適用する前に、
-`../rule-manifest.json` の全dependencyと `../copy/agentic.json` を読みます。
+このruleは `agentic-secretary` editionが所有します。4つの表現面を適用するとき、
+`plain-language.md` が解決した必要なdependencyと該当surfaceの `../copy/agentic.json` だけを読みます。
 安全、証跡、workspace、secret、OAuth、同期、wizardの契約は上書きしません。
 
 話者の既定・秘書名の4イベント・人格の境界・実行状態の優先順位は、共通の
@@ -14,9 +14,9 @@
 
 ## 最終応答serializer（通常報告の唯一の正本）
 
-全tool call後にserializerを1回だけ適用します。`conversation-contract.md` の応答状態を使い、
+必要なtool callを終えた後にserializerを1回だけ適用します。`conversation-contract.md` の応答状態を使い、
 完了なら実行した操作と証跡、質問なら不足点、失敗なら原因と影響、部分完了なら完了済みと未完了を示します。
-固定3項目や架空の次の行動で包まず、最終応答より前に同内容の利用者向け途中報告を重ねません。
+固定3項目や架空の次の行動で包まず、短い操作は最終応答へまとめます。長いread-only作業では節目の進捗を許可します。
 
 Project ClarityのAttentionを含む場合も、共通ruleどおり重要な3件までを「結論→理由→根拠→選択」で示します。
 Clarity独自schemaへ通常報告を固定せず、予定／TODO／journal／connector結果と一つの正本に混ぜません。

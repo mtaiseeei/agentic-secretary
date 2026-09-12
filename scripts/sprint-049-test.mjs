@@ -241,13 +241,25 @@ try {
     ];
     for (const input of clarityFixtures) { const routed = routeSecretaryIntent(input); assert.equal(routed.selectedSkill, "clarity", input); assert.equal(routed.route, "clarity-manual-entry", input); zeroEffect(routed); }
     const fixtures = [
-      ["Chatworkで探して", "chatwork"], ["Chatworkにつないで", "chatwork"], ["Chatworkと連携して", "chatwork"],
-      ["Google Chatにつないで", "google-chat"], ["Google Chatで探して", "google-chat"],
-      ["Googleカレンダーを見て", "setup-google"], ["Google Driveからファイルを取得して", "setup-google"], ["Gmailを設定して", "setup-google"], ["Googleカレンダーと連携して", "setup-google"],
-      ["Outlookにつないで", "setup-microsoft"], ["Microsoft 365を設定して", "setup-microsoft"],
-      ["Notionにつないで", "setup-notion"], ["Notionを設定して", "setup-notion"],
+      ["Chatworkで探して", "chatwork", "chatwork-explicit-entry", "existing-explicit-connector-entry"],
+      ["Chatworkにつないで", "chatwork", "chatwork-explicit-entry", "existing-explicit-connector-entry"],
+      ["Chatworkと連携して", "chatwork", "chatwork-explicit-entry", "existing-explicit-connector-entry"],
+      ["Google Chatにつないで", "google-chat", "google-chat-explicit-entry", "existing-explicit-connector-entry"],
+      ["Google Chatで探して", "google-chat", "google-chat-explicit-entry", "existing-explicit-connector-entry"],
+      ["Googleカレンダーを見て", "secretary", "google-read-only-handoff", "host-connector-read"],
+      ["Google Driveからファイルを取得して", "secretary", "google-read-only-handoff", "host-connector-read"],
+      ["Gmailを設定して", "setup-google", "google-explicit-entry", "existing-explicit-connector-entry"],
+      ["Googleカレンダーと連携して", "setup-google", "google-explicit-entry", "existing-explicit-connector-entry"],
+      ["Outlookの予定を確認して", "secretary", "microsoft-read-only-handoff", "host-connector-read"],
+      ["Outlookにつないで", "setup-microsoft", "microsoft-explicit-entry", "existing-explicit-connector-entry"],
+      ["Microsoft 365を設定して", "setup-microsoft", "microsoft-explicit-entry", "existing-explicit-connector-entry"],
+      ["Notionにつないで", "setup-notion", "notion-connection-explicit-entry", "existing-explicit-connector-entry"],
+      ["Notionを設定して", "setup-notion", "notion-connection-explicit-entry", "existing-explicit-connector-entry"],
     ];
-    for (const [input, skill] of fixtures) { const routed = routeSecretaryIntent(input); assert.equal(routed.selectedSkill, skill, input); assert.equal(routed.delegation, "existing-explicit-connector-entry"); zeroEffect(routed); }
+    for (const [input, skill, route, delegation] of fixtures) {
+      const routed = routeSecretaryIntent(input); assert.equal(routed.selectedSkill, skill, input); assert.equal(routed.route, route, input);
+      assert.equal(routed.delegation, delegation, input); zeroEffect(routed);
+    }
     const connectorPaths = ["chatwork", "google-chat", "connections", "setup-google", "setup-microsoft", "setup-notion"];
     for (const skill of connectorPaths) assert(text(join(repo, `plugins/secretary/skills/${skill}/SKILL.md`)).includes("agentic-secretary:clarity-collaboration:connector:v1"));
   });
